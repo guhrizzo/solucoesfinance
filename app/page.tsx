@@ -23,6 +23,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import Footer from "./components/Footer";
+import Link from "next/link";
 
 const stats = [
   { label: "Empresas atendidas", value: "12.4K", change: "+18.2%", up: true },
@@ -220,12 +221,16 @@ export default function FinanceHome() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <button className="btn-outline text-white text-sm px-5 py-2 cursor-pointer rounded-full font-medium">
-              Entrar
-            </button>
-            <button className="btn-primary text-white text-sm px-5 py-2.5 rounded-full font-semibold cursor-pointer">
-              Testar grátis
-            </button>
+            <Link href="/login">
+              <button className="btn-outline text-white text-sm px-5 py-2 cursor-pointer rounded-full font-medium">
+                Entrar
+              </button>
+            </Link>
+            <Link href="/register">
+              <button className="btn-primary text-white text-sm px-5 py-2.5 rounded-full font-semibold cursor-pointer">
+                Testar grátis
+              </button>
+            </Link>
           </div>
 
           <button className="md:hidden text-white" onClick={() => setMenuOpen(!menuOpen)}>
