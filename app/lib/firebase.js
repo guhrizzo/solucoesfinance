@@ -10,8 +10,8 @@ const firebaseConfig = {
     appId: "1:310589264866:web:f42e53887eec75f485dfbb",
 };
 
-// Evita re-inicializar em hot reload do Next.js
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
