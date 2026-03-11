@@ -289,9 +289,11 @@ export default function FinanceHome() {
               </p>
 
               <div className="flex flex-wrap gap-4 fade-in-delay-3">
-                <button className="btn-primary text-white font-semibold px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
-                  Testar 3 dias grátis <ArrowRight size={16} />
-                </button>
+                <Link href="/register">
+                  <button className="btn-primary text-white font-semibold px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
+                    Testar 3 dias grátis <ArrowRight size={16} />
+                  </button>
+                </Link>
                 <button className="btn-outline text-white font-medium px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
                   Agendar demonstração
                 </button>
@@ -464,7 +466,7 @@ export default function FinanceHome() {
                 <div className="relative w-11 h-11 mb-4 flex items-center justify-center group">
 
                   {/* Fundo que gira */}
-                  <div className="absolute inset-0 rounded-xl bg-blue-50 border border-blue-100/40 transition-transform duration-300 group-hover:rotate-15 "></div>
+                  <div className="absolute inset-0 rounded-xl bg-blue-50 border border-blue-100/40 transition-transform duration-300 group-hover:rotate-15 group-hover:scale-105"></div>
 
                   {/* Ícone fixo */}
                   <f.icon size={20} className="relative text-blue-600 scale-100 z-10 group-hover:scale-105 ease-in-out duration-200" />
@@ -494,9 +496,11 @@ export default function FinanceHome() {
             3 dias grátis, configuração em menos de 5 minutos, suporte humano incluído.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <button className="btn-primary text-white font-semibold px-8 py-4 rounded-xl flex items-center gap-2 cursor-pointer text-base">
-              Começar teste grátis <ArrowRight size={17} />
-            </button>
+            <Link href="/register">
+              <button className="btn-primary text-white font-semibold px-8 py-4 rounded-xl flex items-center gap-2 cursor-pointer text-base">
+                Começar teste grátis <ArrowRight size={17} />
+              </button>
+            </Link>
             <button className="btn-outline text-white font-medium px-8 py-4 rounded-xl cursor-pointer text-base">
               Falar com consultor
             </button>

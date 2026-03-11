@@ -366,7 +366,7 @@ export default function RegisterPage() {
           PAINEL DIREITO — formulário
       ══════════════════════════════════════════════════════════ */}
       <div className="flex-1 bg-white flex items-start justify-center overflow-y-auto px-6 py-10">
-        <div className="w-full max-w-[420px]">
+        <div className="w-full max-w-105">
 
           {/* Logo mobile */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
