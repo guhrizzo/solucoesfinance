@@ -1,10 +1,10 @@
 "use client";
 
+// hooks/useAuth.ts
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import type { User }           from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 
-// Rotas públicas — não precisam de autenticação
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
 
 export function useAuth() {
@@ -15,25 +15,30 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Importa auth dinamicamente para garantir que só rode no browser
-    import("../lib/firebase").then(({ auth }) => {
-      const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-        setUser(firebaseUser);
-        setLoading(false);
+    let unsubscribe: (() => void) | undefined;
 
-        const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
+    // Tudo importado dinamicamente — nunca roda no servidor
+    import("../lib/firebase").then(({ getFirebase }) =>
+      getFirebase().then(({ auth }) => {
+        import("firebase/auth").then(({ onAuthStateChanged }) => {
+          unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            setUser(firebaseUser);
+            setLoading(false);
 
-        if (!firebaseUser && !isPublic) {
-          router.replace("/login");
-        }
+            const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
 
-        if (firebaseUser && (pathname === "/login" || pathname === "/register")) {
-          router.replace("/dashboard");
-        }
-      });
+            if (!firebaseUser && !isPublic) {
+              router.replace("/login");
+            }
+            if (firebaseUser && (pathname === "/login" || pathname === "/register")) {
+              router.replace("/dashboard");
+            }
+          });
+        });
+      })
+    );
 
-      return () => unsub();
-    });
+    return () => unsubscribe?.();
   }, [pathname, router]);
 
   return { user, loading };
