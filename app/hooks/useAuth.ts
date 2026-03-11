@@ -9,31 +9,31 @@ import { useRouter, usePathname } from "next/navigation";
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
 
 export function useAuth() {
-  const router   = useRouter();
-  const pathname = usePathname();
-  const [user, setUser]       = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+    const router = useRouter();
+    const pathname = usePathname();
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
+    useEffect(() => {
+        const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+            setUser(firebaseUser);
+            setLoading(false);
 
-      const isPublic = PUBLIC_ROUTES.includes(pathname);
+            const isPublic = PUBLIC_ROUTES.includes(pathname);
 
-      if (!firebaseUser && !isPublic) {
-        // Não autenticado tentando acessar rota protegida → redireciona
-        router.replace("/login");
-      }
+            if (!firebaseUser && !isPublic) {
+                // Não autenticado tentando acessar rota protegida → redireciona
+                router.replace("/login");
+            }
 
-      if (firebaseUser && (pathname === "/login" || pathname === "/register")) {
-        // Já autenticado tentando acessar login → vai pro dashboard
-        router.replace("/dashboard");
-      }
-    });
+            if (firebaseUser && (pathname === "/login" || pathname === "/register")) {
+                // Já autenticado tentando acessar login → vai pro dashboard
+                router.replace("/dashboard");
+            }
+        });
 
-    return () => unsub();
-  }, [pathname, router]);
+        return () => unsub();
+    }, [pathname, router]);
 
-  return { user, loading };
+    return { user, loading };
 }
