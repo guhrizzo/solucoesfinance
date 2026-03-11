@@ -358,7 +358,7 @@ export default function Dashboard() {
                   <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
                     <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" /> Despesa
                   </div>
-                  <button className="flex items-center gap-1 text-xs text-blue-500 font-medium hover:text-blue-700 transition-colors">
+                  <button className="flex items-center gap-1 text-xs text-blue-500 font-medium hover:text-blue-700 transition-colors cursor-pointer">
                     <Download size={12} /><span className="hidden sm:inline">Exportar</span>
                   </button>
                 </div>
@@ -426,7 +426,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <button className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-blue-600 text-xs font-semibold border border-blue-100 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
+              <button className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-blue-600 text-xs font-semibold border border-blue-100 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 cursor-pointer">
                 Ver todos <ChevronRight size={13} />
               </button>
             </div>
@@ -442,10 +442,10 @@ export default function Dashboard() {
                   <p className="text-slate-400 text-xs mt-0.5">6 movimentações recentes</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1 bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors">
+                  <button className="flex items-center gap-1 bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer">
                     <Filter size={11} /><span className="hidden sm:inline ml-1">Filtrar</span>
                   </button>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors">
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer">
                     Ver todas
                   </button>
                 </div>
@@ -510,9 +510,9 @@ export default function Dashboard() {
             <div className="side-card p-4 md:p-6 flex flex-col">
               <div className="flex items-center justify-between mb-4 md:mb-5">
                 <h2 className="text-blue-950 font-bold text-sm md:text-base">Centro de custos</h2>
-                <button className="text-slate-400 hover:text-blue-600 transition-colors"><MoreHorizontal size={16} /></button>
+                <button className="text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"><MoreHorizontal size={16} /></button>
               </div>
-              <div className="flex justify-center mb-4 md:mb-5">
+              <div className="flex justify-center mb-4 md:mb-5 cursor-pointer">
                 <svg width="130" height="130" viewBox="0 0 140 140">
                   {(() => {
                     const circ = 2 * Math.PI * 52;
@@ -522,7 +522,7 @@ export default function Dashboard() {
                       const el = (
                         <circle key={cc.name} cx={70} cy={70} r={52} fill="none" stroke={cc.color}
                           strokeWidth={22} strokeDasharray={`${dash} ${circ-dash}`}
-                          strokeDashoffset={-offset} transform="rotate(-90 70 70)" className="donut-ring" />
+                          strokeDashoffset={-offset} transform="rotate(-90 70 70)" className="donut-ring " />
                       );
                       offset += dash;
                       return el;
@@ -562,7 +562,7 @@ export default function Dashboard() {
                 <h2 className="text-blue-950 font-bold text-sm md:text-base">Fluxo de caixa — projeção 30 dias</h2>
                 <p className="text-slate-400 text-xs mt-0.5">Baseado em histórico + compromissos agendados</p>
               </div>
-              <button className="flex items-center gap-1 text-slate-400 hover:text-blue-600 text-xs font-medium transition-colors shrink-0">
+              <button className="flex items-center gap-1 text-slate-400 hover:text-blue-600 text-xs font-medium transition-colors shrink-0 cursor-pointer">
                 <RefreshCw size={12} /><span className="hidden sm:inline ml-1">Atualizar</span>
               </button>
             </div>

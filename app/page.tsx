@@ -491,7 +491,7 @@ export default function FinanceHome() {
             da sua empresa hoje.
           </h2>
           <p className="text-blue-200/70 text-lg mb-10 max-w-xl mx-auto">
-            14 dias grátis, configuração em menos de 10 minutos, suporte humano incluído.
+            3 dias grátis, configuração em menos de 5 minutos, suporte humano incluído.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <button className="btn-primary text-white font-semibold px-8 py-4 rounded-xl flex items-center gap-2 cursor-pointer text-base">

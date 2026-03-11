@@ -9,6 +9,7 @@ import {
   Shield, TrendingUp, Lock, Mail, AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // ── Mensagens de erro Firebase → PT-BR ───────────────────────────────────────
 const firebaseErrorMap: Record<string, string> = {
@@ -384,13 +385,14 @@ export default function LoginPage() {
               Microsoft
             </button>
           </div>
-
-          <p className="fade-in-4 text-center text-slate-400 text-sm mt-8">
-            Ainda não tem conta?{" "}
-            <a href="/register" className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
-              Testar 14 dias grátis
-            </a>
-          </p>
+          <Link href="/register">
+            <p className="fade-in-4 text-center text-slate-400 text-sm mt-8">
+              Ainda não tem conta?{" "}
+              <a href="/register" className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
+                Testar 3 dias grátis
+              </a>
+            </p>
+          </Link>
 
           <div className="fade-in-4 mt-6 flex items-center justify-center gap-2">
             <Shield size={12} className="text-slate-300" />
