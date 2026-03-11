@@ -34,6 +34,7 @@ import {
   Menu,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import OnboardingModal from "../components/OnboardingModal";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -195,10 +196,11 @@ function KpiCard({ kpi, delay }: { kpi: typeof kpis[0]; delay: number }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [collapsed, setCollapsed]   = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [period]                     = useState("Out 2024");
-  const { user, loading }            = useAuth();
+  const [collapsed, setCollapsed]         = useState(false);
+  const [mobileOpen, setMobileOpen]       = useState(false);
+  const [period]                           = useState("Out 2024");
+  const [showOnboarding, setShowOnboarding] = useState(true); // mostra na 1ª visita
+  const { user, loading }                  = useAuth();
 
   if (loading) {
     return (
@@ -213,6 +215,11 @@ export default function Dashboard() {
 
   return (
     <div className="flex bg-slate-50 min-h-screen">
+      {/* ── Modal de onboarding ── */}
+      <OnboardingModal
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         *, body { font-family: 'Sora', sans-serif; }
