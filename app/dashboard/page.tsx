@@ -30,7 +30,7 @@ import {
   Download,
   Filter,
 } from "lucide-react";
-
+import { useAuth } from "../hooks/useAuth";
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 const kpis = [
@@ -234,6 +234,8 @@ function KpiCard({ kpi, delay }: KpiCardProps)  {
 export default function Dashboard() {
   const [collapsed, setCollapsed] = useState(false);
   const [period, setPeriod] = useState("Outubro 2024");
+  const { user, loading } = useAuth();
+  if (loading) return <div>Carregando...</div>;
 
   return (
     <div className="flex bg-slate-50 min-h-screen">
