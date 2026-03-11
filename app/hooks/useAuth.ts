@@ -2,38 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "../lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 
-// Rotas que NÃO precisam de autenticação
+// Rotas públicas — não precisam de autenticação
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
 
 export function useAuth() {
-    const router = useRouter();
-    const pathname = usePathname();
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+  const router   = useRouter();
+  const pathname = usePathname();
 
-    useEffect(() => {
-        const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-            setUser(firebaseUser);
-            setLoading(false);
+  const [user, setUser]       = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-            const isPublic = PUBLIC_ROUTES.includes(pathname);
+  useEffect(() => {
+    // Importa auth dinamicamente para garantir que só rode no browser
+    import("../lib/firebase").then(({ auth }) => {
+      const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+        setUser(firebaseUser);
+        setLoading(false);
 
-            if (!firebaseUser && !isPublic) {
-                // Não autenticado tentando acessar rota protegida → redireciona
-                router.replace("/login");
-            }
+        const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
 
-            if (firebaseUser && (pathname === "/login" || pathname === "/register")) {
-                // Já autenticado tentando acessar login → vai pro dashboard
-                router.replace("/dashboard");
-            }
-        });
+        if (!firebaseUser && !isPublic) {
+          router.replace("/login");
+        }
 
-        return () => unsub();
-    }, [pathname, router]);
+        if (firebaseUser && (pathname === "/login" || pathname === "/register")) {
+          router.replace("/dashboard");
+        }
+      });
 
-    return { user, loading };
+      return () => unsub();
+    });
+  }, [pathname, router]);
+
+  return { user, loading };
 }

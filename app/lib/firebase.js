@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
@@ -10,8 +10,8 @@ const firebaseConfig = {
     appId: "1:310589264866:web:f42e53887eec75f485dfbb",
 };
 
-
+// Evita re-inicializar em hot-reload e no SSR
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
