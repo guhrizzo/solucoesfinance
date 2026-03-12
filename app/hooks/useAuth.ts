@@ -2,7 +2,7 @@
 
 // hooks/useAuth.ts
 import { useEffect, useState } from "react";
-import type { User }           from "firebase/auth";
+import type { User } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
@@ -11,34 +11,29 @@ export function useAuth() {
   const router   = useRouter();
   const pathname = usePathname();
 
-  const [user, setUser]       = useState<User | null>(null);
+  const [user,    setUser]    = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    let unsub: (() => void) | undefined;
 
-    // Tudo importado dinamicamente — nunca roda no servidor
-    import("../lib/firebase").then(({ getFirebase }) =>
-      getFirebase().then(({ auth }) => {
-        import("firebase/auth").then(({ onAuthStateChanged }) => {
-          unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            setUser(firebaseUser);
-            setLoading(false);
+    (async () => {
+      // getFirebase() é SÍNCRONO — não use .then(), não é uma Promise
+      const { getFirebase }        = await import("../lib/firebase");
+      const { auth }               = getFirebase();
+      const { onAuthStateChanged } = await import("firebase/auth");
 
-            const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
+      unsub = onAuthStateChanged(auth, (u) => {
+        setUser(u);
+        setLoading(false);
 
-            if (!firebaseUser && !isPublic) {
-              router.replace("/login");
-            }
-            if (firebaseUser && (pathname === "/login" || pathname === "/register")) {
-              router.replace("/dashboard");
-            }
-          });
-        });
-      })
-    );
+        const isPublic = PUBLIC_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
+        if (!u && !isPublic) router.replace("/login");
+        if (u && (pathname === "/login" || pathname === "/register")) router.replace("/dashboard");
+      });
+    })();
 
-    return () => unsubscribe?.();
+    return () => unsub?.();
   }, [pathname, router]);
 
   return { user, loading };
