@@ -1,34 +1,36 @@
 // lib/firebase.ts
-// ─── NÃO inicializa Firebase no momento do import ────────────────────────────
-// Toda inicialização acontece dentro de getFirebase(), que só é chamada
-// no browser (dentro de useEffect / event handlers).
+// Singleton robusto — inicializa UMA vez, guarda referências prontas para uso
 
-import type { Auth } from "firebase/auth";
-import type { GoogleAuthProvider as GProvider } from "firebase/auth";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
-let _auth: Auth | null = null;
-let _googleProvider: GProvider | null = null;
+const firebaseConfig = {
+  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+};
 
-export async function getFirebase() {
-    if (_auth && _googleProvider) {
-        return { auth: _auth, googleProvider: _googleProvider };
-    }
+let app:            FirebaseApp   | null = null;
+let auth:           Auth          | null = null;
+let db:             Firestore     | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
 
-    const { initializeApp, getApps, getApp } = await import("firebase/app");
-    const { getAuth, GoogleAuthProvider } = await import("firebase/auth");
+export function getFirebase() {
+  if (typeof window === "undefined") {
+    // SSR — nunca inicializa no servidor
+    throw new Error("Firebase só pode ser usado no browser");
+  }
 
-    const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: "my-finance-9bd3a.firebaseapp.com",
-        projectId: "my-finance-9bd3a",
-        storageBucket: "my-finance-9bd3a.firebasestorage.app",
-        messagingSenderId: "310589264866",
-        appId: "1:310589264866:web:f42e53887eec75f485dfbb",
-    };
+  if (!app) {
+    app            = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    auth           = getAuth(app);
+    db             = getFirestore(app);
+    googleProvider = new GoogleAuthProvider();
+  }
 
-    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    _auth = getAuth(app);
-    _googleProvider = new GoogleAuthProvider();
-
-    return { auth: _auth, googleProvider: _googleProvider };
+  return { app: app!, auth: auth!, db: db!, googleProvider: googleProvider! };
 }
