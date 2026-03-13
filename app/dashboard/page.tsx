@@ -344,7 +344,7 @@ export default function Dashboard() {
               <Bell size={16} className="text-slate-500" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" />
             </button>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm">
               {user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
             </div>
           </div>
