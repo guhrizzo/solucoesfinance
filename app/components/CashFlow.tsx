@@ -348,13 +348,19 @@ function Modal({ open, editing, onClose, onSave }: {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
+// Prefetch — inicia o download dos chunks antes do useEffect rodar
+if (typeof window !== "undefined") {
+  import("../lib/firebase");
+  import("firebase/auth");
+  import("firebase/firestore");
+}
+
 export default function CashFlowPage() {
   const [uid,       setUid]       = useState<string | null>(null);
   const [userName,  setUserName]  = useState("");
   const [txs,       setTxs]       = useState<Tx[]>([]);
   const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
   const [errMsg,    setErrMsg]    = useState("");
-  const [debugMsg,  setDebugMsg]  = useState("iniciando...");
 
   const [collapsed, setCollapsed] = useState(false);
   const [sideOpen,  setSideOpen]  = useState(false);
@@ -372,56 +378,48 @@ export default function CashFlowPage() {
 
     (async () => {
       try {
-        setDebugMsg("1. importando firebase...");
-        const { getFirebase }        = await import("../lib/firebase");
-        setDebugMsg("2. inicializando app...");
-        const { auth, db }           = await getFirebase();
-        setDebugMsg("3. firebase ok, aguardando auth...");
-        const { onAuthStateChanged } = await import("firebase/auth");
+        // Carrega tudo em paralelo — elimina espera sequencial
+        const [
+          { getFirebase },
+          { onAuthStateChanged },
+          { collection, query, orderBy, onSnapshot },
+        ] = await Promise.all([
+          import("../lib/firebase"),
+          import("firebase/auth"),
+          import("firebase/firestore"),
+        ]);
 
-        authUnsub = onAuthStateChanged(auth, async (u) => {
+        const { auth, db } = await getFirebase();
+
+        authUnsub = onAuthStateChanged(auth, (u) => {
           if (!u) {
-            setDebugMsg("auth: sem usuário → redirect login");
             window.location.href = "/login";
             return;
           }
 
-          setDebugMsg(`4. usuário ok: ${u.uid.slice(0,8)}... buscando dados...`);
           setUid(u.uid);
           setUserName(u.displayName ?? u.email ?? "Usuário");
           snapUnsub?.();
 
-          try {
-            const {
-              collection, query, orderBy, onSnapshot,
-            } = await import("firebase/firestore");
+          const q = query(
+            collection(db, "users", u.uid, "cashflow"),
+            orderBy("createdAt", "desc")
+          );
 
-            const q = query(
-              collection(db, "users", u.uid, "cashflow"),
-              orderBy("createdAt", "desc")
-            );
-
-            snapUnsub = onSnapshot(
-              q,
-              (snap) => {
-                setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tx)));
-                setPageState("ready");
-              },
-              (err) => {
-                console.error("Firestore onSnapshot:", err);
-                setErrMsg(`Firestore: ${err.message} (code: ${err.code})`);
-                setPageState("error");
-              }
-            );
-          } catch (e: any) {
-            console.error("Firestore setup error:", e);
-            setErrMsg(`Setup Firestore: ${e.message}`);
-            setPageState("error");
-          }
+          snapUnsub = onSnapshot(
+            q,
+            (snap) => {
+              setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tx)));
+              setPageState("ready");
+            },
+            (err) => {
+              setErrMsg(`${err.message} (${err.code})`);
+              setPageState("error");
+            }
+          );
         });
       } catch (e: any) {
-        console.error("Firebase init error:", e);
-        setErrMsg(`Init Firebase: ${e.message}`);
+        setErrMsg(e.message);
         setPageState("error");
       }
     })();
@@ -436,14 +434,15 @@ export default function CashFlowPage() {
   async function handleSave(data: Omit<Tx, "id">) {
     if (!uid) throw new Error("Usuário não autenticado");
 
-    const { getFirebase } = await import("../lib/firebase");
-    const { db }          = await getFirebase();
+    const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
+      import("../lib/firebase"),
+      import("firebase/firestore"),
+    ]);
+    const { db } = await getFirebase();
 
     if (editing) {
-      const { doc, updateDoc } = await import("firebase/firestore");
       await updateDoc(doc(db, "users", uid, "cashflow", editing.id), data as any);
     } else {
-      const { collection, addDoc } = await import("firebase/firestore");
       await addDoc(collection(db, "users", uid, "cashflow"), data);
     }
   }
@@ -453,9 +452,11 @@ export default function CashFlowPage() {
     if (!confirmId || !uid || deleting) return;
     setDeleting(true);
     try {
-      const { getFirebase }    = await import("../lib/firebase");
-      const { db }             = await getFirebase();
-      const { doc, deleteDoc } = await import("firebase/firestore");
+      const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
+        import("../lib/firebase"),
+        import("firebase/firestore"),
+      ]);
+      const { db } = await getFirebase();
       await deleteDoc(doc(db, "users", uid, "cashflow", confirmId));
       setConfirmId(null);
     } catch (e: any) {
@@ -489,10 +490,9 @@ export default function CashFlowPage() {
 
   // ── Loading / Error ───────────────────────────────────────────────────────
   if (pageState === "loading") return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3 p-6">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
       <div className="w-10 h-10 border-2 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
       <p className="text-slate-400 text-sm">Carregando…</p>
-      <p className="text-slate-300 text-xs text-center max-w-xs font-mono">{debugMsg}</p>
     </div>
   );
 
