@@ -354,6 +354,7 @@ export default function CashFlowPage() {
   const [txs,       setTxs]       = useState<Tx[]>([]);
   const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
   const [errMsg,    setErrMsg]    = useState("");
+  const [debugMsg,  setDebugMsg]  = useState("iniciando...");
 
   const [collapsed, setCollapsed] = useState(false);
   const [sideOpen,  setSideOpen]  = useState(false);
@@ -371,21 +372,23 @@ export default function CashFlowPage() {
 
     (async () => {
       try {
-        // Uma única chamada async — resolve Auth e Firestore juntos
+        setDebugMsg("1. importando firebase...");
         const { getFirebase }        = await import("../lib/firebase");
+        setDebugMsg("2. inicializando app...");
         const { auth, db }           = await getFirebase();
+        setDebugMsg("3. firebase ok, aguardando auth...");
         const { onAuthStateChanged } = await import("firebase/auth");
 
         authUnsub = onAuthStateChanged(auth, async (u) => {
           if (!u) {
+            setDebugMsg("auth: sem usuário → redirect login");
             window.location.href = "/login";
             return;
           }
 
+          setDebugMsg(`4. usuário ok: ${u.uid.slice(0,8)}... buscando dados...`);
           setUid(u.uid);
           setUserName(u.displayName ?? u.email ?? "Usuário");
-
-          // Cancela listener anterior se o usuário mudou
           snapUnsub?.();
 
           try {
@@ -406,19 +409,19 @@ export default function CashFlowPage() {
               },
               (err) => {
                 console.error("Firestore onSnapshot:", err);
-                setErrMsg(err.message);
+                setErrMsg(`Firestore: ${err.message} (code: ${err.code})`);
                 setPageState("error");
               }
             );
           } catch (e: any) {
             console.error("Firestore setup error:", e);
-            setErrMsg(e.message);
+            setErrMsg(`Setup Firestore: ${e.message}`);
             setPageState("error");
           }
         });
       } catch (e: any) {
         console.error("Firebase init error:", e);
-        setErrMsg(e.message);
+        setErrMsg(`Init Firebase: ${e.message}`);
         setPageState("error");
       }
     })();
@@ -486,25 +489,24 @@ export default function CashFlowPage() {
 
   // ── Loading / Error ───────────────────────────────────────────────────────
   if (pageState === "loading") return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3 p-6">
       <div className="w-10 h-10 border-2 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
       <p className="text-slate-400 text-sm">Carregando…</p>
+      <p className="text-slate-300 text-xs text-center max-w-xs font-mono">{debugMsg}</p>
     </div>
   );
 
   if (pageState === "error") return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3 p-6 text-center">
-      <p className="text-rose-500 font-bold">Erro ao conectar</p>
-      <p className="text-slate-400 text-sm max-w-sm">{errMsg}</p>
-      <p className="text-slate-400 text-xs max-w-sm">
-        Verifique as <strong>regras do Firestore</strong> e as <strong>variáveis de ambiente</strong> na Vercel.
-      </p>
-      <button onClick={() => window.location.reload()}
-        className="mt-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
-        Tentar novamente
-      </button>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <p className="text-rose-500 font-bold text-lg">Erro ao conectar</p>
+      <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 max-w-sm w-full text-left">
+        <p className="text-rose-700 text-xs font-mono break-all">{errMsg || "Erro desconhecido"}</p>
+      </div>
+      <p className="text-slate-400 text-xs max-w-sm">uid capturado: <span className="font-mono">{uid ?? "nenhum — auth falhou"}</span></p>
+      <button onClick={() => window.location.reload()} className="mt-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">Tentar novamente</button>
     </div>
   );
+
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
