@@ -1,164 +1,136 @@
 "use client";
 
-// ─── CRÍTICO: impede o Next.js de tentar fazer prerender desta página ─────────
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
-  LayoutDashboard,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  CreditCard,
-  FileText,
-  Users,
-  Bell,
-  Search,
-  ChevronDown,
-  ArrowUpRight,
-  ArrowDownRight,
-  MoreHorizontal,
-  ClipboardList,
-  Settings,
-  LogOut,
-  ChevronRight,
-  AlertCircle,
-  Clock,
-  Wallet,
-  BarChart2,
-  RefreshCw,
-  Calendar,
-  Download,
-  Filter,
-  X,
-  Menu,
+  TrendingUp, Plus, X, Check, ArrowUpRight, ArrowDownRight,
+  Search, Calendar, ChevronDown, Trash2, Edit3, ClipboardList,
+  LayoutDashboard, FileText, CreditCard, Settings, BarChart2,
+  Users, DollarSign, LogOut, Menu, Bell, Loader2, Wallet,
+  ShoppingCart, Briefcase, UserCheck, PiggyBank, CircleDollarSign,
+  Truck, UsersRound, Building2, Receipt, Megaphone, Monitor, Package,
+  BanknoteArrowUp, BanknoteArrowDown,
+  type LucideIcon,
 } from "lucide-react";
-import OnboardingModal from "../components/OnboardingModal";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Tipos ───────────────────────────────────────────────────────────────────
 
-const kpis = [
-  { label: "Receita bruta",   value: "R$ 1.248.390", change: "+14.2%", up: true,  sub: "vs. mês anterior", icon: TrendingUp,  color: "blue"    },
-  { label: "Despesas totais", value: "R$ 892.140",   change: "+3.8%",  up: false, sub: "vs. mês anterior", icon: CreditCard,  color: "rose"    },
-  { label: "Lucro líquido",   value: "R$ 356.250",   change: "+28.6%", up: true,  sub: "vs. mês anterior", icon: Wallet,      color: "emerald" },
-  { label: "Inadimplência",   value: "3.1%",          change: "-0.4%",  up: true,  sub: "vs. mês anterior", icon: AlertCircle, color: "amber"   },
-];
+type TxType = "entrada" | "saida";
 
-const months      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const revenueData = [680,820,740,960,880,1050,970,1120,1040,1248,0,0];
-const expenseData = [510,630,580,720,690,800,750,860,810,892,0,0];
+interface Tx {
+  id: string;
+  type: TxType;
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+  note: string;
+  createdAt: number;
+}
 
-const transactions = [
-  { id: "TXN-8841", name: "Fornecedor Alpha Ltda",  type: "Pagamento",   amount: -42800,  date: "Hoje, 09:14",   status: "pago"      },
-  { id: "TXN-8840", name: "Cliente Beta S.A.",       type: "Recebimento", amount:  98500,  date: "Hoje, 08:30",   status: "recebido"  },
-  { id: "TXN-8839", name: "Aluguel sede",            type: "Pagamento",   amount: -18500,  date: "Ontem, 17:02",  status: "pago"      },
-  { id: "TXN-8838", name: "Gama Consultoria",        type: "Recebimento", amount:  55000,  date: "Ontem, 14:45",  status: "recebido"  },
-  { id: "TXN-8837", name: "Folha de pagamento",      type: "Pagamento",   amount: -210000, date: "28 out, 10:00", status: "pago"      },
-  { id: "TXN-8836", name: "Delta Tecnologia Ltda",   type: "Recebimento", amount: 134000,  date: "27 out, 16:20", status: "pendente"  },
-];
+// ─── Constantes ──────────────────────────────────────────────────────────────
 
-const upcomingBills = [
-  { name: "Simples Nacional",      due: "05/11", amount: 12400, urgent: true  },
-  { name: "Seguro empresarial",    due: "08/11", amount:  4800, urgent: false },
-  { name: "Licença de software",   due: "10/11", amount:  2200, urgent: false },
-  { name: "Parcela financiamento", due: "15/11", amount: 28000, urgent: false },
-];
+const TODAY = new Date().toISOString().split("T")[0];
 
-const costCenters = [
-  { name: "Operações",      pct: 38, color: "#1565c0" },
-  { name: "Comercial",      pct: 26, color: "#42a5f5" },
-  { name: "Administrativo", pct: 20, color: "#90caf9" },
-  { name: "TI",             pct: 10, color: "#bbdefb" },
-  { name: "Outros",         pct:  6, color: "#e3f2fd" },
-];
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard",        href: "/dashboard",   active: true  },
-  { icon: TrendingUp,      label: "Fluxo de caixa",   href: "/fluxo-caixa", active: false },
-  { icon: FileText,        label: "Relatórios",        href: "#",            active: false },
-  { icon: CreditCard,      label: "Contas a pagar",    href: "#",            active: false },
-  { icon: DollarSign,      label: "Contas a receber",  href: "#",            active: false },
-  { icon: BarChart2,       label: "Centro de custos",  href: "#",            active: false },
-  { icon: Users,           label: "Usuários",          href: "#",            active: false },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const fmt = (n: number) =>
-  n < 0 ? `- R$ ${Math.abs(n).toLocaleString("pt-BR")}` : `R$ ${n.toLocaleString("pt-BR")}`;
-
-const maxBar = Math.max(...revenueData.filter(Boolean));
-
-const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
-  blue:    { bg: "rgba(21,101,192,0.1)",  text: "#42a5f5", icon: "rgba(21,101,192,0.15)" },
-  rose:    { bg: "rgba(244,63,94,0.08)",  text: "#fb7185", icon: "rgba(244,63,94,0.12)"  },
-  emerald: { bg: "rgba(16,185,129,0.08)", text: "#34d399", icon: "rgba(16,185,129,0.12)" },
-  amber:   { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", icon: "rgba(245,158,11,0.12)" },
+const CAT: Record<TxType, string[]> = {
+  entrada: ["Vendas", "Serviços prestados", "Recebimento de clientes", "Investimentos", "Outros recebimentos"],
+  saida:   ["Fornecedores", "Folha de pagamento", "Aluguel", "Impostos", "Marketing", "TI / Software", "Outros gastos"],
 };
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+const CAT_ICON: Record<string, LucideIcon> = {
+  "Vendas":                  ShoppingCart,
+  "Serviços prestados":      Briefcase,
+  "Recebimento de clientes": UserCheck,
+  "Investimentos":           PiggyBank,
+  "Outros recebimentos":     CircleDollarSign,
+  "Fornecedores":            Truck,
+  "Folha de pagamento":      UsersRound,
+  "Aluguel":                 Building2,
+  "Impostos":                Receipt,
+  "Marketing":               Megaphone,
+  "TI / Software":           Monitor,
+  "Outros gastos":           Package,
+};
 
-function Sidebar({
-  collapsed,
-  mobileOpen,
-  onClose,
-}: {
-  collapsed: boolean;
-  mobileOpen: boolean;
-  onClose: () => void;
+const NAV = [
+  { icon: LayoutDashboard, label: "Dashboard",       href: "/dashboard"    },
+  { icon: TrendingUp,      label: "Fluxo de caixa",  href: "/fluxo-caixa", active: true },
+  { icon: FileText,        label: "Relatórios",       href: "#"             },
+  { icon: CreditCard,      label: "Contas a pagar",   href: "#"             },
+  { icon: DollarSign,      label: "Contas a receber", href: "#"             },
+  { icon: BarChart2,       label: "Centro de custos", href: "#"             },
+  { icon: Users,           label: "Usuários",         href: "#"             },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const toBRL = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const labelDate = (d: string) =>
+  new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+
+function parseAmount(raw: string): number {
+  const s = raw.trim().replace(/[^\d,.]/g, "");
+  if (!s) return 0;
+  if (s.includes(",")) return parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
+  return parseFloat(s) || 0;
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+function Sidebar({ collapsed, open, onClose }: {
+  collapsed: boolean; open: boolean; onClose: () => void;
 }) {
   return (
     <>
-      {mobileOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
-      )}
+      {open && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />}
       <aside
-        className={`sidebar fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+        id="cf-sidebar"
         style={{ width: collapsed ? 72 : 230 }}
+        className={`fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300 overflow-hidden
+          ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-between gap-3 px-5 py-6 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
-              <ClipboardList size={16} className="text-white" />
-            </div>
-            {!collapsed && (
-              <span className="text-white font-bold text-lg tracking-tight whitespace-nowrap">
-                Nexus<span className="text-blue-400">Fi</span>
-              </span>
-            )}
+        <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
+            <ClipboardList size={15} className="text-white" />
           </div>
-          <button onClick={onClose} className="lg:hidden text-white/40 hover:text-white">
-            <X size={18} />
+          {!collapsed && (
+            <span className="text-white font-bold text-base truncate">
+              Nexus<span className="text-blue-400">Fi</span>
+            </span>
+          )}
+          <button onClick={onClose} className="lg:hidden text-white/40 hover:text-white ml-auto shrink-0">
+            <X size={16} />
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto overflow-x-hidden">
-          {navItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className={`nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
-                ${item.active ? "bg-blue-500/20 text-white" : "text-blue-200/50 hover:text-white hover:bg-white/5"}`}
+        <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
+          {NAV.map((item) => (
+            <a key={item.label} href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                ${"active" in item
+                  ? "bg-blue-500/20 text-white"
+                  : "text-blue-200/50 hover:text-white hover:bg-white/5"}`}
             >
-              <item.icon size={18} className="shrink-0" />
-              {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
-              {!collapsed && item.active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
+              <item.icon size={17} className="shrink-0" />
+              {!collapsed && <span className="truncate">{item.label}</span>}
+              {"active" in item && !collapsed && (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+              )}
             </a>
           ))}
         </nav>
 
-        {/* Bottom */}
-        <div className="px-3 pb-6 space-y-1 border-t border-white/5 pt-4">
-          <button className="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-white hover:bg-white/5 text-sm font-medium transition-all">
-            <Settings size={18} className="shrink-0" />
-            {!collapsed && <span>Configurações</span>}
+        <div className="px-2 pb-5 pt-3 border-t border-white/5 shrink-0 space-y-0.5">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-white hover:bg-white/5 text-sm">
+            <Settings size={17} className="shrink-0" />
+            {!collapsed && "Configurações"}
           </button>
-          <button className="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-rose-400 hover:bg-rose-500/5 text-sm font-medium transition-all">
-            <LogOut size={18} className="shrink-0" />
-            {!collapsed && <span>Sair</span>}
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-rose-400 hover:bg-rose-500/5 text-sm">
+            <LogOut size={17} className="shrink-0" />
+            {!collapsed && "Sair"}
           </button>
         </div>
       </aside>
@@ -166,478 +138,645 @@ function Sidebar({
   );
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
+// ─── Modal ────────────────────────────────────────────────────────────────────
 
-function KpiCard({ kpi, delay }: { kpi: typeof kpis[0]; delay: number }) {
-  const c = colorMap[kpi.color];
+function Modal({ open, editing, onClose, onSave }: {
+  open: boolean;
+  editing: Tx | null;
+  onClose: () => void;
+  onSave: (data: Omit<Tx, "id">) => Promise<void>;
+}) {
+  const [type,   setType]   = useState<TxType>("entrada");
+  const [desc,   setDesc]   = useState("");
+  const [cat,    setCat]    = useState("");
+  const [rawAmt, setRawAmt] = useState("");
+  const [date,   setDate]   = useState(TODAY);
+  const [note,   setNote]   = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err,    setErr]    = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setType(editing?.type ?? "entrada");
+    setDesc(editing?.description ?? "");
+    setCat(editing?.category ?? "");
+    setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
+    setDate(editing?.date ?? TODAY);
+    setNote(editing?.note ?? "");
+    setSaving(false);
+    setErr("");
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!open) return null;
+
+  const amount  = parseAmount(rawAmt);
+  const descOk  = desc.trim().length >= 2;
+  const catOk   = cat !== "";
+  const amtOk   = amount > 0;
+  const dateOk  = date !== "";
+  const canSave = descOk && catOk && amtOk && dateOk;
+
+  const missing = [
+    !descOk && "descrição",
+    !catOk  && "categoria",
+    !amtOk  && "valor",
+    !dateOk && "data",
+  ].filter(Boolean).join(", ");
+
+  async function submit() {
+    if (!canSave || saving) return;
+    setSaving(true);
+    setErr("");
+    try {
+      await onSave({
+        type,
+        description: desc.trim(),
+        category: cat,
+        amount,
+        date,
+        note: note.trim(),
+        createdAt: editing?.createdAt ?? Date.now(),
+      });
+      onClose();
+    } catch (e: any) {
+      setErr(e?.message ?? "Erro ao salvar");
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3 md:gap-4" style={{ animationDelay: `${delay}ms` }}>
-      <div className="flex items-start justify-between">
-        <p className="text-slate-400 text-xs font-medium">{kpi.label}</p>
-        <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
-          <kpi.icon size={16} style={{ color: c.text }} />
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ background: "rgba(10,22,40,0.7)", backdropFilter: "blur(6px)" }}
+    >
+      <div
+        className="w-full sm:max-w-md bg-white sm:rounded-2xl rounded-t-3xl overflow-hidden"
+        style={{ boxShadow: "0 32px 80px rgba(10,22,40,0.3)", animation: "mIn .25s cubic-bezier(.22,.68,0,1.2)" }}
+      >
+        {/* Handle mobile */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1.5 rounded-full bg-slate-200" />
         </div>
-      </div>
-      <div>
-        <p className="text-blue-950 text-xl md:text-2xl font-extrabold leading-tight mb-1">{kpi.value}</p>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: c.bg, color: c.text }}>
-            {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-            {kpi.change}
-          </span>
-          <span className="text-slate-400 text-xs">{kpi.sub}</span>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div>
+            <p className="text-blue-950 font-extrabold text-base">
+              {editing ? "Editar transação" : "Nova transação"}
+            </p>
+            <p className="text-slate-400 text-xs">Preencha todos os campos *</p>
+          </div>
+          <button
+            onClick={() => !saving && onClose()}
+            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "78vh" }}>
+          {err && (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 text-rose-600 text-xs">
+              ⚠ {err}
+            </div>
+          )}
+
+          {/* Tipo */}
+          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+            {(["entrada", "saida"] as TxType[]).map((t) => (
+              <button key={t}
+                onClick={() => { setType(t); setCat(""); }}
+                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all
+                  ${type === t
+                    ? t === "entrada" ? "bg-emerald-500 text-white shadow-md" : "bg-rose-500 text-white shadow-md"
+                    : "text-slate-400 hover:text-slate-600"}`}
+              >
+                {t === "entrada" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
+                {t === "entrada" ? "Entrada" : "Saída"}
+              </button>
+            ))}
+          </div>
+
+          {/* Descrição */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Descrição *</label>
+            <input
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="Ex: Cliente XYZ, Aluguel…"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+            />
+          </div>
+
+          {/* Categoria */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Categoria *</label>
+            <div className="relative">
+              <select
+                value={cat}
+                onChange={(e) => setCat(e.target.value)}
+                className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-9 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+              >
+                <option value="">— Selecione —</option>
+                {CAT[type].map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Valor + Data */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Valor (R$) *</label>
+              <input
+                inputMode="decimal"
+                value={rawAmt}
+                onChange={(e) => setRawAmt(e.target.value)}
+                placeholder="0,00"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+              />
+              {rawAmt.length > 0 && !amtOk && <p className="text-xs text-rose-400">Valor inválido</p>}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Data *</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Observação */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Observação <span className="text-slate-300 font-normal normal-case">(opcional)</span>
+            </label>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="NF, contrato, parcela…"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+            />
+          </div>
+
+          {/* Botão */}
+          <button
+            onClick={submit}
+            disabled={!canSave || saving}
+            className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all
+              ${canSave && !saving
+                ? type === "entrada"
+                  ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-100"
+                  : "bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-100"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
+          >
+            {saving
+              ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
+              : <><Check size={15} /> {editing ? "Salvar alterações" : type === "entrada" ? "Registrar entrada" : "Registrar saída"}</>}
+          </button>
+
+          {!canSave && (
+            <p className="text-center text-rose-400 text-xs font-medium">Faltando: {missing}</p>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Página principal ─────────────────────────────────────────────────────────
 
-export default function Dashboard() {
-  const [collapsed, setCollapsed]           = useState(false);
-  const [mobileOpen, setMobileOpen]         = useState(false);
-  const [period]                             = useState("Out 2024");
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  const [user, setUser]                     = useState<{ displayName: string | null; email: string | null } | null>(null);
-  const [loading, setLoading]               = useState(true);
+export default function CashFlowPage() {
+  const [uid,       setUid]       = useState<string | null>(null);
+  const [userName,  setUserName]  = useState("");
+  const [txs,       setTxs]       = useState<Tx[]>([]);
+  const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
+  const [errMsg,    setErrMsg]    = useState("");
 
-  // Auth rápido — mesmo padrão do cashflow, sem triple async chain
+  const [collapsed, setCollapsed] = useState(false);
+  const [sideOpen,  setSideOpen]  = useState(false);
+  const [modal,     setModal]     = useState(false);
+  const [editing,   setEditing]   = useState<Tx | null>(null);
+  const [filter,    setFilter]    = useState<"all" | TxType>("all");
+  const [search,    setSearch]    = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleting,  setDeleting]  = useState(false);
+
+  // ── Firebase: Auth + Firestore ────────────────────────────────────────────
   useEffect(() => {
-    let unsub: (() => void) | undefined;
+    let snapUnsub: (() => void) | undefined;
+    let authUnsub: (() => void) | undefined;
+
     (async () => {
-      const { getFirebase }        = await import("../lib/firebase");
-      const { auth }               = await getFirebase();
-      const { onAuthStateChanged } = await import("firebase/auth");
-      unsub = onAuthStateChanged(auth, (u) => {
-        if (!u) { window.location.href = "/login"; return; }
-        setUser({ displayName: u.displayName, email: u.email });
-        setLoading(false);
-      });
+      try {
+        // Uma única chamada async — resolve Auth e Firestore juntos
+        const { getFirebase }        = await import("../lib/firebase");
+        const { auth, db }           = await getFirebase();
+        const { onAuthStateChanged } = await import("firebase/auth");
+
+        authUnsub = onAuthStateChanged(auth, async (u) => {
+          if (!u) {
+            window.location.href = "/login";
+            return;
+          }
+
+          setUid(u.uid);
+          setUserName(u.displayName ?? u.email ?? "Usuário");
+
+          // Cancela listener anterior se o usuário mudou
+          snapUnsub?.();
+
+          try {
+            const {
+              collection, query, orderBy, onSnapshot,
+            } = await import("firebase/firestore");
+
+            const q = query(
+              collection(db, "users", u.uid, "cashflow"),
+              orderBy("createdAt", "desc")
+            );
+
+            snapUnsub = onSnapshot(
+              q,
+              (snap) => {
+                setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tx)));
+                setPageState("ready");
+              },
+              (err) => {
+                console.error("Firestore onSnapshot:", err);
+                setErrMsg(err.message);
+                setPageState("error");
+              }
+            );
+          } catch (e: any) {
+            console.error("Firestore setup error:", e);
+            setErrMsg(e.message);
+            setPageState("error");
+          }
+        });
+      } catch (e: any) {
+        console.error("Firebase init error:", e);
+        setErrMsg(e.message);
+        setPageState("error");
+      }
     })();
-    return () => unsub?.();
+
+    return () => {
+      authUnsub?.();
+      snapUnsub?.();
+    };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-slate-400 text-sm">Carregando...</p>
-        </div>
-      </div>
-    );
+  // ── Salvar ───────────────────────────────────────────────────────────────
+  async function handleSave(data: Omit<Tx, "id">) {
+    if (!uid) throw new Error("Usuário não autenticado");
+
+    const { getFirebase } = await import("../lib/firebase");
+    const { db }          = await getFirebase();
+
+    if (editing) {
+      const { doc, updateDoc } = await import("firebase/firestore");
+      await updateDoc(doc(db, "users", uid, "cashflow", editing.id), data as any);
+    } else {
+      const { collection, addDoc } = await import("firebase/firestore");
+      await addDoc(collection(db, "users", uid, "cashflow"), data);
+    }
   }
 
+  // ── Deletar ──────────────────────────────────────────────────────────────
+  async function handleDelete() {
+    if (!confirmId || !uid || deleting) return;
+    setDeleting(true);
+    try {
+      const { getFirebase }    = await import("../lib/firebase");
+      const { db }             = await getFirebase();
+      const { doc, deleteDoc } = await import("firebase/firestore");
+      await deleteDoc(doc(db, "users", uid, "cashflow", confirmId));
+      setConfirmId(null);
+    } catch (e: any) {
+      alert("Erro ao deletar: " + e.message);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // ── Métricas ─────────────────────────────────────────────────────────────
+  const entradas = useMemo(() => txs.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0), [txs]);
+  const saidas   = useMemo(() => txs.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0), [txs]);
+  const saldo    = entradas - saidas;
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return txs
+      .filter(t => filter === "all" || t.type === filter)
+      .filter(t => !q || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
+  }, [txs, filter, search]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, Tx[]>();
+    filtered.forEach(t => {
+      const arr = map.get(t.date) ?? [];
+      arr.push(t);
+      map.set(t.date, arr);
+    });
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [filtered]);
+
+  // ── Loading / Error ───────────────────────────────────────────────────────
+  if (pageState === "loading") return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+      <div className="w-10 h-10 border-2 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+      <p className="text-slate-400 text-sm">Carregando…</p>
+    </div>
+  );
+
+  if (pageState === "error") return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3 p-6 text-center">
+      <p className="text-rose-500 font-bold">Erro ao conectar</p>
+      <p className="text-slate-400 text-sm max-w-sm">{errMsg}</p>
+      <p className="text-slate-400 text-xs max-w-sm">
+        Verifique as <strong>regras do Firestore</strong> e as <strong>variáveis de ambiente</strong> na Vercel.
+      </p>
+      <button onClick={() => window.location.reload()}
+        className="mt-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
+        Tentar novamente
+      </button>
+    </div>
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex bg-slate-50 min-h-screen">
-      {/* ── Modal de onboarding ── */}
-      <OnboardingModal
-        open={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-      />
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-        *, body { font-family: 'Sora', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-
-        .sidebar {
-          background: linear-gradient(180deg, #0a1628 0%, #0d2247 60%, #0e3372 100%);
-          border-right: 1px solid rgba(255,255,255,0.05);
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+        *{font-family:'Sora',sans-serif;box-sizing:border-box}
+        .mono{font-family:'JetBrains Mono',monospace}
+        #cf-sidebar{
+          background:linear-gradient(180deg,#0a1628 0%,#0d2247 60%,#0e3372 100%);
+          border-right:1px solid rgba(255,255,255,.05)
         }
-        .kpi-card {
-          background: white; border: 1px solid #e8eef8;
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          animation: slideUp 0.5s ease both;
-        }
-        .chart-card {
-          background: white; border: 1px solid #e8eef8;
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          border-radius: 1rem; animation: slideUp 0.5s 0.2s ease both;
-        }
-        .side-card {
-          background: white; border: 1px solid #e8eef8;
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          border-radius: 1rem; animation: slideUp 0.5s 0.3s ease both;
-        }
-        @keyframes slideUp {
-          from { opacity:0; transform: translateY(20px); }
-          to   { opacity:1; transform: translateY(0); }
-        }
-        .bar-rev { fill: #1565c0; transition: opacity 0.15s; }
-        .bar-rev:hover { opacity: 0.8; }
-        .bar-exp { fill: #e8eef8; transition: opacity 0.15s; }
-        .bar-exp:hover { opacity: 0.7; }
-        .bar-rev-anim { animation: growBar 0.8s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
-        .bar-exp-anim { animation: growBar 0.8s 0.1s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
-        @keyframes growBar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-        .tx-row { transition: background 0.15s; }
-        .tx-row:hover { background: #f8faff; }
-        .nav-item { cursor: pointer; }
-        .search-input {
-          background: #f1f5fb; border: 1.5px solid transparent; outline: none; transition: all 0.2s;
-        }
-        .search-input:focus {
-          border-color: #1565c0; background: white; box-shadow: 0 0 0 3px rgba(21,101,192,0.08);
-        }
-        .donut-ring { transition: stroke-dashoffset 0.8s cubic-bezier(.22,.68,0,1.2); }
-        .badge-pago     { background:#dcfce7; color:#16a34a; }
-        .badge-recebido { background:#dbeafe; color:#1d4ed8; }
-        .badge-pendente { background:#fef9c3; color:#b45309; }
-        .collapse-btn {
-          background: white; border: 1px solid #e8eef8;
-          box-shadow: 0 2px 8px rgba(13,34,71,0.08); transition: all 0.15s;
-        }
-        .collapse-btn:hover { background: #f0f5ff; }
-        .header-shadow { box-shadow: 0 1px 0 #e8eef8; }
-        .bottom-nav {
-          background: white; border-top: 1px solid #e8eef8;
-          box-shadow: 0 -4px 20px rgba(13,34,71,0.06);
-        }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #d0daf0; border-radius: 4px; }
+        .card{background:white;border:1px solid #e8eef8;border-radius:16px;box-shadow:0 1px 3px rgba(13,34,71,.06),0 4px 16px rgba(13,34,71,.04)}
+        .hline{box-shadow:0 1px 0 #e8eef8}
+        .tx{border-bottom:1px solid #f1f5f9;transition:background .12s}
+        .tx:last-child{border-bottom:none}
+        .tx:hover{background:#f8faff}
+        .tx:hover .txa{opacity:1;pointer-events:auto}
+        .txa{opacity:0;pointer-events:none;transition:opacity .12s}
+        @media(max-width:639px){.txa{opacity:1;pointer-events:auto}}
+        @keyframes mIn{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+        @keyframes kIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+        .kin{animation:kIn .45s ease both}
+        ::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar-thumb{background:#d0daf0;border-radius:4px}
       `}</style>
 
-      {/* Sidebar desktop */}
+      {/* Sidebars */}
       <div className="hidden lg:block shrink-0" style={{ width: collapsed ? 72 : 230 }}>
-        <Sidebar collapsed={collapsed} mobileOpen={false} onClose={() => {}} />
+        <Sidebar collapsed={collapsed} open={false} onClose={() => {}} />
       </div>
-
-      {/* Sidebar mobile drawer */}
       <div className="lg:hidden">
-        <Sidebar collapsed={false} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+        <Sidebar collapsed={false} open={sideOpen} onClose={() => setSideOpen(false)} />
       </div>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 pb-16 lg:pb-0">
+      {/* Modal nova/editar transação */}
+      <Modal
+        open={modal}
+        editing={editing}
+        onClose={() => { setModal(false); setEditing(null); }}
+        onSave={handleSave}
+      />
 
-        {/* Topbar */}
-        <header className="sticky top-0 z-20 bg-white header-shadow flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setMobileOpen(true)} className="collapse-btn lg:hidden w-9 h-9 rounded-lg flex items-center justify-center">
-              <Menu size={16} className="text-blue-800" />
-            </button>
-            <button onClick={() => setCollapsed(!collapsed)} className="collapse-btn hidden lg:flex w-8 h-8 rounded-lg items-center justify-center">
-              <BarChart2 size={15} className="text-blue-800" />
-            </button>
-            <div>
-              <h1 className="text-blue-950 font-bold text-sm md:text-lg leading-tight">Dashboard financeiro</h1>
-              <p className="text-slate-400 text-xs hidden sm:block">
-                Bem-vindo de volta, {user?.displayName?.split(" ")[0] ?? "Usuário"} 👋
-              </p>
+      {/* Confirmar exclusão */}
+      {confirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(10,22,40,0.65)", backdropFilter: "blur(4px)" }}>
+          <div className="card p-6 w-full max-w-xs text-center">
+            <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-3">
+              <Trash2 size={18} className="text-rose-500" />
+            </div>
+            <p className="text-blue-950 font-bold mb-1 text-sm">Excluir transação?</p>
+            <p className="text-slate-400 text-xs mb-4">Esta ação não pode ser desfeita.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmId(null)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-bold flex items-center justify-center gap-1 transition-colors">
+                {deleting ? <Loader2 size={13} className="animate-spin" /> : <><Trash2 size={13} /> Excluir</>}
+              </button>
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="relative hidden md:block">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input className="search-input rounded-xl pl-9 pr-4 py-2 text-sm text-blue-950 placeholder-slate-400 w-52" placeholder="Buscar transações..." />
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 lg:pb-0">
+
+        {/* Header */}
+        <header className="sticky top-0 z-20 bg-white hline flex items-center justify-between px-4 md:px-6 py-3 shrink-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={() => setSideOpen(true)}
+              className="lg:hidden w-9 h-9 rounded-lg border border-slate-200 bg-white shadow-sm flex items-center justify-center shrink-0">
+              <Menu size={16} className="text-blue-800" />
+            </button>
+            <button onClick={() => setCollapsed(c => !c)}
+              className="hidden lg:flex w-8 h-8 rounded-lg border border-slate-200 bg-white shadow-sm items-center justify-center shrink-0">
+              <BarChart2 size={14} className="text-blue-800" />
+            </button>
+            <div className="min-w-0">
+              <p className="text-blue-950 font-bold text-sm sm:text-base leading-tight">Fluxo de caixa</p>
+              <p className="text-slate-400 text-xs hidden sm:block">Olá, {userName} 👋</p>
             </div>
-            <button className="flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 transition-colors text-blue-700 text-xs font-semibold px-3 py-2 rounded-xl">
-              <Calendar size={12} />
-              <span className="hidden sm:inline">{period}</span>
-              <span className="sm:hidden">Out</span>
-              <ChevronDown size={11} />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => { setEditing(null); setModal(true); }}
+              className="hidden sm:flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors">
+              <Plus size={14} /> Nova transação
             </button>
-            <button className="relative w-9 h-9 rounded-xl bg-slate-50 hover:bg-blue-50 flex items-center justify-center transition-colors">
+            <button className="relative w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center">
               <Bell size={16} className="text-slate-500" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full" />
             </button>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm">
-              {user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shrink-0">
+              {userName[0]?.toUpperCase() ?? "U"}
             </div>
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto">
+        {/* Conteúdo */}
+        <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 overflow-y-auto overflow-x-hidden">
 
           {/* KPIs */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
-            {kpis.map((kpi, i) => <KpiCard key={kpi.label} kpi={kpi} delay={i * 80} />)}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { label: "Total entradas", val: entradas, Icon: ArrowUpRight,   ibg: "#dcfce7", color: "#15803d", delay: "0ms",   sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
+              { label: "Total saídas",   val: saidas,   Icon: ArrowDownRight, ibg: "#ffe4e6", color: "#be123c", delay: "80ms",  sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
+              {
+                label: "Saldo atual", val: saldo, Icon: Wallet,
+                ibg: saldo >= 0 ? "#dbeafe" : "#ffe4e6",
+                color: saldo >= 0 ? "#1d4ed8" : "#be123c",
+                delay: "160ms",
+                sub: saldo >= 0 ? "Resultado positivo ✓" : "Resultado negativo ⚠",
+              },
+            ].map(({ label, val, Icon, ibg, color, delay, sub }) => (
+              <div key={label} className="card kin p-4 flex items-center gap-3" style={{ animationDelay: delay }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: ibg }}>
+                  <Icon size={20} style={{ color }} strokeWidth={2.5} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-slate-400 text-xs truncate">{label}</p>
+                  <p className="font-extrabold text-lg mono leading-tight" style={{ color }}>{toBRL(val)}</p>
+                  <p className="text-slate-400 text-xs truncate">{sub}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Chart + Bills */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-
-            <div className="chart-card xl:col-span-2 p-4 md:p-6">
-              <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2">
-                <div>
-                  <h2 className="text-blue-950 font-bold text-sm md:text-base">Receita vs. Despesas</h2>
-                  <p className="text-slate-400 text-xs mt-0.5">Acumulado 2024 — mensal</p>
-                </div>
-                <div className="flex items-center gap-2 md:gap-4 shrink-0">
-                  <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 inline-block" /> Receita
-                  </div>
-                  <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" /> Despesa
-                  </div>
-                  <button className="flex items-center gap-1 text-xs text-blue-500 font-medium hover:text-blue-700 transition-colors">
-                    <Download size={12} /><span className="hidden sm:inline">Exportar</span>
-                  </button>
-                </div>
-              </div>
-
-              <svg viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}>
-                {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
-                  <g key={i}>
-                    <line x1="40" y1={10+(1-t)*160} x2="590" y2={10+(1-t)*160} stroke="#f1f5f9" strokeWidth="1" />
-                    <text x="32" y={10+(1-t)*160+4} fontSize="9" fill="#94a3b8" textAnchor="end" fontFamily="JetBrains Mono, monospace">
-                      {Math.round(t*maxBar/100)*100===0?"0":`${Math.round(t*maxBar/100)}k`}
-                    </text>
-                  </g>
-                ))}
-                {months.map((m, i) => {
-                  const rev = revenueData[i]; const exp = expenseData[i];
-                  if (!rev) return null;
-                  const bw=22, gap=44, x=48+i*gap;
-                  return (
-                    <g key={m}>
-                      <rect className="bar-rev bar-rev-anim" x={x} y={170-(rev/maxBar)*160} width={bw} height={(rev/maxBar)*160} rx="3" style={{ animationDelay: `${i*60}ms` }} />
-                      <rect className="bar-exp bar-exp-anim" x={x+bw+2} y={170-(exp/maxBar)*160} width={bw} height={(exp/maxBar)*160} rx="3" style={{ animationDelay: `${i*60+30}ms` }} />
-                      <text x={x+bw} y={190} fontSize="9" fill="#94a3b8" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
-                    </g>
-                  );
-                })}
-              </svg>
-
-              <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-slate-100">
-                {[
-                  { label: "Total receitas", val: "R$ 9.51M", color: "text-blue-600"    },
-                  { label: "Total despesas", val: "R$ 7.25M", color: "text-slate-400"   },
-                  { label: "Resultado líq.", val: "R$ 2.26M", color: "text-emerald-500" },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <p className="text-slate-400 text-xs mb-0.5 leading-tight">{s.label}</p>
-                    <p className={`font-bold text-xs md:text-sm mono ${s.color}`}>{s.val}</p>
-                  </div>
-                ))}
-              </div>
+          {/* Toolbar */}
+          <div className="card p-3 space-y-3">
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-blue-950 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+                placeholder="Buscar por descrição ou categoria…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-
-            <div className="side-card p-4 md:p-6 flex flex-col">
-              <div className="flex items-center justify-between mb-4 md:mb-5">
-                <h2 className="text-blue-950 font-bold text-sm md:text-base">Vencimentos próximos</h2>
-                <span className="bg-rose-50 text-rose-500 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  {upcomingBills.filter(b=>b.urgent).length} urgente
-                </span>
-              </div>
-              <div className="space-y-2 md:space-y-3 flex-1">
-                {upcomingBills.map((bill) => (
-                  <div key={bill.name} className="flex items-center justify-between p-2.5 md:p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bill.urgent ? "bg-rose-50" : "bg-blue-50"}`}>
-                        {bill.urgent ? <AlertCircle size={14} className="text-rose-500" /> : <Clock size={14} className="text-blue-400" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-blue-950 text-xs font-semibold leading-tight truncate">{bill.name}</p>
-                        <p className="text-slate-400 text-xs mono">vence {bill.due}</p>
-                      </div>
-                    </div>
-                    <p className={`text-xs font-bold mono shrink-0 ml-2 ${bill.urgent ? "text-rose-500" : "text-blue-950"}`}>
-                      R$ {bill.amount.toLocaleString("pt-BR")}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <button className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-blue-600 text-xs font-semibold border border-blue-100 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
-                Ver todos <ChevronRight size={13} />
-              </button>
+            <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+              {([
+                { f: "all",     label: "Todos",    icon: null              },
+                { f: "entrada", label: "Entradas", icon: BanknoteArrowUp   },
+                { f: "saida",   label: "Saídas",   icon: BanknoteArrowDown },
+              ] as const).map(({ f, label, icon: Icon }) => (
+                <button key={f} onClick={() => setFilter(f)}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 cursor-pointer transition-all
+                    ${filter === f
+                      ? f === "all"     ? "bg-slate-800 text-white border-transparent"
+                      : f === "entrada" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : "bg-rose-50 text-rose-700 border-rose-200"
+                      : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"}`}
+                >
+                  {Icon && <Icon size={13} />}
+                  {label}
+                </button>
+              ))}
+              <span className="ml-auto text-xs text-slate-300 shrink-0">
+                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
 
-          {/* Transactions + Cost Centers */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-
-            <div className="chart-card xl:col-span-2 p-4 md:p-6">
-              <div className="flex items-center justify-between mb-4 md:mb-5">
-                <div>
-                  <h2 className="text-blue-950 font-bold text-sm md:text-base">Últimas transações</h2>
-                  <p className="text-slate-400 text-xs mt-0.5">6 movimentações recentes</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1 bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors">
-                    <Filter size={11} /><span className="hidden sm:inline ml-1">Filtrar</span>
-                  </button>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors">
-                    Ver todas
-                  </button>
-                </div>
+          {/* Lista */}
+          {grouped.length === 0 ? (
+            <div className="card p-10 flex flex-col items-center text-center gap-2">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-1">
+                <TrendingUp size={22} className="text-blue-200" />
               </div>
-
-              {/* Mobile: cards */}
-              <div className="md:hidden space-y-2">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="tx-row flex items-center justify-between p-3 rounded-xl border border-slate-100">
-                    <div className="min-w-0">
-                      <p className="text-blue-950 text-xs font-semibold truncate">{tx.name}</p>
-                      <p className="text-slate-400 text-xs mono">{tx.date}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 ml-3 shrink-0">
-                      <span className={`mono text-xs font-bold ${tx.amount > 0 ? "text-emerald-600" : "text-rose-500"}`}>
-                        {tx.amount > 0 ? "+" : ""}{fmt(tx.amount)}
-                      </span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${tx.status}`}>
-                        {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop: table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-100">
-                      {["ID","Descrição","Tipo","Valor","Data","Status"].map((h) => (
-                        <th key={h} className="text-left text-xs font-semibold text-slate-400 pb-3 pr-4 whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map((tx) => (
-                      <tr key={tx.id} className="tx-row border-b border-slate-50">
-                        <td className="py-3 pr-4"><span className="mono text-xs text-slate-400">{tx.id}</span></td>
-                        <td className="py-3 pr-4"><p className="text-blue-950 text-xs font-semibold">{tx.name}</p></td>
-                        <td className="py-3 pr-4">
-                          <span className={`text-xs font-medium ${tx.amount > 0 ? "text-emerald-600" : "text-slate-500"}`}>{tx.type}</span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className={`mono text-xs font-bold ${tx.amount > 0 ? "text-emerald-600" : "text-rose-500"}`}>
-                            {tx.amount > 0 ? "+" : ""}{fmt(tx.amount)}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-4"><span className="text-slate-400 text-xs whitespace-nowrap">{tx.date}</span></td>
-                        <td className="py-3">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${tx.status}`}>
-                            {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <p className="text-blue-950 font-bold text-sm">
+                {search || filter !== "all" ? "Nenhum resultado" : "Nenhuma transação ainda"}
+              </p>
+              <p className="text-slate-400 text-xs">
+                {search || filter !== "all" ? "Tente mudar os filtros." : "Clique no botão abaixo para começar."}
+              </p>
+              {!search && filter === "all" && (
+                <button onClick={() => { setEditing(null); setModal(true); }}
+                  className="mt-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
+                  <Plus size={14} /> Adicionar transação
+                </button>
+              )}
             </div>
-
-            <div className="side-card p-4 md:p-6 flex flex-col">
-              <div className="flex items-center justify-between mb-4 md:mb-5">
-                <h2 className="text-blue-950 font-bold text-sm md:text-base">Centro de custos</h2>
-                <button className="text-slate-400 hover:text-blue-600 transition-colors"><MoreHorizontal size={16} /></button>
-              </div>
-              <div className="flex justify-center mb-4 md:mb-5">
-                <svg width="130" height="130" viewBox="0 0 140 140">
-                  {(() => {
-                    const circ = 2 * Math.PI * 52;
-                    let offset = 0;
-                    return costCenters.map((cc) => {
-                      const dash = (cc.pct / 100) * circ;
-                      const el = (
-                        <circle key={cc.name} cx={70} cy={70} r={52} fill="none" stroke={cc.color}
-                          strokeWidth={22} strokeDasharray={`${dash} ${circ-dash}`}
-                          strokeDashoffset={-offset} transform="rotate(-90 70 70)" className="donut-ring" />
-                      );
-                      offset += dash;
-                      return el;
-                    });
-                  })()}
-                  <text x="70" y="66" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0d2247" fontFamily="Sora">R$ 892K</text>
-                  <text x="70" y="80" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="Sora">total despesas</text>
-                </svg>
-              </div>
-              <div className="space-y-2.5 flex-1">
-                {costCenters.map((cc) => (
-                  <div key={cc.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cc.color }} />
-                      <span className="text-slate-500 text-xs">{cc.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 md:gap-3">
-                      <div className="w-16 md:w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${cc.pct}%`, background: cc.color }} />
-                      </div>
-                      <span className="mono text-xs text-blue-950 font-semibold w-7 text-right">{cc.pct}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                <span className="text-slate-400 text-xs">Maior custo</span>
-                <span className="text-blue-950 text-xs font-bold">Operações · 38%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Cash Flow */}
-          <div className="chart-card p-4 md:p-6">
-            <div className="flex items-start md:items-center justify-between mb-4 gap-2">
-              <div>
-                <h2 className="text-blue-950 font-bold text-sm md:text-base">Fluxo de caixa — projeção 30 dias</h2>
-                <p className="text-slate-400 text-xs mt-0.5">Baseado em histórico + compromissos agendados</p>
-              </div>
-              <button className="flex items-center gap-1 text-slate-400 hover:text-blue-600 text-xs font-medium transition-colors shrink-0">
-                <RefreshCw size={12} /><span className="hidden sm:inline ml-1">Atualizar</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
-              {[
-                { label: "Saldo atual",        val: "R$ 1.248.390",  icon: Wallet,       color: "blue",    note: "em conta corrente" },
-                { label: "Entradas previstas", val: "+ R$ 643.000",  icon: TrendingUp,   color: "emerald", note: "próximos 30 dias"  },
-                { label: "Saídas agendadas",   val: "- R$ 418.500",  icon: TrendingDown, color: "rose",    note: "próximos 30 dias"  },
-              ].map((item) => {
-                const cMap: Record<string, { bg: string; text: string; icon: string }> = {
-                  blue:    { bg: "#eff6ff", text: "#1d4ed8", icon: "#dbeafe" },
-                  emerald: { bg: "#f0fdf4", text: "#15803d", icon: "#dcfce7" },
-                  rose:    { bg: "#fff1f2", text: "#be123c", icon: "#ffe4e6" },
-                };
-                const c = cMap[item.color];
+          ) : (
+            <div className="space-y-3">
+              {grouped.map(([date, items]) => {
+                const net = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
                 return (
-                  <div key={item.label} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl" style={{ background: c.bg }}>
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
-                      <item.icon size={18} style={{ color: c.text }} />
+                  <div key={date} className="card overflow-hidden">
+                    {/* Header data */}
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={12} className="text-slate-400" />
+                        <span className="text-slate-600 text-xs font-semibold">{labelDate(date)}</span>
+                        <span className="text-slate-300 text-xs">· {items.length}</span>
+                      </div>
+                      <span className={`mono text-xs font-bold ${net >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                        {net >= 0 ? "+" : ""}{toBRL(net)}
+                      </span>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium mb-0.5" style={{ color: c.text }}>{item.label}</p>
-                      <p className="font-extrabold text-base md:text-lg mono truncate" style={{ color: c.text }}>{item.val}</p>
-                      <p className="text-xs opacity-60" style={{ color: c.text }}>{item.note}</p>
-                    </div>
+
+                    {/* Transações */}
+                    {items.map((tx) => {
+                      const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
+                      return (
+                        <div key={tx.id} className="tx flex items-center gap-3 px-4 py-3">
+                          {/* Ícone categoria */}
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${tx.type === "entrada" ? "bg-emerald-50" : "bg-rose-50"}`}>
+                            <CatIcon size={17} className={tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"} />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start sm:items-center gap-1 sm:gap-2 flex-col sm:flex-row">
+                              <span className="text-blue-950 text-sm font-semibold truncate">{tx.description}</span>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0
+                                ${tx.type === "entrada" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                                {tx.category}
+                              </span>
+                            </div>
+                            {tx.note && <p className="text-slate-400 text-xs mt-0.5 truncate">{tx.note}</p>}
+                          </div>
+
+                          {/* Valor */}
+                          <span className={`mono text-sm font-bold shrink-0 ${tx.type === "entrada" ? "text-emerald-600" : "text-rose-500"}`}>
+                            {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
+                          </span>
+
+                          {/* Ações */}
+                          <div className="txa flex items-center gap-1 shrink-0">
+                            <button onClick={() => { setEditing(tx); setModal(true); }}
+                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center text-slate-400 transition-colors">
+                              <Edit3 size={12} />
+                            </button>
+                            <button onClick={() => setConfirmId(tx.id)}
+                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-500 flex items-center justify-center text-slate-400 transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
             </div>
-            <div className="mt-4 md:mt-5">
-              <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-                <span>Saldo projetado final</span>
-                <span className="mono font-semibold text-emerald-600">R$ 1.472.890 <span className="text-slate-400 font-normal">(+18.0%)</span></span>
-              </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: "72%", background: "linear-gradient(90deg, #1565c0, #42a5f5)" }} />
-              </div>
-              <div className="flex justify-between text-xs text-slate-300 mt-1 mono">
-                <span>R$ 0</span><span>Meta: R$ 2M</span>
-              </div>
-            </div>
-          </div>
-
+          )}
         </main>
       </div>
 
-      {/* Bottom nav mobile */}
-      <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-30 flex lg:hidden justify-around items-center py-2 px-2">
+      {/* FAB mobile */}
+      <button
+        onClick={() => { setEditing(null); setModal(true); }}
+        className="lg:hidden fixed z-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
+        style={{ bottom: 74, right: 18, width: 54, height: 54, boxShadow: "0 8px 28px rgba(21,101,192,.5)" }}
+      >
+        <Plus size={24} />
+      </button>
+
+      {/* Bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-white border-t border-slate-100 flex justify-around items-center py-1.5"
+        style={{ boxShadow: "0 -4px 20px rgba(13,34,71,.06)" }}>
         {[
-          { icon: LayoutDashboard, label: "Início",     href: "/dashboard",   active: true  },
-          { icon: TrendingUp,      label: "Caixa",      href: "/fluxo-caixa", active: false },
+          { icon: LayoutDashboard, label: "Início",     href: "/dashboard",   active: false },
+          { icon: TrendingUp,      label: "Caixa",      href: "/fluxo-caixa", active: true  },
           { icon: FileText,        label: "Relatórios", href: "#",            active: false },
           { icon: CreditCard,      label: "Contas",     href: "#",            active: false },
           { icon: Settings,        label: "Config.",    href: "#",            active: false },
         ].map((item) => (
           <a key={item.label} href={item.href}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all
-              ${item.active ? "text-blue-600" : "text-slate-400 hover:text-blue-500"}`}
-          >
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${item.active ? "text-blue-600" : "text-slate-400"}`}>
             <item.icon size={20} strokeWidth={item.active ? 2.5 : 1.8} />
             <span className="text-xs font-medium">{item.label}</span>
           </a>
