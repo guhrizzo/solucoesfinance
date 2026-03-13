@@ -38,48 +38,48 @@ import OnboardingModal from "../components/OnboardingModal";
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const kpis = [
-  { label: "Receita bruta",   value: "R$ 1.248.390", change: "+14.2%", up: true,  sub: "vs. mês anterior", icon: TrendingUp,  color: "blue"    },
-  { label: "Despesas totais", value: "R$ 892.140",   change: "+3.8%",  up: false, sub: "vs. mês anterior", icon: CreditCard,  color: "rose"    },
-  { label: "Lucro líquido",   value: "R$ 356.250",   change: "+28.6%", up: true,  sub: "vs. mês anterior", icon: Wallet,      color: "emerald" },
-  { label: "Inadimplência",   value: "3.1%",          change: "-0.4%",  up: true,  sub: "vs. mês anterior", icon: AlertCircle, color: "amber"   },
+  { label: "Receita bruta", value: "R$ 1.248.390", change: "+14.2%", up: true, sub: "vs. mês anterior", icon: TrendingUp, color: "blue" },
+  { label: "Despesas totais", value: "R$ 892.140", change: "+3.8%", up: false, sub: "vs. mês anterior", icon: CreditCard, color: "rose" },
+  { label: "Lucro líquido", value: "R$ 356.250", change: "+28.6%", up: true, sub: "vs. mês anterior", icon: Wallet, color: "emerald" },
+  { label: "Inadimplência", value: "3.1%", change: "-0.4%", up: true, sub: "vs. mês anterior", icon: AlertCircle, color: "amber" },
 ];
 
-const months      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const revenueData = [680,820,740,960,880,1050,970,1120,1040,1248,0,0];
-const expenseData = [510,630,580,720,690,800,750,860,810,892,0,0];
+const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const revenueData = [680, 820, 740, 960, 880, 1050, 970, 1120, 1040, 1248, 0, 0];
+const expenseData = [510, 630, 580, 720, 690, 800, 750, 860, 810, 892, 0, 0];
 
 const transactions = [
-  { id: "TXN-8841", name: "Fornecedor Alpha Ltda",  type: "Pagamento",   amount: -42800,  date: "Hoje, 09:14",   status: "pago"      },
-  { id: "TXN-8840", name: "Cliente Beta S.A.",       type: "Recebimento", amount:  98500,  date: "Hoje, 08:30",   status: "recebido"  },
-  { id: "TXN-8839", name: "Aluguel sede",            type: "Pagamento",   amount: -18500,  date: "Ontem, 17:02",  status: "pago"      },
-  { id: "TXN-8838", name: "Gama Consultoria",        type: "Recebimento", amount:  55000,  date: "Ontem, 14:45",  status: "recebido"  },
-  { id: "TXN-8837", name: "Folha de pagamento",      type: "Pagamento",   amount: -210000, date: "28 out, 10:00", status: "pago"      },
-  { id: "TXN-8836", name: "Delta Tecnologia Ltda",   type: "Recebimento", amount: 134000,  date: "27 out, 16:20", status: "pendente"  },
+  { id: "TXN-8841", name: "Fornecedor Alpha Ltda", type: "Pagamento", amount: -42800, date: "Hoje, 09:14", status: "pago" },
+  { id: "TXN-8840", name: "Cliente Beta S.A.", type: "Recebimento", amount: 98500, date: "Hoje, 08:30", status: "recebido" },
+  { id: "TXN-8839", name: "Aluguel sede", type: "Pagamento", amount: -18500, date: "Ontem, 17:02", status: "pago" },
+  { id: "TXN-8838", name: "Gama Consultoria", type: "Recebimento", amount: 55000, date: "Ontem, 14:45", status: "recebido" },
+  { id: "TXN-8837", name: "Folha de pagamento", type: "Pagamento", amount: -210000, date: "28 out, 10:00", status: "pago" },
+  { id: "TXN-8836", name: "Delta Tecnologia Ltda", type: "Recebimento", amount: 134000, date: "27 out, 16:20", status: "pendente" },
 ];
 
 const upcomingBills = [
-  { name: "Simples Nacional",      due: "05/11", amount: 12400, urgent: true  },
-  { name: "Seguro empresarial",    due: "08/11", amount:  4800, urgent: false },
-  { name: "Licença de software",   due: "10/11", amount:  2200, urgent: false },
+  { name: "Simples Nacional", due: "05/11", amount: 12400, urgent: true },
+  { name: "Seguro empresarial", due: "08/11", amount: 4800, urgent: false },
+  { name: "Licença de software", due: "10/11", amount: 2200, urgent: false },
   { name: "Parcela financiamento", due: "15/11", amount: 28000, urgent: false },
 ];
 
 const costCenters = [
-  { name: "Operações",      pct: 38, color: "#1565c0" },
-  { name: "Comercial",      pct: 26, color: "#42a5f5" },
+  { name: "Operações", pct: 38, color: "#1565c0" },
+  { name: "Comercial", pct: 26, color: "#42a5f5" },
   { name: "Administrativo", pct: 20, color: "#90caf9" },
-  { name: "TI",             pct: 10, color: "#bbdefb" },
-  { name: "Outros",         pct:  6, color: "#e3f2fd" },
+  { name: "TI", pct: 10, color: "#bbdefb" },
+  { name: "Outros", pct: 6, color: "#e3f2fd" },
 ];
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard",        href: "/dashboard",   active: true  },
-  { icon: TrendingUp,      label: "Fluxo de caixa",   href: "/fluxo-caixa", active: false },
-  { icon: FileText,        label: "Relatórios",        href: "#",            active: false },
-  { icon: CreditCard,      label: "Contas a pagar",    href: "#",            active: false },
-  { icon: DollarSign,      label: "Contas a receber",  href: "#",            active: false },
-  { icon: BarChart2,       label: "Centro de custos",  href: "#",            active: false },
-  { icon: Users,           label: "Usuários",          href: "#",            active: false },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", active: true },
+  { icon: TrendingUp, label: "Fluxo de caixa", href: "/fluxo-caixa", active: false },
+  { icon: FileText, label: "Relatórios", href: "#", active: false },
+  { icon: CreditCard, label: "Contas a pagar", href: "#", active: false },
+  { icon: DollarSign, label: "Contas a receber", href: "#", active: false },
+  { icon: BarChart2, label: "Centro de custos", href: "#", active: false },
+  { icon: Users, label: "Usuários", href: "#", active: false },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -90,10 +90,10 @@ const fmt = (n: number) =>
 const maxBar = Math.max(...revenueData.filter(Boolean));
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
-  blue:    { bg: "rgba(21,101,192,0.1)",  text: "#42a5f5", icon: "rgba(21,101,192,0.15)" },
-  rose:    { bg: "rgba(244,63,94,0.08)",  text: "#fb7185", icon: "rgba(244,63,94,0.12)"  },
+  blue: { bg: "rgba(21,101,192,0.1)", text: "#42a5f5", icon: "rgba(21,101,192,0.15)" },
+  rose: { bg: "rgba(244,63,94,0.08)", text: "#fb7185", icon: "rgba(244,63,94,0.12)" },
   emerald: { bg: "rgba(16,185,129,0.08)", text: "#34d399", icon: "rgba(16,185,129,0.12)" },
-  amber:   { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", icon: "rgba(245,158,11,0.12)" },
+  amber: { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", icon: "rgba(245,158,11,0.12)" },
 };
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -195,19 +195,19 @@ function KpiCard({ kpi, delay }: { kpi: typeof kpis[0]; delay: number }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [collapsed, setCollapsed]           = useState(false);
-  const [mobileOpen, setMobileOpen]         = useState(false);
-  const [period]                             = useState("Out 2024");
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [period] = useState("Out 2024");
   const [showOnboarding, setShowOnboarding] = useState(true);
-  const [user, setUser]                     = useState<{ displayName: string | null; email: string | null } | null>(null);
-  const [loading, setLoading]               = useState(true);
+  const [user, setUser] = useState<{ displayName: string | null; email: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Auth rápido — mesmo padrão do cashflow, sem triple async chain
   useEffect(() => {
     let unsub: (() => void) | undefined;
     (async () => {
-      const { getFirebase }        = await import("../lib/firebase");
-      const { auth }               = await getFirebase();
+      const { getFirebase } = await import("../../lib/firebase");
+      const { auth } = await getFirebase();
       const { onAuthStateChanged } = await import("firebase/auth");
       unsub = onAuthStateChanged(auth, (u) => {
         if (!u) { window.location.href = "/login"; return; }
@@ -301,7 +301,7 @@ export default function Dashboard() {
 
       {/* Sidebar desktop */}
       <div className="hidden lg:block shrink-0" style={{ width: collapsed ? 72 : 230 }}>
-        <Sidebar collapsed={collapsed} mobileOpen={false} onClose={() => {}} />
+        <Sidebar collapsed={collapsed} mobileOpen={false} onClose={() => { }} />
       </div>
 
       {/* Sidebar mobile drawer */}
@@ -383,21 +383,21 @@ export default function Dashboard() {
               <svg viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}>
                 {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
                   <g key={i}>
-                    <line x1="40" y1={10+(1-t)*160} x2="590" y2={10+(1-t)*160} stroke="#f1f5f9" strokeWidth="1" />
-                    <text x="32" y={10+(1-t)*160+4} fontSize="9" fill="#94a3b8" textAnchor="end" fontFamily="JetBrains Mono, monospace">
-                      {Math.round(t*maxBar/100)*100===0?"0":`${Math.round(t*maxBar/100)}k`}
+                    <line x1="40" y1={10 + (1 - t) * 160} x2="590" y2={10 + (1 - t) * 160} stroke="#f1f5f9" strokeWidth="1" />
+                    <text x="32" y={10 + (1 - t) * 160 + 4} fontSize="9" fill="#94a3b8" textAnchor="end" fontFamily="JetBrains Mono, monospace">
+                      {Math.round(t * maxBar / 100) * 100 === 0 ? "0" : `${Math.round(t * maxBar / 100)}k`}
                     </text>
                   </g>
                 ))}
                 {months.map((m, i) => {
                   const rev = revenueData[i]; const exp = expenseData[i];
                   if (!rev) return null;
-                  const bw=22, gap=44, x=48+i*gap;
+                  const bw = 22, gap = 44, x = 48 + i * gap;
                   return (
                     <g key={m}>
-                      <rect className="bar-rev bar-rev-anim" x={x} y={170-(rev/maxBar)*160} width={bw} height={(rev/maxBar)*160} rx="3" style={{ animationDelay: `${i*60}ms` }} />
-                      <rect className="bar-exp bar-exp-anim" x={x+bw+2} y={170-(exp/maxBar)*160} width={bw} height={(exp/maxBar)*160} rx="3" style={{ animationDelay: `${i*60+30}ms` }} />
-                      <text x={x+bw} y={190} fontSize="9" fill="#94a3b8" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                      <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / maxBar) * 160} width={bw} height={(rev / maxBar) * 160} rx="3" style={{ animationDelay: `${i * 60}ms` }} />
+                      <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / maxBar) * 160} width={bw} height={(exp / maxBar) * 160} rx="3" style={{ animationDelay: `${i * 60 + 30}ms` }} />
+                      <text x={x + bw} y={190} fontSize="9" fill="#94a3b8" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
                     </g>
                   );
                 })}
@@ -405,8 +405,8 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-slate-100">
                 {[
-                  { label: "Total receitas", val: "R$ 9.51M", color: "text-blue-600"    },
-                  { label: "Total despesas", val: "R$ 7.25M", color: "text-slate-400"   },
+                  { label: "Total receitas", val: "R$ 9.51M", color: "text-blue-600" },
+                  { label: "Total despesas", val: "R$ 7.25M", color: "text-slate-400" },
                   { label: "Resultado líq.", val: "R$ 2.26M", color: "text-emerald-500" },
                 ].map((s) => (
                   <div key={s.label}>
@@ -421,7 +421,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-4 md:mb-5">
                 <h2 className="text-blue-950 font-bold text-sm md:text-base">Vencimentos próximos</h2>
                 <span className="bg-rose-50 text-rose-500 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  {upcomingBills.filter(b=>b.urgent).length} urgente
+                  {upcomingBills.filter(b => b.urgent).length} urgente
                 </span>
               </div>
               <div className="space-y-2 md:space-y-3 flex-1">
@@ -492,7 +492,7 @@ export default function Dashboard() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-100">
-                      {["ID","Descrição","Tipo","Valor","Data","Status"].map((h) => (
+                      {["ID", "Descrição", "Tipo", "Valor", "Data", "Status"].map((h) => (
                         <th key={h} className="text-left text-xs font-semibold text-slate-400 pb-3 pr-4 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -537,7 +537,7 @@ export default function Dashboard() {
                       const dash = (cc.pct / 100) * circ;
                       const el = (
                         <circle key={cc.name} cx={70} cy={70} r={52} fill="none" stroke={cc.color}
-                          strokeWidth={22} strokeDasharray={`${dash} ${circ-dash}`}
+                          strokeWidth={22} strokeDasharray={`${dash} ${circ - dash}`}
                           strokeDashoffset={-offset} transform="rotate(-90 70 70)" className="donut-ring" />
                       );
                       offset += dash;
@@ -584,14 +584,14 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
               {[
-                { label: "Saldo atual",        val: "R$ 1.248.390",  icon: Wallet,       color: "blue",    note: "em conta corrente" },
-                { label: "Entradas previstas", val: "+ R$ 643.000",  icon: TrendingUp,   color: "emerald", note: "próximos 30 dias"  },
-                { label: "Saídas agendadas",   val: "- R$ 418.500",  icon: TrendingDown, color: "rose",    note: "próximos 30 dias"  },
+                { label: "Saldo atual", val: "R$ 1.248.390", icon: Wallet, color: "blue", note: "em conta corrente" },
+                { label: "Entradas previstas", val: "+ R$ 643.000", icon: TrendingUp, color: "emerald", note: "próximos 30 dias" },
+                { label: "Saídas agendadas", val: "- R$ 418.500", icon: TrendingDown, color: "rose", note: "próximos 30 dias" },
               ].map((item) => {
                 const cMap: Record<string, { bg: string; text: string; icon: string }> = {
-                  blue:    { bg: "#eff6ff", text: "#1d4ed8", icon: "#dbeafe" },
+                  blue: { bg: "#eff6ff", text: "#1d4ed8", icon: "#dbeafe" },
                   emerald: { bg: "#f0fdf4", text: "#15803d", icon: "#dcfce7" },
-                  rose:    { bg: "#fff1f2", text: "#be123c", icon: "#ffe4e6" },
+                  rose: { bg: "#fff1f2", text: "#be123c", icon: "#ffe4e6" },
                 };
                 const c = cMap[item.color];
                 return (
@@ -628,11 +628,11 @@ export default function Dashboard() {
       {/* Bottom nav mobile */}
       <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-30 flex lg:hidden justify-around items-center py-2 px-2">
         {[
-          { icon: LayoutDashboard, label: "Início",     href: "/dashboard",   active: true  },
-          { icon: TrendingUp,      label: "Caixa",      href: "/fluxo-caixa", active: false },
-          { icon: FileText,        label: "Relatórios", href: "#",            active: false },
-          { icon: CreditCard,      label: "Contas",     href: "#",            active: false },
-          { icon: Settings,        label: "Config.",    href: "#",            active: false },
+          { icon: LayoutDashboard, label: "Início", href: "/dashboard", active: true },
+          { icon: TrendingUp, label: "Caixa", href: "/fluxo-caixa", active: false },
+          { icon: FileText, label: "Relatórios", href: "#", active: false },
+          { icon: CreditCard, label: "Contas", href: "#", active: false },
+          { icon: Settings, label: "Config.", href: "#", active: false },
         ].map((item) => (
           <a key={item.label} href={item.href}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all

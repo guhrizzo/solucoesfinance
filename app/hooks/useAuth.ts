@@ -7,18 +7,18 @@ import { useRouter, usePathname } from "next/navigation";
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
 
 export function useAuth() {
-  const router   = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
 
-  const [user,    setUser]    = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsub: (() => void) | undefined;
 
     (async () => {
-      const { getFirebase }        = await import("../lib/firebase");
-      const { auth }               = await getFirebase();
+      const { getFirebase } = await import("../../lib/firebase");
+      const { auth } = await getFirebase();
       const { onAuthStateChanged } = await import("firebase/auth");
 
       unsub = onAuthStateChanged(auth, (u) => {
