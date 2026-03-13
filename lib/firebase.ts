@@ -3,9 +3,9 @@
 // Funciona com Next.js SSR sem erros
 
 let _cache: {
-  app:            import("firebase/app").FirebaseApp;
-  auth:           import("firebase/auth").Auth;
-  db:             import("firebase/firestore").Firestore;
+  app: import("firebase/app").FirebaseApp;
+  auth: import("firebase/auth").Auth;
+  db: import("firebase/firestore").Firestore;
   googleProvider: import("firebase/auth").GoogleAuthProvider;
 } | null = null;
 
@@ -22,21 +22,22 @@ export async function getFirebase() {
     import("firebase/firestore"),
   ]);
 
-  const config = {
-    apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-    authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-    projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-    storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-    appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+  const firebaseConfig = {
+    apiKey: "AIzaSyD-C0_u_yANYCOV89EX5bZFSIwWnU-VKeE",
+    authDomain: "finance-add95.firebaseapp.com",
+    projectId: "finance-add95",
+    storageBucket: "finance-add95.firebasestorage.app",
+    messagingSenderId: "642933154268",
+    appId: "1:642933154268:web:9366c791e2aab51bb32f19",
+    measurementId: "G-JE3P61FDSL"
   };
 
-  const app = getApps().length > 0 ? getApp() : initializeApp(config);
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
   _cache = {
     app,
-    auth:           getAuth(app),
-    db:             getFirestore(app),
+    auth: getAuth(app),
+    db: getFirestore(app),
     googleProvider: new GoogleAuthProvider(),
   };
 
