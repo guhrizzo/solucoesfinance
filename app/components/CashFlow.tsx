@@ -569,10 +569,11 @@ export default function CashFlowPage() {
                   {label}
                 </button>
               ))}
-              <span className="ml-auto text-xs text-slate-300 shrink-0 pl-2">
+              
+            </div>
+            <span className="ml-auto text-xs text-slate-400 shrink-0 pl-1">
                 {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
               </span>
-            </div>
           </div>
 
           {/* Lista */}
