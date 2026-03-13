@@ -1,6 +1,5 @@
 "use client";
 
-// hooks/useAuth.ts
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
@@ -18,9 +17,8 @@ export function useAuth() {
     let unsub: (() => void) | undefined;
 
     (async () => {
-      // getFirebase() é SÍNCRONO — não use .then(), não é uma Promise
       const { getFirebase }        = await import("../lib/firebase");
-      const { auth }               = getFirebase();
+      const { auth }               = await getFirebase();
       const { onAuthStateChanged } = await import("firebase/auth");
 
       unsub = onAuthStateChanged(auth, (u) => {

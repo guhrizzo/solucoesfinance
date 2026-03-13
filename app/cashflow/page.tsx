@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp, Plus, X, Check, ArrowUpRight, ArrowDownRight,
   Search, Calendar, ChevronDown, Trash2, Edit3, ClipboardList,
@@ -13,9 +13,8 @@ import {
   BanknoteArrowUp, BanknoteArrowDown,
   type LucideIcon,
 } from "lucide-react";
-import type { Firestore } from "firebase/firestore";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
+// ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type TxType = "entrada" | "saida";
 
@@ -30,7 +29,9 @@ interface Tx {
   createdAt: number;
 }
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// ─── Constantes ──────────────────────────────────────────────────────────────
+
+const TODAY = new Date().toISOString().split("T")[0];
 
 const CAT: Record<TxType, string[]> = {
   entrada: ["Vendas", "Serviços prestados", "Recebimento de clientes", "Investimentos", "Outros recebimentos"],
@@ -38,25 +39,31 @@ const CAT: Record<TxType, string[]> = {
 };
 
 const CAT_ICON: Record<string, LucideIcon> = {
-  // entradas
-  "Vendas":                   ShoppingCart,
-  "Serviços prestados":       Briefcase,
-  "Recebimento de clientes":  UserCheck,
-  "Investimentos":            PiggyBank,
-  "Outros recebimentos":      CircleDollarSign,
-  // saídas
-  "Fornecedores":             Truck,
-  "Folha de pagamento":       UsersRound,
-  "Aluguel":                  Building2,
-  "Impostos":                 Receipt,
-  "Marketing":                Megaphone,
-  "TI / Software":            Monitor,
-  "Outros gastos":            Package,
+  "Vendas":                  ShoppingCart,
+  "Serviços prestados":      Briefcase,
+  "Recebimento de clientes": UserCheck,
+  "Investimentos":           PiggyBank,
+  "Outros recebimentos":     CircleDollarSign,
+  "Fornecedores":            Truck,
+  "Folha de pagamento":      UsersRound,
+  "Aluguel":                 Building2,
+  "Impostos":                Receipt,
+  "Marketing":               Megaphone,
+  "TI / Software":           Monitor,
+  "Outros gastos":           Package,
 };
 
-const TODAY = new Date().toISOString().split("T")[0];
+const NAV = [
+  { icon: LayoutDashboard, label: "Dashboard",       href: "/dashboard"    },
+  { icon: TrendingUp,      label: "Fluxo de caixa",  href: "/fluxo-caixa", active: true },
+  { icon: FileText,        label: "Relatórios",       href: "#"             },
+  { icon: CreditCard,      label: "Contas a pagar",   href: "#"             },
+  { icon: DollarSign,      label: "Contas a receber", href: "#"             },
+  { icon: BarChart2,       label: "Centro de custos", href: "#"             },
+  { icon: Users,           label: "Usuários",         href: "#"             },
+];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const toBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -65,17 +72,75 @@ const labelDate = (d: string) =>
   new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 
 function parseAmount(raw: string): number {
-  const s = raw.trim().replace(/[^\d,\.]/g, "");
+  const s = raw.trim().replace(/[^\d,.]/g, "");
   if (!s) return 0;
   if (s.includes(",")) return parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
   return parseFloat(s) || 0;
 }
 
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+function Sidebar({ collapsed, open, onClose }: {
+  collapsed: boolean; open: boolean; onClose: () => void;
+}) {
+  return (
+    <>
+      {open && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />}
+      <aside
+        id="cf-sidebar"
+        style={{ width: collapsed ? 72 : 230 }}
+        className={`fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300 overflow-hidden
+          ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+      >
+        <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
+            <ClipboardList size={15} className="text-white" />
+          </div>
+          {!collapsed && (
+            <span className="text-white font-bold text-base truncate">
+              Nexus<span className="text-blue-400">Fi</span>
+            </span>
+          )}
+          <button onClick={onClose} className="lg:hidden text-white/40 hover:text-white ml-auto shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+
+        <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
+          {NAV.map((item) => (
+            <a key={item.label} href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                ${"active" in item
+                  ? "bg-blue-500/20 text-white"
+                  : "text-blue-200/50 hover:text-white hover:bg-white/5"}`}
+            >
+              <item.icon size={17} className="shrink-0" />
+              {!collapsed && <span className="truncate">{item.label}</span>}
+              {"active" in item && !collapsed && (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+              )}
+            </a>
+          ))}
+        </nav>
+
+        <div className="px-2 pb-5 pt-3 border-t border-white/5 shrink-0 space-y-0.5">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-white hover:bg-white/5 text-sm">
+            <Settings size={17} className="shrink-0" />
+            {!collapsed && "Configurações"}
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-rose-400 hover:bg-rose-500/5 text-sm">
+            <LogOut size={17} className="shrink-0" />
+            {!collapsed && "Sair"}
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
-function Modal({
-  open, editing, onClose, onSave,
-}: {
+function Modal({ open, editing, onClose, onSave }: {
   open: boolean;
   editing: Tx | null;
   onClose: () => void;
@@ -100,15 +165,15 @@ function Modal({
     setNote(editing?.note ?? "");
     setSaving(false);
     setErr("");
-  }, [open]); // eslint-disable-line
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open) return null;
 
-  const amount = parseAmount(rawAmt);
-  const descOk = desc.trim().length >= 2;
-  const catOk  = cat !== "";
-  const amtOk  = amount > 0;
-  const dateOk = date !== "";
+  const amount  = parseAmount(rawAmt);
+  const descOk  = desc.trim().length >= 2;
+  const catOk   = cat !== "";
+  const amtOk   = amount > 0;
+  const dateOk  = date !== "";
   const canSave = descOk && catOk && amtOk && dateOk;
 
   const missing = [
@@ -144,26 +209,32 @@ function Modal({
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       style={{ background: "rgba(10,22,40,0.7)", backdropFilter: "blur(6px)" }}
     >
-      <div className="w-full sm:max-w-md bg-white sm:rounded-2xl rounded-t-3xl overflow-hidden"
-        style={{ boxShadow: "0 32px 80px rgba(10,22,40,0.3)", animation: "mIn .25s cubic-bezier(.22,.68,0,1.2)" }}>
-
+      <div
+        className="w-full sm:max-w-md bg-white sm:rounded-2xl rounded-t-3xl overflow-hidden"
+        style={{ boxShadow: "0 32px 80px rgba(10,22,40,0.3)", animation: "mIn .25s cubic-bezier(.22,.68,0,1.2)" }}
+      >
+        {/* Handle mobile */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
           <div className="w-10 h-1.5 rounded-full bg-slate-200" />
         </div>
 
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
-            <p className="text-blue-950 font-extrabold text-base">{editing ? "Editar transação" : "Nova transação"}</p>
-            <p className="text-slate-400 text-xs">Preencha todos os campos marcados *</p>
+            <p className="text-blue-950 font-extrabold text-base">
+              {editing ? "Editar transação" : "Nova transação"}
+            </p>
+            <p className="text-slate-400 text-xs">Preencha todos os campos *</p>
           </div>
-          <button onClick={() => !saving && onClose()}
-            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500">
+          <button
+            onClick={() => !saving && onClose()}
+            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+          >
             <X size={15} />
           </button>
         </div>
 
         <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "78vh" }}>
-
           {err && (
             <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 text-rose-600 text-xs">
               ⚠ {err}
@@ -192,7 +263,7 @@ function Modal({
             <input
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              placeholder="Ex: Cliente XYZ, Aluguel mensal…"
+              placeholder="Ex: Cliente XYZ, Aluguel…"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
             />
           </div>
@@ -267,9 +338,7 @@ function Modal({
           </button>
 
           {!canSave && (
-            <p className="text-center text-rose-400 text-xs font-medium">
-              Preencha: {missing}
-            </p>
+            <p className="text-center text-rose-400 text-xs font-medium">Faltando: {missing}</p>
           )}
         </div>
       </div>
@@ -277,68 +346,14 @@ function Modal({
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-
-const NAV = [
-  { icon: LayoutDashboard, label: "Dashboard",       href: "/dashboard"    },
-  { icon: TrendingUp,      label: "Fluxo de caixa",  href: "/fluxo-caixa", active: true },
-  { icon: FileText,        label: "Relatórios",       href: "#"             },
-  { icon: CreditCard,      label: "Contas a pagar",   href: "#"             },
-  { icon: DollarSign,      label: "Contas a receber", href: "#"             },
-  { icon: BarChart2,       label: "Centro de custos", href: "#"             },
-  { icon: Users,           label: "Usuários",         href: "#"             },
-];
-
-function Sidebar({ collapsed, open, onClose }: { collapsed: boolean; open: boolean; onClose: () => void }) {
-  return (
-    <>
-      {open && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />}
-      <aside id="sidebar"
-        style={{ width: collapsed ? 72 : 230 }}
-        className={`fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col transition-all duration-300 overflow-hidden
-          ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
-            <ClipboardList size={15} className="text-white" />
-          </div>
-          {!collapsed && <span className="text-white font-bold text-base">Nexus<span className="text-blue-400">Fi</span></span>}
-          <button onClick={onClose} className="lg:hidden text-white/40 hover:text-white ml-auto shrink-0"><X size={16} /></button>
-        </div>
-        <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
-          {NAV.map((item) => (
-            <a key={item.label} href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                ${"active" in item ? "bg-blue-500/20 text-white" : "text-blue-200/50 hover:text-white hover:bg-white/5"}`}>
-              <item.icon size={17} className="shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </a>
-          ))}
-        </nav>
-        <div className="px-2 pb-5 pt-3 border-t border-white/5 shrink-0 space-y-0.5">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-white hover:bg-white/5 text-sm">
-            <Settings size={17} className="shrink-0" />{!collapsed && "Configurações"}
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-200/50 hover:text-rose-400 hover:bg-rose-500/5 text-sm">
-            <LogOut size={17} className="shrink-0" />{!collapsed && "Sair"}
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-}
-
-// ─── Página ───────────────────────────────────────────────────────────────────
+// ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  const [uid,      setUid]      = useState<string>("");
-  const [userName, setUserName] = useState("");
-  const [txs,      setTxs]      = useState<Tx[]>([]);
-  const [status,   setStatus]   = useState<"loading" | "ready" | "error">("loading");
-  const [errMsg,   setErrMsg]   = useState("");
-
-  // Referências ao Firestore — preenchidas uma única vez no useEffect
-  const dbRef  = useRef<Firestore | null>(null);
-  const uidRef = useRef<string>("");
+  const [uid,       setUid]       = useState<string | null>(null);
+  const [userName,  setUserName]  = useState("");
+  const [txs,       setTxs]       = useState<Tx[]>([]);
+  const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
+  const [errMsg,    setErrMsg]    = useState("");
 
   const [collapsed, setCollapsed] = useState(false);
   const [sideOpen,  setSideOpen]  = useState(false);
@@ -349,88 +364,94 @@ export default function CashFlowPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting,  setDeleting]  = useState(false);
 
-  // ── Inicializa Firebase uma única vez ──────────────────────────────────────
+  // ── Firebase: Auth + Firestore ────────────────────────────────────────────
   useEffect(() => {
-    let authUnsub: (() => void) | undefined;
     let snapUnsub: (() => void) | undefined;
+    let authUnsub: (() => void) | undefined;
 
     (async () => {
       try {
-        // getFirebase() é síncrono — não tem await, não tem lazy import aqui
+        // Uma única chamada async — resolve Auth e Firestore juntos
         const { getFirebase }        = await import("../lib/firebase");
-        const { auth, db }           = getFirebase();
+        const { auth, db }           = await getFirebase();
         const { onAuthStateChanged } = await import("firebase/auth");
-        const { collection, query, orderBy, onSnapshot } = await import("firebase/firestore");
 
-        // Guarda db nas refs — handleSave vai usar direto, sem import
-        dbRef.current = db;
-
-        authUnsub = onAuthStateChanged(auth, (u) => {
+        authUnsub = onAuthStateChanged(auth, async (u) => {
           if (!u) {
             window.location.href = "/login";
             return;
           }
 
           setUid(u.uid);
-          setUserName(u.displayName ?? u.email ?? "");
-          uidRef.current = u.uid;
+          setUserName(u.displayName ?? u.email ?? "Usuário");
 
-          // Cancela listener anterior se existir
+          // Cancela listener anterior se o usuário mudou
           snapUnsub?.();
 
-          // Assina Firestore
-          const q = query(
-            collection(db, "users", u.uid, "cashflow"),
-            orderBy("createdAt", "desc")
-          );
+          try {
+            const {
+              collection, query, orderBy, onSnapshot,
+            } = await import("firebase/firestore");
 
-          snapUnsub = onSnapshot(
-            q,
-            (snap) => {
-              setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tx)));
-              setStatus("ready");
-            },
-            (err) => {
-              console.error("Firestore:", err);
-              setErrMsg(err.message);
-              setStatus("error");
-            }
-          );
+            const q = query(
+              collection(db, "users", u.uid, "cashflow"),
+              orderBy("createdAt", "desc")
+            );
+
+            snapUnsub = onSnapshot(
+              q,
+              (snap) => {
+                setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tx)));
+                setPageState("ready");
+              },
+              (err) => {
+                console.error("Firestore onSnapshot:", err);
+                setErrMsg(err.message);
+                setPageState("error");
+              }
+            );
+          } catch (e: any) {
+            console.error("Firestore setup error:", e);
+            setErrMsg(e.message);
+            setPageState("error");
+          }
         });
       } catch (e: any) {
+        console.error("Firebase init error:", e);
         setErrMsg(e.message);
-        setStatus("error");
+        setPageState("error");
       }
     })();
 
-    return () => { authUnsub?.(); snapUnsub?.(); };
+    return () => {
+      authUnsub?.();
+      snapUnsub?.();
+    };
   }, []);
 
-  // ── Salvar — usa refs, sem nenhum import extra ─────────────────────────────
+  // ── Salvar ───────────────────────────────────────────────────────────────
   async function handleSave(data: Omit<Tx, "id">) {
-    const db  = dbRef.current;
-    const uid = uidRef.current;
-    if (!db || !uid) throw new Error("Firebase não inicializado");
+    if (!uid) throw new Error("Usuário não autenticado");
 
-    const { collection, addDoc, doc, updateDoc } = await import("firebase/firestore");
+    const { getFirebase } = await import("../lib/firebase");
+    const { db }          = await getFirebase();
 
     if (editing) {
+      const { doc, updateDoc } = await import("firebase/firestore");
       await updateDoc(doc(db, "users", uid, "cashflow", editing.id), data as any);
     } else {
+      const { collection, addDoc } = await import("firebase/firestore");
       await addDoc(collection(db, "users", uid, "cashflow"), data);
     }
-    // onSnapshot atualiza a lista automaticamente
   }
 
-  // ── Deletar ────────────────────────────────────────────────────────────────
+  // ── Deletar ──────────────────────────────────────────────────────────────
   async function handleDelete() {
-    if (!confirmId || deleting) return;
-    const db  = dbRef.current;
-    const uid = uidRef.current;
-    if (!db || !uid) return;
-
+    if (!confirmId || !uid || deleting) return;
     setDeleting(true);
     try {
+      const { getFirebase }    = await import("../lib/firebase");
+      const { db }             = await getFirebase();
       const { doc, deleteDoc } = await import("firebase/firestore");
       await deleteDoc(doc(db, "users", uid, "cashflow", confirmId));
       setConfirmId(null);
@@ -441,7 +462,7 @@ export default function CashFlowPage() {
     }
   }
 
-  // ── Métricas ───────────────────────────────────────────────────────────────
+  // ── Métricas ─────────────────────────────────────────────────────────────
   const entradas = useMemo(() => txs.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0), [txs]);
   const saidas   = useMemo(() => txs.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0), [txs]);
   const saldo    = entradas - saidas;
@@ -463,34 +484,39 @@ export default function CashFlowPage() {
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
 
-  // ── Loading / Error ────────────────────────────────────────────────────────
-  if (status === "loading") return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
+  // ── Loading / Error ───────────────────────────────────────────────────────
+  if (pageState === "loading") return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
       <div className="w-10 h-10 border-2 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
       <p className="text-slate-400 text-sm">Carregando…</p>
     </div>
   );
 
-  if (status === "error") return (
+  if (pageState === "error") return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3 p-6 text-center">
-      <p className="text-rose-500 font-bold">Erro ao conectar com Firebase</p>
-      <p className="text-slate-400 text-sm">{errMsg}</p>
-      <p className="text-slate-400 text-xs">Verifique as regras do Firestore e as variáveis de ambiente.</p>
+      <p className="text-rose-500 font-bold">Erro ao conectar</p>
+      <p className="text-slate-400 text-sm max-w-sm">{errMsg}</p>
+      <p className="text-slate-400 text-xs max-w-sm">
+        Verifique as <strong>regras do Firestore</strong> e as <strong>variáveis de ambiente</strong> na Vercel.
+      </p>
       <button onClick={() => window.location.reload()}
-        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold">
+        className="mt-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
         Tentar novamente
       </button>
     </div>
   );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex bg-slate-50 min-h-screen">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         *{font-family:'Sora',sans-serif;box-sizing:border-box}
         .mono{font-family:'JetBrains Mono',monospace}
-        #sidebar{background:linear-gradient(180deg,#0a1628 0%,#0d2247 60%,#0e3372 100%);border-right:1px solid rgba(255,255,255,.05)}
+        #cf-sidebar{
+          background:linear-gradient(180deg,#0a1628 0%,#0d2247 60%,#0e3372 100%);
+          border-right:1px solid rgba(255,255,255,.05)
+        }
         .card{background:white;border:1px solid #e8eef8;border-radius:16px;box-shadow:0 1px 3px rgba(13,34,71,.06),0 4px 16px rgba(13,34,71,.04)}
         .hline{box-shadow:0 1px 0 #e8eef8}
         .tx{border-bottom:1px solid #f1f5f9;transition:background .12s}
@@ -514,7 +540,7 @@ export default function CashFlowPage() {
         <Sidebar collapsed={false} open={sideOpen} onClose={() => setSideOpen(false)} />
       </div>
 
-      {/* Modal */}
+      {/* Modal nova/editar transação */}
       <Modal
         open={modal}
         editing={editing}
@@ -522,7 +548,7 @@ export default function CashFlowPage() {
         onSave={handleSave}
       />
 
-      {/* Confirm delete */}
+      {/* Confirmar exclusão */}
       {confirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(10,22,40,0.65)", backdropFilter: "blur(4px)" }}>
@@ -562,12 +588,11 @@ export default function CashFlowPage() {
             </button>
             <div className="min-w-0">
               <p className="text-blue-950 font-bold text-sm sm:text-base leading-tight">Fluxo de caixa</p>
-              <p className="text-slate-400 text-xs hidden sm:block">Entradas e saídas do seu negócio</p>
+              <p className="text-slate-400 text-xs hidden sm:block">Olá, {userName} 👋</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => { setEditing(null); setModal(true); }}
+            <button onClick={() => { setEditing(null); setModal(true); }}
               className="hidden sm:flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors">
               <Plus size={14} /> Nova transação
             </button>
@@ -575,29 +600,35 @@ export default function CashFlowPage() {
               <Bell size={16} className="text-slate-500" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full" />
             </button>
-            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shrink-0">
               {userName[0]?.toUpperCase() ?? "U"}
             </div>
           </div>
         </header>
 
-        {/* Content */}
+        {/* Conteúdo */}
         <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 overflow-y-auto overflow-x-hidden">
 
           {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              { label:"Total entradas", val:entradas, Icon:ArrowUpRight,   c:{ibg:"#dcfce7",text:"#15803d"}, d:"0ms",   sub:`${txs.filter(t=>t.type==="entrada").length} lançamentos` },
-              { label:"Total saídas",   val:saidas,   Icon:ArrowDownRight, c:{ibg:"#ffe4e6",text:"#be123c"}, d:"80ms",  sub:`${txs.filter(t=>t.type==="saida").length} lançamentos` },
-              { label:"Saldo atual",    val:saldo,    Icon:Wallet,         c:saldo>=0?{ibg:"#dbeafe",text:"#1d4ed8"}:{ibg:"#ffe4e6",text:"#be123c"}, d:"160ms", sub:saldo>=0?"Resultado positivo ✓":"Resultado negativo ⚠" },
-            ].map(({ label, val, Icon, c, d, sub }) => (
-              <div key={label} className="card kin p-4 flex items-center gap-3" style={{ animationDelay: d }}>
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.ibg }}>
-                  <Icon size={20} style={{ color: c.text }} strokeWidth={2.5} />
+              { label: "Total entradas", val: entradas, Icon: ArrowUpRight,   ibg: "#dcfce7", color: "#15803d", delay: "0ms",   sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
+              { label: "Total saídas",   val: saidas,   Icon: ArrowDownRight, ibg: "#ffe4e6", color: "#be123c", delay: "80ms",  sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
+              {
+                label: "Saldo atual", val: saldo, Icon: Wallet,
+                ibg: saldo >= 0 ? "#dbeafe" : "#ffe4e6",
+                color: saldo >= 0 ? "#1d4ed8" : "#be123c",
+                delay: "160ms",
+                sub: saldo >= 0 ? "Resultado positivo ✓" : "Resultado negativo ⚠",
+              },
+            ].map(({ label, val, Icon, ibg, color, delay, sub }) => (
+              <div key={label} className="card kin p-4 flex items-center gap-3" style={{ animationDelay: delay }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: ibg }}>
+                  <Icon size={20} style={{ color }} strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-slate-400 text-xs truncate">{label}</p>
-                  <p className="font-extrabold text-lg mono leading-tight" style={{ color: c.text }}>{toBRL(val)}</p>
+                  <p className="font-extrabold text-lg mono leading-tight" style={{ color }}>{toBRL(val)}</p>
                   <p className="text-slate-400 text-xs truncate">{sub}</p>
                 </div>
               </div>
@@ -617,7 +648,7 @@ export default function CashFlowPage() {
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
               {([
-                { f: "all",    label: "Todos",    icon: null              },
+                { f: "all",     label: "Todos",    icon: null              },
                 { f: "entrada", label: "Entradas", icon: BanknoteArrowUp   },
                 { f: "saida",   label: "Saídas",   icon: BanknoteArrowDown },
               ] as const).map(({ f, label, icon: Icon }) => (
@@ -627,12 +658,15 @@ export default function CashFlowPage() {
                       ? f === "all"     ? "bg-slate-800 text-white border-transparent"
                       : f === "entrada" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                         : "bg-rose-50 text-rose-700 border-rose-200"
-                      : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"}`}>
+                      : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"}`}
+                >
                   {Icon && <Icon size={13} />}
                   {label}
                 </button>
               ))}
-              <span className="ml-auto text-xs text-slate-300 shrink-0">{filtered.length} resultado{filtered.length !== 1 ? "s" : ""}</span>
+              <span className="ml-auto text-xs text-slate-300 shrink-0">
+                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
 
@@ -661,6 +695,7 @@ export default function CashFlowPage() {
                 const net = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
                 return (
                   <div key={date} className="card overflow-hidden">
+                    {/* Header data */}
                     <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
                       <div className="flex items-center gap-2">
                         <Calendar size={12} className="text-slate-400" />
@@ -672,39 +707,45 @@ export default function CashFlowPage() {
                       </span>
                     </div>
 
+                    {/* Transações */}
                     {items.map((tx) => {
                       const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
                       return (
-                      <div key={tx.id} className="tx flex items-center gap-3 px-4 py-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${tx.type === "entrada" ? "bg-emerald-50" : "bg-rose-50"}`}>
-                          <CatIcon size={17} className={tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"} />
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start sm:items-center gap-1 sm:gap-2 flex-col sm:flex-row">
-                            <span className="text-blue-950 text-sm font-semibold truncate">{tx.description}</span>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${tx.type === "entrada" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-                              {tx.category}
-                            </span>
+                        <div key={tx.id} className="tx flex items-center gap-3 px-4 py-3">
+                          {/* Ícone categoria */}
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${tx.type === "entrada" ? "bg-emerald-50" : "bg-rose-50"}`}>
+                            <CatIcon size={17} className={tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"} />
                           </div>
-                          {tx.note && <p className="text-slate-400 text-xs mt-0.5 truncate">{tx.note}</p>}
-                        </div>
 
-                        <span className={`mono text-sm font-bold shrink-0 ${tx.type === "entrada" ? "text-emerald-600" : "text-rose-500"}`}>
-                          {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
-                        </span>
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start sm:items-center gap-1 sm:gap-2 flex-col sm:flex-row">
+                              <span className="text-blue-950 text-sm font-semibold truncate">{tx.description}</span>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0
+                                ${tx.type === "entrada" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                                {tx.category}
+                              </span>
+                            </div>
+                            {tx.note && <p className="text-slate-400 text-xs mt-0.5 truncate">{tx.note}</p>}
+                          </div>
 
-                        <div className="txa flex items-center gap-1 shrink-0">
-                          <button onClick={() => { setEditing(tx); setModal(true); }}
-                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center text-slate-400 transition-colors">
-                            <Edit3 size={12} />
-                          </button>
-                          <button onClick={() => setConfirmId(tx.id)}
-                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-500 flex items-center justify-center text-slate-400 transition-colors">
-                            <Trash2 size={12} />
-                          </button>
+                          {/* Valor */}
+                          <span className={`mono text-sm font-bold shrink-0 ${tx.type === "entrada" ? "text-emerald-600" : "text-rose-500"}`}>
+                            {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
+                          </span>
+
+                          {/* Ações */}
+                          <div className="txa flex items-center gap-1 shrink-0">
+                            <button onClick={() => { setEditing(tx); setModal(true); }}
+                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center text-slate-400 transition-colors">
+                              <Edit3 size={12} />
+                            </button>
+                            <button onClick={() => setConfirmId(tx.id)}
+                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-500 flex items-center justify-center text-slate-400 transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
                       );
                     })}
                   </div>
@@ -719,7 +760,8 @@ export default function CashFlowPage() {
       <button
         onClick={() => { setEditing(null); setModal(true); }}
         className="lg:hidden fixed z-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
-        style={{ bottom: 74, right: 18, width: 54, height: 54, boxShadow: "0 8px 28px rgba(21,101,192,.5)" }}>
+        style={{ bottom: 74, right: 18, width: 54, height: 54, boxShadow: "0 8px 28px rgba(21,101,192,.5)" }}
+      >
         <Plus size={24} />
       </button>
 
@@ -727,15 +769,15 @@ export default function CashFlowPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-white border-t border-slate-100 flex justify-around items-center py-1.5"
         style={{ boxShadow: "0 -4px 20px rgba(13,34,71,.06)" }}>
         {[
-          { icon: LayoutDashboard, label: "Início",     href: "/dashboard",   a: false },
-          { icon: TrendingUp,      label: "Caixa",      href: "/fluxo-caixa", a: true  },
-          { icon: FileText,        label: "Relatórios", href: "#",            a: false },
-          { icon: CreditCard,      label: "Contas",     href: "#",            a: false },
-          { icon: Settings,        label: "Config.",    href: "#",            a: false },
+          { icon: LayoutDashboard, label: "Início",     href: "/dashboard",   active: false },
+          { icon: TrendingUp,      label: "Caixa",      href: "/fluxo-caixa", active: true  },
+          { icon: FileText,        label: "Relatórios", href: "#",            active: false },
+          { icon: CreditCard,      label: "Contas",     href: "#",            active: false },
+          { icon: Settings,        label: "Config.",    href: "#",            active: false },
         ].map((item) => (
           <a key={item.label} href={item.href}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl ${item.a ? "text-blue-600" : "text-slate-400"}`}>
-            <item.icon size={20} strokeWidth={item.a ? 2.5 : 1.8} />
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${item.active ? "text-blue-600" : "text-slate-400"}`}>
+            <item.icon size={20} strokeWidth={item.active ? 2.5 : 1.8} />
             <span className="text-xs font-medium">{item.label}</span>
           </a>
         ))}

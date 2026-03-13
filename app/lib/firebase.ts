@@ -1,36 +1,44 @@
 // lib/firebase.ts
-// Singleton robusto — inicializa UMA vez, guarda referências prontas para uso
+// Lazy singleton — ZERO imports estáticos do Firebase
+// Funciona com Next.js SSR sem erros
 
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+let _cache: {
+  app:            import("firebase/app").FirebaseApp;
+  auth:           import("firebase/auth").Auth;
+  db:             import("firebase/firestore").Firestore;
+  googleProvider: import("firebase/auth").GoogleAuthProvider;
+} | null = null;
 
-const firebaseConfig = {
-  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-};
+export async function getFirebase() {
+  if (_cache) return _cache;
 
-let app:            FirebaseApp   | null = null;
-let auth:           Auth          | null = null;
-let db:             Firestore     | null = null;
-let googleProvider: GoogleAuthProvider | null = null;
+  const [
+    { initializeApp, getApps, getApp },
+    { getAuth, GoogleAuthProvider },
+    { getFirestore },
+  ] = await Promise.all([
+    import("firebase/app"),
+    import("firebase/auth"),
+    import("firebase/firestore"),
+  ]);
 
-export function getFirebase() {
-  if (typeof window === "undefined") {
-    // SSR — nunca inicializa no servidor
-    throw new Error("Firebase só pode ser usado no browser");
-  }
+  const config = {
+    apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+    authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+    projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+    storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+    appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+  };
 
-  if (!app) {
-    app            = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    auth           = getAuth(app);
-    db             = getFirestore(app);
-    googleProvider = new GoogleAuthProvider();
-  }
+  const app = getApps().length > 0 ? getApp() : initializeApp(config);
 
-  return { app: app!, auth: auth!, db: db!, googleProvider: googleProvider! };
+  _cache = {
+    app,
+    auth:           getAuth(app),
+    db:             getFirestore(app),
+    googleProvider: new GoogleAuthProvider(),
+  };
+
+  return _cache;
 }
