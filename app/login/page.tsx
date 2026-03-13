@@ -9,45 +9,46 @@ import {
   Shield, TrendingUp, Lock, Mail, AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 // ── Mensagens de erro Firebase → PT-BR ───────────────────────────────────────
 const firebaseErrorMap: Record<string, string> = {
-  "auth/invalid-credential": "E-mail ou senha incorretos.",
-  "auth/user-not-found": "Nenhuma conta encontrada com este e-mail.",
-  "auth/wrong-password": "Senha incorreta. Tente novamente.",
-  "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos.",
-  "auth/user-disabled": "Esta conta foi desativada.",
-  "auth/network-request-failed": "Falha de rede. Verifique sua conexão.",
-  "auth/popup-closed-by-user": "Login cancelado. Tente novamente.",
+  "auth/invalid-credential":      "E-mail ou senha incorretos.",
+  "auth/user-not-found":          "Nenhuma conta encontrada com este e-mail.",
+  "auth/wrong-password":          "Senha incorreta. Tente novamente.",
+  "auth/too-many-requests":       "Muitas tentativas. Aguarde alguns minutos.",
+  "auth/user-disabled":           "Esta conta foi desativada.",
+  "auth/network-request-failed":  "Falha de rede. Verifique sua conexão.",
+  "auth/popup-closed-by-user":    "Login cancelado. Tente novamente.",
   "auth/cancelled-popup-request": "Login cancelado. Tente novamente.",
 };
 
-const getErrorMessage = (code: string) =>
-  firebaseErrorMap[code] ?? "Ocorreu um erro inesperado. Tente novamente.";
+const getErrorMessage = (code: string, raw?: string) => {
+  if (firebaseErrorMap[code]) return firebaseErrorMap[code];
+  return `Erro: ${code ?? "desconhecido"}${raw ? " — " + raw : ""}`;
+};
 
 // ── Helpers Firebase (lazy) ───────────────────────────────────────────────────
 // Toda interação com o Firebase acontece DENTRO de event handlers,
 // nunca no corpo do módulo — isso evita o erro de prerender.
 
 async function loginWithEmail(email: string, password: string) {
-  const { getFirebase } = await import("../lib/firebase");
+  const { getFirebase }             = await import("../lib/firebase");
   const { signInWithEmailAndPassword } = await import("firebase/auth");
-  const { auth } = await getFirebase();
+  const { auth }                    = await getFirebase();
   return signInWithEmailAndPassword(auth, email, password);
 }
 
 async function loginWithGoogle() {
-  const { getFirebase } = await import("../lib/firebase");
-  const { signInWithPopup } = await import("firebase/auth");
+  const { getFirebase }        = await import("../lib/firebase");
+  const { signInWithPopup }    = await import("firebase/auth");
   const { auth, googleProvider } = await getFirebase();
   return signInWithPopup(auth, googleProvider);
 }
 
 async function resetPassword(email: string) {
-  const { getFirebase } = await import("../lib/firebase");
+  const { getFirebase }           = await import("../lib/firebase");
   const { sendPasswordResetEmail } = await import("firebase/auth");
-  const { auth } = await getFirebase();
+  const { auth }                   = await getFirebase();
   return sendPasswordResetEmail(auth, email);
 }
 
@@ -56,13 +57,13 @@ async function resetPassword(email: string) {
 export default function LoginPage() {
   const router = useRouter();
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword]   = useState(false);
+  const [email, setEmail]                 = useState("");
+  const [password, setPassword]           = useState("");
+  const [loading, setLoading]             = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resetSent, setResetSent] = useState(false);
+  const [error, setError]                 = useState<string | null>(null);
+  const [resetSent, setResetSent]         = useState(false);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ export default function LoginPage() {
       await loginWithEmail(email, password);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(getErrorMessage(err.code));
+      setError(getErrorMessage(err.code, err.message));
     } finally {
       setLoading(false);
     }
@@ -87,7 +88,7 @@ export default function LoginPage() {
       await loginWithGoogle();
       router.push("/dashboard");
     } catch (err: any) {
-      setError(getErrorMessage(err.code));
+      setError(getErrorMessage(err.code, err.message));
     } finally {
       setGoogleLoading(false);
     }
@@ -103,7 +104,7 @@ export default function LoginPage() {
       await resetPassword(email);
       setResetSent(true);
     } catch (err: any) {
-      setError(getErrorMessage(err.code));
+      setError(getErrorMessage(err.code, err.message));
     }
   };
 
@@ -224,8 +225,8 @@ export default function LoginPage() {
             <div className="space-y-3">
               {[
                 { label: "Entradas previstas", val: "R$ 84.200", color: "bg-green-400" },
-                { label: "Saídas agendadas", val: "R$ 31.500", color: "bg-red-400" },
-                { label: "Saldo projetado", val: "R$ 52.700", color: "bg-blue-400" },
+                { label: "Saídas agendadas",   val: "R$ 31.500", color: "bg-red-400"   },
+                { label: "Saldo projetado",    val: "R$ 52.700", color: "bg-blue-400"  },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -366,10 +367,10 @@ export default function LoginPage() {
               className="social-btn rounded-xl py-2.5 flex items-center justify-center gap-2 text-slate-600 text-sm font-medium cursor-pointer">
               {googleLoading ? <span className="spinner-blue" /> : (
                 <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
               )}
               Google
@@ -377,22 +378,21 @@ export default function LoginPage() {
             <button disabled
               className="social-btn rounded-xl py-2.5 flex items-center justify-center gap-2 text-slate-400 text-sm font-medium opacity-50 cursor-not-allowed">
               <svg width="16" height="16" viewBox="0 0 24 24">
-                <path fill="#F25022" d="M1 1h10v10H1z" />
-                <path fill="#7FBA00" d="M13 1h10v10H13z" />
-                <path fill="#00A4EF" d="M1 13h10v10H1z" />
-                <path fill="#FFB900" d="M13 13h10v10H13z" />
+                <path fill="#F25022" d="M1 1h10v10H1z"/>
+                <path fill="#7FBA00" d="M13 1h10v10H13z"/>
+                <path fill="#00A4EF" d="M1 13h10v10H1z"/>
+                <path fill="#FFB900" d="M13 13h10v10H13z"/>
               </svg>
               Microsoft
             </button>
           </div>
-          <Link href="/register">
-            <p className="fade-in-4 text-center text-slate-400 text-sm mt-8">
-              Ainda não tem conta?{" "}
-              <a href="/register" className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
-                Testar 3 dias grátis
-              </a>
-            </p>
-          </Link>
+
+          <p className="fade-in-4 text-center text-slate-400 text-sm mt-8">
+            Ainda não tem conta?{" "}
+            <a href="/register" className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
+              Testar 14 dias grátis
+            </a>
+          </p>
 
           <div className="fade-in-4 mt-6 flex items-center justify-center gap-2">
             <Shield size={12} className="text-slate-300" />
