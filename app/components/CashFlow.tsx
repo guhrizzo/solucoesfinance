@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   TrendingUp, Plus, X, Check, ArrowUpRight, ArrowDownRight,
   Search, Calendar, ChevronDown, Trash2, Edit3, ClipboardList,
@@ -10,7 +10,7 @@ import {
   Users, DollarSign, LogOut, Menu, Bell, Loader2, Wallet,
   ShoppingCart, Briefcase, UserCheck, PiggyBank, CircleDollarSign,
   Truck, UsersRound, Building2, Receipt, Megaphone, Monitor, Package,
-  BanknoteArrowUp, BanknoteArrowDown,
+  BanknoteArrowUp, BanknoteArrowDown, Sparkles, Upload, Eye, CheckCircle2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +27,15 @@ interface Tx {
   date: string;
   note: string;
   createdAt: number;
+}
+
+interface ImportedTx {
+  type: TxType;
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+  note: string;
 }
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -78,7 +87,6 @@ function parseAmount(raw: string): number {
   return parseFloat(s) || 0;
 }
 
-// Prefetch — inicia o download dos chunks antes do useEffect rodar
 if (typeof window !== "undefined") {
   import("../../lib/firebase");
   import("firebase/auth");
@@ -147,7 +155,7 @@ function Sidebar({ collapsed, open, onClose, onLogout }: {
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// ─── Modal de transação manual ────────────────────────────────────────────────
 
 function Modal({ open, editing, onClose, onSave }: {
   open: boolean; editing: Tx | null;
@@ -220,7 +228,6 @@ function Modal({ open, editing, onClose, onSave }: {
         <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "78vh" }}>
           {err && <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 text-rose-600 text-xs">⚠ {err}</div>}
 
-          {/* Tipo */}
           <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
             {(["entrada", "saida"] as TxType[]).map((t) => (
               <button key={t} onClick={() => { setType(t); setCat(""); }}
@@ -232,14 +239,12 @@ function Modal({ open, editing, onClose, onSave }: {
             ))}
           </div>
 
-          {/* Descrição */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Descrição *</label>
             <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Cliente XYZ, Aluguel…"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
 
-          {/* Categoria */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Categoria *</label>
             <div className="relative">
@@ -252,7 +257,6 @@ function Modal({ open, editing, onClose, onSave }: {
             </div>
           </div>
 
-          {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Valor (R$) *</label>
@@ -267,7 +271,6 @@ function Modal({ open, editing, onClose, onSave }: {
             </div>
           </div>
 
-          {/* Nota */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
               Observação <span className="text-slate-300 font-normal normal-case">(opcional)</span>
@@ -276,7 +279,6 @@ function Modal({ open, editing, onClose, onSave }: {
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
 
-          {/* Salvar */}
           <button onClick={submit} disabled={!canSave || saving}
             className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all
               ${canSave && !saving
@@ -288,6 +290,362 @@ function Modal({ open, editing, onClose, onSave }: {
           </button>
 
           {!canSave && <p className="text-center text-rose-400 text-xs font-medium">Faltando: {missing}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal de importação IA ───────────────────────────────────────────────────
+
+type ImportStep = "input" | "loading" | "preview" | "saving" | "done";
+
+function ImportModal({ open, onClose, onImport }: {
+  open: boolean;
+  onClose: () => void;
+  onImport: (txs: ImportedTx[]) => Promise<void>;
+}) {
+  const [step, setStep] = useState<ImportStep>("input");
+  const [text, setText] = useState("");
+  const [preview, setPreview] = useState<ImportedTx[]>([]);
+  const [errMsg, setErrMsg] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setStep("input");
+      setText("");
+      setPreview([]);
+      setErrMsg("");
+      setSelected(new Set());
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setText(ev.target?.result as string ?? "");
+    reader.readAsText(file, "UTF-8");
+  };
+
+  // Mapeia categorias livres da IA para as categorias válidas do sistema
+  const normalizeCategory = (raw: string, type: TxType): string => {
+    const entradaCats = CAT.entrada;
+    const saidaCats   = CAT.saida;
+    const cats = type === "entrada" ? entradaCats : saidaCats;
+    const match = cats.find(c => c.toLowerCase().includes(raw.toLowerCase()) || raw.toLowerCase().includes(c.toLowerCase()));
+    if (match) return match;
+    // fallback por palavras-chave
+    const r = raw.toLowerCase();
+    if (type === "entrada") {
+      if (r.includes("salário") || r.includes("salario") || r.includes("folha")) return "Recebimento de clientes";
+      if (r.includes("venda") || r.includes("pix receb")) return "Vendas";
+      if (r.includes("invest")) return "Investimentos";
+      if (r.includes("serviç") || r.includes("servic") || r.includes("freela")) return "Serviços prestados";
+      return "Outros recebimentos";
+    } else {
+      if (r.includes("aluguel") || r.includes("alug")) return "Aluguel";
+      if (r.includes("fornec") || r.includes("compra") || r.includes("mercado")) return "Fornecedores";
+      if (r.includes("folha") || r.includes("salário") || r.includes("salario")) return "Folha de pagamento";
+      if (r.includes("imposto") || r.includes("tributo") || r.includes("das") || r.includes("ir ")) return "Impostos";
+      if (r.includes("market") || r.includes("publi") || r.includes("anún")) return "Marketing";
+      if (r.includes("softw") || r.includes("ti ") || r.includes("assinatura") || r.includes("tech")) return "TI / Software";
+      return "Outros gastos";
+    }
+  };
+
+  const analyze = async () => {
+    if (!text.trim()) return;
+    setStep("loading");
+    setErrMsg("");
+    try {
+      const res = await fetch("/api/analyze-extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
+
+      const rawText = (data.content as any[])?.map((c: any) => c.text || "").join("") ?? "";
+      const clean   = rawText.replace(/```json|```/g, "").trim();
+      const parsed  = JSON.parse(clean);
+
+      if (!parsed.transactions?.length) {
+        setErrMsg("Nenhuma transação encontrada. Verifique se o texto contém dados bancários.");
+        setStep("input");
+        return;
+      }
+
+      const normalized: ImportedTx[] = parsed.transactions.map((t: any) => ({
+        type:        (t.type === "entrada" || t.type === "saida") ? t.type : "saida",
+        description: String(t.description ?? "Sem descrição").slice(0, 60),
+        category:    normalizeCategory(String(t.category ?? ""), t.type === "entrada" ? "entrada" : "saida"),
+        amount:      Math.abs(Number(t.amount) || 0),
+        date:        String(t.date ?? TODAY),
+        note:        String(t.note ?? ""),
+      }));
+
+      setPreview(normalized);
+      setSelected(new Set(normalized.map((_, i) => i)));
+      setStep("preview");
+    } catch (e: any) {
+      setErrMsg(`Erro ao interpretar: ${e.message}`);
+      setStep("input");
+    }
+  };
+
+  const confirmImport = async () => {
+    const toImport = preview.filter((_, i) => selected.has(i));
+    if (!toImport.length) return;
+    setStep("saving");
+    try {
+      await onImport(toImport);
+      setStep("done");
+    } catch (e: any) {
+      setErrMsg(e.message);
+      setStep("preview");
+    }
+  };
+
+  const toggleAll = () => {
+    if (selected.size === preview.length) setSelected(new Set());
+    else setSelected(new Set(preview.map((_, i) => i)));
+  };
+
+  const toggle = (i: number) => {
+    const s = new Set(selected);
+    s.has(i) ? s.delete(i) : s.add(i);
+    setSelected(s);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ background: "rgba(10,22,40,0.80)", backdropFilter: "blur(8px)" }}>
+      <div className="w-full sm:max-w-lg bg-white sm:rounded-2xl rounded-t-3xl overflow-hidden"
+        style={{ boxShadow: "0 32px 80px rgba(10,22,40,0.35)", animation: "mIn .25s cubic-bezier(.22,.68,0,1.2)", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+
+        {/* Handle mobile */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
+          <div className="w-10 h-1.5 rounded-full bg-slate-200" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Sparkles size={15} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-blue-950 font-extrabold text-base leading-tight">Importar com IA</p>
+              <p className="text-slate-400 text-xs">
+                {step === "input"   && "Cole ou faça upload do extrato"}
+                {step === "loading" && "Analisando…"}
+                {step === "preview" && `${preview.length} transações encontradas`}
+                {step === "saving"  && "Salvando…"}
+                {step === "done"    && "Importado com sucesso!"}
+              </p>
+            </div>
+          </div>
+          {step !== "saving" && (
+            <button onClick={onClose}
+              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors cursor-pointer">
+              <X size={15} />
+            </button>
+          )}
+        </div>
+
+        {/* Corpo */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+          {/* Step: input */}
+          {step === "input" && (
+            <>
+              {errMsg && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 text-rose-600 text-xs flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">⚠</span> {errMsg}
+                </div>
+              )}
+
+              {/* Upload */}
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="w-full border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 rounded-xl p-5 flex flex-col items-center gap-2 transition-all cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                  <Upload size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+                </div>
+                <p className="text-sm font-semibold text-slate-600 group-hover:text-blue-700 transition-colors">Upload de arquivo</p>
+                <p className="text-xs text-slate-400">.txt ou .csv</p>
+                <input ref={fileRef} type="file" accept=".txt,.csv" className="hidden" onChange={handleFile} />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-slate-100" />
+                <span className="text-xs text-slate-400 font-medium">ou cole o texto</span>
+                <div className="flex-1 h-px bg-slate-100" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Texto do extrato</label>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  rows={7}
+                  placeholder={`Exemplo:\n01/03/2026  PIX RECEBIDO CLIENTE ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA COMERCIAL       DB  R$ 2.200,00\n10/03/2026  FORNECEDOR XYZ LTDA          DB  R$   870,00\n15/03/2026  PAGTO SALARIOS               DB  R$ 4.800,00`}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-blue-950 font-mono outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all resize-none placeholder-slate-300"
+                />
+                <p className="text-xs text-slate-400">{text.length} caracteres</p>
+              </div>
+            </>
+          )}
+
+          {/* Step: loading */}
+          {step === "loading" && (
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                  <Sparkles size={28} className="text-blue-500" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                  <Loader2 size={13} className="text-blue-500 animate-spin" />
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-blue-950 font-bold text-sm">IA analisando extrato…</p>
+                <p className="text-slate-400 text-xs mt-1">Identificando transações, valores e categorias</p>
+              </div>
+              <div className="w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: "60%" }} />
+              </div>
+            </div>
+          )}
+
+          {/* Step: preview */}
+          {(step === "preview" || step === "saving") && (
+            <>
+              {/* Resumo */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Entradas", val: preview.filter(t => t.type === "entrada").length, color: "text-emerald-600", bg: "bg-emerald-50" },
+                  { label: "Saídas",   val: preview.filter(t => t.type === "saida").length,   color: "text-rose-600",    bg: "bg-rose-50"    },
+                  { label: "Selecionados", val: selected.size,                                  color: "text-blue-700",    bg: "bg-blue-50"    },
+                ].map(({ label, val, color, bg }) => (
+                  <div key={label} className={`${bg} rounded-xl p-2.5 text-center`}>
+                    <p className={`text-lg font-extrabold ${color}`}>{val}</p>
+                    <p className="text-xs text-slate-500">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Selecionar todos */}
+              <button onClick={toggleAll}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer text-sm text-slate-600 font-medium">
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors
+                  ${selected.size === preview.length ? "bg-blue-600 border-blue-600" : "border-slate-300"}`}>
+                  {selected.size === preview.length && <Check size={10} className="text-white" />}
+                </div>
+                {selected.size === preview.length ? "Desmarcar todos" : "Selecionar todos"}
+                <span className="ml-auto text-xs text-slate-400">{selected.size}/{preview.length}</span>
+              </button>
+
+              {/* Lista de preview */}
+              <div className="space-y-1.5">
+                {preview.map((tx, i) => {
+                  const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
+                  const isSelected = selected.has(i);
+                  return (
+                    <button key={i} onClick={() => toggle(i)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all cursor-pointer text-left
+                        ${isSelected
+                          ? tx.type === "entrada" ? "border-emerald-200 bg-emerald-50/60" : "border-rose-200 bg-rose-50/60"
+                          : "border-slate-100 bg-slate-50/60 opacity-50"}`}>
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors
+                        ${isSelected ? "bg-blue-600 border-blue-600" : "border-slate-300"}`}>
+                        {isSelected && <Check size={9} className="text-white" />}
+                      </div>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                        ${tx.type === "entrada" ? "bg-emerald-100" : "bg-rose-100"}`}>
+                        <CatIcon size={14} className={tx.type === "entrada" ? "text-emerald-600" : "text-rose-600"} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-blue-950 text-xs font-semibold truncate">{tx.description}</p>
+                        <p className="text-slate-400 text-xs truncate">{tx.category} · {labelDate(tx.date)}</p>
+                      </div>
+                      <span className={`text-xs font-bold mono shrink-0
+                        ${tx.type === "entrada" ? "text-emerald-600" : "text-rose-500"}`}>
+                        {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Step: done */}
+          {step === "done" && (
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                <CheckCircle2 size={32} className="text-emerald-500" />
+              </div>
+              <p className="text-blue-950 font-bold text-base">Importado com sucesso!</p>
+              <p className="text-slate-400 text-sm text-center">
+                {selected.size} transação{selected.size !== 1 ? "ões" : ""} adicionada{selected.size !== 1 ? "s" : ""} ao fluxo de caixa.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-slate-100 shrink-0 flex gap-2">
+          {step === "input" && (
+            <>
+              <button onClick={onClose}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">
+                Cancelar
+              </button>
+              <button onClick={analyze} disabled={!text.trim()}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all
+                  ${text.trim()
+                    ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 cursor-pointer"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
+                <Sparkles size={14} /> Analisar com IA
+              </button>
+            </>
+          )}
+          {step === "preview" && (
+            <>
+              <button onClick={() => setStep("input")}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">
+                ← Voltar
+              </button>
+              <button onClick={confirmImport} disabled={selected.size === 0}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all
+                  ${selected.size > 0
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-100 cursor-pointer"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
+                <Check size={14} /> Importar {selected.size}
+              </button>
+            </>
+          )}
+          {step === "saving" && (
+            <button disabled
+              className="flex-1 py-3 rounded-xl bg-slate-200 text-slate-400 text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed">
+              <Loader2 size={14} className="animate-spin" /> Salvando…
+            </button>
+          )}
+          {step === "done" && (
+            <button onClick={onClose}
+              className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer">
+              <Check size={14} /> Concluir
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -306,6 +664,7 @@ export default function CashFlowPage() {
   const [sideOpen,  setSideOpen]  = useState(false);
   const [modal,     setModal]     = useState(false);
   const [editing,   setEditing]   = useState<Tx | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [filter,    setFilter]    = useState<"all" | TxType>("all");
   const [search,    setSearch]    = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -367,6 +726,22 @@ export default function CashFlowPage() {
     const { db } = await getFirebase();
     if (editing) await updateDoc(doc(db, "users", uid, "cashflow", editing.id), data as any);
     else         await addDoc(collection(db, "users", uid, "cashflow"), data);
+  }
+
+  // ── Importação em lote ────────────────────────────────────────────────────
+  async function handleImport(importedTxs: ImportedTx[]) {
+    if (!uid) throw new Error("Usuário não autenticado");
+    const [{ getFirebase }, { collection, addDoc }] = await Promise.all([
+      import("../../lib/firebase"), import("firebase/firestore"),
+    ]);
+    const { db } = await getFirebase();
+    const col = collection(db, "users", uid, "cashflow");
+    // Salva em paralelo
+    await Promise.all(
+      importedTxs.map((tx) =>
+        addDoc(col, { ...tx, createdAt: Date.now() })
+      )
+    );
   }
 
   async function handleDelete() {
@@ -459,6 +834,12 @@ export default function CashFlowPage() {
         onClose={() => { setModal(false); setEditing(null); }}
         onSave={handleSave} />
 
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={handleImport}
+      />
+
       {/* Confirmar exclusão */}
       {confirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -503,6 +884,13 @@ export default function CashFlowPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Botão Importar IA — desktop */}
+            <button
+              onClick={() => setImportOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer"
+            >
+              <Sparkles size={13} /> Importar extrato
+            </button>
             <button onClick={() => { setEditing(null); setModal(true); }}
               className="hidden sm:flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer">
               <Plus size={14} /> Nova transação
@@ -542,6 +930,21 @@ export default function CashFlowPage() {
             ))}
           </div>
 
+          {/* Banner importação IA — mobile */}
+          <button
+            onClick={() => setImportOpen(true)}
+            className="sm:hidden w-full card p-3 flex items-center gap-3 cursor-pointer hover:border-blue-200 transition-colors"
+          >
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+              <Sparkles size={16} className="text-blue-600" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-blue-950 text-sm font-bold leading-tight">Importar extrato bancário</p>
+              <p className="text-slate-400 text-xs">A IA preenche tudo automaticamente</p>
+            </div>
+            <ArrowUpRight size={16} className="text-blue-400 shrink-0" />
+          </button>
+
           {/* Toolbar */}
           <div className="card p-3 space-y-2.5 sm:space-y-3">
             <div className="relative">
@@ -569,11 +972,10 @@ export default function CashFlowPage() {
                   {label}
                 </button>
               ))}
-              
-            </div>
-            <span className="ml-auto text-xs text-slate-400 shrink-0 pl-1">
+              <span className="ml-auto text-xs text-slate-400 shrink-0 pl-1">
                 {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
               </span>
+            </div>
           </div>
 
           {/* Lista */}
@@ -586,13 +988,19 @@ export default function CashFlowPage() {
                 {search || filter !== "all" ? "Nenhum resultado" : "Nenhuma transação ainda"}
               </p>
               <p className="text-slate-400 text-xs">
-                {search || filter !== "all" ? "Tente mudar os filtros." : "Clique no botão abaixo para começar."}
+                {search || filter !== "all" ? "Tente mudar os filtros." : "Adicione manualmente ou importe seu extrato bancário."}
               </p>
               {!search && filter === "all" && (
-                <button onClick={() => { setEditing(null); setModal(true); }}
-                  className="mt-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors cursor-pointer">
-                  <Plus size={14} /> Adicionar transação
-                </button>
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => { setEditing(null); setModal(true); }}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors cursor-pointer">
+                    <Plus size={14} /> Adicionar
+                  </button>
+                  <button onClick={() => setImportOpen(true)}
+                    className="flex items-center gap-2 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-bold px-4 py-2.5 rounded-xl transition-colors cursor-pointer">
+                    <Sparkles size={14} /> Importar extrato
+                  </button>
+                </div>
               )}
             </div>
           ) : (
@@ -653,12 +1061,22 @@ export default function CashFlowPage() {
         </main>
       </div>
 
-      {/* FAB mobile */}
-      <button onClick={() => { setEditing(null); setModal(true); }}
-        className="lg:hidden fixed z-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-        style={{ bottom: 74, right: 18, width: 54, height: 54, boxShadow: "0 8px 28px rgba(21,101,192,.5)" }}>
-        <Plus size={24} />
-      </button>
+      {/* FAB mobile — dois botões */}
+      <div className="lg:hidden fixed z-20 flex flex-col gap-2" style={{ bottom: 74, right: 18 }}>
+        <button
+          onClick={() => setImportOpen(true)}
+          className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+          style={{ boxShadow: "0 4px 16px rgba(21,101,192,.2)" }}
+          title="Importar extrato"
+        >
+          <Sparkles size={18} />
+        </button>
+        <button onClick={() => { setEditing(null); setModal(true); }}
+          className="bg-blue-600 text-white rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+          style={{ width: 54, height: 54, boxShadow: "0 8px 28px rgba(21,101,192,.5)" }}>
+          <Plus size={24} />
+        </button>
+      </div>
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-white border-t border-slate-100 flex justify-around items-center py-1.5"
