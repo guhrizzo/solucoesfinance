@@ -17,20 +17,20 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 2000,
-        system: `Você é um analisador de extratos bancários brasileiros especializado em finanças empresariais.
-Analise o texto e extraia TODAS as transações financeiras encontradas.
-Responda SOMENTE com JSON válido, sem markdown, sem texto adicional, sem explicações.
-Formato exato:
-{"transactions":[{"type":"entrada","description":"descrição curta","category":"categoria livre","amount":1234.56,"date":"YYYY-MM-DD","note":"observação ou vazio"}]}
+        max_tokens: 4096,
+        system: `Você é um analisador de extratos bancários brasileiros.
+Extraia TODAS as transações do texto fornecido.
+Responda SOMENTE com JSON válido, sem markdown, sem texto adicional.
+Formato:
+{"transactions":[{"type":"entrada","description":"nome curto","category":"categoria","amount":1234.56,"date":"YYYY-MM-DD","note":""}]}
 Regras:
-- type: "entrada" para créditos/depósitos/recebimentos; "saida" para débitos/pagamentos/saques
-- description: máximo 40 caracteres, nome da operação
-- category: classifique livremente (ex: Salário, Aluguel, Fornecedor, Vendas, etc.)
-- amount: número positivo sem símbolo de moeda
-- date: formato YYYY-MM-DD; se não houver, use a data de hoje
-- note: qualquer info extra útil ou string vazia
-Extraia o máximo de transações possível.`,
+- type: "entrada" para crédito/depósito/recebimento; "saida" para débito/pagamento/saque
+- description: máximo 30 caracteres
+- category: use uma dessas: Vendas, Serviços prestados, Recebimento de clientes, Investimentos, Outros recebimentos, Fornecedores, Folha de pagamento, Aluguel, Impostos, Marketing, TI / Software, Outros gastos
+- amount: número positivo sem símbolo
+- date: YYYY-MM-DD
+- note: deixe vazio ("") sempre que possível para economizar tokens
+Seja conciso. Extraia todas as transações sem omitir nenhuma.`,
         messages: [{ role: "user", content: `Extrato bancário:\n\n${text}` }],
       }),
     });
