@@ -10,7 +10,8 @@ import {
   Users, DollarSign, LogOut, Menu, Bell, Loader2, Wallet,
   ShoppingCart, Briefcase, UserCheck, PiggyBank, CircleDollarSign,
   Truck, UsersRound, Building2, Receipt, Megaphone, Monitor, Package,
-  BanknoteArrowUp, BanknoteArrowDown, Sparkles, Upload, Eye, CheckCircle2,
+  BanknoteArrowUp, BanknoteArrowDown, Sparkles, Upload, CheckCircle2,
+  Paperclip, ExternalLink, FileScan,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,8 @@ interface Tx {
   date: string;
   note: string;
   createdAt: number;
+  nfUrl?: string;
+  nfName?: string;
 }
 
 interface ImportedTx {
@@ -155,20 +158,27 @@ function Sidebar({ collapsed, open, onClose, onLogout }: {
   );
 }
 
-// ─── Modal de transação manual ────────────────────────────────────────────────
+// ─── Modal de transação manual (com NF) ──────────────────────────────────────
 
-function Modal({ open, editing, onClose, onSave }: {
-  open: boolean; editing: Tx | null;
+function Modal({ open, editing, uid, onClose, onSave }: {
+  open: boolean; editing: Tx | null; uid: string | null;
   onClose: () => void; onSave: (data: Omit<Tx, "id">) => Promise<void>;
 }) {
-  const [type,   setType]   = useState<TxType>("entrada");
-  const [desc,   setDesc]   = useState("");
-  const [cat,    setCat]    = useState("");
-  const [rawAmt, setRawAmt] = useState("");
-  const [date,   setDate]   = useState(TODAY);
-  const [note,   setNote]   = useState("");
-  const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState("");
+  const [type,      setType]      = useState<TxType>("entrada");
+  const [desc,      setDesc]      = useState("");
+  const [cat,       setCat]       = useState("");
+  const [rawAmt,    setRawAmt]    = useState("");
+  const [date,      setDate]      = useState(TODAY);
+  const [note,      setNote]      = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [err,       setErr]       = useState("");
+  // NF states
+  const [nfFile,    setNfFile]    = useState<File | null>(null);
+  const [nfPreview, setNfPreview] = useState<string>("");   // URL de preview local
+  const [nfUrl,     setNfUrl]     = useState<string>("");   // URL Firebase já salva
+  const [nfName,    setNfName]    = useState<string>("");
+  const [scanning,  setScanning]  = useState(false);
+  const nfRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -178,6 +188,10 @@ function Modal({ open, editing, onClose, onSave }: {
     setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
     setDate(editing?.date ?? TODAY);
     setNote(editing?.note ?? "");
+    setNfFile(null);
+    setNfPreview("");
+    setNfUrl(editing?.nfUrl ?? "");
+    setNfName(editing?.nfName ?? "");
     setSaving(false);
     setErr("");
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -192,17 +206,126 @@ function Modal({ open, editing, onClose, onSave }: {
   const canSave = descOk && catOk && amtOk && dateOk;
   const missing = [!descOk && "descrição", !catOk && "categoria", !amtOk && "valor", !dateOk && "data"].filter(Boolean).join(", ");
 
+  // Seleciona arquivo NF
+  const handleNfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNfFile(file);
+    setNfName(file.name);
+    // Preview local
+    const url = URL.createObjectURL(file);
+    setNfPreview(url);
+    setNfUrl("");
+  };
+
+  // Lê NF com IA e preenche campos automaticamente
+  const scanNf = async () => {
+    if (!nfFile) return;
+    setScanning(true);
+    setErr("");
+    try {
+      const base64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res((r.result as string).split(",")[1]);
+        r.onerror = () => rej(new Error("Falha ao ler arquivo"));
+        r.readAsDataURL(nfFile);
+      });
+
+      const isXml = nfFile.name.toLowerCase().endsWith(".xml");
+      let body: any;
+
+      if (isXml) {
+        // XML: lê como texto
+        const xmlText = await nfFile.text();
+        body = { type: "xml", content: xmlText };
+      } else {
+        // PDF ou imagem: envia base64
+        const mediaType = nfFile.type || (nfFile.name.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+        body = { type: "file", base64, mediaType };
+      }
+
+      const res = await fetch("/api/analyze-nf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
+
+      // Preenche campos com dados da NF
+      if (data.description) setDesc(data.description.slice(0, 60));
+      if (data.amount)      setRawAmt(String(data.amount).replace(".", ","));
+      if (data.date)        setDate(data.date);
+      if (data.note)        setNote(data.note);
+      if (data.type)        setType(data.type);
+      // Tenta achar categoria
+      const cats = data.type === "entrada" ? CAT.entrada : CAT.saida;
+      const match = cats.find(c =>
+        c.toLowerCase().includes((data.category ?? "").toLowerCase()) ||
+        (data.category ?? "").toLowerCase().includes(c.toLowerCase())
+      );
+      if (match) setCat(match);
+
+    } catch (e: any) {
+      setErr(`Erro ao ler NF: ${e.message}`);
+    }
+    setScanning(false);
+  };
+
+  // Upload NF para Firebase Storage (com timeout de 15s)
+  const uploadNf = async (): Promise<{ url: string; name: string }> => {
+    if (!nfFile || !uid) return { url: nfUrl, name: nfName };
+
+    const timeout = new Promise<never>((_, rej) =>
+      setTimeout(() => rej(new Error("Timeout: Firebase Storage pode não estar ativado no console.")), 15000)
+    );
+
+    const upload = async () => {
+      const [{ getFirebase }, { ref, uploadBytes, getDownloadURL }] = await Promise.all([
+        import("../../lib/firebase"),
+        import("firebase/storage"),
+      ]);
+      const { storage } = await getFirebase();
+      const path = `users/${uid}/nfs/${Date.now()}_${nfFile.name}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, nfFile);
+      const url = await getDownloadURL(storageRef);
+      return { url, name: nfFile.name };
+    };
+
+    return Promise.race([upload(), timeout]);
+  };
+
   async function submit() {
     if (!canSave || saving) return;
     setSaving(true); setErr("");
     try {
-      await onSave({ type, description: desc.trim(), category: cat, amount, date, note: note.trim(), createdAt: editing?.createdAt ?? Date.now() });
+      let nfData = { url: nfUrl, name: nfName };
+      if (nfFile) {
+        try {
+          nfData = await uploadNf();
+        } catch (uploadErr: any) {
+          setErr(`NF nao anexada: ${uploadErr.message}. Salvando sem arquivo.`);
+          await new Promise(r => setTimeout(r, 2500));
+          setErr("");
+        }
+      }
+      const saveData: any = {
+        type, description: desc.trim(), category: cat, amount, date,
+        note: note.trim(), createdAt: editing?.createdAt ?? Date.now(),
+      };
+      if (nfData.url)  saveData.nfUrl  = nfData.url;
+      if (nfData.name) saveData.nfName = nfData.name;
+      await onSave(saveData);
       onClose();
     } catch (e: any) {
       setErr(e?.message ?? "Erro ao salvar");
       setSaving(false);
     }
   }
+
+  const hasNf = nfPreview || nfUrl;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
@@ -217,7 +340,7 @@ function Modal({ open, editing, onClose, onSave }: {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
             <p className="text-blue-950 font-extrabold text-base">{editing ? "Editar transação" : "Nova transação"}</p>
-            <p className="text-slate-400 text-xs">Preencha todos os campos *</p>
+            <p className="text-slate-400 text-xs">Preencha os campos ou anexe uma NF</p>
           </div>
           <button onClick={() => !saving && onClose()}
             className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors cursor-pointer">
@@ -225,9 +348,68 @@ function Modal({ open, editing, onClose, onSave }: {
           </button>
         </div>
 
-        <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "78vh" }}>
+        <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "82vh" }}>
           {err && <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 text-rose-600 text-xs">⚠ {err}</div>}
 
+          {/* ── Anexo de NF ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+              <Paperclip size={12} /> Nota Fiscal <span className="text-slate-300 font-normal normal-case">(opcional)</span>
+            </label>
+
+            {hasNf ? (
+              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                  <FileText size={16} className="text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-blue-950 text-xs font-semibold truncate">{nfName || "Nota Fiscal"}</p>
+                  <p className="text-blue-400 text-xs">Anexada ✓</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {(nfPreview || nfUrl) && (
+                    <a href={nfPreview || nfUrl} target="_blank" rel="noreferrer"
+                      className="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-200 flex items-center justify-center text-blue-600 transition-colors cursor-pointer">
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                  <button onClick={() => { setNfFile(null); setNfPreview(""); setNfUrl(""); setNfName(""); }}
+                    className="w-7 h-7 rounded-lg bg-blue-100 hover:bg-rose-100 hover:text-rose-500 flex items-center justify-center text-blue-400 transition-colors cursor-pointer">
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => nfRef.current?.click()}
+                className="w-full border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 rounded-xl p-4 flex items-center gap-3 transition-all cursor-pointer group">
+                <div className="w-9 h-9 rounded-lg bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center shrink-0 transition-colors">
+                  <Upload size={15} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-slate-600 group-hover:text-blue-700 transition-colors">Anexar NF</p>
+                  <p className="text-xs text-slate-400">PDF, imagem ou XML</p>
+                </div>
+                <input ref={nfRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.xml" className="hidden" onChange={handleNfSelect} />
+              </button>
+            )}
+
+            {/* Botão de leitura IA */}
+            {nfFile && (
+              <button onClick={scanNf} disabled={scanning}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 transition-all
+                  ${scanning
+                    ? "border-violet-200 bg-violet-50 text-violet-400 cursor-not-allowed"
+                    : "border-violet-300 bg-violet-50 hover:bg-violet-100 text-violet-700 cursor-pointer"}`}>
+                {scanning
+                  ? <><Loader2 size={14} className="animate-spin" /> Lendo NF com IA…</>
+                  : <><FileScan size={14} /> Ler NF com IA e preencher campos</>}
+              </button>
+            )}
+          </div>
+
+          <div className="h-px bg-slate-100" />
+
+          {/* Tipo */}
           <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
             {(["entrada", "saida"] as TxType[]).map((t) => (
               <button key={t} onClick={() => { setType(t); setCat(""); }}
@@ -239,12 +421,14 @@ function Modal({ open, editing, onClose, onSave }: {
             ))}
           </div>
 
+          {/* Descrição */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Descrição *</label>
             <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Cliente XYZ, Aluguel…"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
 
+          {/* Categoria */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Categoria *</label>
             <div className="relative">
@@ -257,6 +441,7 @@ function Modal({ open, editing, onClose, onSave }: {
             </div>
           </div>
 
+          {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Valor (R$) *</label>
@@ -271,6 +456,7 @@ function Modal({ open, editing, onClose, onSave }: {
             </div>
           </div>
 
+          {/* Nota */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
               Observação <span className="text-slate-300 font-normal normal-case">(opcional)</span>
@@ -279,6 +465,7 @@ function Modal({ open, editing, onClose, onSave }: {
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-blue-950 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
 
+          {/* Salvar */}
           <button onClick={submit} disabled={!canSave || saving}
             className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all
               ${canSave && !saving
@@ -305,20 +492,16 @@ function ImportModal({ open, onClose, onImport }: {
   onClose: () => void;
   onImport: (txs: ImportedTx[]) => Promise<void>;
 }) {
-  const [step, setStep] = useState<ImportStep>("input");
-  const [text, setText] = useState("");
-  const [preview, setPreview] = useState<ImportedTx[]>([]);
-  const [errMsg, setErrMsg] = useState("");
+  const [step,     setStep]     = useState<ImportStep>("input");
+  const [text,     setText]     = useState("");
+  const [preview,  setPreview]  = useState<ImportedTx[]>([]);
+  const [errMsg,   setErrMsg]   = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) {
-      setStep("input");
-      setText("");
-      setPreview([]);
-      setErrMsg("");
-      setSelected(new Set());
+      setStep("input"); setText(""); setPreview([]); setErrMsg(""); setSelected(new Set());
     }
   }, [open]);
 
@@ -332,14 +515,10 @@ function ImportModal({ open, onClose, onImport }: {
     reader.readAsText(file, "UTF-8");
   };
 
-  // Mapeia categorias livres da IA para as categorias válidas do sistema
   const normalizeCategory = (raw: string, type: TxType): string => {
-    const entradaCats = CAT.entrada;
-    const saidaCats   = CAT.saida;
-    const cats = type === "entrada" ? entradaCats : saidaCats;
+    const cats = type === "entrada" ? CAT.entrada : CAT.saida;
     const match = cats.find(c => c.toLowerCase().includes(raw.toLowerCase()) || raw.toLowerCase().includes(c.toLowerCase()));
     if (match) return match;
-    // fallback por palavras-chave
     const r = raw.toLowerCase();
     if (type === "entrada") {
       if (r.includes("salário") || r.includes("salario") || r.includes("folha")) return "Recebimento de clientes";
@@ -348,27 +527,25 @@ function ImportModal({ open, onClose, onImport }: {
       if (r.includes("serviç") || r.includes("servic") || r.includes("freela")) return "Serviços prestados";
       return "Outros recebimentos";
     } else {
-      if (r.includes("aluguel") || r.includes("alug")) return "Aluguel";
+      if (r.includes("aluguel")) return "Aluguel";
       if (r.includes("fornec") || r.includes("compra") || r.includes("mercado")) return "Fornecedores";
       if (r.includes("folha") || r.includes("salário") || r.includes("salario")) return "Folha de pagamento";
-      if (r.includes("imposto") || r.includes("tributo") || r.includes("das") || r.includes("ir ")) return "Impostos";
-      if (r.includes("market") || r.includes("publi") || r.includes("anún")) return "Marketing";
-      if (r.includes("softw") || r.includes("ti ") || r.includes("assinatura") || r.includes("tech")) return "TI / Software";
+      if (r.includes("imposto") || r.includes("tributo") || r.includes("das")) return "Impostos";
+      if (r.includes("market") || r.includes("publi")) return "Marketing";
+      if (r.includes("softw") || r.includes("ti ") || r.includes("assinatura")) return "TI / Software";
       return "Outros gastos";
     }
   };
 
   const analyze = async () => {
     if (!text.trim()) return;
-    setStep("loading");
-    setErrMsg("");
+    setStep("loading"); setErrMsg("");
     try {
       const res = await fetch("/api/analyze-extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
 
@@ -378,8 +555,7 @@ function ImportModal({ open, onClose, onImport }: {
 
       if (!parsed.transactions?.length) {
         setErrMsg("Nenhuma transação encontrada. Verifique se o texto contém dados bancários.");
-        setStep("input");
-        return;
+        setStep("input"); return;
       }
 
       const normalized: ImportedTx[] = parsed.transactions.map((t: any) => ({
@@ -404,24 +580,16 @@ function ImportModal({ open, onClose, onImport }: {
     const toImport = preview.filter((_, i) => selected.has(i));
     if (!toImport.length) return;
     setStep("saving");
-    try {
-      await onImport(toImport);
-      setStep("done");
-    } catch (e: any) {
-      setErrMsg(e.message);
-      setStep("preview");
-    }
+    try { await onImport(toImport); setStep("done"); }
+    catch (e: any) { setErrMsg(e.message); setStep("preview"); }
   };
 
   const toggleAll = () => {
     if (selected.size === preview.length) setSelected(new Set());
     else setSelected(new Set(preview.map((_, i) => i)));
   };
-
   const toggle = (i: number) => {
-    const s = new Set(selected);
-    s.has(i) ? s.delete(i) : s.add(i);
-    setSelected(s);
+    const s = new Set(selected); s.has(i) ? s.delete(i) : s.add(i); setSelected(s);
   };
 
   return (
@@ -430,12 +598,10 @@ function ImportModal({ open, onClose, onImport }: {
       <div className="w-full sm:max-w-lg bg-white sm:rounded-2xl rounded-t-3xl overflow-hidden"
         style={{ boxShadow: "0 32px 80px rgba(10,22,40,0.35)", animation: "mIn .25s cubic-bezier(.22,.68,0,1.2)", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
 
-        {/* Handle mobile */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
           <div className="w-10 h-1.5 rounded-full bg-slate-200" />
         </div>
 
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
@@ -460,10 +626,7 @@ function ImportModal({ open, onClose, onImport }: {
           )}
         </div>
 
-        {/* Corpo */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-
-          {/* Step: input */}
           {step === "input" && (
             <>
               {errMsg && (
@@ -471,12 +634,8 @@ function ImportModal({ open, onClose, onImport }: {
                   <span className="shrink-0 mt-0.5">⚠</span> {errMsg}
                 </div>
               )}
-
-              {/* Upload */}
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="w-full border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 rounded-xl p-5 flex flex-col items-center gap-2 transition-all cursor-pointer group"
-              >
+              <button onClick={() => fileRef.current?.click()}
+                className="w-full border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 rounded-xl p-5 flex flex-col items-center gap-2 transition-all cursor-pointer group">
                 <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
                   <Upload size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
                 </div>
@@ -493,19 +652,14 @@ function ImportModal({ open, onClose, onImport }: {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Texto do extrato</label>
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  rows={7}
-                  placeholder={`Exemplo:\n01/03/2026  PIX RECEBIDO CLIENTE ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA COMERCIAL       DB  R$ 2.200,00\n10/03/2026  FORNECEDOR XYZ LTDA          DB  R$   870,00\n15/03/2026  PAGTO SALARIOS               DB  R$ 4.800,00`}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-blue-950 font-mono outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all resize-none placeholder-slate-300"
-                />
+                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7}
+                  placeholder={`Exemplo:\n01/03/2026  PIX RECEBIDO CLIENTE ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA COMERCIAL       DB  R$ 2.200,00\n10/03/2026  FORNECEDOR XYZ LTDA          DB  R$   870,00`}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-blue-950 font-mono outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all resize-none placeholder-slate-300" />
                 <p className="text-xs text-slate-400">{text.length} caracteres</p>
               </div>
             </>
           )}
 
-          {/* Step: loading */}
           {step === "loading" && (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <div className="relative">
@@ -526,10 +680,8 @@ function ImportModal({ open, onClose, onImport }: {
             </div>
           )}
 
-          {/* Step: preview */}
           {(step === "preview" || step === "saving") && (
             <>
-              {/* Resumo */}
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { label: "Entradas", val: preview.filter(t => t.type === "entrada").length, color: "text-emerald-600", bg: "bg-emerald-50" },
@@ -543,42 +695,34 @@ function ImportModal({ open, onClose, onImport }: {
                 ))}
               </div>
 
-              {/* Selecionar todos */}
               <button onClick={toggleAll}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer text-sm text-slate-600 font-medium">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors
-                  ${selected.size === preview.length ? "bg-blue-600 border-blue-600" : "border-slate-300"}`}>
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${selected.size === preview.length ? "bg-blue-600 border-blue-600" : "border-slate-300"}`}>
                   {selected.size === preview.length && <Check size={10} className="text-white" />}
                 </div>
                 {selected.size === preview.length ? "Desmarcar todos" : "Selecionar todos"}
                 <span className="ml-auto text-xs text-slate-400">{selected.size}/{preview.length}</span>
               </button>
 
-              {/* Lista de preview */}
               <div className="space-y-1.5">
                 {preview.map((tx, i) => {
                   const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
-                  const isSelected = selected.has(i);
+                  const isSel = selected.has(i);
                   return (
                     <button key={i} onClick={() => toggle(i)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all cursor-pointer text-left
-                        ${isSelected
-                          ? tx.type === "entrada" ? "border-emerald-200 bg-emerald-50/60" : "border-rose-200 bg-rose-50/60"
-                          : "border-slate-100 bg-slate-50/60 opacity-50"}`}>
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors
-                        ${isSelected ? "bg-blue-600 border-blue-600" : "border-slate-300"}`}>
-                        {isSelected && <Check size={9} className="text-white" />}
+                        ${isSel ? tx.type === "entrada" ? "border-emerald-200 bg-emerald-50/60" : "border-rose-200 bg-rose-50/60" : "border-slate-100 bg-slate-50/60 opacity-50"}`}>
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSel ? "bg-blue-600 border-blue-600" : "border-slate-300"}`}>
+                        {isSel && <Check size={9} className="text-white" />}
                       </div>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                        ${tx.type === "entrada" ? "bg-emerald-100" : "bg-rose-100"}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === "entrada" ? "bg-emerald-100" : "bg-rose-100"}`}>
                         <CatIcon size={14} className={tx.type === "entrada" ? "text-emerald-600" : "text-rose-600"} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-blue-950 text-xs font-semibold truncate">{tx.description}</p>
                         <p className="text-slate-400 text-xs truncate">{tx.category} · {labelDate(tx.date)}</p>
                       </div>
-                      <span className={`text-xs font-bold mono shrink-0
-                        ${tx.type === "entrada" ? "text-emerald-600" : "text-rose-500"}`}>
+                      <span className={`text-xs font-bold mono shrink-0 ${tx.type === "entrada" ? "text-emerald-600" : "text-rose-500"}`}>
                         {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
                       </span>
                     </button>
@@ -588,7 +732,6 @@ function ImportModal({ open, onClose, onImport }: {
             </>
           )}
 
-          {/* Step: done */}
           {step === "done" && (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
               <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
@@ -602,47 +745,34 @@ function ImportModal({ open, onClose, onImport }: {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-4 border-t border-slate-100 shrink-0 flex gap-2">
           {step === "input" && (
             <>
-              <button onClick={onClose}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">
-                Cancelar
-              </button>
+              <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">Cancelar</button>
               <button onClick={analyze} disabled={!text.trim()}
                 className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all
-                  ${text.trim()
-                    ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 cursor-pointer"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
+                  ${text.trim() ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-100 cursor-pointer" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
                 <Sparkles size={14} /> Analisar com IA
               </button>
             </>
           )}
           {step === "preview" && (
             <>
-              <button onClick={() => setStep("input")}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">
-                ← Voltar
-              </button>
+              <button onClick={() => setStep("input")} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">← Voltar</button>
               <button onClick={confirmImport} disabled={selected.size === 0}
                 className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all
-                  ${selected.size > 0
-                    ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-100 cursor-pointer"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
+                  ${selected.size > 0 ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-100 cursor-pointer" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}>
                 <Check size={14} /> Importar {selected.size}
               </button>
             </>
           )}
           {step === "saving" && (
-            <button disabled
-              className="flex-1 py-3 rounded-xl bg-slate-200 text-slate-400 text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed">
+            <button disabled className="flex-1 py-3 rounded-xl bg-slate-200 text-slate-400 text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed">
               <Loader2 size={14} className="animate-spin" /> Salvando…
             </button>
           )}
           {step === "done" && (
-            <button onClick={onClose}
-              className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer">
+            <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer">
               <Check size={14} /> Concluir
             </button>
           )}
@@ -655,38 +785,30 @@ function ImportModal({ open, onClose, onImport }: {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  const [uid,       setUid]       = useState<string | null>(null);
-  const [userName,  setUserName]  = useState("");
-  const [txs,       setTxs]       = useState<Tx[]>([]);
-  const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
-  const [errMsg,    setErrMsg]    = useState("");
-  const [collapsed, setCollapsed] = useState(false);
-  const [sideOpen,  setSideOpen]  = useState(false);
-  const [modal,     setModal]     = useState(false);
-  const [editing,   setEditing]   = useState<Tx | null>(null);
+  const [uid,        setUid]        = useState<string | null>(null);
+  const [userName,   setUserName]   = useState("");
+  const [txs,        setTxs]        = useState<Tx[]>([]);
+  const [pageState,  setPageState]  = useState<"loading" | "ready" | "error">("loading");
+  const [errMsg,     setErrMsg]     = useState("");
+  const [collapsed,  setCollapsed]  = useState(false);
+  const [sideOpen,   setSideOpen]   = useState(false);
+  const [modal,      setModal]      = useState(false);
+  const [editing,    setEditing]    = useState<Tx | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [filter,    setFilter]    = useState<"all" | TxType>("all");
-  const [search,    setSearch]    = useState("");
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [deleting,  setDeleting]  = useState(false);
+  const [filter,     setFilter]     = useState<"all" | TxType>("all");
+  const [search,     setSearch]     = useState("");
+  const [confirmId,  setConfirmId]  = useState<string | null>(null);
+  const [deleting,   setDeleting]   = useState(false);
 
-  // ── Firebase ──────────────────────────────────────────────────────────────
   useEffect(() => {
     let snapUnsub: (() => void) | undefined;
     let authUnsub: (() => void) | undefined;
 
     (async () => {
       try {
-        const [
-          { getFirebase },
-          { onAuthStateChanged },
-          { collection, query, orderBy, onSnapshot },
-        ] = await Promise.all([
-          import("../../lib/firebase"),
-          import("firebase/auth"),
-          import("firebase/firestore"),
+        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot }] = await Promise.all([
+          import("../../lib/firebase"), import("firebase/auth"), import("firebase/firestore"),
         ]);
-
         const { auth, db } = await getFirebase();
 
         authUnsub = onAuthStateChanged(auth, (u) => {
@@ -694,7 +816,6 @@ export default function CashFlowPage() {
           setUid(u.uid);
           setUserName(u.displayName ?? u.email ?? "Usuário");
           snapUnsub?.();
-
           const q = query(collection(db, "users", u.uid, "cashflow"), orderBy("createdAt", "desc"));
           snapUnsub = onSnapshot(q,
             (snap) => { setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tx))); setPageState("ready"); },
@@ -702,8 +823,7 @@ export default function CashFlowPage() {
           );
         });
       } catch (e: any) {
-        setErrMsg(e.message);
-        setPageState("error");
+        setErrMsg(e.message); setPageState("error");
       }
     })();
 
@@ -724,11 +844,12 @@ export default function CashFlowPage() {
       import("../../lib/firebase"), import("firebase/firestore"),
     ]);
     const { db } = await getFirebase();
-    if (editing) await updateDoc(doc(db, "users", uid, "cashflow", editing.id), data as any);
-    else         await addDoc(collection(db, "users", uid, "cashflow"), data);
+    // Remove campos undefined para o Firestore não rejeitar
+    const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+    if (editing) await updateDoc(doc(db, "users", uid, "cashflow", editing.id), clean as any);
+    else         await addDoc(collection(db, "users", uid, "cashflow"), clean);
   }
 
-  // ── Importação em lote ────────────────────────────────────────────────────
   async function handleImport(importedTxs: ImportedTx[]) {
     if (!uid) throw new Error("Usuário não autenticado");
     const [{ getFirebase }, { collection, addDoc }] = await Promise.all([
@@ -736,12 +857,7 @@ export default function CashFlowPage() {
     ]);
     const { db } = await getFirebase();
     const col = collection(db, "users", uid, "cashflow");
-    // Salva em paralelo
-    await Promise.all(
-      importedTxs.map((tx) =>
-        addDoc(col, { ...tx, createdAt: Date.now() })
-      )
-    );
+    await Promise.all(importedTxs.map((tx) => addDoc(col, { ...tx, createdAt: Date.now() })));
   }
 
   async function handleDelete() {
@@ -821,24 +937,18 @@ export default function CashFlowPage() {
         .scrollbar-none::-webkit-scrollbar{display:none}
       `}</style>
 
-      {/* Sidebar desktop */}
       <div className="hidden lg:block shrink-0" style={{ width: collapsed ? 72 : 230 }}>
         <Sidebar collapsed={collapsed} open={false} onClose={() => {}} onLogout={handleLogout} />
       </div>
-      {/* Sidebar mobile */}
       <div className="lg:hidden">
         <Sidebar collapsed={false} open={sideOpen} onClose={() => setSideOpen(false)} onLogout={handleLogout} />
       </div>
 
-      <Modal open={modal} editing={editing}
+      <Modal open={modal} editing={editing} uid={uid}
         onClose={() => { setModal(false); setEditing(null); }}
         onSave={handleSave} />
 
-      <ImportModal
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        onImport={handleImport}
-      />
+      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
 
       {/* Confirmar exclusão */}
       {confirmId && (
@@ -864,7 +974,6 @@ export default function CashFlowPage() {
         </div>
       )}
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 lg:pb-0">
 
         {/* Header */}
@@ -884,11 +993,8 @@ export default function CashFlowPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Botão Importar IA — desktop */}
-            <button
-              onClick={() => setImportOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer"
-            >
+            <button onClick={() => setImportOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer">
               <Sparkles size={13} /> Importar extrato
             </button>
             <button onClick={() => { setEditing(null); setModal(true); }}
@@ -905,7 +1011,6 @@ export default function CashFlowPage() {
           </div>
         </header>
 
-        {/* Conteúdo */}
         <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 overflow-y-auto overflow-x-hidden">
 
           {/* KPIs */}
@@ -930,11 +1035,9 @@ export default function CashFlowPage() {
             ))}
           </div>
 
-          {/* Banner importação IA — mobile */}
-          <button
-            onClick={() => setImportOpen(true)}
-            className="sm:hidden w-full card p-3 flex items-center gap-3 cursor-pointer hover:border-blue-200 transition-colors"
-          >
+          {/* Banner importação IA mobile */}
+          <button onClick={() => setImportOpen(true)}
+            className="sm:hidden w-full card p-3 flex items-center gap-3 cursor-pointer hover:border-blue-200 transition-colors">
             <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
               <Sparkles size={16} className="text-blue-600" />
             </div>
@@ -949,11 +1052,8 @@ export default function CashFlowPage() {
           <div className="card p-3 space-y-2.5 sm:space-y-3">
             <div className="relative">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-blue-950 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
-                placeholder="Buscar por descrição ou categoria…"
-                value={search} onChange={(e) => setSearch(e.target.value)}
-              />
+              <input className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-blue-950 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+                placeholder="Buscar por descrição ou categoria…" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
               {([
@@ -964,9 +1064,9 @@ export default function CashFlowPage() {
                 <button key={f} onClick={() => setFilter(f)}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 cursor-pointer transition-all select-none
                     ${filter === f
-                      ? f === "all"     ? "bg-slate-800 text-white border-transparent"
+                      ? f === "all" ? "bg-slate-800 text-white border-transparent"
                       : f === "entrada" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : "bg-rose-50 text-rose-700 border-rose-200"
+                      : "bg-rose-50 text-rose-700 border-rose-200"
                       : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"}`}>
                   {Icon && <Icon size={13} />}
                   {label}
@@ -1030,12 +1130,23 @@ export default function CashFlowPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start sm:items-center gap-1 flex-col sm:flex-row sm:gap-2">
                               <span className="text-blue-950 text-sm font-semibold truncate max-w-32.5 sm:max-w-none">{tx.description}</span>
-                              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0
-                                ${tx.type === "entrada" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${tx.type === "entrada" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
                                 {tx.category}
                               </span>
                             </div>
-                            {tx.note && <p className="text-slate-400 text-xs mt-0.5 truncate">{tx.note}</p>}
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {tx.note && <p className="text-slate-400 text-xs truncate">{tx.note}</p>}
+                              {/* Ícone de NF clicável */}
+                              {tx.nfUrl && (
+                                <a href={tx.nfUrl} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 font-medium shrink-0 transition-colors"
+                                  title={tx.nfName ?? "Ver Nota Fiscal"}>
+                                  <Paperclip size={11} />
+                                  <span className="hidden sm:inline truncate max-w-24">{tx.nfName ?? "NF"}</span>
+                                  <span className="sm:hidden">NF</span>
+                                </a>
+                              )}
+                            </div>
                           </div>
                           <span className={`mono text-sm font-bold shrink-0 ${tx.type === "entrada" ? "text-emerald-600" : "text-rose-500"}`}>
                             {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
@@ -1061,14 +1172,11 @@ export default function CashFlowPage() {
         </main>
       </div>
 
-      {/* FAB mobile — dois botões */}
+      {/* FAB mobile */}
       <div className="lg:hidden fixed z-20 flex flex-col gap-2" style={{ bottom: 74, right: 18 }}>
-        <button
-          onClick={() => setImportOpen(true)}
+        <button onClick={() => setImportOpen(true)}
           className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-          style={{ boxShadow: "0 4px 16px rgba(21,101,192,.2)" }}
-          title="Importar extrato"
-        >
+          style={{ boxShadow: "0 4px 16px rgba(21,101,192,.2)" }}>
           <Sparkles size={18} />
         </button>
         <button onClick={() => { setEditing(null); setModal(true); }}

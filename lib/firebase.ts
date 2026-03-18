@@ -6,6 +6,7 @@ let _cache: {
   app: import("firebase/app").FirebaseApp;
   auth: import("firebase/auth").Auth;
   db: import("firebase/firestore").Firestore;
+  storage: import("firebase/storage").FirebaseStorage;
   googleProvider: import("firebase/auth").GoogleAuthProvider;
 } | null = null;
 
@@ -16,10 +17,12 @@ export async function getFirebase() {
     { initializeApp, getApps, getApp },
     { getAuth, GoogleAuthProvider },
     { getFirestore },
+    { getStorage },
   ] = await Promise.all([
     import("firebase/app"),
     import("firebase/auth"),
     import("firebase/firestore"),
+    import("firebase/storage"),
   ]);
 
   const firebaseConfig = {
@@ -36,8 +39,9 @@ export async function getFirebase() {
 
   _cache = {
     app,
-    auth: getAuth(app),
-    db: getFirestore(app),
+    auth:           getAuth(app),
+    db:             getFirestore(app),
+    storage:        getStorage(app),
     googleProvider: new GoogleAuthProvider(),
   };
 
