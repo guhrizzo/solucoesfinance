@@ -254,13 +254,18 @@ function Modal({ open, editing, uid, onClose, onSave }: {
       if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
 
       // Preenche campos com dados da NF
+      // Determina o tipo primeiro, mas só sobrescreve se o usuário não tiver escolhido
+      const nfType: TxType = (data.type === "entrada" || data.type === "saida") ? data.type : type;
       if (data.description) setDesc(data.description.slice(0, 60));
       if (data.amount)      setRawAmt(String(data.amount).replace(".", ","));
       if (data.date)        setDate(data.date);
       if (data.note)        setNote(data.note);
-      if (data.type)        setType(data.type);
-      // Tenta achar categoria
-      const cats = data.type === "entrada" ? CAT.entrada : CAT.saida;
+      // NÃO sobrescreve o tipo — respeita a escolha do usuário
+      // se quiser aplicar o tipo da IA, descomente a linha abaixo:
+      // setType(nfType);
+
+      // Busca categoria baseada no tipo atual (escolhido pelo usuário)
+      const cats = type === "entrada" ? CAT.entrada : CAT.saida;
       const match = cats.find(c =>
         c.toLowerCase().includes((data.category ?? "").toLowerCase()) ||
         (data.category ?? "").toLowerCase().includes(c.toLowerCase())
