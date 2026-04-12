@@ -1156,7 +1156,7 @@ export default function CashFlowPage() {
 
   const kpis = [
     {
-      label: "Previsão",
+      label: "Previsão de Gasto",
       val: previsao,
       Icon: ClipboardList,
       ibg: dark ? "#1e2a3a" : "#eff6ff",
