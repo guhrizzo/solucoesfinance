@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, Calendar, Settings,
-  LogOut, ClipboardList, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap,
+  LogOut, ClipboardList, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap, PanelLeft,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { useNavbarLayout } from "../hooks/useNavbarLayout";
 
 interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; }
 interface NavbarProps {
@@ -17,8 +17,6 @@ interface NavbarProps {
   activePath?: string;
   onLogout?: () => void;
 }
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -36,12 +34,9 @@ const notifications = [
   { id: 3, title: "Meta atingida", desc: "Lucro líquido superou projeção de outubro", time: "há 2h", urgent: false },
 ];
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ── Dark mode variables (sync with CashFlowPage) ── */
   :root {
     --nav-bg:        #ffffff;
     --nav-border:    #e8eef8;
@@ -112,7 +107,6 @@ const css = `
     padding: 0 2rem; height: 64px; gap: 1rem;
   }
 
-  /* Logo */
   .nxfi-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
   .nxfi-logo-icon {
     width: 34px; height: 34px; border-radius: 10px;
@@ -123,7 +117,6 @@ const css = `
   .nxfi-logo-text { font-weight: 800; font-size: 1.1rem; color: var(--nav-logo-text); letter-spacing: -0.03em; }
   .nxfi-logo-text span { color: #1565c0; }
 
-  /* Desktop nav links */
   .nxfi-nav-links { display: flex; align-items: center; gap: 2px; flex: 1; overflow: hidden; }
   .nxfi-nav-link {
     display: flex; align-items: center; gap: 6px;
@@ -144,7 +137,6 @@ const css = `
     font-family: 'JetBrains Mono', monospace; line-height: 1.4;
   }
 
-  /* Right actions */
   .nxfi-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
   .nxfi-search-wrap { position: relative; }
@@ -239,7 +231,7 @@ const css = `
   .nxfi-drop-item.danger:hover { background: #fff1f2; color: #ef4444; }
   .nxfi-drop-divider { height: 1px; background: var(--nav-drop-div); margin: 4px 0; }
 
-  /* ── Sidebar (mobile drawer) ── */
+  /* ── Mobile Sidebar Drawer ── */
   .nxfi-sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 60; backdrop-filter: blur(2px); animation: fadeIn 0.2s ease both; }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
   .nxfi-sidebar {
@@ -270,7 +262,7 @@ const css = `
   .nxfi-sidebar-link.active { color: white; background: rgba(21,101,192,0.25); border-color: rgba(66,165,245,0.2); font-weight: 600; }
   .nxfi-sidebar-link .dot { width: 6px; height: 6px; border-radius: 50%; background: #42a5f5; margin-left: auto; }
   .nxfi-sidebar-link .badge { margin-left: auto; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 100px; font-family: 'JetBrains Mono', monospace; }
-  .nxfi-sidebar-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .nxfi-sidebar-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; }
   .nxfi-sidebar-footer-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 500; cursor: pointer; width: 100%; background: none; border: none; transition: all 0.15s; font-family: 'Sora', sans-serif; color: rgba(147,197,253,0.55); }
   .nxfi-sidebar-footer-btn:hover { color: white; background: rgba(255,255,255,0.06); }
   .nxfi-sidebar-footer-btn.danger:hover { color: #fca5a5; background: rgba(239,68,68,0.08); }
@@ -287,12 +279,72 @@ const css = `
   .nxfi-mobile-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
   .nxfi-mobile-link.active { color: #1565c0; }
 
-  /* Responsive */
-  @media (max-width: 1024px) { .nxfi-nav-links, .nxfi-search-wrap { display: none; } .nxfi-avatar-info { display: none; } .nxfi-period-label { display: none; } }
-  @media (min-width: 1025px) { .nxfi-hamburger { display: none; } .nxfi-mobile-nav { display: none; } }
-`;
+  /* ── Vertical Sidebar (portal, direto no body) ── */
+  .nxfi-sidebar-vertical {
+    position: fixed; top: 0; left: 0; height: 100vh; z-index: 50;
+    width: 260px; display: flex; flex-direction: column; flex-shrink: 0;
+    background: var(--nav-bg);
+    border-right: 1px solid var(--nav-border);
+    box-shadow: 1px 0 0 var(--nav-border);
+    overflow-y: auto; overflow-x: hidden;
+  }
+  .nxfi-vertical-logo {
+    display: flex; align-items: center; gap: 10px;
+    padding: 20px; border-bottom: 1px solid var(--nav-border);
+    text-decoration: none; font-weight: 800; font-size: 1.1rem;
+    color: var(--nav-logo-text); letter-spacing: -0.03em; flex-shrink: 0;
+  }
+  .nxfi-vertical-logo span { color: #1565c0; }
+  .nxfi-vertical-nav { flex: 1; padding: 16px 8px; overflow-y: auto; }
+  .nxfi-vertical-section {
+    font-size: 0.65rem; font-weight: 700; color: var(--nav-text3);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0 12px; margin: 12px 0 6px;
+  }
+  .nxfi-vertical-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 10px;
+    text-decoration: none; font-size: 0.82rem; font-weight: 500;
+    color: var(--nav-text2); margin-bottom: 2px;
+    transition: all 0.15s; border: 1.5px solid transparent;
+  }
+  .nxfi-vertical-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
+  .nxfi-vertical-link.active {
+    color: var(--nav-link-hover-color); background: var(--nav-link-active-bg);
+    border-color: var(--nav-link-active-border); font-weight: 600;
+  }
+  .nxfi-vertical-link .badge {
+    background: #ef4444; color: white; font-size: 0.65rem;
+    font-weight: 700; padding: 1px 5px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace; line-height: 1.4;
+    margin-left: auto;
+  }
+  .nxfi-vertical-footer {
+    padding: 12px 8px; border-top: 1px solid var(--nav-border);
+    display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;
+  }
+  .nxfi-vertical-footer-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 10px; font-size: 0.82rem;
+    font-weight: 500; cursor: pointer; width: 100%; background: none;
+    border: none; transition: all 0.15s; font-family: 'Sora', sans-serif;
+    color: var(--nav-text2);
+  }
+  .nxfi-vertical-footer-btn:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
+  .nxfi-vertical-footer-btn.danger:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .nxfi-nav-links, .nxfi-search-wrap { display: none; }
+    .nxfi-avatar-info { display: none; }
+    .nxfi-period-label { display: none; }
+    .nxfi-sidebar-vertical { display: none; }
+  }
+  @media (min-width: 1025px) {
+    .nxfi-hamburger { display: none; }
+    .nxfi-mobile-nav { display: none; }
+  }
+`;
 
 export default function Navbar({
   user = { displayName: "Carlos Mendes", email: "carlos@nexusfi.com" },
@@ -305,6 +357,7 @@ export default function Navbar({
   const [userOpen, setUserOpen] = useState(false);
 
   const { dark, toggle } = useTheme();
+  const { layout, toggle: toggleLayout, mounted } = useNavbarLayout();
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
@@ -318,15 +371,110 @@ export default function Navbar({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Quando vertical: empurra o conteúdo da página com margin-left
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Pega o primeiro filho do body que não é a sidebar
+    const applyMargin = () => {
+      Array.from(document.body.children).forEach((child) => {
+        const el = child as HTMLElement;
+        if (!el.classList.contains("nxfi-sidebar-vertical")) {
+          el.style.marginLeft = layout === "vertical" ? "260px" : "";
+        }
+      });
+    };
+
+    applyMargin();
+
+    // Observa mudanças no DOM (Next.js pode re-renderizar filhos)
+    const observer = new MutationObserver(applyMargin);
+    observer.observe(document.body, { childList: true });
+
+    return () => {
+      observer.disconnect();
+      Array.from(document.body.children).forEach((child) => {
+        (child as HTMLElement).style.marginLeft = "";
+      });
+    };
+  }, [layout, mounted]);
+
   const initial = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U";
   const firstName = user?.displayName?.split(" ")[0] ?? "Usuário";
   const unreadCount = notifications.length;
 
+  if (!mounted) {
+    return (
+      <>
+        <style>{css}</style>
+        <nav className="nxfi-nav">
+          <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)}>
+            <Menu size={18} />
+          </button>
+          <a href="/dashboard" className="nxfi-logo">
+            <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
+            <span className="nxfi-logo-text">Nexus<span>Fi</span></span>
+          </a>
+        </nav>
+        <nav className="nxfi-mobile-nav" />
+      </>
+    );
+  }
+
+  // ── Sidebar vertical via Portal (direto no body, fora do div da página) ──
+  const sidebarJSX = (
+    <>
+      <style>{css}</style>
+      <aside className="nxfi-sidebar-vertical">
+        <a href="/dashboard" className="nxfi-vertical-logo">
+          <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
+          <span>Nexus<span>Fi</span></span>
+        </a>
+        <nav className="nxfi-vertical-nav">
+          <div className="nxfi-vertical-section">Menu Principal</div>
+          {navItems.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className={`nxfi-vertical-link ${activePath === item.href ? "active" : ""}`}
+            >
+              <item.icon size={16} />
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge && <span className="badge">{item.badge}</span>}
+            </a>
+          ))}
+        </nav>
+        <div className="nxfi-vertical-footer">
+          <button onClick={toggleLayout} className="nxfi-vertical-footer-btn">
+            <PanelLeft size={16} />
+            <span>Layout Horizontal</span>
+          </button>
+          <button onClick={toggle} className="nxfi-vertical-footer-btn">
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+            <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
+          </button>
+          <button className="nxfi-vertical-footer-btn">
+            <Settings size={16} />
+            <span>Configurações</span>
+          </button>
+          <button className="nxfi-vertical-footer-btn danger" onClick={onLogout}>
+            <LogOut size={16} />
+            <span>Sair</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+
+  if (layout === "vertical") {
+    return createPortal(sidebarJSX, document.body);
+  }
+
+  // ── Layout Horizontal ──
   return (
     <>
       <style>{css}</style>
 
-      {/* ── Top Navbar ── */}
       <nav className="nxfi-nav">
         <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)}>
           <Menu size={18} />
@@ -359,12 +507,14 @@ export default function Navbar({
             <ChevronDown size={11} />
           </button>
 
-          
-          <button onClick={toggle} className="cursor-pointer">
-            {dark ? <Sun size={16} /> : <Moon size={16} className="text-slate-900/60" />}
+          <button onClick={toggleLayout} className="nxfi-icon-btn" title="Alternar layout">
+            <PanelLeft size={16} />
           </button>
 
-          {/* Notifications */}
+          <button onClick={toggle} className="nxfi-icon-btn">
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+
           <div ref={notifRef} style={{ position: "relative" }}>
             <button className="nxfi-icon-btn" onClick={() => { setNotifOpen(!notifOpen); setUserOpen(false); }}>
               <Bell size={16} />
@@ -395,7 +545,6 @@ export default function Navbar({
             )}
           </div>
 
-          {/* User menu */}
           <div ref={userRef} style={{ position: "relative" }}>
             <button className="nxfi-avatar-btn" onClick={() => { setUserOpen(!userOpen); setNotifOpen(false); }}>
               <div className="nxfi-avatar">{initial}</div>
@@ -435,7 +584,6 @@ export default function Navbar({
         </div>
       </nav>
 
-      {/* ── Mobile Sidebar Drawer ── */}
       {mobileOpen && (
         <>
           <div className="nxfi-sidebar-overlay" onClick={() => setMobileOpen(false)} />
@@ -452,7 +600,12 @@ export default function Navbar({
             <nav className="nxfi-sidebar-nav">
               <div className="nxfi-sidebar-section">Menu principal</div>
               {navItems.map((item) => (
-                <a key={item.label} href={item.href} className={`nxfi-sidebar-link ${activePath === item.href ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`nxfi-sidebar-link ${activePath === item.href ? "active" : ""}`}
+                  onClick={() => setMobileOpen(false)}
+                >
                   <item.icon size={16} />
                   {item.label}
                   {activePath === item.href && <span className="dot" />}
@@ -461,18 +614,23 @@ export default function Navbar({
               ))}
             </nav>
             <div className="nxfi-sidebar-footer">
-              
-              <button onClick={toggle}>
+              <button className="nxfi-sidebar-footer-btn" onClick={toggle}>
                 {dark ? <Sun size={16} /> : <Moon size={16} />}
+                <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
               </button>
-              <button className="nxfi-sidebar-footer-btn"><Settings size={16} />Configurações</button>
-              <button className="nxfi-sidebar-footer-btn danger" onClick={onLogout}><LogOut size={16} />Sair da conta</button>
+              <button className="nxfi-sidebar-footer-btn">
+                <Settings size={16} />
+                Configurações
+              </button>
+              <button className="nxfi-sidebar-footer-btn danger" onClick={onLogout}>
+                <LogOut size={16} />
+                Sair da conta
+              </button>
             </div>
           </aside>
         </>
       )}
 
-      {/* ── Mobile Bottom Nav ── */}
       <nav className="nxfi-mobile-nav">
         {[
           { icon: LayoutDashboard, label: "Início", href: "/dashboard" },
