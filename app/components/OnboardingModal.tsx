@@ -179,6 +179,8 @@ export default function OnboardingModal({ open, onClose }: OnboardingModalProps)
     }, 220);
   };
 
+  
+
   return (
     <>
       <style>{`
@@ -334,7 +336,7 @@ export default function OnboardingModal({ open, onClose }: OnboardingModalProps)
 
       {/* Overlay */}
       <div
-        className={`ob-overlay fixed inset-0 z-50 flex items-center justify-center p-4 ${visible ? "visible" : "hidden"}`}
+        className={`ob-overlay fixed inset-0 z-999 flex items-center justify-center p-4 ${visible ? "visible" : "hidden"}`}
         onClick={(e) => { if (e.target === e.currentTarget) { setVisible(false); setTimeout(onClose, 300); } }}
       >
         {/* Modal */}

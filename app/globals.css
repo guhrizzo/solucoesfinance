@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Enquanto o modal de onboarding estiver aberto */
+body.modal-open .nxfi-nav,
+body.modal-open .nxfi-sidebar-vertical {
+  filter: blur(3px);
+  transition: filter 0.3s ease;
+  pointer-events: none;
+}
