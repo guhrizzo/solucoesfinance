@@ -246,8 +246,12 @@ export default function FinanceHome() {
               </a>
             ))}
             <div className="flex gap-3 pt-2">
-              <button className="btn-outline text-white text-sm px-5 py-2 rounded-full font-medium flex-1">Entrar</button>
-              <button className="btn-primary text-white text-sm px-5 py-2.5 rounded-full font-semibold flex-1">Testar grátis</button>
+              <Link href="/login">
+                <button className="btn-outline text-white text-sm px-5 py-2 rounded-full font-medium flex-1">Entrar</button>
+              </Link>
+              <Link href="/register">
+                <button className="btn-primary text-white text-sm px-5 py-2.5 rounded-full font-semibold flex-1">Testar grátis</button>
+              </Link>
             </div>
           </div>
         )}
