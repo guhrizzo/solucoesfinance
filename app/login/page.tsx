@@ -390,7 +390,7 @@ export default function LoginPage() {
           <p className="fade-in-4 text-center text-slate-400 text-sm mt-8">
             Ainda não tem conta?{" "}
             <a href="/register" className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
-              Testar 14 dias grátis
+              Testar 3 dias grátis
             </a>
           </p>
 
