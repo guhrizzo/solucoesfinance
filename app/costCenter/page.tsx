@@ -5,8 +5,6 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 import {
   TrendingUp,
-  TrendingDown,
-  DollarSign,
   CreditCard,
   Wallet,
   BarChart2,
@@ -16,9 +14,6 @@ import {
   X,
   Check,
   AlertCircle,
-  MoreHorizontal,
-  Filter,
-  Download,
   ArrowUpRight,
   ArrowDownRight,
   Loader,
@@ -47,17 +42,18 @@ interface Expense {
   amount: number;
   date: string;
   status: "pago" | "pendente" | "agendado";
+  description?: string;
   userId: string;
   createdAt: any;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR")}`;
+const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-const colors = [
+const COLORS = [
   "#1565c0", "#42a5f5", "#90caf9", "#bbdefb",
-  "#64b5f6", "#2196f3", "#1e88e5", "#1976d2"
+  "#64b5f6", "#2196f3", "#1e88e5", "#1976d2",
 ];
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
@@ -67,118 +63,440 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   amber:   { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", icon: "rgba(245,158,11,0.12)" },
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+function mapCategoryToCashflow(cat: string): string {
+  const l = cat.toLowerCase();
+  if (l.includes("salário") || l.includes("salario") || l.includes("folha")) return "Folha de pagamento";
+  if (l.includes("aluguel")) return "Aluguel";
+  if (l.includes("fornec") || l.includes("compra") || l.includes("mercadoria")) return "Fornecedores";
+  if (l.includes("imposto") || l.includes("tributo")) return "Impostos";
+  if (l.includes("marketing") || l.includes("anúncio") || l.includes("publicidade")) return "Marketing";
+  if (l.includes("ti") || l.includes("softw") || l.includes("assinatura")) return "TI / Software";
+  return "Outros gastos";
+}
 
-export default function CostCenter() {
-  const [period] = useState("Nov 2024");
-  const [user, setUser] = useState<{ displayName: string | null; email: string | null; uid?: string } | null>(null);
+// ─── SVG Bar Chart ─────────────────────────────────────────────────────────────
+
+function BarChart({ centers }: { centers: CostCenter[] }) {
+  if (centers.length === 0) return null;
+  const maxVal = Math.max(...centers.map(c => Math.max(c.budget, c.spent, 1)));
+  const W = Math.max(centers.length * 90 + 60, 320);
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <svg viewBox={`0 0 ${W} 180`} style={{ width: "100%", minWidth: W, height: 180 }}>
+        {[0, 0.5, 1].map(pct => {
+          const y = 20 + (1 - pct) * 120;
+          const val = Math.round(maxVal * pct);
+          return (
+            <g key={pct}>
+              <line x1="48" x2={W - 10} y1={y} y2={y} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
+              <text x="44" y={y + 4} textAnchor="end" fontSize="9" fill="currentColor" fillOpacity="0.45">
+                {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
+              </text>
+            </g>
+          );
+        })}
+        <rect x="52" y="162" width="10" height="8" rx="2" fill="#93c5fd" />
+        <text x="66" y="170" fontSize="9" fill="currentColor" fillOpacity="0.6">Orçamento</text>
+        <rect x="138" y="162" width="10" height="8" rx="2" fill="#1d4ed8" />
+        <text x="152" y="170" fontSize="9" fill="currentColor" fillOpacity="0.6">Real</text>
+
+        {centers.map((c, i) => {
+          const x = 52 + i * 90;
+          const bw = 24;
+          const bh = Math.max((c.budget / maxVal) * 120, 2);
+          const sh = Math.max((c.spent / maxVal) * 120, 2);
+          const over = c.spent > c.budget;
+          const label = c.name.length > 10 ? c.name.slice(0, 10) + "…" : c.name;
+          return (
+            <g key={c.id}>
+              <rect x={x} y={20 + 120 - bh} width={bw} height={bh} rx="3" fill="#93c5fd" opacity="0.7" />
+              <rect x={x + bw + 4} y={20 + 120 - sh} width={bw} height={sh} rx="3" fill={over ? "#f87171" : "#1d4ed8"} />
+              <text x={x + bw + 2} y={154} textAnchor="middle" fontSize="9" fill="currentColor" fillOpacity="0.5">{label}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+// ─── Expense Modal (fully controlled) ─────────────────────────────────────────
+
+interface ExpenseModalProps {
+  open: boolean;
+  editing: Expense | null;
+  centers: CostCenter[];
+  uid: string;
+  onClose: () => void;
+  onSaved: (msg: string) => void;
+}
+
+function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: ExpenseModalProps) {
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [center, setCenter] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("");
+  const [status, setStatus] = useState<"pago" | "pendente" | "agendado">("pago");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  // Initialise fields whenever the modal opens or the edited record changes
+  useEffect(() => {
+    if (!open) return;
+    setDescription(editing?.description ?? "");
+    setCategory(editing?.category ?? "");
+    // Default to first center if nothing is selected yet
+    setCenter(editing?.center ?? centers[0]?.name ?? "");
+    setAmount(editing ? String(editing.amount) : "");
+    setDate(editing?.date ?? new Date().toISOString().split("T")[0]);
+    setStatus((editing?.status ?? "pago") as "pago" | "pendente" | "agendado");
+    setSaving(false);
+    setErr("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
+
+  if (!open) return null;
+
+  const parsedAmount = parseFloat(amount.replace(",", ".")) || 0;
+  const canSave = category.trim().length > 0 && center.length > 0 && parsedAmount > 0 && date.length > 0;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSave || saving || !uid) return;
+    setSaving(true);
+    setErr("");
+
+    try {
+      const { getFirebase } = await import("../../lib/firebase");
+      const { db } = await getFirebase();
+      const {
+        collection, addDoc, updateDoc, doc,
+        query, where, getDocs, deleteDoc,
+      } = await import("firebase/firestore");
+
+      if (editing) {
+        // 1. Update expense record
+        await updateDoc(doc(db, "expenses", editing.id), {
+          description, category, center, amount: parsedAmount, date, status,
+        });
+
+        // 2. Revert old center spent
+        const oldCenter = centers.find(c => c.name === editing.center);
+        if (oldCenter) {
+          await updateDoc(doc(db, "costCenters", oldCenter.id), {
+            spent: Math.max(0, oldCenter.spent - editing.amount),
+          });
+        }
+        // 3. Add to new center spent
+        const newCenter = centers.find(c => c.name === center);
+        if (newCenter) {
+          await updateDoc(doc(db, "costCenters", newCenter.id), {
+            spent: newCenter.spent + parsedAmount,
+          });
+        }
+
+        // 4. Sync cashflow
+        const cfSnap = await getDocs(
+          query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", editing.id))
+        );
+        if (status === "pago") {
+          const cfData = {
+            type: "saida",
+            description: description || `${category} – ${center}`,
+            category: mapCategoryToCashflow(category),
+            amount: parsedAmount,
+            date,
+            note: `Centro: ${center}`,
+            sourceExpenseId: editing.id,
+            createdAt: Date.now(),
+          };
+          if (!cfSnap.empty) {
+            await updateDoc(doc(db, "users", uid, "cashflow", cfSnap.docs[0].id), cfData);
+          } else {
+            await addDoc(collection(db, "users", uid, "cashflow"), cfData);
+          }
+        } else {
+          // Remove cashflow entry if status is no longer "pago"
+          await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
+        }
+
+        onSaved("Despesa atualizada!");
+      } else {
+        // 1. Create new expense
+        const expRef = await addDoc(collection(db, "expenses"), {
+          description, category, center,
+          amount: parsedAmount, date, status,
+          userId: uid, createdAt: new Date(),
+        });
+
+        // 2. Update center spent
+        const matchCenter = centers.find(c => c.name === center);
+        if (matchCenter) {
+          await updateDoc(doc(db, "costCenters", matchCenter.id), {
+            spent: matchCenter.spent + parsedAmount,
+          });
+        }
+
+        // 3. Sync to cashflow when "pago"
+        if (status === "pago") {
+          await addDoc(collection(db, "users", uid, "cashflow"), {
+            type: "saida",
+            description: description || `${category} – ${center}`,
+            category: mapCategoryToCashflow(category),
+            amount: parsedAmount,
+            date,
+            note: `Centro: ${center}`,
+            sourceExpenseId: expRef.id,
+            createdAt: Date.now(),
+          });
+        }
+
+        onSaved(status === "pago" ? "Despesa criada e lançada no fluxo de caixa!" : "Despesa criada!");
+      }
+
+      onClose();
+    } catch (e: any) {
+      setErr(e.message || "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{ backdropFilter: "blur(4px)" }}>
+      <div className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
+          <div>
+            <h3 className="font-bold text-base" style={{ color: "var(--db-text)" }}>
+              {editing ? "Editar despesa" : "Nova despesa"}
+            </h3>
+            <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#10b981" }}>
+              <Check size={11} /> Despesas "Pago" são lançadas no fluxo de caixa
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity">
+            <X size={16} style={{ color: "var(--db-text2)" }} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[72vh] overflow-y-auto">
+          {err && (
+            <div className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl" style={{ background: "#fff1f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+              <AlertCircle size={13} /> {err}
+            </div>
+          )}
+
+          {/* Description */}
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+              Descrição <span style={{ color: "var(--db-text3)" }}>(opcional)</span>
+            </label>
+            <input type="text" value={description} onChange={e => setDescription(e.target.value)}
+              placeholder="Ex: PIX Fornecedor Farinha"
+              className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+              Categoria <span style={{ color: "#f87171" }}>*</span>
+            </label>
+            <input type="text" value={category} onChange={e => setCategory(e.target.value)}
+              placeholder="Ex: Fornecedores, Aluguel, Salários…" required
+              className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
+          </div>
+
+          {/* Center — fully controlled, always shows current centers list */}
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+              Centro de custo <span style={{ color: "#f87171" }}>*</span>
+            </label>
+            {centers.length === 0 ? (
+              <p className="text-xs px-3 py-2.5 rounded-xl" style={{ background: "var(--db-sub)", border: "1px solid var(--db-border)", color: "var(--db-text3)" }}>
+                Crie um centro de custo primeiro.
+              </p>
+            ) : (
+              <select
+                value={center}
+                onChange={e => setCenter(e.target.value)}
+                required
+                className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
+              >
+                <option value="">— Selecione um centro —</option>
+                {centers.map(cc => (
+                  <option key={cc.id} value={cc.name}>{cc.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Amount + Date */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+                Valor (R$) <span style={{ color: "#f87171" }}>*</span>
+              </label>
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+                placeholder="0,00" required min="0.01" step="0.01"
+                className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+                Data <span style={{ color: "#f87171" }}>*</span>
+              </label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+                className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
+            </div>
+          </div>
+
+          {/* Status buttons */}
+          <div>
+            <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>
+              Status <span style={{ color: "#f87171" }}>*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["pago", "pendente", "agendado"] as const).map(s => (
+                <button key={s} type="button" onClick={() => setStatus(s)}
+                  className="py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer"
+                  style={
+                    status === s
+                      ? s === "pago"
+                        ? { background: "#dcfce7", borderColor: "#86efac", color: "#16a34a" }
+                        : s === "pendente"
+                          ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
+                          : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
+                      : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
+                  }>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+            {status === "pago" && (
+              <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "#10b981" }}>
+                <ArrowDownRight size={11} /> Lançado como saída no fluxo de caixa
+              </p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
+              style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={!canSave || saving || centers.length === 0}
+              className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2 cursor-pointer transition-colors">
+              {saving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
+              {editing ? "Atualizar" : "Criar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
+
+export default function CostCenterPage() {
+  const [period] = useState("Abr 2025");
+  const [uid, setUid] = useState<string>("");
+  const [user, setUser] = useState<{ displayName: string | null; email: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [showCenterModal, setShowCenterModal] = useState(false);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [editingCenter, setEditingCenter] = useState<CostCenter | null>(null);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">("todos");
-  const activePath = "/costCenter";
 
+  const [showCenterModal, setShowCenterModal] = useState(false);
+  const [editingCenter, setEditingCenter] = useState<CostCenter | null>(null);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">("todos");
+  const [savingCenter, setSavingCenter] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+
+  const activePath = "/costCenter";
   const { dark } = useTheme();
 
+  const showToast = (msg: string, type: "ok" | "err" = "ok") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const theme = dark ? {
-    "--db-bg": "#0d1117",
-    "--db-card": "#1c2230",
-    "--db-border": "#2a3548",
-    "--db-text": "#e2e8f0",
-    "--db-text2": "#8899b4",
-    "--db-text3": "#4a5568",
-    "--db-hover": "#1e2a3a",
-    "--db-sub": "#131922",
-    "--db-divider": "#2a3548",
+    "--db-bg": "#0d1117", "--db-card": "#1c2230", "--db-border": "#2a3548",
+    "--db-text": "#e2e8f0", "--db-text2": "#8899b4", "--db-text3": "#4a5568",
+    "--db-hover": "#1e2a3a", "--db-sub": "#131922",
   } : {
-    "--db-bg": "#f8fafc",
-    "--db-card": "#ffffff",
-    "--db-border": "#e8eef8",
-    "--db-text": "#0f1f40",
-    "--db-text2": "#64748b",
-    "--db-text3": "#94a3b8",
-    "--db-hover": "#f8faff",
-    "--db-sub": "#f1f5fb",
-    "--db-divider": "#f1f5fb",
+    "--db-bg": "#f8fafc", "--db-card": "#ffffff", "--db-border": "#e8eef8",
+    "--db-text": "#0f1f40", "--db-text2": "#64748b", "--db-text3": "#94a3b8",
+    "--db-hover": "#f8faff", "--db-sub": "#f1f5fb",
   };
 
-  const svgText = dark ? "#8899b4" : "#94a3b8";
-  const svgTitle = dark ? "#e2e8f0" : "#0d2247";
-
-  // ─── Load data from Firestore ─────────────────────────────────────────────────
+  // ── Firestore listeners ────────────────────────────────────────────────────
   useEffect(() => {
-  let unsubCenters: (() => void) | undefined;
-  let unsubExpenses: (() => void) | undefined;
-  let unsubAuth: (() => void) | undefined;
+    let unsubAuth: (() => void) | undefined;
+    let unsubCenters: (() => void) | undefined;
+    let unsubExpenses: (() => void) | undefined;
 
-  (async () => {
-    try {
-      const { getFirebase } = await import("../../lib/firebase");
-      const { auth, db } = await getFirebase();
-      const { onAuthStateChanged } = await import("firebase/auth");
-      const { collection, query, where, onSnapshot } = await import("firebase/firestore");
+    (async () => {
+      try {
+        const { getFirebase } = await import("../../lib/firebase");
+        const { auth, db } = await getFirebase();
+        const { onAuthStateChanged } = await import("firebase/auth");
+        const { collection, query, where, onSnapshot } = await import("firebase/firestore");
 
-      unsubAuth = onAuthStateChanged(auth, (u) => {
-        if (!u) { window.location.href = "/login"; return; }
-        setUser({ displayName: u.displayName, email: u.email, uid: u.uid });
+        unsubAuth = onAuthStateChanged(auth, u => {
+          if (!u) { window.location.href = "/login"; return; }
+          setUid(u.uid);
+          setUser({ displayName: u.displayName, email: u.email });
 
-        const centersQuery = query(collection(db, "costCenters"), where("userId", "==", u.uid));
-        unsubCenters = onSnapshot(centersQuery, (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostCenter));
-          setCostCenters(data);
+          unsubCenters?.();
+          unsubCenters = onSnapshot(
+            query(collection(db, "costCenters"), where("userId", "==", u.uid)),
+            snap => setCostCenters(snap.docs.map(d => ({ id: d.id, ...d.data() } as CostCenter)))
+          );
+
+          unsubExpenses?.();
+          unsubExpenses = onSnapshot(
+            query(collection(db, "expenses"), where("userId", "==", u.uid)),
+            snap => setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))
+          );
+
+          setLoading(false);
         });
-
-        const expensesQuery = query(collection(db, "expenses"), where("userId", "==", u.uid));
-        unsubExpenses = onSnapshot(expensesQuery, (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
-          setExpenses(data);
-        });
-
-        // ✅ setLoading(false) logo após montar os listeners,
-        //    não espera dados chegarem
+      } catch {
         setLoading(false);
-      });
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
-    }
-  })();
+      }
+    })();
 
-  // ✅ cleanup correto no nível do useEffect
-  return () => {
-    unsubAuth?.();
-    unsubCenters?.();
-    unsubExpenses?.();
-  };
-}, []);
+    return () => { unsubAuth?.(); unsubCenters?.(); unsubExpenses?.(); };
+  }, []);
 
-  // ─── Save cost center ──────────────────────────────────────────────────────────
+  // ── Save center ────────────────────────────────────────────────────────────
   const handleSaveCenter = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user?.uid) return;
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
+    if (!uid) return;
+    setSavingCenter(true);
     try {
-      const formData = new FormData(e.currentTarget);
-      const name = formData.get("name") as string;
-      const budget = parseFloat(formData.get("budget") as string);
-      const employees = parseInt(formData.get("employees") as string);
+      const fd = new FormData(e.currentTarget);
+      const name = (fd.get("name") as string).trim();
+      const budget = parseFloat(fd.get("budget") as string);
+      const employees = parseInt(fd.get("employees") as string);
 
-      if (!name || !budget || budget <= 0 || !employees || employees <= 0) {
-        setError("Todos os campos são obrigatórios e devem ser válidos");
-        setSaving(false);
-        return;
+      if (!name || isNaN(budget) || budget <= 0 || isNaN(employees) || employees <= 0) {
+        showToast("Preencha todos os campos corretamente", "err"); return;
       }
 
       const { getFirebase } = await import("../../lib/firebase");
@@ -186,239 +504,161 @@ export default function CostCenter() {
       const { collection, addDoc, updateDoc, doc } = await import("firebase/firestore");
 
       if (editingCenter) {
-        await updateDoc(doc(db, "costCenters", editingCenter.id), {
-          name,
-          budget,
-          employees,
-        });
-        setSuccess("Centro de custo atualizado com sucesso!");
+        await updateDoc(doc(db, "costCenters", editingCenter.id), { name, budget, employees });
+        showToast("Centro atualizado!");
       } else {
         await addDoc(collection(db, "costCenters"), {
-          name,
-          budget,
-          spent: 0,
-          employees,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          userId: user.uid,
-          createdAt: new Date(),
+          name, budget, spent: 0, employees,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          userId: uid, createdAt: new Date(),
         });
-        setSuccess("Centro de custo criado com sucesso!");
+        showToast("Centro criado!");
       }
-
       setShowCenterModal(false);
       setEditingCenter(null);
-      (e.target as HTMLFormElement).reset();
-      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      setError(err.message || "Erro ao salvar centro de custo");
+      showToast(err.message || "Erro ao salvar", "err");
     } finally {
-      setSaving(false);
+      setSavingCenter(false);
     }
   };
 
-  // ─── Delete cost center ────────────────────────────────────────────────────────
+  // ── Delete center ──────────────────────────────────────────────────────────
   const handleDeleteCenter = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar este centro de custo?")) return;
-
+    if (!confirm("Deletar este centro de custo?")) return;
     try {
       const { getFirebase } = await import("../../lib/firebase");
       const { db } = await getFirebase();
       const { deleteDoc, doc } = await import("firebase/firestore");
-
       await deleteDoc(doc(db, "costCenters", id));
-      setSuccess("Centro de custo removido com sucesso!");
-      setTimeout(() => setSuccess(""), 3000);
+      showToast("Centro removido!");
     } catch (err: any) {
-      setError(err.message || "Erro ao deletar centro de custo");
+      showToast(err.message || "Erro", "err");
     }
   };
 
-  // ─── Save expense ──────────────────────────────────────────────────────────────
-  const handleSaveExpense = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!user?.uid) return;
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const formData = new FormData(e.currentTarget);
-      const category = formData.get("category") as string;
-      const center = formData.get("center") as string;
-      const amount = parseFloat(formData.get("amount") as string);
-      const date = formData.get("date") as string;
-      const status = formData.get("status") as string;
-
-      if (!category || !center || !amount || amount <= 0 || !date || !status) {
-        setError("Todos os campos são obrigatórios");
-        setSaving(false);
-        return;
-      }
-
-      const { getFirebase } = await import("../../lib/firebase");
-      const { db } = await getFirebase();
-      const { collection, addDoc, updateDoc, doc } = await import("firebase/firestore");
-
-      if (editingExpense) {
-        await updateDoc(doc(db, "expenses", editingExpense.id), {
-          category,
-          center,
-          amount,
-          date,
-          status,
-        });
-        setSuccess("Despesa atualizada com sucesso!");
-      } else {
-        await addDoc(collection(db, "expenses"), {
-          category,
-          center,
-          amount,
-          date,
-          status,
-          userId: user.uid,
-          createdAt: new Date(),
-        });
-        setSuccess("Despesa criada com sucesso!");
-      }
-
-      setShowExpenseModal(false);
-      setEditingExpense(null);
-      (e.target as HTMLFormElement).reset();
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      setError(err.message || "Erro ao salvar despesa");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ─── Delete expense ────────────────────────────────────────────────────────────
+  // ── Delete expense ─────────────────────────────────────────────────────────
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar esta despesa?")) return;
-
+    if (!confirm("Deletar esta despesa?")) return;
     try {
       const { getFirebase } = await import("../../lib/firebase");
       const { db } = await getFirebase();
-      const { deleteDoc, doc } = await import("firebase/firestore");
+      const { deleteDoc, doc, collection, query, where, getDocs, updateDoc } = await import("firebase/firestore");
+
+      const exp = expenses.find(e => e.id === id);
+      if (exp) {
+        const matchCenter = costCenters.find(c => c.name === exp.center);
+        if (matchCenter) {
+          await updateDoc(doc(db, "costCenters", matchCenter.id), {
+            spent: Math.max(0, matchCenter.spent - exp.amount),
+          });
+        }
+        // Remove linked cashflow entry
+        const cfSnap = await getDocs(
+          query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", id))
+        );
+        await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
+      }
 
       await deleteDoc(doc(db, "expenses", id));
-      setSuccess("Despesa removida com sucesso!");
-      setTimeout(() => setSuccess(""), 3000);
+      showToast("Despesa removida!");
     } catch (err: any) {
-      setError(err.message || "Erro ao deletar despesa");
+      showToast(err.message || "Erro", "err");
     }
   };
 
-  // ─── Filtered data ─────────────────────────────────────────────────────────────
+  // ── Computed ───────────────────────────────────────────────────────────────
   const filteredExpenses = expenses.filter(exp => {
-    const matchesSearch = exp.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exp.center.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "todos" || exp.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const q = searchTerm.toLowerCase();
+    const matchSearch = !q ||
+      exp.category.toLowerCase().includes(q) ||
+      exp.center.toLowerCase().includes(q) ||
+      (exp.description || "").toLowerCase().includes(q);
+    return matchSearch && (filterStatus === "todos" || exp.status === filterStatus);
   });
 
-  const totalBudget = costCenters.reduce((sum, cc) => sum + cc.budget, 0);
-  const totalSpent = costCenters.reduce((sum, cc) => sum + cc.spent, 0);
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const totalBudget = costCenters.reduce((s, c) => s + c.budget, 0);
+  const totalSpent = costCenters.reduce((s, c) => s + c.spent, 0);
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const utilizationPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
+  const today = new Date();
+  const monthProgress = Math.max(today.getDate() / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(), 0.01);
+
   const kpis = [
-    { label: "Orçamento total", value: fmt(totalBudget), change: costCenters.length.toString(), up: true, sub: `${costCenters.length} centros`, icon: Wallet, color: "blue" },
+    { label: "Orçamento total", value: fmt(totalBudget), change: `${costCenters.length}`, up: true, sub: `${costCenters.length} centros`, icon: Wallet, color: "blue" },
     { label: "Custo real", value: fmt(totalExpenses), change: "+3.1%", up: false, sub: "vs. mês anterior", icon: CreditCard, color: "rose" },
-    { label: "Disponível", value: fmt(totalBudget - totalSpent), change: `${100 - utilizationPct}%`, up: true, sub: "de margem", icon: TrendingUp, color: "emerald" },
-    { label: "Centros ativos", value: costCenters.length.toString(), change: "+0", up: true, sub: "ativos agora", icon: BarChart2, color: "amber" },
+    { label: "Disponível", value: fmt(Math.max(totalBudget - totalSpent, 0)), change: `${100 - utilizationPct}%`, up: true, sub: "de margem", icon: TrendingUp, color: "emerald" },
+    { label: "Centros ativos", value: String(costCenters.length), change: "+0", up: true, sub: "ativos agora", icon: BarChart2, color: "amber" },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)", ...(theme as any) }}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-sm" style={{ color: "var(--db-text2)" }}>Carregando...</p>
-        </div>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)", ...(theme as any) }}>
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm" style={{ color: "var(--db-text2)" }}>Carregando...</p>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)", ...(theme as any) }}>
-
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         *, body { font-family: 'Sora', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
         * { transition: background-color .2s, border-color .2s, color .15s; }
         button, a, input, select { transition: background-color .15s, border-color .15s, color .1s, opacity .15s !important; }
-
-        .kpi-card {
-          background: var(--db-card);
-          border: 1px solid var(--db-border);
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          animation: slideUp 0.5s ease both;
-        }
-        .chart-card {
-          background: var(--db-card);
-          border: 1px solid var(--db-border);
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          border-radius: 1rem;
-          animation: slideUp 0.5s 0.2s ease both;
-        }
-        .side-card {
-          background: var(--db-card);
-          border: 1px solid var(--db-border);
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          border-radius: 1rem;
-          animation: slideUp 0.5s 0.3s ease both;
-        }
+        .kpi-card { background:var(--db-card); border:1px solid var(--db-border); box-shadow:0 1px 3px rgba(13,34,71,0.06),0 4px 16px rgba(13,34,71,0.04); animation:slideUp 0.5s ease both; }
+        .chart-card { background:var(--db-card); border:1px solid var(--db-border); box-shadow:0 1px 3px rgba(13,34,71,0.06),0 4px 16px rgba(13,34,71,0.04); border-radius:1rem; animation:slideUp 0.5s 0.2s ease both; }
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-
-        .center-row { transition: background 0.15s; border-radius: 12px; }
-        .center-row:hover { background: var(--db-hover); }
-
-        .expense-row { transition: background 0.15s; border-bottom: 1px solid var(--db-border); }
-        .expense-row:last-child { border-bottom: none; }
-        .expense-row:hover { background: var(--db-hover); }
-
-        .badge-pago     { background: #dcfce7; color: #16a34a; }
-        .badge-pendente { background: #fef9c3; color: #b45309; }
-        .badge-agendado { background: #dbeafe; color: #1d4ed8; }
-
-        .db-divider { border-color: var(--db-border); }
-        .db-progress-bg { background: var(--db-border); }
-
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--db-border); border-radius: 4px; }
+        .expense-row { transition:background 0.15s; border-bottom:1px solid var(--db-border); }
+        .expense-row:last-child { border-bottom:none; }
+        .expense-row:hover { background:var(--db-hover); }
+        .badge-pago     { background:#dcfce7; color:#16a34a; }
+        .badge-pendente { background:#fef9c3; color:#b45309; }
+        .badge-agendado { background:#dbeafe; color:#1d4ed8; }
+        .cf-badge { background:rgba(16,185,129,0.12); color:#10b981; font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; }
+        .atbl th { font-size:11px; font-weight:600; color:var(--db-text2); padding:8px 12px; text-align:left; border-bottom:1px solid var(--db-border); white-space:nowrap; }
+        .atbl td { font-size:12px; padding:10px 12px; border-bottom:1px solid var(--db-border); }
+        .atbl tr:last-child td { border-bottom:none; }
+        .atbl tr:hover td { background:var(--db-hover); }
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-thumb { background:var(--db-border); border-radius:4px; }
       `}</style>
 
-      {/* ── Notifications ── */}
-      {error && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg flex items-center gap-2 z-50">
-          <AlertCircle size={16} />
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="fixed top-4 right-4 bg-emerald-500 text-white px-4 py-3 rounded-lg flex items-center gap-2 z-50">
-          <Check size={16} />
-          {success}
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl flex items-center gap-2 shadow-xl text-sm font-semibold text-white"
+          style={{ background: toast.type === "ok" ? "#10b981" : "#ef4444", animation: "slideUp .3s ease" }}>
+          {toast.type === "ok" ? <Check size={15} /> : <AlertCircle size={15} />}
+          {toast.msg}
         </div>
       )}
 
       <Navbar user={user} period={period} activePath={activePath} />
 
+      {/* Expense modal lives at page level — always receives fresh `centers` */}
+      <ExpenseModal
+        open={showExpenseModal}
+        editing={editingExpense}
+        centers={costCenters}
+        uid={uid}
+        onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }}
+        onSaved={msg => showToast(msg)}
+      />
+
       <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
 
-        {/* ── KPIs ── */}
+        {/* KPIs */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
           {kpis.map((kpi, i) => {
             const c = colorMap[kpi.color];
             return (
-              <div key={kpi.label} className="kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3 md:gap-4" style={{ animationDelay: `${i * 80}ms` }}>
+              <div key={kpi.label} className="kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3" style={{ animationDelay: `${i * 80}ms` }}>
                 <div className="flex items-start justify-between">
                   <p className="text-xs font-medium" style={{ color: "var(--db-text2)" }}>{kpi.label}</p>
-                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
                     <kpi.icon size={16} style={{ color: c.text }} />
                   </div>
                 </div>
@@ -426,8 +666,7 @@ export default function CostCenter() {
                   <p className="text-xl md:text-2xl font-extrabold leading-tight mb-1" style={{ color: "var(--db-text)" }}>{kpi.value}</p>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: c.bg, color: c.text }}>
-                      {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                      {kpi.change}
+                      {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}{kpi.change}
                     </span>
                     <span className="text-xs" style={{ color: "var(--db-text2)" }}>{kpi.sub}</span>
                   </div>
@@ -437,117 +676,124 @@ export default function CostCenter() {
           })}
         </div>
 
-        {/* ── Cost Centers ── */}
+        {/* Cost Centers */}
         <div className="chart-card p-4 md:p-6">
-          <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2">
+          <div className="flex items-start md:items-center justify-between mb-5 gap-2">
             <div>
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centros de custo</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Gerenciar orçamentos e despesas</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Orçamento vs. gasto real</p>
             </div>
-            <button
-              onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1 cursor-pointer">
+            <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer">
               <Plus size={14} /> Novo
             </button>
           </div>
 
           {costCenters.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <BarChart2 size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.5 }} />
+              <BarChart2 size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.4 }} />
               <p style={{ color: "var(--db-text2)" }}>Nenhum centro de custo criado</p>
-              <button
-                onClick={() => setShowCenterModal(true)}
-                className="mt-3 text-xs text-blue-500 hover:text-blue-400 font-semibold cursor-pointer">
+              <button onClick={() => setShowCenterModal(true)} className="mt-3 text-xs text-blue-500 font-semibold cursor-pointer">
                 Criar primeiro centro
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {costCenters.map((center) => {
-                const pct = center.budget > 0 ? Math.round((center.spent / center.budget) * 100) : 0;
-                const remaining = center.budget - center.spent;
-                return (
-                  <div key={center.id} className="center-row p-3 md:p-4 rounded-xl border" style={{ borderColor: "var(--db-border)" }}>
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ background: center.color }} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{center.name}</p>
-                          <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>{center.employees} colaboradores</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-3 shrink-0">
-                        <button
-                          onClick={() => { setEditingCenter(center); setShowCenterModal(true); }}
-                          className="p-1.5 rounded hover:bg-blue-500 hover:bg-opacity-10 transition-colors">
-                          <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCenter(center.id)}
-                          className="p-1.5 rounded hover:bg-red-500 hover:bg-opacity-10 transition-colors">
-                          <Trash2 size={12} style={{ color: "#f87171" }} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="relative w-full overflow-hidden rounded-full mb-2" style={{ background: "var(--db-border)", height: "8px" }}>
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(pct, 100)}%`, background: pct > 90 ? "#f87171" : center.color }}
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <p style={{ color: "var(--db-text2)" }}>Orçamento</p>
-                        <p className="font-bold mono" style={{ color: "var(--db-text)" }}>{fmt(center.budget)}</p>
-                      </div>
-                      <div>
-                        <p style={{ color: "var(--db-text2)" }}>Gasto</p>
-                        <p className="font-bold mono" style={{ color: "var(--db-text)" }}>{fmt(center.spent)}</p>
-                      </div>
-                      <div>
-                        <p style={{ color: "var(--db-text2)" }}>Utilização</p>
-                        <p className="font-bold mono" style={{ color: pct > 90 ? "#f87171" : "var(--db-text)" }}>{pct}%</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <>
+              <div className="mb-5 p-3 rounded-xl" style={{ background: "var(--db-sub)" }}>
+                <BarChart centers={costCenters} />
+              </div>
+              <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--db-border)" }}>
+                <table className="w-full atbl">
+                  <thead>
+                    <tr style={{ background: "var(--db-sub)" }}>
+                      <th>Centro</th><th>Orçamento</th><th>Real</th>
+                      <th>% Executado</th><th>Prev. gasto restante</th><th>Prev. final do mês</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {costCenters.map(c => {
+                      const pct = c.budget > 0 ? Math.round((c.spent / c.budget) * 100) : 0;
+                      const remaining = Math.max(c.budget - c.spent, 0);
+                      const projected = Math.round(c.spent / monthProgress);
+                      const over = pct > 100; const warn = pct >= 80 && !over;
+                      return (
+                        <tr key={c.id} style={{ background: "var(--db-card)" }}>
+                          <td>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                              <div>
+                                <p className="font-semibold text-xs" style={{ color: "var(--db-text)" }}>{c.name}</p>
+                                <p className="text-xs" style={{ color: "var(--db-text3)" }}>{c.employees} colab.</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="mono" style={{ color: "var(--db-text2)" }}>{fmt(c.budget)}</td>
+                          <td className="mono font-bold" style={{ color: "var(--db-text)" }}>{fmt(c.spent)}</td>
+                          <td>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
+                                <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#f87171" : warn ? "#fbbf24" : "#34d399" }} />
+                              </div>
+                              <span className="mono font-bold text-xs px-2 py-0.5 rounded-full" style={{ background: over ? "#fee2e2" : warn ? "#fef9c3" : "#dcfce7", color: over ? "#dc2626" : warn ? "#b45309" : "#16a34a" }}>
+                                {pct}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="mono" style={{ color: remaining === 0 ? "#f87171" : "var(--db-text2)" }}>
+                            {remaining === 0 ? "Esgotado" : fmt(remaining)}
+                          </td>
+                          <td>
+                            <span className="mono font-semibold" style={{ color: projected > c.budget ? "#f87171" : "var(--db-text)" }}>
+                              {fmt(projected)}{projected > c.budget && " ↑"}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }} className="p-1.5 rounded hover:bg-blue-500 hover:bg-opacity-10">
+                                <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                              </button>
+                              <button onClick={() => handleDeleteCenter(c.id)} className="p-1.5 rounded hover:bg-red-500 hover:bg-opacity-10">
+                                <Trash2 size={12} style={{ color: "#f87171" }} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
-        {/* ── Expenses ── */}
+        {/* Expenses */}
         <div className="chart-card p-4 md:p-6">
-          <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2 flex-wrap">
+          <div className="flex items-start md:items-center justify-between mb-4 gap-2 flex-wrap">
             <div>
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Despesas</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Total: {fmt(totalExpenses)}</p>
+              <p className="text-xs mt-0.5 flex items-center gap-2" style={{ color: "var(--db-text2)" }}>
+                Total: {fmt(totalExpenses)}
+                <span className="cf-badge">✓ Sincroniza com fluxo de caixa</span>
+              </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative hidden sm:flex">
-                <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2" style={{ color: "var(--db-text2)" }} />
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--db-text2)" }} />
+                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                   className="pl-9 pr-3 py-1.5 text-xs rounded-lg border"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-                />
+                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
               </div>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="text-xs px-2.5 py-1.5 rounded-lg border"
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
+                className="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer"
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="todos">Todos</option>
                 <option value="pago">Pago</option>
                 <option value="pendente">Pendente</option>
                 <option value="agendado">Agendado</option>
               </select>
-              <button
-                onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1 cursor-pointer">
+              <button onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer">
                 <Plus size={14} /> Novo
               </button>
             </div>
@@ -555,24 +801,30 @@ export default function CostCenter() {
 
           {filteredExpenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <CreditCard size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.5 }} />
+              <CreditCard size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.4 }} />
               <p style={{ color: "var(--db-text2)" }}>Nenhuma despesa encontrada</p>
+              {costCenters.length === 0 && <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>Crie um centro de custo primeiro</p>}
             </div>
           ) : (
             <>
               {/* Mobile */}
               <div className="md:hidden space-y-2">
-                {filteredExpenses.map((exp) => (
-                  <div key={exp.id} className="expense-row flex items-center justify-between p-3 rounded-xl" style={{ border: `1px solid var(--db-border)` }}>
+                {filteredExpenses.map(exp => (
+                  <div key={exp.id} className="p-3 rounded-xl flex items-center justify-between gap-3" style={{ border: "1px solid var(--db-border)" }}>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.category}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>{exp.center}</p>
+                      <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || exp.category}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>{exp.center} · {exp.date}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1 ml-3 shrink-0">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
-                        {exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>{exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}</span>
+                        {exp.status === "pago" && <span className="cf-badge">FC✓</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
+                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
                     </div>
                   </div>
                 ))}
@@ -582,32 +834,32 @@ export default function CostCenter() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b db-divider">
-                      {["Categoria", "Centro", "Valor", "Data", "Status", "Ações"].map((h) => (
+                    <tr className="border-b" style={{ borderColor: "var(--db-border)" }}>
+                      {["Descrição", "Categoria", "Centro", "Valor", "Data", "Status", ""].map(h => (
                         <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap" style={{ color: "var(--db-text2)" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredExpenses.map((exp) => (
+                    {filteredExpenses.map(exp => (
                       <tr key={exp.id} className="expense-row">
-                        <td className="py-3 pr-4"><p className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>{exp.category}</p></td>
+                        <td className="py-3 pr-4 max-w-[150px]"><p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || "—"}</p></td>
+                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.category}</span></td>
                         <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.center}</span></td>
                         <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span></td>
                         <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.date}</span></td>
-                        <td className="py-3 pr-4"><span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>{exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}</span></td>
-                        <td className="py-3"><div className="flex items-center gap-2">
-                          <button
-                            onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
-                            className="p-1 rounded hover:bg-blue-500 hover:bg-opacity-10 transition-colors">
-                            <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteExpense(exp.id)}
-                            className="p-1 rounded hover:bg-red-500 hover:bg-opacity-10 transition-colors">
-                            <Trash2 size={12} style={{ color: "#f87171" }} />
-                          </button>
-                        </div></td>
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>{exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}</span>
+                            {exp.status === "pago" && <span className="cf-badge" title="Lançado no fluxo de caixa">FC ✓</span>}
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded hover:bg-blue-500 hover:bg-opacity-10"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
+                            <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded hover:bg-red-500 hover:bg-opacity-10"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -616,174 +868,40 @@ export default function CostCenter() {
             </>
           )}
         </div>
-
       </main>
 
-      {/* ── Modal: Center ── */}
+      {/* Center Modal */}
       {showCenterModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md rounded-xl border" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
-            <div className="flex items-center justify-between p-4 md:p-6 border-b db-divider">
-              <h3 className="font-bold" style={{ color: "var(--db-text)" }}>
-                {editingCenter ? "Editar centro" : "Novo centro de custo"}
-              </h3>
-              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} className="p-1">
-                <X size={18} style={{ color: "var(--db-text2)" }} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{ backdropFilter: "blur(4px)" }}>
+          <div className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
+            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
+              <h3 className="font-bold" style={{ color: "var(--db-text)" }}>{editingCenter ? "Editar centro" : "Novo centro de custo"}</h3>
+              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} className="p-1.5 rounded-lg">
+                <X size={16} style={{ color: "var(--db-text2)" }} />
               </button>
             </div>
-            <form onSubmit={handleSaveCenter} className="p-4 md:p-6 space-y-4">
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Nome</label>
-                <input
-                  type="text"
-                  name="name"
-                  defaultValue={editingCenter?.name}
-                  placeholder="Ex: Operações"
-                  required
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Orçamento (R$)</label>
-                <input
-                  type="number"
-                  name="budget"
-                  defaultValue={editingCenter?.budget}
-                  placeholder="185000"
-                  required
-                  min="0"
-                  step="100"
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Colaboradores</label>
-                <input
-                  type="number"
-                  name="employees"
-                  defaultValue={editingCenter?.employees}
-                  placeholder="24"
-                  required
-                  min="1"
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-                />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
-                  className="flex-1 px-4 py-2 text-sm font-semibold rounded-lg border transition-colors"
-                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600 disabled:opacity-50 text-white transition-colors flex items-center justify-center gap-2">
-                  {saving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
+            <form onSubmit={handleSaveCenter} className="p-5 space-y-4">
+              {[
+                { name: "name", label: "Nome", placeholder: "Ex: Operações", type: "text", defaultValue: editingCenter?.name, min: undefined, step: undefined },
+                { name: "budget", label: "Orçamento (R$)", placeholder: "10000", type: "number", defaultValue: editingCenter?.budget, min: "1", step: "100" },
+                { name: "employees", label: "Colaboradores", placeholder: "5", type: "number", defaultValue: editingCenter?.employees, min: "1", step: undefined },
+              ].map(f => (
+                <div key={f.name}>
+                  <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>{f.label}</label>
+                  <input type={f.type} name={f.name} defaultValue={f.defaultValue} placeholder={f.placeholder}
+                    required min={f.min} step={f.step}
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
+                </div>
+              ))}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer"
+                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>Cancelar</button>
+                <button type="submit" disabled={savingCenter}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer">
+                  {savingCenter ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
                   {editingCenter ? "Atualizar" : "Criar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal: Expense ── */}
-      {showExpenseModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md rounded-xl border" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
-            <div className="flex items-center justify-between p-4 md:p-6 border-b db-divider">
-              <h3 className="font-bold" style={{ color: "var(--db-text)" }}>
-                {editingExpense ? "Editar despesa" : "Nova despesa"}
-              </h3>
-              <button onClick={() => { setShowExpenseModal(false); setEditingExpense(null); }} className="p-1">
-                <X size={18} style={{ color: "var(--db-text2)" }} />
-              </button>
-            </div>
-            <form onSubmit={handleSaveExpense} className="p-4 md:p-6 space-y-4">
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Categoria</label>
-                <input
-                  type="text"
-                  name="category"
-                  defaultValue={editingExpense?.category}
-                  placeholder="Ex: Salários"
-                  required
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Centro</label>
-                <select
-                  name="center"
-                  defaultValue={editingExpense?.center}
-                  required
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
-                  <option value="">Selecione um centro</option>
-                  {costCenters.map(cc => (
-                    <option key={cc.id} value={cc.name}>{cc.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Valor (R$)</label>
-                <input
-                  type="number"
-                  name="amount"
-                  defaultValue={editingExpense?.amount}
-                  placeholder="98000"
-                  required
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Data</label>
-                <input
-                  type="text"
-                  name="date"
-                  defaultValue={editingExpense?.date}
-                  placeholder="Ex: Mensal"
-                  required
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>Status</label>
-                <select
-                  name="status"
-                  defaultValue={editingExpense?.status}
-                  required
-                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
-                  <option value="pago">Pago</option>
-                  <option value="pendente">Pendente</option>
-                  <option value="agendado">Agendado</option>
-                </select>
-              </div>
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => { setShowExpenseModal(false); setEditingExpense(null); }}
-                  className="flex-1 px-4 py-2 text-sm font-semibold rounded-lg border transition-colors"
-                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600 disabled:opacity-50 text-white transition-colors flex items-center justify-center gap-2">
-                  {saving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
-                  {editingExpense ? "Atualizar" : "Criar"}
                 </button>
               </div>
             </form>
