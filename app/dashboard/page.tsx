@@ -26,6 +26,7 @@ import {
 import OnboardingModal from "../components/OnboardingModal";
 import Navbar from "../components/Navbar";
 import { useTheme } from "@/app/hooks/useTheme"; // ajuste o path se necessário
+import { useSyncTheme } from "@/app/hooks/useSyncTheme";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ export default function Dashboard() {
 
   // ── Tema compartilhado com Navbar ──
   const { dark } = useTheme();
+  useSyncTheme();
 
   const theme = dark ? {
     "--db-bg":     "#0d1117",
@@ -381,13 +383,13 @@ export default function Dashboard() {
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b db-divider">
-                    {["ID","Descrição","Tipo","Valor","Data","Status"].map((h) => (
-                      <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap" style={{ color: "var(--db-text2)" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
+                 <thead>
+                   <tr className="border-b db-divider">
+                     {["ID","Descrição","Tipo","Valor","Data","Status"].map((h) => (
+                       <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap" style={{ color: "var(--db-text)" }}>{h}</th>
+                     ))}
+                   </tr>
+                 </thead>
                 <tbody>
                   {transactions.map((tx) => (
                     <tr key={tx.id} className="tx-row">

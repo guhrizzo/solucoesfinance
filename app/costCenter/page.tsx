@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useTheme } from "@/app/hooks/useTheme";
+import { useSyncTheme } from "@/app/hooks/useSyncTheme";
 import { setupFirestoreDebug } from "@/lib/firestore-debug";
 import { inspectFirestore, testPermissions } from "@/lib/firestore-inspect";
 
@@ -92,16 +93,18 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
           return (
             <g key={pct}>
               <line x1="48" x2={W - 10} y1={y} y2={y} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
-              <text x="44" y={y + 4} textAnchor="end" fontSize="9" fill="currentColor" fillOpacity="0.45">
+              <text x="44" y={y + 4} textAnchor="end" fontSize="9" fill="#64748b" fillOpacity="0.85">
+
                 {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
               </text>
             </g>
           );
         })}
         <rect x="52" y="162" width="10" height="8" rx="2" fill="#93c5fd" />
-        <text x="66" y="170" fontSize="9" fill="currentColor" fillOpacity="0.6">Orçamento</text>
+        <text x="66" y="170" fontSize="9" fill="#64748b" fillOpacity="0.85">Orçamento</text>
         <rect x="138" y="162" width="10" height="8" rx="2" fill="#1d4ed8" />
-        <text x="152" y="170" fontSize="9" fill="currentColor" fillOpacity="0.6">Real</text>
+        <text x="152" y="170" fontSize="9" fill="#64748b" fillOpacity="0.85">Real</text>
+
 
         {centers.map((c, i) => {
           const x = 52 + i * 90;
@@ -114,7 +117,7 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
             <g key={c.id}>
               <rect x={x} y={20 + 120 - bh} width={bw} height={bh} rx="3" fill="#93c5fd" opacity="0.7" />
               <rect x={x + bw + 4} y={20 + 120 - sh} width={bw} height={sh} rx="3" fill={over ? "#f87171" : "#1d4ed8"} />
-              <text x={x + bw + 2} y={154} textAnchor="middle" fontSize="9" fill="currentColor" fillOpacity="0.5">{label}</text>
+              <text x={x + bw + 2} y={154} textAnchor="middle" fontSize="9" fill="#64748b" fillOpacity="0.85">{label}</text>
             </g>
           );
         })}
@@ -437,6 +440,7 @@ export default function CostCenterPage() {
 
   const activePath = "/costCenter";
   const { dark } = useTheme();
+  useSyncTheme();
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type });
@@ -644,7 +648,7 @@ export default function CostCenterPage() {
         .badge-pendente { background:#fef9c3; color:#b45309; }
         .badge-agendado { background:#dbeafe; color:#1d4ed8; }
         .cf-badge { background:rgba(16,185,129,0.12); color:#10b981; font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; }
-        .atbl th { font-size:11px; font-weight:600; color:var(--db-text2); padding:8px 12px; text-align:left; border-bottom:1px solid var(--db-border); white-space:nowrap; }
+        .atbl th { font-size:11px; font-weight:600; color:var(--db-text); padding:8px 12px; text-align:left; border-bottom:1px solid var(--db-border); white-space:nowrap; }
         .atbl td { font-size:12px; padding:10px 12px; border-bottom:1px solid var(--db-border); }
         .atbl tr:last-child td { border-bottom:none; }
         .atbl tr:hover td { background:var(--db-hover); }
@@ -774,10 +778,10 @@ export default function CostCenterPage() {
                           </td>
                            <td>
                              <div className="flex items-center gap-1">
-                               <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }} className="p-1.5 rounded hover:bg-blue-500 hover:bg-opacity-10 cursor-pointer">
+                               <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }} className="p-1.5 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer">
                                  <Edit2 size={12} style={{ color: "#60a5fa" }} />
                                </button>
-                               <button onClick={() => handleDeleteCenter(c.id)} className="p-1.5 rounded hover:bg-red-500 hover:bg-opacity-10 cursor-pointer">
+                               <button onClick={() => handleDeleteCenter(c.id)} className="p-1.5 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer">
                                  <Trash2 size={12} style={{ color: "#f87171" }} />
                                </button>
                              </div>
@@ -848,8 +852,8 @@ export default function CostCenterPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 shrink-0">
-                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
-                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
+                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
+                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
                     </div>
                   </div>
                 ))}
@@ -881,8 +885,8 @@ export default function CostCenterPage() {
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-1.5">
-                            <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded hover:bg-blue-500 hover:bg-opacity-10"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
-                            <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded hover:bg-red-500 hover:bg-opacity-10"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
+                            <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded hover:bg-blue-2 00 hover:bg-opacity-10 cursor-pointer"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
+                            <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
                           </div>
                         </td>
                       </tr>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Sora } from "next/font/google";
 import "./globals.css";
+import { ThemeInitializer } from "./components/ThemeInitializer";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -47,6 +48,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${sora.variable} font-sans antialiased bg-white text-blue-950`}>
+        <ThemeInitializer />
         {children}
       </body>
     </html>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Navbar from "./Navbar";
 import { useTheme } from "../hooks/useTheme";
+import { useSyncTheme } from "../hooks/useSyncTheme";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -1005,6 +1006,7 @@ export default function CashFlowPage() {
   const [previsaoOpen, setPrevisaoOpen] = useState(false);
 
   const { dark } = useTheme();
+  useSyncTheme();
 
   useEffect(() => {
     let snapUnsub: (() => void) | undefined;
