@@ -38,16 +38,54 @@ export const metadata: Metadata = {
   },
 };
 
-
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className={`${sora.variable} font-sans antialiased bg-white text-blue-950`}>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        {/* Script CRÍTICO: Executa ANTES de qualquer renderização */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // 1. Restaura tema do localStorage
+                  const savedTheme = localStorage.getItem('nexusfi-theme');
+                  let theme = savedTheme;
+                  
+                  // 2. Se não houver, detecta preferência do sistema
+                  if (!theme) {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  }
+                  
+                  // 3. Aplica IMEDIATAMENTE no HTML
+                  document.documentElement.setAttribute('data-theme', theme);
+                  document.documentElement.classList.toggle('dark', theme === 'dark');
+                  
+                  // 4. Salva no localStorage (se não estava)
+                  if (!savedTheme) {
+                    localStorage.setItem('nexusfi-theme', theme);
+                  }
+                  
+                  // 5. Debug no console
+                  console.log('🎨 Tema carregado:', theme);
+                } catch (e) {
+                  console.error('❌ Erro ao inicializar tema:', e);
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body 
+        className={sora.variable} 
+        suppressHydrationWarning
+        style={{ margin: 0, padding: 0 }}
+      >
+        {/* ThemeInitializer monitora mudanças e sincroniza */}
         <ThemeInitializer />
         {children}
       </body>

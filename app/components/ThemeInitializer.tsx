@@ -3,35 +3,54 @@
 import { useEffect } from "react";
 
 /**
- * ThemeInitializer - Restaura e sincroniza o tema no carregamento e navegação
- * Deve ser colocado no layout.tsx para funcionar globalmente
+ * ThemeInitializer - Sincroniza tema entre abas e monitora mudanças
+ * O script inline no layout.tsx já carrega o tema antes de render
+ * Este componente cuida de manter sincronizado
  */
 export function ThemeInitializer() {
   useEffect(() => {
-    // Restaura o tema no carregamento
     if (typeof window === "undefined") return;
 
     const initTheme = () => {
       const savedTheme = localStorage.getItem("nexusfi-theme");
-      if (savedTheme) {
-        document.documentElement.setAttribute("data-theme", savedTheme);
-      } else {
-        // Se não houver tema salvo, usa o padrão do sistema
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
-        localStorage.setItem("nexusfi-theme", prefersDark ? "dark" : "light");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      
+      // Define tema: salvo > preferência do sistema > padrão (light)
+      const theme = savedTheme || (prefersDark ? "dark" : "light");
+      
+      // Aplica ao HTML
+      document.documentElement.setAttribute("data-theme", theme);
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      document.documentElement.classList.toggle("light", theme === "light");
+      
+      // Salva no localStorage se não estava
+      if (!savedTheme) {
+        localStorage.setItem("nexusfi-theme", theme);
       }
+      
+      console.log("✅ Tema sincronizado:", theme);
     };
 
-    // Inicializa no carregamento
+    // Inicializa
     initTheme();
 
-    // Monitora mudanças no data-theme e sincroniza com localStorage
-    const observer = new MutationObserver(() => {
-      const currentTheme = document.documentElement.getAttribute("data-theme");
-      if (currentTheme) {
-        localStorage.setItem("nexusfi-theme", currentTheme);
-      }
+    // ─── Monitora mudanças no data-theme (quando usuário clica no botão) ───
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "data-theme") {
+          const currentTheme = document.documentElement.getAttribute("data-theme");
+          console.log("🔄 data-theme mudou para:", currentTheme);
+          
+          if (currentTheme) {
+            // Salva no localStorage
+            localStorage.setItem("nexusfi-theme", currentTheme);
+            
+            // Sincroniza classe .dark
+            document.documentElement.classList.toggle("dark", currentTheme === "dark");
+            document.documentElement.classList.toggle("light", currentTheme === "light");
+          }
+        }
+      });
     });
 
     observer.observe(document.documentElement, {
@@ -39,18 +58,23 @@ export function ThemeInitializer() {
       attributeFilter: ["data-theme"],
     });
 
-    // Sincroniza entre abas
-    const handleStorage = (e: StorageEvent) => {
+    // ─── Sincroniza entre abas ───
+    const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "nexusfi-theme" && e.newValue) {
+        console.log("📱 Sincronização entre abas:", e.newValue);
+        
         document.documentElement.setAttribute("data-theme", e.newValue);
+        document.documentElement.classList.toggle("dark", e.newValue === "dark");
+        document.documentElement.classList.toggle("light", e.newValue === "light");
       }
     };
 
-    window.addEventListener("storage", handleStorage);
+    window.addEventListener("storage", handleStorageChange);
 
+    // ─── Cleanup ───
     return () => {
       observer.disconnect();
-      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
