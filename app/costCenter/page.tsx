@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useTheme } from "@/app/hooks/useTheme";
+import { setupFirestoreDebug } from "@/lib/firestore-debug";
+import { inspectFirestore, testPermissions } from "@/lib/firestore-inspect";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,10 +59,10 @@ const COLORS = [
 ];
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
-  blue:    { bg: "rgba(21,101,192,0.1)",  text: "#42a5f5", icon: "rgba(21,101,192,0.15)" },
-  rose:    { bg: "rgba(244,63,94,0.08)",  text: "#fb7185", icon: "rgba(244,63,94,0.12)" },
+  blue: { bg: "rgba(21,101,192,0.1)", text: "#42a5f5", icon: "rgba(21,101,192,0.15)" },
+  rose: { bg: "rgba(244,63,94,0.08)", text: "#fb7185", icon: "rgba(244,63,94,0.12)" },
   emerald: { bg: "rgba(16,185,129,0.08)", text: "#34d399", icon: "rgba(16,185,129,0.12)" },
-  amber:   { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", icon: "rgba(245,158,11,0.12)" },
+  amber: { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", icon: "rgba(245,158,11,0.12)" },
 };
 
 function mapCategoryToCashflow(cat: string): string {
@@ -265,7 +267,14 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{ backdropFilter: "blur(4px)" }}>
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4 z-999"
+      style={{
+        background: "rgba(0, 0, 0, 0.12)",
+        backdropFilter: "blur(3px)",
+        WebkitBackdropFilter: "blur(3px)"
+      }}
+    >
       <div className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
@@ -482,6 +491,22 @@ export default function CostCenterPage() {
     })();
 
     return () => { unsubAuth?.(); unsubCenters?.(); unsubExpenses?.(); };
+  }, []);
+
+  useEffect(() => {
+    // Executa debug quando a página carrega
+    if (typeof window !== 'undefined') {
+      (window as any).debugFirestore = setupFirestoreDebug;
+      console.log("💡 Execute no console: debugFirestore()");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).testPermissions = testPermissions;
+      (window as any).inspectFirestore = inspectFirestore;
+      console.log("💡 Execute: testPermissions() ou inspectFirestore()");
+    }
   }, []);
 
   // ── Save center ────────────────────────────────────────────────────────────
@@ -747,16 +772,16 @@ export default function CostCenterPage() {
                               {fmt(projected)}{projected > c.budget && " ↑"}
                             </span>
                           </td>
-                          <td>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }} className="p-1.5 rounded hover:bg-blue-500 hover:bg-opacity-10">
-                                <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                              </button>
-                              <button onClick={() => handleDeleteCenter(c.id)} className="p-1.5 rounded hover:bg-red-500 hover:bg-opacity-10">
-                                <Trash2 size={12} style={{ color: "#f87171" }} />
-                              </button>
-                            </div>
-                          </td>
+                           <td>
+                             <div className="flex items-center gap-1">
+                               <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }} className="p-1.5 rounded hover:bg-blue-500 hover:bg-opacity-10 cursor-pointer">
+                                 <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                               </button>
+                               <button onClick={() => handleDeleteCenter(c.id)} className="p-1.5 rounded hover:bg-red-500 hover:bg-opacity-10 cursor-pointer">
+                                 <Trash2 size={12} style={{ color: "#f87171" }} />
+                               </button>
+                             </div>
+                           </td>
                         </tr>
                       );
                     })}
@@ -872,7 +897,14 @@ export default function CostCenterPage() {
 
       {/* Center Modal */}
       {showCenterModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{ backdropFilter: "blur(4px)" }}>
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 z-999"
+          style={{
+            background: "rgba(0, 0, 0, 0.42)",
+            backdropFilter: "blur(3px)",
+            WebkitBackdropFilter: "blur(3px)"
+          }}
+        >
           <div className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
               <h3 className="font-bold" style={{ color: "var(--db-text)" }}>{editingCenter ? "Editar centro" : "Novo centro de custo"}</h3>
