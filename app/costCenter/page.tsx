@@ -152,6 +152,93 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
   );
 }
 
+// ─── Confirmation Modal ────────────────────────────────────────────────────────
+
+interface ConfirmModalProps {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  isDangerous?: boolean;
+  loading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmModal({
+  open,
+  title,
+  message,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  isDangerous = false,
+  loading = false,
+  onConfirm,
+  onCancel,
+}: ConfirmModalProps) {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4 z-999"
+      style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border shadow-2xl"
+        style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
+          <h3 className="font-bold text-base" style={{ color: isDangerous ? "#ef4444" : "var(--db-text)" }}>
+            {title}
+          </h3>
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
+          >
+            <X size={16} style={{ color: "var(--db-text2)" }} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5">
+          <p className="text-sm" style={{ color: "var(--db-text2)" }}>
+            {message}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-2 p-5 border-t" style={{ borderColor: "var(--db-border)" }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-50"
+            style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}
+          >
+            {cancelText}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50 ${
+              isDangerous
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {loading ? <Loader size={14} className="animate-spin" /> : null}
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Expense Modal ─────────────────────────────────────────────────────────────
 
 interface ExpenseModalProps {
@@ -381,9 +468,9 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
               <Check size={11} /> Despesas "Pago" sincronizam com fluxo de caixa
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity">
-            <X size={16} style={{ color: "var(--db-text2)" }} />
-          </button>
+           <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer">
+             <X size={16} style={{ color: "var(--db-text2)" }} />
+           </button>
         </div>
 
         {/* Body */}
@@ -411,9 +498,9 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
               Categoria <span style={{ color: "#f87171" }}>*</span>
             </label>
-            <select value={category} onChange={e => setCategory(e.target.value)} required
-              className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
+             <select value={category} onChange={e => setCategory(e.target.value)} required
+               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
+               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
               <option value="">— Selecione uma categoria —</option>
               {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
@@ -436,9 +523,9 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
                 Crie um centro de custo primeiro.
               </p>
             ) : (
-              <select value={center} onChange={e => setCenter(e.target.value)} required
-                className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
+               <select value={center} onChange={e => setCenter(e.target.value)} required
+                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
+                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="">— Selecione um centro —</option>
                 {centers.map(cc => <option key={cc.id} value={cc.name}>{cc.name}</option>)}
               </select>
@@ -472,18 +559,18 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
               Status <span style={{ color: "#f87171" }}>*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {(["pago", "pendente", "agendado"] as const).map(s => (
-                <button key={s} type="button" onClick={() => setStatus(s)}
-                  className="py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer"
-                  style={status === s
-                    ? s === "pago" ? { background: "#dcfce7", borderColor: "#86efac", color: "#16a34a" }
-                      : s === "pendente" ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
-                        : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
-                    : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
-                  }>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              ))}
+               {(["pago", "pendente", "agendado"] as const).map(s => (
+                 <button key={s} type="button" onClick={() => setStatus(s)}
+                   className="py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer"
+                   style={status === s
+                     ? s === "pago" ? { background: "#dcfce7", borderColor: "#86efac", color: "#16a34a" }
+                       : s === "pendente" ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
+                         : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
+                     : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
+                   }>
+                   {s.charAt(0).toUpperCase() + s.slice(1)}
+                 </button>
+               ))}
             </div>
             {status === "pago" && (
               <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "#10b981" }}>
@@ -530,6 +617,14 @@ export default function CostCenterPage() {
   const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">("todos");
   const [savingCenter, setSavingCenter] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+
+  // Confirmation modals
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    type: "delete-center" | "delete-expense" | null;
+    id: string;
+    loading: boolean;
+  }>({ open: false, type: null, id: "", loading: false });
 
   const activePath = "/costCenter";
   const { dark } = useTheme();
@@ -636,68 +731,82 @@ export default function CostCenterPage() {
     }
   };
 
-  // ── Delete center ──────────────────────────────────────────────────────────
-  const handleDeleteCenter = async (id: string) => {
-    if (!confirm("Deletar este centro de custo?")) return;
-    try {
-      const { getFirebase } = await import("../../lib/firebase");
-      const { db } = await getFirebase();
-      const { deleteDoc, doc } = await import("firebase/firestore");
-      await deleteDoc(doc(db, "costCenters", id));
-      showToast("Centro removido!");
-    } catch (err: any) {
-      showToast(err.message || "Erro", "err");
-    }
-  };
+   // ── Delete center ──────────────────────────────────────────────────────────
+   const handleDeleteCenter = (id: string) => {
+     setConfirmModal({ open: true, type: "delete-center", id, loading: false });
+   };
 
-  // ── Delete expense ─────────────────────────────────────────────────────────
-  const handleDeleteExpense = async (id: string) => {
-    if (!confirm("Deletar esta despesa?")) return;
-    try {
-      const { getFirebase } = await import("../../lib/firebase");
-      const { db } = await getFirebase();
-      const { deleteDoc, doc, collection, query, where, getDocs, updateDoc } = await import("firebase/firestore");
+   const confirmDeleteCenter = async () => {
+     if (confirmModal.type !== "delete-center") return;
+     setConfirmModal(prev => ({ ...prev, loading: true }));
+     try {
+       const { getFirebase } = await import("../../lib/firebase");
+       const { db } = await getFirebase();
+       const { deleteDoc, doc } = await import("firebase/firestore");
+       await deleteDoc(doc(db, "costCenters", confirmModal.id));
+       showToast("Centro removido!");
+       setConfirmModal({ open: false, type: null, id: "", loading: false });
+     } catch (err: any) {
+       showToast(err.message || "Erro", "err");
+       setConfirmModal(prev => ({ ...prev, loading: false }));
+     }
+   };
 
-      const exp = expenses.find(e => e.id === id);
-      if (exp) {
-        // FIX: adiciona where userId para respeitar as security rules
-        const centerSnap = await getDocs(
-          query(
-            collection(db, "costCenters"),
-            where("name", "==", exp.center),
-            where("userId", "==", uid),  // FIX
-          )
-        );
+   // ── Delete expense ─────────────────────────────────────────────────────────
+   const handleDeleteExpense = (id: string) => {
+     setConfirmModal({ open: true, type: "delete-expense", id, loading: false });
+   };
 
-        if (!centerSnap.empty) {
-          const centerData = centerSnap.docs[0].data();
-          const categories = centerData.categories || [];
-          const updatedCategories = categories.map((cat: any) =>
-            cat.name === exp.category
-              ? { ...cat, spent: Math.max(0, cat.spent - exp.amount) }
-              : cat
-          );
-          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
-          await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
-            spent: newSpent,
-            categories: updatedCategories,
-          });
-        }
+   const confirmDeleteExpense = async () => {
+     if (confirmModal.type !== "delete-expense") return;
+     setConfirmModal(prev => ({ ...prev, loading: true }));
+     try {
+       const { getFirebase } = await import("../../lib/firebase");
+       const { db } = await getFirebase();
+       const { deleteDoc, doc, collection, query, where, getDocs, updateDoc } = await import("firebase/firestore");
 
-        // Remove entrada no cashflow vinculada
-        const cfSnap = await getDocs(
-          query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", id))
-        );
-        await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
-      }
+       const exp = expenses.find(e => e.id === confirmModal.id);
+       if (exp) {
+         // FIX: adiciona where userId para respeitar as security rules
+         const centerSnap = await getDocs(
+           query(
+             collection(db, "costCenters"),
+             where("name", "==", exp.center),
+             where("userId", "==", uid),  // FIX
+           )
+         );
 
-      await deleteDoc(doc(db, "expenses", id));
-      showToast("Despesa removida!");
-    } catch (err: any) {
-      console.error("DELETE EXPENSE ERROR:", err.code, err.message, err);
-      showToast(err.message || "Erro", "err");
-    }
-  };
+         if (!centerSnap.empty) {
+           const centerData = centerSnap.docs[0].data();
+           const categories = centerData.categories || [];
+           const updatedCategories = categories.map((cat: any) =>
+             cat.name === exp.category
+               ? { ...cat, spent: Math.max(0, cat.spent - exp.amount) }
+               : cat
+           );
+           const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
+           await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
+             spent: newSpent,
+             categories: updatedCategories,
+           });
+         }
+
+         // Remove entrada no cashflow vinculada
+         const cfSnap = await getDocs(
+           query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", confirmModal.id))
+         );
+         await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
+       }
+
+       await deleteDoc(doc(db, "expenses", confirmModal.id));
+       showToast("Despesa removida!");
+       setConfirmModal({ open: false, type: null, id: "", loading: false });
+     } catch (err: any) {
+       console.error("DELETE EXPENSE ERROR:", err.code, err.message, err);
+       showToast(err.message || "Erro", "err");
+       setConfirmModal(prev => ({ ...prev, loading: false }));
+     }
+   };
 
   // ── Computed ───────────────────────────────────────────────────────────────
   const filteredExpenses = expenses.filter(exp => {
@@ -768,6 +877,31 @@ export default function CostCenterPage() {
         </div>
       )}
 
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        open={confirmModal.open}
+        title={
+          confirmModal.type === "delete-center"
+            ? "Deletar centro de custo?"
+            : "Deletar despesa?"
+        }
+        message={
+          confirmModal.type === "delete-center"
+            ? "Esta ação não pode ser desfeita. O centro de custo e todos os seus dados serão removidos permanentemente."
+            : "Esta ação não pode ser desfeita. A despesa será removida permanentemente."
+        }
+        confirmText="Deletar"
+        cancelText="Cancelar"
+        isDangerous={true}
+        loading={confirmModal.loading}
+        onConfirm={
+          confirmModal.type === "delete-center"
+            ? confirmDeleteCenter
+            : confirmDeleteExpense
+        }
+        onCancel={() => setConfirmModal({ open: false, type: null, id: "", loading: false })}
+      />
+
       <Navbar user={user} period={period} activePath={activePath} />
 
       <ExpenseModal
@@ -815,7 +949,7 @@ export default function CostCenterPage() {
               <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Orçamento vs. gasto real</p>
             </div>
             <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer">
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
               <Plus size={14} /> Novo
             </button>
           </div>
@@ -824,9 +958,9 @@ export default function CostCenterPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <BarChart2 size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.4 }} />
               <p style={{ color: "var(--db-text2)" }}>Nenhum centro de custo criado</p>
-              <button onClick={() => setShowCenterModal(true)} className="mt-3 text-xs text-blue-500 font-semibold cursor-pointer">
-                Criar primeiro centro
-              </button>
+               <button onClick={() => setShowCenterModal(true)} className="mt-3 text-xs text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors">
+                 Criar primeiro centro
+               </button>
             </div>
           ) : (
             <>
@@ -880,18 +1014,18 @@ export default function CostCenterPage() {
                               {fmt(projected)}{projected > c.budget && " ↑"}
                             </span>
                           </td>
-                          <td>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }}
-                                className="p-1.5 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer">
-                                <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                              </button>
-                              <button onClick={() => handleDeleteCenter(c.id)}
-                                className="p-1.5 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer">
-                                <Trash2 size={12} style={{ color: "#f87171" }} />
-                              </button>
-                            </div>
-                          </td>
+                           <td>
+                             <div className="flex items-center gap-1">
+                               <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }}
+                                 className="p-1.5 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                                 <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                               </button>
+                               <button onClick={() => handleDeleteCenter(c.id)}
+                                 className="p-1.5 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                                 <Trash2 size={12} style={{ color: "#f87171" }} />
+                               </button>
+                             </div>
+                           </td>
                         </tr>
                       );
                     })}
@@ -919,18 +1053,18 @@ export default function CostCenterPage() {
                   className="pl-9 pr-3 py-1.5 text-xs rounded-lg border"
                   style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
               </div>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-                className="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer"
-                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
+               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
+                 className="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="todos">Todos</option>
                 <option value="pago">Pago</option>
                 <option value="pendente">Pendente</option>
                 <option value="agendado">Agendado</option>
               </select>
-              <button onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer">
-                <Plus size={14} /> Novo
-              </button>
+               <button onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
+                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
+                 <Plus size={14} /> Novo
+               </button>
             </div>
           </div>
 
@@ -962,14 +1096,14 @@ export default function CostCenterPage() {
                         {exp.status === "pago" && <span className="cf-badge">FC✓</span>}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1 shrink-0">
-                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer">
-                        <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                      </button>
-                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer">
-                        <Trash2 size={12} style={{ color: "#f87171" }} />
-                      </button>
-                    </div>
+                     <div className="flex flex-col gap-1 shrink-0">
+                       <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer hover:bg-blue-200 hover:bg-opacity-10 transition-colors">
+                         <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                       </button>
+                       <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer hover:bg-red-200 hover:bg-opacity-10 transition-colors">
+                         <Trash2 size={12} style={{ color: "#f87171" }} />
+                       </button>
+                     </div>
                   </div>
                 ))}
               </div>
@@ -1003,18 +1137,18 @@ export default function CostCenterPage() {
                             {exp.status === "pago" && <span className="cf-badge" title="Lançado no fluxo de caixa">FC ✓</span>}
                           </div>
                         </td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1.5">
-                            <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
-                              className="p-1 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer">
-                              <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                            </button>
-                            <button onClick={() => handleDeleteExpense(exp.id)}
-                              className="p-1 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer">
-                              <Trash2 size={12} style={{ color: "#f87171" }} />
-                            </button>
-                          </div>
-                        </td>
+                         <td className="py-3">
+                           <div className="flex items-center gap-1.5">
+                             <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
+                               className="p-1 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                               <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                             </button>
+                             <button onClick={() => handleDeleteExpense(exp.id)}
+                               className="p-1 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                               <Trash2 size={12} style={{ color: "#f87171" }} />
+                             </button>
+                           </div>
+                         </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1035,7 +1169,7 @@ export default function CostCenterPage() {
               <h3 className="font-bold" style={{ color: "var(--db-text)" }}>
                 {editingCenter ? "Editar centro" : "Novo centro de custo"}
               </h3>
-              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} className="p-1.5 rounded-lg">
+              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} className="p-1.5 rounded-lg cursor-pointer hover:opacity-70 transition-opacity">
                 <X size={16} style={{ color: "var(--db-text2)" }} />
               </button>
             </div>
@@ -1053,18 +1187,18 @@ export default function CostCenterPage() {
                     style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
                 </div>
               ))}
-              <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
-                  className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer"
-                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
-                  Cancelar
-                </button>
-                <button type="submit" disabled={savingCenter}
-                  className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer">
-                  {savingCenter ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
-                  {editingCenter ? "Atualizar" : "Criar"}
-                </button>
-              </div>
+               <div className="flex gap-2 pt-1">
+                 <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
+                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
+                   style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
+                   Cancelar
+                 </button>
+                 <button type="submit" disabled={savingCenter}
+                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                   {savingCenter ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
+                   {editingCenter ? "Atualizar" : "Criar"}
+                 </button>
+               </div>
             </form>
           </div>
         </div>
