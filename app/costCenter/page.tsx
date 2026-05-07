@@ -22,8 +22,6 @@ import {
 import Navbar from "../components/Navbar";
 import { useTheme } from "@/app/hooks/useTheme";
 import { useSyncTheme } from "@/app/hooks/useSyncTheme";
-import { setupFirestoreDebug } from "@/lib/firestore-debug";
-import { inspectFirestore, testPermissions } from "@/lib/firestore-inspect";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,7 +48,7 @@ interface Expense {
   createdAt: any;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Constantes e Helpers ─────────────────────────────────────────────────────
 
 const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
@@ -58,6 +56,34 @@ const COLORS = [
   "#1565c0", "#42a5f5", "#90caf9", "#bbdefb",
   "#64b5f6", "#2196f3", "#1e88e5", "#1976d2",
 ];
+
+const EXPENSE_CATEGORIES = [
+  "Alimentação",
+  "Transporte",
+  "Hospedagem",
+  "Comunicação",
+  "Equipamentos",
+  "Consultoria",
+  "Treinamento",
+  "Marketing",
+  "Utilities",
+  "Manutenção",
+  "Outros",
+];
+
+const CATEGORY_COLORS: Record<string, string> = {
+  "Alimentação": "#f97316",
+  "Transporte": "#06b6d4",
+  "Hospedagem": "#ec4899",
+  "Comunicação": "#8b5cf6",
+  "Equipamentos": "#10b981",
+  "Consultoria": "#3b82f6",
+  "Treinamento": "#f59e0b",
+  "Marketing": "#ef4444",
+  "Utilities": "#6366f1",
+  "Manutenção": "#14b8a6",
+  "Outros": "#6b7280",
+};
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   blue: { bg: "rgba(21,101,192,0.1)", text: "#42a5f5", icon: "rgba(21,101,192,0.15)" },
@@ -68,6 +94,9 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
 
 function mapCategoryToCashflow(cat: string): string {
   const l = cat.toLowerCase();
+  if (l.includes("almoço") || l.includes("almoco") || l.includes("alimento") || l.includes("refeição") || l.includes("refeicao") || l.includes("restaurante")) return "Outros gastos";
+  if (l.includes("uber") || l.includes("táxi") || l.includes("taxi") || l.includes("combustível") || l.includes("combustivel") || l.includes("passagem")) return "Outros gastos";
+  if (l.includes("hotel") || l.includes("hospedagem") || l.includes("hostel") || l.includes("airbnb")) return "Outros gastos";
   if (l.includes("salário") || l.includes("salario") || l.includes("folha")) return "Folha de pagamento";
   if (l.includes("aluguel")) return "Aluguel";
   if (l.includes("fornec") || l.includes("compra") || l.includes("mercadoria")) return "Fornecedores";
@@ -94,7 +123,6 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
             <g key={pct}>
               <line x1="48" x2={W - 10} y1={y} y2={y} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
               <text x="44" y={y + 4} textAnchor="end" fontSize="9" fill="#64748b" fillOpacity="0.85">
-
                 {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
               </text>
             </g>
@@ -104,8 +132,6 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
         <text x="66" y="170" fontSize="9" fill="#64748b" fillOpacity="0.85">Orçamento</text>
         <rect x="138" y="162" width="10" height="8" rx="2" fill="#1d4ed8" />
         <text x="152" y="170" fontSize="9" fill="#64748b" fillOpacity="0.85">Real</text>
-
-
         {centers.map((c, i) => {
           const x = 52 + i * 90;
           const bw = 24;
@@ -126,7 +152,7 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
   );
 }
 
-// ─── Expense Modal (fully controlled) ─────────────────────────────────────────
+// ─── Expense Modal ─────────────────────────────────────────────────────────────
 
 interface ExpenseModalProps {
   open: boolean;
@@ -147,12 +173,10 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  // Initialise fields whenever the modal opens or the edited record changes
   useEffect(() => {
     if (!open) return;
     setDescription(editing?.description ?? "");
     setCategory(editing?.category ?? "");
-    // Default to first center if nothing is selected yet
     setCenter(editing?.center ?? centers[0]?.name ?? "");
     setAmount(editing ? String(editing.amount) : "");
     setDate(editing?.date ?? new Date().toISOString().split("T")[0]);
@@ -182,27 +206,69 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
       } = await import("firebase/firestore");
 
       if (editing) {
-        // 1. Update expense record
+        // ── EDITAR DESPESA ──────────────────────────────────────────────
+
+        // 1. Atualizar documento de despesa
         await updateDoc(doc(db, "expenses", editing.id), {
           description, category, center, amount: parsedAmount, date, status,
         });
 
-        // 2. Revert old center spent
-        const oldCenter = centers.find(c => c.name === editing.center);
-        if (oldCenter) {
-          await updateDoc(doc(db, "costCenters", oldCenter.id), {
-            spent: Math.max(0, oldCenter.spent - editing.amount),
-          });
+        // 2. Remover gasto anterior do centro/categoria (se mudou)
+        if (editing.category !== category || editing.center !== center) {
+          const oldCenterSnap = await getDocs(
+            query(
+              collection(db, "costCenters"),
+              where("name", "==", editing.center),
+              where("userId", "==", uid),  // FIX: filtro por userId
+            )
+          );
+          if (!oldCenterSnap.empty) {
+            const centerData = oldCenterSnap.docs[0].data();
+            const categories = centerData.categories || [];
+            const updatedCategories = categories.map((cat: any) =>
+              cat.name === editing.category
+                ? { ...cat, spent: Math.max(0, cat.spent - editing.amount) }
+                : cat
+            );
+            const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
+            await updateDoc(doc(db, "costCenters", oldCenterSnap.docs[0].id), {
+              spent: newSpent,
+              categories: updatedCategories,
+            });
+          }
         }
-        // 3. Add to new center spent
-        const newCenter = centers.find(c => c.name === center);
-        if (newCenter) {
-          await updateDoc(doc(db, "costCenters", newCenter.id), {
-            spent: newCenter.spent + parsedAmount,
+
+        // 3. Adicionar novo gasto no centro/categoria
+        const newCenterSnap = await getDocs(
+          query(
+            collection(db, "costCenters"),
+            where("name", "==", center),
+            where("userId", "==", uid),  // FIX: filtro por userId
+          )
+        );
+        if (!newCenterSnap.empty) {
+          const centerData = newCenterSnap.docs[0].data();
+          const categories = centerData.categories || [];
+          const existingCat = categories.find((cat: any) => cat.name === category);
+          let updatedCategories;
+          if (existingCat) {
+            updatedCategories = categories.map((cat: any) =>
+              cat.name === category ? { ...cat, spent: cat.spent + parsedAmount } : cat
+            );
+          } else {
+            updatedCategories = [
+              ...categories,
+              { id: `cat_${Date.now()}`, name: category, spent: parsedAmount, color: CATEGORY_COLORS[category] || "#6b7280" },
+            ];
+          }
+          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
+          await updateDoc(doc(db, "costCenters", newCenterSnap.docs[0].id), {
+            spent: newSpent,
+            categories: updatedCategories,
           });
         }
 
-        // 4. Sync cashflow
+        // 4. Sincronizar com cashflow
         const cfSnap = await getDocs(
           query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", editing.id))
         );
@@ -213,7 +279,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             category: mapCategoryToCashflow(category),
             amount: parsedAmount,
             date,
-            note: `Centro: ${center}`,
+            note: `Centro: ${center} | ${category}`,
             sourceExpenseId: editing.id,
             createdAt: Date.now(),
           };
@@ -223,28 +289,57 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             await addDoc(collection(db, "users", uid, "cashflow"), cfData);
           }
         } else {
-          // Remove cashflow entry if status is no longer "pago"
           await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
         }
 
         onSaved("Despesa atualizada!");
+
       } else {
-        // 1. Create new expense
+        // ── CRIAR NOVA DESPESA ──────────────────────────────────────────
+
+        // 1. Criar documento de despesa
         const expRef = await addDoc(collection(db, "expenses"), {
-          description, category, center,
-          amount: parsedAmount, date, status,
-          userId: uid, createdAt: new Date(),
+          description,
+          category,
+          center,
+          amount: parsedAmount,
+          date,
+          status,
+          userId: uid,
+          createdAt: new Date(),
         });
 
-        // 2. Update center spent
-        const matchCenter = centers.find(c => c.name === center);
-        if (matchCenter) {
-          await updateDoc(doc(db, "costCenters", matchCenter.id), {
-            spent: matchCenter.spent + parsedAmount,
+        // 2. Atualizar centro de custo com a categoria
+        const centerSnap = await getDocs(
+          query(
+            collection(db, "costCenters"),
+            where("name", "==", center),
+            where("userId", "==", uid),  // FIX: filtro por userId
+          )
+        );
+        if (!centerSnap.empty) {
+          const centerData = centerSnap.docs[0].data();
+          const categories = centerData.categories || [];
+          const existingCat = categories.find((cat: any) => cat.name === category);
+          let updatedCategories;
+          if (existingCat) {
+            updatedCategories = categories.map((cat: any) =>
+              cat.name === category ? { ...cat, spent: cat.spent + parsedAmount } : cat
+            );
+          } else {
+            updatedCategories = [
+              ...categories,
+              { id: `cat_${Date.now()}`, name: category, spent: parsedAmount, color: CATEGORY_COLORS[category] || "#6b7280" },
+            ];
+          }
+          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
+          await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
+            spent: newSpent,
+            categories: updatedCategories,
           });
         }
 
-        // 3. Sync to cashflow when "pago"
+        // 3. Sincronizar com cashflow quando "pago"
         if (status === "pago") {
           await addDoc(collection(db, "users", uid, "cashflow"), {
             type: "saida",
@@ -252,7 +347,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             category: mapCategoryToCashflow(category),
             amount: parsedAmount,
             date,
-            note: `Centro: ${center}`,
+            note: `Centro: ${center} | ${category}`,
             sourceExpenseId: expRef.id,
             createdAt: Date.now(),
           });
@@ -263,6 +358,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
 
       onClose();
     } catch (e: any) {
+      console.error("SAVE EXPENSE ERROR:", e.code, e.message, e);
       setErr(e.message || "Erro ao salvar");
     } finally {
       setSaving(false);
@@ -272,11 +368,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
   return (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 z-999"
-      style={{
-        background: "rgba(0, 0, 0, 0.12)",
-        backdropFilter: "blur(3px)",
-        WebkitBackdropFilter: "blur(3px)"
-      }}
+      style={{ background: "rgba(0,0,0,0.12)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
     >
       <div className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
         {/* Header */}
@@ -286,7 +378,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
               {editing ? "Editar despesa" : "Nova despesa"}
             </h3>
             <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#10b981" }}>
-              <Check size={11} /> Despesas "Pago" são lançadas no fluxo de caixa
+              <Check size={11} /> Despesas "Pago" sincronizam com fluxo de caixa
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity">
@@ -297,59 +389,63 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[72vh] overflow-y-auto">
           {err && (
-            <div className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl" style={{ background: "#fff1f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+            <div className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
+              style={{ background: "#fff1f2", border: "1px solid #fecdd3", color: "#be123c" }}>
               <AlertCircle size={13} /> {err}
             </div>
           )}
 
-          {/* Description */}
+          {/* Descrição */}
           <div>
             <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
               Descrição <span style={{ color: "var(--db-text3)" }}>(opcional)</span>
             </label>
             <input type="text" value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="Ex: PIX Fornecedor Farinha"
+              placeholder="Ex: Almoço com cliente"
               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
           </div>
 
-          {/* Category */}
+          {/* Categoria */}
           <div>
             <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
               Categoria <span style={{ color: "#f87171" }}>*</span>
             </label>
-            <input type="text" value={category} onChange={e => setCategory(e.target.value)}
-              placeholder="Ex: Fornecedores, Aluguel, Salários…" required
-              className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
-              style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
+            <select value={category} onChange={e => setCategory(e.target.value)} required
+              className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
+              <option value="">— Selecione uma categoria —</option>
+              {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+            {category && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ background: CATEGORY_COLORS[category] || "#6b7280" }} />
+                <span className="text-xs font-semibold" style={{ color: CATEGORY_COLORS[category] || "#6b7280" }}>{category}</span>
+              </div>
+            )}
           </div>
 
-          {/* Center — fully controlled, always shows current centers list */}
+          {/* Centro de custo */}
           <div>
             <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
               Centro de custo <span style={{ color: "#f87171" }}>*</span>
             </label>
             {centers.length === 0 ? (
-              <p className="text-xs px-3 py-2.5 rounded-xl" style={{ background: "var(--db-sub)", border: "1px solid var(--db-border)", color: "var(--db-text3)" }}>
+              <p className="text-xs px-3 py-2.5 rounded-xl"
+                style={{ background: "var(--db-sub)", border: "1px solid var(--db-border)", color: "var(--db-text3)" }}>
                 Crie um centro de custo primeiro.
               </p>
             ) : (
-              <select
-                value={center}
-                onChange={e => setCenter(e.target.value)}
-                required
+              <select value={center} onChange={e => setCenter(e.target.value)} required
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}
-              >
+                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="">— Selecione um centro —</option>
-                {centers.map(cc => (
-                  <option key={cc.id} value={cc.name}>{cc.name}</option>
-                ))}
+                {centers.map(cc => <option key={cc.id} value={cc.name}>{cc.name}</option>)}
               </select>
             )}
           </div>
 
-          {/* Amount + Date */}
+          {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
@@ -370,7 +466,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             </div>
           </div>
 
-          {/* Status buttons */}
+          {/* Status */}
           <div>
             <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>
               Status <span style={{ color: "#f87171" }}>*</span>
@@ -379,14 +475,11 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
               {(["pago", "pendente", "agendado"] as const).map(s => (
                 <button key={s} type="button" onClick={() => setStatus(s)}
                   className="py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer"
-                  style={
-                    status === s
-                      ? s === "pago"
-                        ? { background: "#dcfce7", borderColor: "#86efac", color: "#16a34a" }
-                        : s === "pendente"
-                          ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
-                          : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
-                      : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
+                  style={status === s
+                    ? s === "pago" ? { background: "#dcfce7", borderColor: "#86efac", color: "#16a34a" }
+                      : s === "pendente" ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
+                        : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
+                    : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
                   }>
                   {s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
@@ -399,7 +492,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             )}
           </div>
 
-          {/* Actions */}
+          {/* Ações */}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose}
               className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
@@ -497,22 +590,6 @@ export default function CostCenterPage() {
     return () => { unsubAuth?.(); unsubCenters?.(); unsubExpenses?.(); };
   }, []);
 
-  useEffect(() => {
-    // Executa debug quando a página carrega
-    if (typeof window !== 'undefined') {
-      (window as any).debugFirestore = setupFirestoreDebug;
-      console.log("💡 Execute no console: debugFirestore()");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).testPermissions = testPermissions;
-      (window as any).inspectFirestore = inspectFirestore;
-      console.log("💡 Execute: testPermissions() ou inspectFirestore()");
-    }
-  }, []);
-
   // ── Save center ────────────────────────────────────────────────────────────
   const handleSaveCenter = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -536,10 +613,17 @@ export default function CostCenterPage() {
         await updateDoc(doc(db, "costCenters", editingCenter.id), { name, budget, employees });
         showToast("Centro atualizado!");
       } else {
+        const initialCategories = EXPENSE_CATEGORIES.map((cat, idx) => ({
+          id: `cat_${Date.now()}_${idx}`,
+          name: cat,
+          spent: 0,
+          color: CATEGORY_COLORS[cat],
+        }));
         await addDoc(collection(db, "costCenters"), {
           name, budget, spent: 0, employees,
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
           userId: uid, createdAt: new Date(),
+          categories: initialCategories,
         });
         showToast("Centro criado!");
       }
@@ -576,13 +660,31 @@ export default function CostCenterPage() {
 
       const exp = expenses.find(e => e.id === id);
       if (exp) {
-        const matchCenter = costCenters.find(c => c.name === exp.center);
-        if (matchCenter) {
-          await updateDoc(doc(db, "costCenters", matchCenter.id), {
-            spent: Math.max(0, matchCenter.spent - exp.amount),
+        // FIX: adiciona where userId para respeitar as security rules
+        const centerSnap = await getDocs(
+          query(
+            collection(db, "costCenters"),
+            where("name", "==", exp.center),
+            where("userId", "==", uid),  // FIX
+          )
+        );
+
+        if (!centerSnap.empty) {
+          const centerData = centerSnap.docs[0].data();
+          const categories = centerData.categories || [];
+          const updatedCategories = categories.map((cat: any) =>
+            cat.name === exp.category
+              ? { ...cat, spent: Math.max(0, cat.spent - exp.amount) }
+              : cat
+          );
+          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
+          await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
+            spent: newSpent,
+            categories: updatedCategories,
           });
         }
-        // Remove linked cashflow entry
+
+        // Remove entrada no cashflow vinculada
         const cfSnap = await getDocs(
           query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", id))
         );
@@ -592,6 +694,7 @@ export default function CostCenterPage() {
       await deleteDoc(doc(db, "expenses", id));
       showToast("Despesa removida!");
     } catch (err: any) {
+      console.error("DELETE EXPENSE ERROR:", err.code, err.message, err);
       showToast(err.message || "Erro", "err");
     }
   };
@@ -667,7 +770,6 @@ export default function CostCenterPage() {
 
       <Navbar user={user} period={period} activePath={activePath} />
 
-      {/* Expense modal lives at page level — always receives fresh `centers` */}
       <ExpenseModal
         open={showExpenseModal}
         editing={editingExpense}
@@ -736,7 +838,7 @@ export default function CostCenterPage() {
                   <thead>
                     <tr style={{ background: "var(--db-sub)" }}>
                       <th>Centro</th><th>Orçamento</th><th>Real</th>
-                      <th>% Executado</th><th>Prev. gasto restante</th><th>Prev. final do mês</th><th></th>
+                      <th>% Executado</th><th>Disponível</th><th>Prev. final do mês</th><th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -744,7 +846,8 @@ export default function CostCenterPage() {
                       const pct = c.budget > 0 ? Math.round((c.spent / c.budget) * 100) : 0;
                       const remaining = Math.max(c.budget - c.spent, 0);
                       const projected = Math.round(c.spent / monthProgress);
-                      const over = pct > 100; const warn = pct >= 80 && !over;
+                      const over = pct > 100;
+                      const warn = pct >= 80 && !over;
                       return (
                         <tr key={c.id} style={{ background: "var(--db-card)" }}>
                           <td>
@@ -763,7 +866,8 @@ export default function CostCenterPage() {
                               <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
                                 <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#f87171" : warn ? "#fbbf24" : "#34d399" }} />
                               </div>
-                              <span className="mono font-bold text-xs px-2 py-0.5 rounded-full" style={{ background: over ? "#fee2e2" : warn ? "#fef9c3" : "#dcfce7", color: over ? "#dc2626" : warn ? "#b45309" : "#16a34a" }}>
+                              <span className="mono font-bold text-xs px-2 py-0.5 rounded-full"
+                                style={{ background: over ? "#fee2e2" : warn ? "#fef9c3" : "#dcfce7", color: over ? "#dc2626" : warn ? "#b45309" : "#16a34a" }}>
                                 {pct}%
                               </span>
                             </div>
@@ -776,16 +880,18 @@ export default function CostCenterPage() {
                               {fmt(projected)}{projected > c.budget && " ↑"}
                             </span>
                           </td>
-                           <td>
-                             <div className="flex items-center gap-1">
-                               <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }} className="p-1.5 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer">
-                                 <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                               </button>
-                               <button onClick={() => handleDeleteCenter(c.id)} className="p-1.5 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer">
-                                 <Trash2 size={12} style={{ color: "#f87171" }} />
-                               </button>
-                             </div>
-                           </td>
+                          <td>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }}
+                                className="p-1.5 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer">
+                                <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                              </button>
+                              <button onClick={() => handleDeleteCenter(c.id)}
+                                className="p-1.5 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer">
+                                <Trash2 size={12} style={{ color: "#f87171" }} />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -832,14 +938,17 @@ export default function CostCenterPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <CreditCard size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.4 }} />
               <p style={{ color: "var(--db-text2)" }}>Nenhuma despesa encontrada</p>
-              {costCenters.length === 0 && <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>Crie um centro de custo primeiro</p>}
+              {costCenters.length === 0 && (
+                <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>Crie um centro de custo primeiro</p>
+              )}
             </div>
           ) : (
             <>
               {/* Mobile */}
               <div className="md:hidden space-y-2">
                 {filteredExpenses.map(exp => (
-                  <div key={exp.id} className="p-3 rounded-xl flex items-center justify-between gap-3" style={{ border: "1px solid var(--db-border)" }}>
+                  <div key={exp.id} className="p-3 rounded-xl flex items-center justify-between gap-3"
+                    style={{ border: "1px solid var(--db-border)" }}>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || exp.category}</p>
                       <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>{exp.center} · {exp.date}</p>
@@ -847,13 +956,19 @@ export default function CostCenterPage() {
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span>
                       <div className="flex items-center gap-1">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>{exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
+                          {exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
+                        </span>
                         {exp.status === "pago" && <span className="cf-badge">FC✓</span>}
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 shrink-0">
-                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
-                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
+                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer">
+                        <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                      </button>
+                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer">
+                        <Trash2 size={12} style={{ color: "#f87171" }} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -865,28 +980,39 @@ export default function CostCenterPage() {
                   <thead>
                     <tr className="border-b" style={{ borderColor: "var(--db-border)" }}>
                       {["Descrição", "Categoria", "Centro", "Valor", "Data", "Status", ""].map(h => (
-                        <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap" style={{ color: "var(--db-text2)" }}>{h}</th>
+                        <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap"
+                          style={{ color: "var(--db-text2)" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredExpenses.map(exp => (
                       <tr key={exp.id} className="expense-row">
-                        <td className="py-3 pr-4 max-w-[150px]"><p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || "—"}</p></td>
+                        <td className="py-3 pr-4 max-w-[150px]">
+                          <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || "—"}</p>
+                        </td>
                         <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.category}</span></td>
                         <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.center}</span></td>
                         <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span></td>
                         <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.date}</span></td>
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-1.5">
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>{exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}</span>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
+                              {exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
+                            </span>
                             {exp.status === "pago" && <span className="cf-badge" title="Lançado no fluxo de caixa">FC ✓</span>}
                           </div>
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-1.5">
-                            <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded hover:bg-blue-2 00 hover:bg-opacity-10 cursor-pointer"><Edit2 size={12} style={{ color: "#60a5fa" }} /></button>
-                            <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer"><Trash2 size={12} style={{ color: "#f87171" }} /></button>
+                            <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
+                              className="p-1 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer">
+                              <Edit2 size={12} style={{ color: "#60a5fa" }} />
+                            </button>
+                            <button onClick={() => handleDeleteExpense(exp.id)}
+                              className="p-1 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer">
+                              <Trash2 size={12} style={{ color: "#f87171" }} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -901,17 +1027,14 @@ export default function CostCenterPage() {
 
       {/* Center Modal */}
       {showCenterModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4 z-999"
-          style={{
-            background: "rgba(0, 0, 0, 0.42)",
-            backdropFilter: "blur(3px)",
-            WebkitBackdropFilter: "blur(3px)"
-          }}
-        >
-          <div className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-999"
+          style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>
+          <div className="w-full max-w-md rounded-2xl border shadow-2xl"
+            style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
-              <h3 className="font-bold" style={{ color: "var(--db-text)" }}>{editingCenter ? "Editar centro" : "Novo centro de custo"}</h3>
+              <h3 className="font-bold" style={{ color: "var(--db-text)" }}>
+                {editingCenter ? "Editar centro" : "Novo centro de custo"}
+              </h3>
               <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} className="p-1.5 rounded-lg">
                 <X size={16} style={{ color: "var(--db-text2)" }} />
               </button>
@@ -933,7 +1056,9 @@ export default function CostCenterPage() {
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer"
-                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>Cancelar</button>
+                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
+                  Cancelar
+                </button>
                 <button type="submit" disabled={savingCenter}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer">
                   {savingCenter ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}

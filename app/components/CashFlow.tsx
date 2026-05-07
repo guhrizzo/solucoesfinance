@@ -313,7 +313,7 @@ function Modal({ open, editing, uid, onClose, onSave }: {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
       style={{ background: "rgba(10,22,40,0.75)", backdropFilter: "blur(6px)" }}
     >
       <div
@@ -1314,7 +1314,7 @@ export default function CashFlowPage() {
       {/* Confirmar exclusão */}
       {confirmId && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-990 flex items-center justify-center p-4"
           style={{ background: "rgba(10,22,40,0.65)", backdropFilter: "blur(4px)" }}
         >
           <div className="cf-card p-6 w-full max-w-xs text-center">
