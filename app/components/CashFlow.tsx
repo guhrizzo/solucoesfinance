@@ -10,8 +10,8 @@ import {
   ShoppingCart, Briefcase, UserCheck, PiggyBank, CircleDollarSign,
   Truck, UsersRound, Building2, Receipt, Megaphone, Monitor, Package,
   BanknoteArrowUp, BanknoteArrowDown, Sparkles, Upload, CheckCircle2,
-  Paperclip, ExternalLink, FileScan, SlidersHorizontal,
-  MoreVertical, Eye, EyeOff, Download, Settings,
+  Paperclip, ExternalLink, FileScan,
+  Eye, EyeOff,
   type LucideIcon,
 } from "lucide-react";
 import Navbar from "./Navbar";
@@ -108,7 +108,7 @@ function PrevisaoModal({ open, value, onClose, onSave }: {
             <h3 className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Meta de gastos</h3>
             <p className="text-xs mt-2" style={{ color: "var(--cf-text2)" }}>Defina um orçamento para comparar com o realizado</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg"
+          <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg cursor-pointer"
             style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
             <X size={16} />
           </button>
@@ -116,7 +116,7 @@ function PrevisaoModal({ open, value, onClose, onSave }: {
         <div className="space-y-3 mb-6">
           <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--cf-text2)" }}>Valor orçado (R$)</label>
           <input inputMode="decimal" value={raw} onChange={(e) => setRaw(e.target.value)}
-            placeholder="0,00" autoFocus className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono"
+            placeholder="0,00" autoFocus className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
         </div>
         <div className="flex gap-2">
@@ -261,7 +261,7 @@ function Modal({ open, editing, uid, onClose, onSave }: {
             <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{editing ? "Editar transação" : "Nova transação"}</p>
             <p className="text-xs mt-1" style={{ color: "var(--cf-text2)" }}>Preencha ou anexe uma nota fiscal</p>
           </div>
-          <button onClick={() => !saving && onClose()} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors"
+          <button onClick={() => !saving && onClose()} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer"
             style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
             <X size={16} />
           </button>
@@ -330,8 +330,8 @@ function Modal({ open, editing, uid, onClose, onSave }: {
             {(["entrada", "saida"] as TxType[]).map((t) => (
               <button key={t} onClick={() => { setType(t); setCat(""); }}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer"
-                style={type === t 
-                  ? { background: t === "entrada" ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #ef4444, #dc2626)", color: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" } 
+                style={type === t
+                  ? { background: t === "entrada" ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #ef4444, #dc2626)", color: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }
                   : { background: "transparent", color: "var(--cf-text2)" }}>
                 {t === "entrada" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
                 {t === "entrada" ? "Entrada" : "Saída"}
@@ -342,7 +342,7 @@ function Modal({ open, editing, uid, onClose, onSave }: {
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Descrição</label>
             <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Cliente XYZ, Aluguel…"
-              className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
           {/* Categoria */}
@@ -363,7 +363,7 @@ function Modal({ open, editing, uid, onClose, onSave }: {
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Valor (R$)</label>
               <input inputMode="decimal" value={rawAmt} onChange={(e) => setRawAmt(e.target.value)} placeholder="0,00"
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono"
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono cursor-text"
                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
             </div>
             <div className="space-y-2">
@@ -377,13 +377,13 @@ function Modal({ open, editing, uid, onClose, onSave }: {
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Observação (opcional)</label>
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="NF #123, parcela 1/5…"
-              className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
           <button onClick={submit} disabled={!canSave || saving}
             className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canSave && !saving ? "cursor-pointer hover:shadow-lg" : "cursor-not-allowed opacity-50"}`}
-            style={canSave && !saving 
-              ? { background: type === "entrada" ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #ef4444, #dc2626)", color: "white" } 
+            style={canSave && !saving
+              ? { background: type === "entrada" ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #ef4444, #dc2626)", color: "white" }
               : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
             {saving ? <><Loader2 size={15} className="animate-spin" /> Salvando…</> : <><Check size={15} /> {editing ? "Salvar alterações" : type === "entrada" ? "Registrar entrada" : "Registrar saída"}</>}
           </button>
@@ -504,7 +504,7 @@ function ImportModal({ open, onClose, onImport }: {
             </div>
           </div>
           {step !== "saving" && (
-            <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors"
+            <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer"
               style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
               <X size={16} />
             </button>
@@ -538,7 +538,7 @@ function ImportModal({ open, onClose, onImport }: {
                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Extrato bancário</label>
                 <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8}
                   placeholder={`01/03/2026  PIX RECEBIDO ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA         DB  R$ 2.200,00`}
-                  className="w-full rounded-xl px-4 py-3 text-xs font-mono outline-none resize-none"
+                  className="w-full rounded-xl px-4 py-3 text-xs font-mono outline-none resize-none cursor-text"
                   style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                 <p className="text-xs" style={{ color: "var(--cf-text2)" }}>{text.length} caracteres</p>
               </div>
@@ -561,9 +561,9 @@ function ImportModal({ open, onClose, onImport }: {
             <>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Entradas",    val: preview.filter(t => t.type === "entrada").length, color: "#059669", bg: "#dcfce7" },
-                  { label: "Saídas",      val: preview.filter(t => t.type === "saida").length,   color: "#dc2626", bg: "#fee2e2" },
-                  { label: "Selecionados",val: selected.size,                                     color: "#2563eb", bg: "#dbeafe" },
+                  { label: "Entradas",     val: preview.filter(t => t.type === "entrada").length, color: "#059669", bg: "#dcfce7" },
+                  { label: "Saídas",       val: preview.filter(t => t.type === "saida").length,   color: "#dc2626", bg: "#fee2e2" },
+                  { label: "Selecionados", val: selected.size,                                     color: "#2563eb", bg: "#dbeafe" },
                 ].map(({ label, val, color, bg }) => (
                   <div key={label} className="rounded-xl p-3 text-center" style={{ background: bg }}>
                     <p className="text-lg font-heading font-bold" style={{ color }}>{val}</p>
@@ -668,26 +668,44 @@ function ImportModal({ open, onClose, onImport }: {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  const [uid, setUid]           = useState<string | null>(null);
-  const [userName, setUserName] = useState("");
+  const [uid, setUid]             = useState<string | null>(null);
+  const [userName, setUserName]   = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [txs, setTxs]           = useState<Tx[]>([]);
+  const [txs, setTxs]             = useState<Tx[]>([]);
   const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
-  const [errMsg, setErrMsg]     = useState("");
-  const [modal, setModal]       = useState(false);
-  const [editing, setEditing]   = useState<Tx | null>(null);
+  const [errMsg, setErrMsg]       = useState("");
+  const [modal, setModal]         = useState(false);
+  const [editing, setEditing]     = useState<Tx | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [filter, setFilter]     = useState<"all" | TxType>("all");
-  const [search, setSearch]     = useState("");
+  const [filter, setFilter]       = useState<"all" | TxType>("all");
+  const [search, setSearch]       = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [previsao, setPrevisao] = useState(0);
+  const [deleting, setDeleting]   = useState(false);
+  const [previsao, setPrevisao]   = useState(0);
   const [previsaoOpen, setPrevisaoOpen] = useState(false);
   const [hideValues, setHideValues] = useState(false);
 
-  const dark = typeof document !== "undefined"
-    ? document.documentElement.getAttribute("data-theme") === "dark"
-    : false;
+  // ─── Accordion state ──────────────────────────────────────────────────────
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = useCallback((date: string) => {
+    setOpenGroups(prev => {
+      const next = new Set(prev);
+      next.has(date) ? next.delete(date) : next.add(date);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (txs.length > 0) {
+      // Abre o grupo mais recente automaticamente na primeira carga
+      setOpenGroups(prev => {
+        if (prev.size > 0) return prev;
+        const firstDate = txs.reduce((max, t) => t.date > max ? t.date : max, "");
+        return new Set([firstDate]);
+      });
+    }
+  }, [txs.length > 0]);
 
   useEffect(() => {
     let snapUnsub: (() => void) | undefined;
@@ -774,10 +792,10 @@ export default function CashFlowPage() {
   const displayValue = (val: number) => hideValues ? "• • •" : toBRL(val);
 
   const kpis = [
-    { label: "Meta de gastos", val: previsao,        Icon: ClipboardList,  ibg: "#eff6ff",  color: "#3b82f6", sub: "Clique para editar", clickable: true, onClick: () => setPrevisaoOpen(true) },
-    { label: "Entradas",       val: entradas,        Icon: ArrowUpRight,   ibg: "#dcfce7",  color: "#059669", sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
-    { label: "Saídas",         val: saidas,          Icon: ArrowDownRight, ibg: "#fee2e2",  color: "#dc2626", sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
-    { label: "Saldo",          val: saldo,           Icon: Wallet,         ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },
+    { label: "Meta de gastos", val: previsao,         Icon: ClipboardList,  ibg: "#eff6ff",  color: "#3b82f6", sub: "Clique para editar", clickable: true, onClick: () => setPrevisaoOpen(true) },
+    { label: "Entradas",       val: entradas,         Icon: ArrowUpRight,   ibg: "#dcfce7",  color: "#059669", sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
+    { label: "Saídas",         val: saidas,           Icon: ArrowDownRight, ibg: "#fee2e2",  color: "#dc2626", sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
+    { label: "Saldo",          val: saldo,            Icon: Wallet,         ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },
     { label: "Resultado",      val: superavitDeficit, Icon: TrendingUp,     ibg: superavitDeficit >= 0 ? "#dcfce7" : "#fee2e2", color: superavitDeficit >= 0 ? "#059669" : "#dc2626", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
   ];
 
@@ -808,18 +826,46 @@ export default function CashFlowPage() {
         .mono { font-family: 'JetBrains Mono', monospace; }
 
         .cf-card { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; }
-        .cf-kpi { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; 
+        .cf-kpi { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px;
           transition: all .2s cubic-bezier(.4, 0, .2, 1); }
         .cf-kpi:hover { border-color: var(--cf-text3); transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
         .cf-kpi.clickable { cursor: pointer; }
         .cf-kpi.clickable:active { transform: translateY(0); }
 
-        .cf-tx { border-bottom: 1px solid var(--cf-border); transition: all .15s; }
+        .cf-tx { border-bottom: 1px solid var(--cf-border); transition: all .15s; cursor: pointer; }
         .cf-tx:last-child { border-bottom: none; }
         .cf-tx:hover { background: var(--cf-hover); transform: translateX(2px); }
         .cf-tx:hover .cf-txa { opacity: 1; pointer-events: auto; }
         .cf-txa { opacity: 0; pointer-events: none; transition: all .15s; }
         @media (max-width: 639px) { .cf-txa { opacity: 1; pointer-events: auto; } }
+
+        .cf-group-header {
+          cursor: pointer;
+          transition: background .15s;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 20px;
+          background: var(--cf-txhdr);
+          border: none;
+          text-align: left;
+        }
+        .cf-group-header:hover { filter: brightness(0.97); }
+        .cf-group-header:active { filter: brightness(0.94); }
+
+        .cf-group-body {
+          overflow: hidden;
+          transition: max-height .32s cubic-bezier(.4,0,.2,1), opacity .22s ease;
+        }
+        .cf-group-body.open  { opacity: 1; }
+        .cf-group-body.closed { opacity: 0; max-height: 0 !important; }
+
+        .cf-chevron {
+          transition: transform .25s cubic-bezier(.4,0,.2,1);
+          flex-shrink: 0;
+        }
+        .cf-chevron.open { transform: rotate(180deg); }
 
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(.95) } to { opacity: 1; transform: none } }
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
@@ -837,7 +883,7 @@ export default function CashFlowPage() {
         .cf-progress-fill { height: 100%; border-radius: 2px; transition: width .4s cubic-bezier(.4,0,.2,1); }
 
         button, a, input, select, textarea { transition: all .12s cubic-bezier(.4, 0, .2, 1) !important; }
-        input:focus, select:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important; }
+        input:focus, select:focus, textarea:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important; }
       `}</style>
 
       <Navbar user={{ displayName: userName, email: userEmail }} activePath="/fluxo-caixa" onLogout={handleLogout} />
@@ -876,7 +922,7 @@ export default function CashFlowPage() {
           </div>
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={() => setHideValues(!hideValues)}
-              className="p-2 hover:bg-opacity-50 rounded-xl transition-colors"
+              className="p-2 hover:bg-opacity-50 rounded-xl transition-colors cursor-pointer"
               style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }} title="Ocultar valores">
               {hideValues ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
@@ -941,7 +987,7 @@ export default function CashFlowPage() {
         <div className="cf-card p-3.5 space-y-3">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text3)" }} />
-            <input className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none"
+            <input className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}
               placeholder="Buscar descrição ou categoria…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
@@ -1000,67 +1046,98 @@ export default function CashFlowPage() {
         ) : (
           <div className="space-y-3">
             {grouped.map(([date, items]) => {
-              const net = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
+              const net    = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
+              const isOpen = openGroups.has(date);
+              // Altura estimada: ~68px por transação
+              const maxH   = `${items.length * 72}px`;
+
               return (
                 <div key={date} className="cf-card overflow-hidden">
-                  <div className="flex items-center justify-between px-4 sm:px-5 py-3"
-                    style={{ background: "var(--cf-txhdr)", borderBottom: "1px solid var(--cf-border)" }}>
+
+                  {/* ── Header clicável (accordion trigger) ── */}
+                  <button
+                    className="cf-group-header"
+                    onClick={() => toggleGroup(date)}
+                    aria-expanded={isOpen}
+                    style={{
+                      borderBottom: isOpen ? "1px solid var(--cf-border)" : "none",
+                      borderRadius: isOpen ? "16px 16px 0 0" : "16px",
+                    }}
+                  >
                     <div className="flex items-center gap-2.5">
                       <Calendar size={12} style={{ color: "var(--cf-text3)" }} />
                       <span className="text-xs font-semibold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>{items.length}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        {items.length}
+                      </span>
                     </div>
-                    <span className="mono text-xs font-bold" style={{ color: net >= 0 ? "#059669" : "#dc2626" }}>
-                      {hideValues ? "• • •" : (net >= 0 ? "+" : "") + toBRL(net)}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="mono text-xs font-bold" style={{ color: net >= 0 ? "#059669" : "#dc2626" }}>
+                        {hideValues ? "• • •" : (net >= 0 ? "+" : "") + toBRL(net)}
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        className={`cf-chevron ${isOpen ? "open" : ""}`}
+                        style={{ color: "var(--cf-text3)" }}
+                      />
+                    </div>
+                  </button>
+
+                  {/* ── Corpo colapsável ── */}
+                  <div
+                    className={`cf-group-body ${isOpen ? "open" : "closed"}`}
+                    style={{ maxHeight: isOpen ? maxH : "0px" }}
+                  >
+                    {items.map((tx) => {
+                      const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
+                      return (
+                        <div key={tx.id} className="cf-tx flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3.5">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2" }}>
+                            <CatIcon size={16} style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start sm:items-center gap-1.5 flex-col sm:flex-row sm:gap-2 mb-0.5">
+                              <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</span>
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                                style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2", color: tx.type === "entrada" ? "#15803d" : "#991b1b" }}>
+                                {tx.category}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {tx.note && <p className="text-xs truncate" style={{ color: "var(--cf-text2)" }}>📝 {tx.note}</p>}
+                              {tx.nfUrl && (
+                                <a href={tx.nfUrl} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors hover:opacity-70 cursor-pointer"
+                                  style={{ color: "#3b82f6" }} title={tx.nfName ?? "Ver Nota Fiscal"}>
+                                  <Paperclip size={11} />
+                                  <span className="hidden sm:inline truncate max-w-24">{tx.nfName ?? "NF"}</span>
+                                  <span className="sm:hidden">NF</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
+                            {hideValues ? "• • •" : (tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}
+                          </span>
+                          <div className="cf-txa flex items-center gap-1 shrink-0">
+                            <button onClick={() => { setEditing(tx); setModal(true); }}
+                              className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
+                              style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                              <Edit3 size={13} />
+                            </button>
+                            <button onClick={() => setConfirmId(tx.id)}
+                              className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
+                              style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {items.map((tx) => {
-                    const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
-                    return (
-                      <div key={tx.id} className="cf-tx flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3.5">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2" }}>
-                          <CatIcon size={16} style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start sm:items-center gap-1.5 flex-col sm:flex-row sm:gap-2 mb-0.5">
-                            <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</span>
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
-                              style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2", color: tx.type === "entrada" ? "#15803d" : "#991b1b" }}>
-                              {tx.category}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {tx.note && <p className="text-xs truncate" style={{ color: "var(--cf-text2)" }}>📝 {tx.note}</p>}
-                            {tx.nfUrl && (
-                              <a href={tx.nfUrl} target="_blank" rel="noreferrer"
-                                className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors hover:opacity-70"
-                                style={{ color: "#3b82f6" }} title={tx.nfName ?? "Ver Nota Fiscal"}>
-                                <Paperclip size={11} />
-                                <span className="hidden sm:inline truncate max-w-24">{tx.nfName ?? "NF"}</span>
-                                <span className="sm:hidden">NF</span>
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
-                          {hideValues ? "• • •" : (tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}
-                        </span>
-                        <div className="cf-txa flex items-center gap-1 shrink-0">
-                          <button onClick={() => { setEditing(tx); setModal(true); }}
-                            className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors"
-                            style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-                            <Edit3 size={13} />
-                          </button>
-                          <button onClick={() => setConfirmId(tx.id)}
-                            className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors"
-                            style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+
                 </div>
               );
             })}
