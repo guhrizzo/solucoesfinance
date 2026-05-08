@@ -19,19 +19,19 @@ interface NavbarProps {
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: TrendingUp, label: "Fluxo de caixa", href: "/fluxo-caixa" },
-  { icon: FileText, label: "Relatórios", href: "/relatorios" },
-  { icon: CreditCard, label: "Contas a pagar", href: "/contasPagar", badge: 4 },
-  { icon: DollarSign, label: "Contas a receber", href: "/contasReceber" },
-  { icon: BarChart2, label: "Centro de custos", href: "/costCenter" },
-  { icon: Users, label: "Usuários", href: "/users" },
+  { icon: LayoutDashboard, label: "Dashboard",        href: "/dashboard" },
+  { icon: TrendingUp,      label: "Fluxo de caixa",   href: "/fluxo-caixa" },
+  { icon: FileText,        label: "Relatórios",        href: "/relatorios" },
+  { icon: CreditCard,      label: "Contas a pagar",    href: "/contasPagar", badge: 4 },
+  { icon: DollarSign,      label: "Contas a receber",  href: "/contasReceber" },
+  { icon: BarChart2,       label: "Centro de custos",  href: "/costCenter" },
+  { icon: Users,           label: "Usuários",          href: "/users" },
 ];
 
 const notifications = [
-  { id: 1, title: "Vencimento próximo", desc: "Simples Nacional vence em 2 dias", time: "há 10 min", urgent: true },
-  { id: 2, title: "Nova transação", desc: "Recebimento de Delta Tecnologia — R$ 134.000", time: "há 35 min", urgent: false },
-  { id: 3, title: "Meta atingida", desc: "Lucro líquido superou projeção de outubro", time: "há 2h", urgent: false },
+  { id: 1, title: "Vencimento próximo",  desc: "Simples Nacional vence em 2 dias",                  time: "há 10 min", urgent: true  },
+  { id: 2, title: "Nova transação",      desc: "Recebimento de Delta Tecnologia — R$ 134.000",      time: "há 35 min", urgent: false },
+  { id: 3, title: "Meta atingida",       desc: "Lucro líquido superou projeção de outubro",         time: "há 2h",     urgent: false },
 ];
 
 const css = `
@@ -44,24 +44,24 @@ const css = `
     --nav-text:      #0d2247;
     --nav-text2:     #64748b;
     --nav-text3:     #94a3b8;
-    --nav-link-hover-bg: #f0f7ff;
-    --nav-link-hover-color: #1565c0;
-    --nav-link-active-bg: rgba(21,101,192,0.08);
+    --nav-link-hover-bg:      #f0f7ff;
+    --nav-link-hover-color:   #1565c0;
+    --nav-link-active-bg:     rgba(21,101,192,0.08);
     --nav-link-active-border: rgba(21,101,192,0.15);
     --nav-input-bg:  #f1f5fb;
     --nav-icon-bg:   #f8faff;
     --nav-icon-hover:#f0f7ff;
-    --nav-drop-bg:   #ffffff;
-    --nav-drop-border: #e8eef8;
+    --nav-drop-bg:         #ffffff;
+    --nav-drop-border:     #e8eef8;
     --nav-drop-item-hover: #f0f7ff;
-    --nav-drop-div:  #f1f5fb;
-    --nav-mobile-bg: #ffffff;
+    --nav-drop-div:        #f1f5fb;
+    --nav-mobile-bg:     #ffffff;
     --nav-mobile-border: #e8eef8;
     --nav-mobile-shadow: 0 -4px 20px rgba(13,34,71,0.06);
     --nav-notif-hover: #f8faff;
-    --nav-period-bg: #f0f7ff;
-    --nav-period-hover: #dbeafe;
-    --nav-logo-text: #0d2247;
+    --nav-period-bg:   #f0f7ff;
+    --nav-period-hover:#dbeafe;
+    --nav-logo-text:   #0d2247;
   }
   [data-theme="dark"] {
     --nav-bg:        #161b22;
@@ -70,24 +70,24 @@ const css = `
     --nav-text:      #e2e8f0;
     --nav-text2:     #8899b4;
     --nav-text3:     #4a5568;
-    --nav-link-hover-bg: rgba(59,130,246,0.08);
-    --nav-link-hover-color: #60a5fa;
-    --nav-link-active-bg: rgba(59,130,246,0.12);
+    --nav-link-hover-bg:      rgba(59,130,246,0.08);
+    --nav-link-hover-color:   #60a5fa;
+    --nav-link-active-bg:     rgba(59,130,246,0.12);
     --nav-link-active-border: rgba(96,165,250,0.2);
     --nav-input-bg:  #0d1117;
     --nav-icon-bg:   #1c2230;
     --nav-icon-hover:#243040;
-    --nav-drop-bg:   #1c2230;
-    --nav-drop-border: #2a3548;
+    --nav-drop-bg:         #1c2230;
+    --nav-drop-border:     #2a3548;
     --nav-drop-item-hover: #243040;
-    --nav-drop-div:  #2a3548;
-    --nav-mobile-bg: #161b22;
+    --nav-drop-div:        #2a3548;
+    --nav-mobile-bg:     #161b22;
     --nav-mobile-border: #2a3548;
     --nav-mobile-shadow: 0 -4px 20px rgba(0,0,0,0.3);
     --nav-notif-hover: #1e2a3a;
-    --nav-period-bg: rgba(59,130,246,0.08);
-    --nav-period-hover: rgba(59,130,246,0.15);
-    --nav-logo-text: #e2e8f0;
+    --nav-period-bg:   rgba(59,130,246,0.08);
+    --nav-period-hover:rgba(59,130,246,0.15);
+    --nav-logo-text:   #e2e8f0;
   }
 
   .nxfi-nav *, .nxfi-sidebar *, .nxfi-mobile-nav * {
@@ -97,7 +97,6 @@ const css = `
   }
   .nxfi-nav .mono, .nxfi-sidebar .mono { font-family: 'JetBrains Mono', monospace; }
 
-  /* ── Top Navbar ── */
   .nxfi-nav {
     position: sticky; top: 0; z-index: 50;
     background: var(--nav-bg);
@@ -144,8 +143,7 @@ const css = `
     background: var(--nav-input-bg); border: 1.5px solid transparent;
     border-radius: 10px; padding: 7px 12px 7px 34px;
     font-size: 0.8rem; color: var(--nav-text); outline: none;
-    width: 200px; transition: all 0.2s;
-    font-family: 'Sora', sans-serif;
+    width: 200px; transition: all 0.2s; font-family: 'Sora', sans-serif;
   }
   .nxfi-search:focus {
     border-color: #1565c0; background: var(--nav-bg); width: 240px;
@@ -175,8 +173,7 @@ const css = `
   .nxfi-avatar-btn {
     display: flex; align-items: center; gap: 8px;
     background: none; border: none; cursor: pointer;
-    padding: 4px 8px 4px 4px; border-radius: 12px;
-    transition: background 0.15s;
+    padding: 4px 8px 4px 4px; border-radius: 12px; transition: background 0.15s;
   }
   .nxfi-avatar-btn:hover { background: var(--nav-link-hover-bg); }
   .nxfi-avatar {
@@ -188,7 +185,6 @@ const css = `
   .nxfi-avatar-name { font-size: 0.78rem; font-weight: 600; color: var(--nav-text); line-height: 1.2; }
   .nxfi-avatar-role { font-size: 0.68rem; color: var(--nav-text3); }
 
-  /* ── Dropdowns ── */
   .nxfi-dropdown {
     position: absolute; top: calc(100% + 8px);
     background: var(--nav-drop-bg); border: 1px solid var(--nav-drop-border);
@@ -213,12 +209,12 @@ const css = `
   .nxfi-notif-item:hover { background: var(--nav-notif-hover); }
   .nxfi-notif-dot2 { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
   .nxfi-notif-title { font-size: 0.78rem; font-weight: 600; color: var(--nav-text); }
-  .nxfi-notif-desc { font-size: 0.72rem; color: var(--nav-text2); margin-top: 2px; line-height: 1.4; }
-  .nxfi-notif-time { font-size: 0.68rem; color: var(--nav-text3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .nxfi-notif-desc  { font-size: 0.72rem; color: var(--nav-text2); margin-top: 2px; line-height: 1.4; }
+  .nxfi-notif-time  { font-size: 0.68rem; color: var(--nav-text3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
 
   .nxfi-user-drop { right: 0; width: 220px; }
   .nxfi-user-drop-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--nav-drop-div); }
-  .nxfi-user-drop-name { font-size: 0.82rem; font-weight: 700; color: var(--nav-text); }
+  .nxfi-user-drop-name  { font-size: 0.82rem; font-weight: 700; color: var(--nav-text); }
   .nxfi-user-drop-email { font-size: 0.72rem; color: var(--nav-text3); margin-top: 2px; }
   .nxfi-drop-item {
     display: flex; align-items: center; gap: 10px;
@@ -231,7 +227,6 @@ const css = `
   .nxfi-drop-item.danger:hover { background: #fff1f2; color: #ef4444; }
   .nxfi-drop-divider { height: 1px; background: var(--nav-drop-div); margin: 4px 0; }
 
-  /* ── Mobile Sidebar Drawer ── */
   .nxfi-sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 60; backdrop-filter: blur(2px); animation: fadeIn 0.2s ease both; }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
   .nxfi-sidebar {
@@ -260,14 +255,13 @@ const css = `
   }
   .nxfi-sidebar-link:hover { color: white; background: rgba(255,255,255,0.06); }
   .nxfi-sidebar-link.active { color: white; background: rgba(21,101,192,0.25); border-color: rgba(66,165,245,0.2); font-weight: 600; }
-  .nxfi-sidebar-link .dot { width: 6px; height: 6px; border-radius: 50%; background: #42a5f5; margin-left: auto; }
+  .nxfi-sidebar-link .dot   { width: 6px; height: 6px; border-radius: 50%; background: #42a5f5; margin-left: auto; }
   .nxfi-sidebar-link .badge { margin-left: auto; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 100px; font-family: 'JetBrains Mono', monospace; }
   .nxfi-sidebar-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; }
   .nxfi-sidebar-footer-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 500; cursor: pointer; width: 100%; background: none; border: none; transition: all 0.15s; font-family: 'Sora', sans-serif; color: rgba(147,197,253,0.55); }
   .nxfi-sidebar-footer-btn:hover { color: white; background: rgba(255,255,255,0.06); }
   .nxfi-sidebar-footer-btn.danger:hover { color: #fca5a5; background: rgba(239,68,68,0.08); }
 
-  /* ── Mobile bottom nav ── */
   .nxfi-mobile-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
     background: var(--nav-mobile-bg); border-top: 1px solid var(--nav-mobile-border);
@@ -279,7 +273,6 @@ const css = `
   .nxfi-mobile-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
   .nxfi-mobile-link.active { color: #1565c0; }
 
-  /* ── Vertical Sidebar (portal, direto no body) ── */
   .nxfi-sidebar-vertical {
     position: fixed; top: 0; left: 0; height: 100vh; z-index: 50;
     width: 260px; display: flex; flex-direction: column; flex-shrink: 0;
@@ -316,8 +309,7 @@ const css = `
   .nxfi-vertical-link .badge {
     background: #ef4444; color: white; font-size: 0.65rem;
     font-weight: 700; padding: 1px 5px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace; line-height: 1.4;
-    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace; line-height: 1.4; margin-left: auto;
   }
   .nxfi-vertical-footer {
     padding: 12px 8px; border-top: 1px solid var(--nav-border);
@@ -333,7 +325,6 @@ const css = `
   .nxfi-vertical-footer-btn:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
   .nxfi-vertical-footer-btn.danger:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
 
-  /* ── Responsive ── */
   @media (max-width: 1024px) {
     .nxfi-nav-links, .nxfi-search-wrap { display: none; }
     .nxfi-avatar-info { display: none; }
@@ -353,29 +344,27 @@ export default function Navbar({
   onLogout,
 }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [userOpen, setUserOpen] = useState(false);
+  const [notifOpen,  setNotifOpen]  = useState(false);
+  const [userOpen,   setUserOpen]   = useState(false);
 
-  const { dark, toggle } = useTheme();
-  const { layout, toggle: toggleLayout, mounted } = useNavbarLayout();
+  const { dark, toggle }           = useTheme();
+  const { layout, toggle: toggleLayout } = useNavbarLayout(); // ← sem mounted
 
   const notifRef = useRef<HTMLDivElement>(null);
-  const userRef = useRef<HTMLDivElement>(null);
+  const userRef  = useRef<HTMLDivElement>(null);
 
+  // Fecha dropdowns ao clicar fora
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
-      if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
+      if (userRef.current  && !userRef.current.contains(e.target as Node))  setUserOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Quando vertical: empurra o conteúdo da página com margin-left
+  // Empurra o conteúdo quando layout vertical
   useEffect(() => {
-    if (!mounted) return;
-
-    // Pega o primeiro filho do body que não é a sidebar
     const applyMargin = () => {
       Array.from(document.body.children).forEach((child) => {
         const el = child as HTMLElement;
@@ -387,7 +376,6 @@ export default function Navbar({
 
     applyMargin();
 
-    // Observa mudanças no DOM (Next.js pode re-renderizar filhos)
     const observer = new MutationObserver(applyMargin);
     observer.observe(document.body, { childList: true });
 
@@ -397,31 +385,13 @@ export default function Navbar({
         (child as HTMLElement).style.marginLeft = "";
       });
     };
-  }, [layout, mounted]);
+  }, [layout]); // ← sem mounted na dep
 
-  const initial = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U";
-  const firstName = user?.displayName?.split(" ")[0] ?? "Usuário";
+  const initial    = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U";
+  const firstName  = user?.displayName?.split(" ")[0] ?? "Usuário";
   const unreadCount = notifications.length;
 
-  if (!mounted) {
-    return (
-      <>
-        <style>{css}</style>
-        <nav className="nxfi-nav">
-          <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)}>
-            <Menu size={18} />
-          </button>
-          <a href="/dashboard" className="nxfi-logo">
-            <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
-            <span className="nxfi-logo-text">Nexus<span>Fi</span></span>
-          </a>
-        </nav>
-        <nav className="nxfi-mobile-nav" />
-      </>
-    );
-  }
-
-  // ── Sidebar vertical via Portal (direto no body, fora do div da página) ──
+  // ── Sidebar vertical via Portal ──
   const sidebarJSX = (
     <>
       <style>{css}</style>
@@ -563,9 +533,9 @@ export default function Navbar({
                 <div style={{ padding: "6px 0" }}>
                   {[
                     { icon: UserCircle, label: "Meu perfil" },
-                    { icon: Zap, label: "Plano & faturamento" },
+                    { icon: Zap,        label: "Plano & faturamento" },
                     { icon: HelpCircle, label: "Ajuda & suporte" },
-                    { icon: Settings, label: "Configurações" },
+                    { icon: Settings,   label: "Configurações" },
                   ].map((item) => (
                     <button key={item.label} className="nxfi-drop-item">
                       <item.icon size={14} />
@@ -633,11 +603,11 @@ export default function Navbar({
 
       <nav className="nxfi-mobile-nav">
         {[
-          { icon: LayoutDashboard, label: "Início", href: "/dashboard" },
-          { icon: TrendingUp, label: "Caixa", href: "/fluxo-caixa" },
-          { icon: FileText, label: "Relatórios", href: "/relatorios" },
-          { icon: CreditCard, label: "Contas", href: "/contasPagar" },
-          { icon: Settings, label: "Config.", href: "#" },
+          { icon: LayoutDashboard, label: "Início",     href: "/dashboard" },
+          { icon: TrendingUp,      label: "Caixa",      href: "/fluxo-caixa" },
+          { icon: FileText,        label: "Relatórios", href: "/relatorios" },
+          { icon: CreditCard,      label: "Contas",     href: "/contasPagar" },
+          { icon: Settings,        label: "Config.",    href: "#" },
         ].map((item) => (
           <a key={item.label} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
             <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />

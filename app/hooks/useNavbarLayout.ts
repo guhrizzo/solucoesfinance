@@ -1,28 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 type NavbarLayout = "horizontal" | "vertical";
 
 export function useNavbarLayout() {
-  const [layout, setLayout] = useState<NavbarLayout>("horizontal");
-  const [mounted, setMounted] = useState(false);
+  const [layout, setLayout] = useState<NavbarLayout>(() => {
+    if (typeof window === "undefined") return "horizontal";
+    const saved = localStorage.getItem("nexusfi-navbar-layout") as NavbarLayout | null;
+    return saved === "horizontal" || saved === "vertical" ? saved : "horizontal";
+  });
 
-  // Carrega a preferência do localStorage
-  useEffect(() => {
-    const savedLayout = localStorage.getItem("nexusfi-navbar-layout") as NavbarLayout | null;
-    if (savedLayout && (savedLayout === "horizontal" || savedLayout === "vertical")) {
-      setLayout(savedLayout);
-    }
-    setMounted(true);
-  }, []);
-
-  // Alterna o layout
   const toggle = () => {
-    const newLayout: NavbarLayout = layout === "horizontal" ? "vertical" : "horizontal";
-    setLayout(newLayout);
-    localStorage.setItem("nexusfi-navbar-layout", newLayout);
+    const next: NavbarLayout = layout === "horizontal" ? "vertical" : "horizontal";
+    setLayout(next);
+    localStorage.setItem("nexusfi-navbar-layout", next);
   };
 
-  return { layout, toggle, mounted };
+  return { layout, toggle };
 }

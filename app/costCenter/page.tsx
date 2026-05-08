@@ -20,8 +20,7 @@ import {
   Search,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { useTheme } from "@/app/hooks/useTheme";
-import { useSyncTheme } from "@/app/hooks/useSyncTheme";
+import { useTheme } from "../hooks/useTheme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,10 +85,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
-  blue: { bg: "rgba(21,101,192,0.1)", text: "#42a5f5", icon: "rgba(21,101,192,0.15)" },
-  rose: { bg: "rgba(244,63,94,0.08)", text: "#fb7185", icon: "rgba(244,63,94,0.12)" },
-  emerald: { bg: "rgba(16,185,129,0.08)", text: "#34d399", icon: "rgba(16,185,129,0.12)" },
-  amber: { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", icon: "rgba(245,158,11,0.12)" },
+  blue: { bg: "rgba(59, 130, 246, 0.1)", text: "#42a5f5", icon: "rgba(59, 130, 246, 0.15)" },
+  rose: { bg: "rgba(244, 63, 94, 0.08)", text: "#fb7185", icon: "rgba(244, 63, 94, 0.12)" },
+  emerald: { bg: "rgba(16, 185, 129, 0.08)", text: "#34d399", icon: "rgba(16, 185, 129, 0.12)" },
+  amber: { bg: "rgba(245, 158, 11, 0.08)", text: "#fbbf24", icon: "rgba(245, 158, 11, 0.12)" },
 };
 
 function mapCategoryToCashflow(cat: string): string {
@@ -122,16 +121,16 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
           return (
             <g key={pct}>
               <line x1="48" x2={W - 10} y1={y} y2={y} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
-              <text x="44" y={y + 4} textAnchor="end" fontSize="9" fill="#64748b" fillOpacity="0.85">
+              <text x="44" y={y + 4} textAnchor="end" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">
                 {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
               </text>
             </g>
           );
         })}
-        <rect x="52" y="162" width="10" height="8" rx="2" fill="#93c5fd" />
-        <text x="66" y="170" fontSize="9" fill="#64748b" fillOpacity="0.85">Orçamento</text>
-        <rect x="138" y="162" width="10" height="8" rx="2" fill="#1d4ed8" />
-        <text x="152" y="170" fontSize="9" fill="#64748b" fillOpacity="0.85">Real</text>
+        <rect x="52" y="162" width="10" height="8" rx="2" fill="var(--primary-light)" />
+        <text x="66" y="170" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">Orçamento</text>
+        <rect x="138" y="162" width="10" height="8" rx="2" fill="var(--primary)" />
+        <text x="152" y="170" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">Real</text>
         {centers.map((c, i) => {
           const x = 52 + i * 90;
           const bw = 24;
@@ -141,9 +140,9 @@ function BarChart({ centers }: { centers: CostCenter[] }) {
           const label = c.name.length > 10 ? c.name.slice(0, 10) + "…" : c.name;
           return (
             <g key={c.id}>
-              <rect x={x} y={20 + 120 - bh} width={bw} height={bh} rx="3" fill="#93c5fd" opacity="0.7" />
-              <rect x={x + bw + 4} y={20 + 120 - sh} width={bw} height={sh} rx="3" fill={over ? "#f87171" : "#1d4ed8"} />
-              <text x={x + bw + 2} y={154} textAnchor="middle" fontSize="9" fill="#64748b" fillOpacity="0.85">{label}</text>
+              <rect x={x} y={20 + 120 - bh} width={bw} height={bh} rx="3" fill="var(--primary-light)" opacity="0.7" />
+              <rect x={x + bw + 4} y={20 + 120 - sh} width={bw} height={sh} rx="3" fill={over ? "var(--danger)" : "var(--primary)"} />
+              <text x={x + bw + 2} y={154} textAnchor="middle" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">{label}</text>
             </g>
           );
         })}
@@ -182,7 +181,7 @@ function ConfirmModal({
   return (
     <div
       className="fixed inset-0 flex items-center justify-center p-4 z-999"
-      style={{ background: "rgba(0,0,0,0.42)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+      style={{ background: "var(--db-overlay)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
     >
       <div
         className="w-full max-w-sm rounded-2xl border shadow-2xl"
@@ -190,7 +189,7 @@ function ConfirmModal({
       >
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
-          <h3 className="font-bold text-base" style={{ color: isDangerous ? "#ef4444" : "var(--db-text)" }}>
+          <h3 className="font-bold text-base" style={{ color: isDangerous ? "var(--danger)" : "var(--db-text)" }}>
             {title}
           </h3>
           <button
@@ -224,11 +223,10 @@ function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50 ${
-              isDangerous
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50`}
+            style={{
+              background: isDangerous ? "var(--danger)" : "var(--primary)",
+            }}
           >
             {loading ? <Loader size={14} className="animate-spin" /> : null}
             {confirmText}
@@ -306,7 +304,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             query(
               collection(db, "costCenters"),
               where("name", "==", editing.center),
-              where("userId", "==", uid),  // FIX: filtro por userId
+              where("userId", "==", uid),
             )
           );
           if (!oldCenterSnap.empty) {
@@ -330,7 +328,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
           query(
             collection(db, "costCenters"),
             where("name", "==", center),
-            where("userId", "==", uid),  // FIX: filtro por userId
+            where("userId", "==", uid),
           )
         );
         if (!newCenterSnap.empty) {
@@ -401,7 +399,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
           query(
             collection(db, "costCenters"),
             where("name", "==", center),
-            where("userId", "==", uid),  // FIX: filtro por userId
+            where("userId", "==", uid),
           )
         );
         if (!centerSnap.empty) {
@@ -464,20 +462,20 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             <h3 className="font-bold text-base" style={{ color: "var(--db-text)" }}>
               {editing ? "Editar despesa" : "Nova despesa"}
             </h3>
-            <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#10b981" }}>
+            <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--success)" }}>
               <Check size={11} /> Despesas "Pago" sincronizam com fluxo de caixa
             </p>
           </div>
-           <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer">
-             <X size={16} style={{ color: "var(--db-text2)" }} />
-           </button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer">
+            <X size={16} style={{ color: "var(--db-text2)" }} />
+          </button>
         </div>
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[72vh] overflow-y-auto">
           {err && (
             <div className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
-              style={{ background: "#fff1f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+              style={{ background: "var(--saida-bg)", border: `1px solid var(--saida-border)`, color: "var(--saida-text)" }}>
               <AlertCircle size={13} /> {err}
             </div>
           )}
@@ -496,11 +494,11 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
           {/* Categoria */}
           <div>
             <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
-              Categoria <span style={{ color: "#f87171" }}>*</span>
+              Categoria <span style={{ color: "var(--danger)" }}>*</span>
             </label>
-             <select value={category} onChange={e => setCategory(e.target.value)} required
-               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
-               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
+            <select value={category} onChange={e => setCategory(e.target.value)} required
+              className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
+              style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
               <option value="">— Selecione uma categoria —</option>
               {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
@@ -515,7 +513,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
           {/* Centro de custo */}
           <div>
             <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
-              Centro de custo <span style={{ color: "#f87171" }}>*</span>
+              Centro de custo <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             {centers.length === 0 ? (
               <p className="text-xs px-3 py-2.5 rounded-xl"
@@ -523,9 +521,9 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
                 Crie um centro de custo primeiro.
               </p>
             ) : (
-               <select value={center} onChange={e => setCenter(e.target.value)} required
-                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
-                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
+              <select value={center} onChange={e => setCenter(e.target.value)} required
+                className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
+                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="">— Selecione um centro —</option>
                 {centers.map(cc => <option key={cc.id} value={cc.name}>{cc.name}</option>)}
               </select>
@@ -536,7 +534,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
-                Valor (R$) <span style={{ color: "#f87171" }}>*</span>
+                Valor (R$) <span style={{ color: "var(--danger)" }}>*</span>
               </label>
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
                 placeholder="0,00" required min="0.01" step="0.01"
@@ -545,7 +543,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
             </div>
             <div>
               <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
-                Data <span style={{ color: "#f87171" }}>*</span>
+                Data <span style={{ color: "var(--danger)" }}>*</span>
               </label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} required
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
@@ -556,24 +554,26 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
           {/* Status */}
           <div>
             <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>
-              Status <span style={{ color: "#f87171" }}>*</span>
+              Status <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
-               {(["pago", "pendente", "agendado"] as const).map(s => (
-                 <button key={s} type="button" onClick={() => setStatus(s)}
-                   className="py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer"
-                   style={status === s
-                     ? s === "pago" ? { background: "#dcfce7", borderColor: "#86efac", color: "#16a34a" }
-                       : s === "pendente" ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
-                         : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
-                     : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
-                   }>
-                   {s.charAt(0).toUpperCase() + s.slice(1)}
-                 </button>
-               ))}
+              {(["pago", "pendente", "agendado"] as const).map(s => (
+                <button key={s} type="button" onClick={() => setStatus(s)}
+                  className="py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer"
+                  style={status === s
+                    ? s === "pago"
+                      ? { background: "var(--entrada-bg)", borderColor: "var(--entrada-border)", color: "var(--entrada-text)" }
+                      : s === "pendente"
+                        ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
+                        : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
+                    : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
+                  }>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
             </div>
             {status === "pago" && (
-              <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "#10b981" }}>
+              <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "var(--success)" }}>
                 <ArrowDownRight size={11} /> Lançado como saída no fluxo de caixa
               </p>
             )}
@@ -587,7 +587,8 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
               Cancelar
             </button>
             <button type="submit" disabled={!canSave || saving || centers.length === 0}
-              className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2 cursor-pointer transition-colors">
+              className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "var(--primary)" }}>
               {saving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
               {editing ? "Atualizar" : "Criar"}
             </button>
@@ -628,21 +629,11 @@ export default function CostCenterPage() {
 
   const activePath = "/costCenter";
   const { dark } = useTheme();
-  useSyncTheme();
+  useTheme();
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
-  };
-
-  const theme = dark ? {
-    "--db-bg": "#0d1117", "--db-card": "#1c2230", "--db-border": "#2a3548",
-    "--db-text": "#e2e8f0", "--db-text2": "#8899b4", "--db-text3": "#4a5568",
-    "--db-hover": "#1e2a3a", "--db-sub": "#131922",
-  } : {
-    "--db-bg": "#f8fafc", "--db-card": "#ffffff", "--db-border": "#e8eef8",
-    "--db-text": "#0f1f40", "--db-text2": "#64748b", "--db-text3": "#94a3b8",
-    "--db-hover": "#f8faff", "--db-sub": "#f1f5fb",
   };
 
   // ── Firestore listeners ────────────────────────────────────────────────────
@@ -731,82 +722,81 @@ export default function CostCenterPage() {
     }
   };
 
-   // ── Delete center ──────────────────────────────────────────────────────────
-   const handleDeleteCenter = (id: string) => {
-     setConfirmModal({ open: true, type: "delete-center", id, loading: false });
-   };
+  // ── Delete center ──────────────────────────────────────────────────────────
+  const handleDeleteCenter = (id: string) => {
+    setConfirmModal({ open: true, type: "delete-center", id, loading: false });
+  };
 
-   const confirmDeleteCenter = async () => {
-     if (confirmModal.type !== "delete-center") return;
-     setConfirmModal(prev => ({ ...prev, loading: true }));
-     try {
-       const { getFirebase } = await import("../../lib/firebase");
-       const { db } = await getFirebase();
-       const { deleteDoc, doc } = await import("firebase/firestore");
-       await deleteDoc(doc(db, "costCenters", confirmModal.id));
-       showToast("Centro removido!");
-       setConfirmModal({ open: false, type: null, id: "", loading: false });
-     } catch (err: any) {
-       showToast(err.message || "Erro", "err");
-       setConfirmModal(prev => ({ ...prev, loading: false }));
-     }
-   };
+  const confirmDeleteCenter = async () => {
+    if (confirmModal.type !== "delete-center") return;
+    setConfirmModal(prev => ({ ...prev, loading: true }));
+    try {
+      const { getFirebase } = await import("../../lib/firebase");
+      const { db } = await getFirebase();
+      const { deleteDoc, doc } = await import("firebase/firestore");
+      await deleteDoc(doc(db, "costCenters", confirmModal.id));
+      showToast("Centro removido!");
+      setConfirmModal({ open: false, type: null, id: "", loading: false });
+    } catch (err: any) {
+      showToast(err.message || "Erro", "err");
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+    }
+  };
 
-   // ── Delete expense ─────────────────────────────────────────────────────────
-   const handleDeleteExpense = (id: string) => {
-     setConfirmModal({ open: true, type: "delete-expense", id, loading: false });
-   };
+  // ── Delete expense ─────────────────────────────────────────────────────────
+  const handleDeleteExpense = (id: string) => {
+    setConfirmModal({ open: true, type: "delete-expense", id, loading: false });
+  };
 
-   const confirmDeleteExpense = async () => {
-     if (confirmModal.type !== "delete-expense") return;
-     setConfirmModal(prev => ({ ...prev, loading: true }));
-     try {
-       const { getFirebase } = await import("../../lib/firebase");
-       const { db } = await getFirebase();
-       const { deleteDoc, doc, collection, query, where, getDocs, updateDoc } = await import("firebase/firestore");
+  const confirmDeleteExpense = async () => {
+    if (confirmModal.type !== "delete-expense") return;
+    setConfirmModal(prev => ({ ...prev, loading: true }));
+    try {
+      const { getFirebase } = await import("../../lib/firebase");
+      const { db } = await getFirebase();
+      const { deleteDoc, doc, collection, query, where, getDocs, updateDoc } = await import("firebase/firestore");
 
-       const exp = expenses.find(e => e.id === confirmModal.id);
-       if (exp) {
-         // FIX: adiciona where userId para respeitar as security rules
-         const centerSnap = await getDocs(
-           query(
-             collection(db, "costCenters"),
-             where("name", "==", exp.center),
-             where("userId", "==", uid),  // FIX
-           )
-         );
+      const exp = expenses.find(e => e.id === confirmModal.id);
+      if (exp) {
+        const centerSnap = await getDocs(
+          query(
+            collection(db, "costCenters"),
+            where("name", "==", exp.center),
+            where("userId", "==", uid),
+          )
+        );
 
-         if (!centerSnap.empty) {
-           const centerData = centerSnap.docs[0].data();
-           const categories = centerData.categories || [];
-           const updatedCategories = categories.map((cat: any) =>
-             cat.name === exp.category
-               ? { ...cat, spent: Math.max(0, cat.spent - exp.amount) }
-               : cat
-           );
-           const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
-           await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
-             spent: newSpent,
-             categories: updatedCategories,
-           });
-         }
+        if (!centerSnap.empty) {
+          const centerData = centerSnap.docs[0].data();
+          const categories = centerData.categories || [];
+          const updatedCategories = categories.map((cat: any) =>
+            cat.name === exp.category
+              ? { ...cat, spent: Math.max(0, cat.spent - exp.amount) }
+              : cat
+          );
+          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
+          await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
+            spent: newSpent,
+            categories: updatedCategories,
+          });
+        }
 
-         // Remove entrada no cashflow vinculada
-         const cfSnap = await getDocs(
-           query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", confirmModal.id))
-         );
-         await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
-       }
+        // Remove entrada no cashflow vinculada
+        const cfSnap = await getDocs(
+          query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", confirmModal.id))
+        );
+        await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
+      }
 
-       await deleteDoc(doc(db, "expenses", confirmModal.id));
-       showToast("Despesa removida!");
-       setConfirmModal({ open: false, type: null, id: "", loading: false });
-     } catch (err: any) {
-       console.error("DELETE EXPENSE ERROR:", err.code, err.message, err);
-       showToast(err.message || "Erro", "err");
-       setConfirmModal(prev => ({ ...prev, loading: false }));
-     }
-   };
+      await deleteDoc(doc(db, "expenses", confirmModal.id));
+      showToast("Despesa removida!");
+      setConfirmModal({ open: false, type: null, id: "", loading: false });
+    } catch (err: any) {
+      console.error("DELETE EXPENSE ERROR:", err.code, err.message, err);
+      showToast(err.message || "Erro", "err");
+      setConfirmModal(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   // ── Computed ───────────────────────────────────────────────────────────────
   const filteredExpenses = expenses.filter(exp => {
@@ -834,7 +824,7 @@ export default function CostCenterPage() {
   ];
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)", ...(theme as any) }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)" }}>
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
         <p className="text-sm" style={{ color: "var(--db-text2)" }}>Carregando...</p>
@@ -843,7 +833,7 @@ export default function CostCenterPage() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)", ...(theme as any) }}>
+    <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         *, body { font-family: 'Sora', sans-serif; }
@@ -856,10 +846,10 @@ export default function CostCenterPage() {
         .expense-row { transition:background 0.15s; border-bottom:1px solid var(--db-border); }
         .expense-row:last-child { border-bottom:none; }
         .expense-row:hover { background:var(--db-hover); }
-        .badge-pago     { background:#dcfce7; color:#16a34a; }
+        .badge-pago     { background:var(--entrada-bg); color:var(--entrada-text); }
         .badge-pendente { background:#fef9c3; color:#b45309; }
         .badge-agendado { background:#dbeafe; color:#1d4ed8; }
-        .cf-badge { background:rgba(16,185,129,0.12); color:#10b981; font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; }
+        .cf-badge { background:rgba(16,185,129,0.12); color:var(--success); font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; }
         .atbl th { font-size:11px; font-weight:600; color:var(--db-text); padding:8px 12px; text-align:left; border-bottom:1px solid var(--db-border); white-space:nowrap; }
         .atbl td { font-size:12px; padding:10px 12px; border-bottom:1px solid var(--db-border); }
         .atbl tr:last-child td { border-bottom:none; }
@@ -871,7 +861,7 @@ export default function CostCenterPage() {
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl flex items-center gap-2 shadow-xl text-sm font-semibold text-white"
-          style={{ background: toast.type === "ok" ? "#10b981" : "#ef4444", animation: "slideUp .3s ease" }}>
+          style={{ background: toast.type === "ok" ? "var(--success)" : "var(--danger)", animation: "slideUp .3s ease" }}>
           {toast.type === "ok" ? <Check size={15} /> : <AlertCircle size={15} />}
           {toast.msg}
         </div>
@@ -949,7 +939,8 @@ export default function CostCenterPage() {
               <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Orçamento vs. gasto real</p>
             </div>
             <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
+              className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+              style={{ background: "var(--primary)" }}>
               <Plus size={14} /> Novo
             </button>
           </div>
@@ -958,9 +949,10 @@ export default function CostCenterPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <BarChart2 size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.4 }} />
               <p style={{ color: "var(--db-text2)" }}>Nenhum centro de custo criado</p>
-               <button onClick={() => setShowCenterModal(true)} className="mt-3 text-xs text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors">
-                 Criar primeiro centro
-               </button>
+              <button onClick={() => setShowCenterModal(true)} className="mt-3 text-xs font-semibold cursor-pointer transition-colors"
+                style={{ color: "var(--primary)" }}>
+                Criar primeiro centro
+              </button>
             </div>
           ) : (
             <>
@@ -998,34 +990,34 @@ export default function CostCenterPage() {
                           <td>
                             <div className="flex items-center gap-2">
                               <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
-                                <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#f87171" : warn ? "#fbbf24" : "#34d399" }} />
+                                <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "var(--danger)" : warn ? "var(--warning)" : "var(--success)" }} />
                               </div>
                               <span className="mono font-bold text-xs px-2 py-0.5 rounded-full"
-                                style={{ background: over ? "#fee2e2" : warn ? "#fef9c3" : "#dcfce7", color: over ? "#dc2626" : warn ? "#b45309" : "#16a34a" }}>
+                                style={{ background: over ? "var(--saida-bg)" : warn ? "#fef9c3" : "var(--entrada-bg)", color: over ? "var(--saida-text)" : warn ? "#b45309" : "var(--entrada-text)" }}>
                                 {pct}%
                               </span>
                             </div>
                           </td>
-                          <td className="mono" style={{ color: remaining === 0 ? "#f87171" : "var(--db-text2)" }}>
+                          <td className="mono" style={{ color: remaining === 0 ? "var(--danger)" : "var(--db-text2)" }}>
                             {remaining === 0 ? "Esgotado" : fmt(remaining)}
                           </td>
                           <td>
-                            <span className="mono font-semibold" style={{ color: projected > c.budget ? "#f87171" : "var(--db-text)" }}>
+                            <span className="mono font-semibold" style={{ color: projected > c.budget ? "var(--danger)" : "var(--db-text)" }}>
                               {fmt(projected)}{projected > c.budget && " ↑"}
                             </span>
                           </td>
-                           <td>
-                             <div className="flex items-center gap-1">
-                               <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }}
-                                 className="p-1.5 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer transition-colors">
-                                 <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                               </button>
-                               <button onClick={() => handleDeleteCenter(c.id)}
-                                 className="p-1.5 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer transition-colors">
-                                 <Trash2 size={12} style={{ color: "#f87171" }} />
-                               </button>
-                             </div>
-                           </td>
+                          <td>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => { setEditingCenter(c); setShowCenterModal(true); }}
+                                className="p-1.5 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                                <Edit2 size={12} style={{ color: "var(--primary)" }} />
+                              </button>
+                              <button onClick={() => handleDeleteCenter(c.id)}
+                                className="p-1.5 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                                <Trash2 size={12} style={{ color: "var(--danger)" }} />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -1053,18 +1045,19 @@ export default function CostCenterPage() {
                   className="pl-9 pr-3 py-1.5 text-xs rounded-lg border"
                   style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
               </div>
-               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-                 className="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors"
-                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
+                className="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="todos">Todos</option>
                 <option value="pago">Pago</option>
                 <option value="pendente">Pendente</option>
                 <option value="agendado">Agendado</option>
               </select>
-               <button onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
-                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
-                 <Plus size={14} /> Novo
-               </button>
+              <button onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
+                className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                style={{ background: "var(--primary)" }}>
+                <Plus size={14} /> Novo
+              </button>
             </div>
           </div>
 
@@ -1096,14 +1089,14 @@ export default function CostCenterPage() {
                         {exp.status === "pago" && <span className="cf-badge">FC✓</span>}
                       </div>
                     </div>
-                     <div className="flex flex-col gap-1 shrink-0">
-                       <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer hover:bg-blue-200 hover:bg-opacity-10 transition-colors">
-                         <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                       </button>
-                       <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer hover:bg-red-200 hover:bg-opacity-10 transition-colors">
-                         <Trash2 size={12} style={{ color: "#f87171" }} />
-                       </button>
-                     </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer hover:bg-blue-200 hover:bg-opacity-10 transition-colors">
+                        <Edit2 size={12} style={{ color: "var(--primary)" }} />
+                      </button>
+                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer hover:bg-red-200 hover:bg-opacity-10 transition-colors">
+                        <Trash2 size={12} style={{ color: "var(--danger)" }} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1137,18 +1130,18 @@ export default function CostCenterPage() {
                             {exp.status === "pago" && <span className="cf-badge" title="Lançado no fluxo de caixa">FC ✓</span>}
                           </div>
                         </td>
-                         <td className="py-3">
-                           <div className="flex items-center gap-1.5">
-                             <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
-                               className="p-1 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer transition-colors">
-                               <Edit2 size={12} style={{ color: "#60a5fa" }} />
-                             </button>
-                             <button onClick={() => handleDeleteExpense(exp.id)}
-                               className="p-1 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer transition-colors">
-                               <Trash2 size={12} style={{ color: "#f87171" }} />
-                             </button>
-                           </div>
-                         </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
+                              className="p-1 rounded hover:bg-blue-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                              <Edit2 size={12} style={{ color: "var(--primary)" }} />
+                            </button>
+                            <button onClick={() => handleDeleteExpense(exp.id)}
+                              className="p-1 rounded hover:bg-red-200 hover:bg-opacity-10 cursor-pointer transition-colors">
+                              <Trash2 size={12} style={{ color: "var(--danger)" }} />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1187,18 +1180,19 @@ export default function CostCenterPage() {
                     style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
                 </div>
               ))}
-               <div className="flex gap-2 pt-1">
-                 <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
-                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
-                   style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
-                   Cancelar
-                 </button>
-                 <button type="submit" disabled={savingCenter}
-                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer transition-colors">
-                   {savingCenter ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
-                   {editingCenter ? "Atualizar" : "Criar"}
-                 </button>
-               </div>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
+                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={savingCenter}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+                  style={{ background: "var(--primary)" }}>
+                  {savingCenter ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
+                  {editingCenter ? "Atualizar" : "Criar"}
+                </button>
+              </div>
             </form>
           </div>
         </div>
