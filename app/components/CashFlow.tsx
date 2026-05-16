@@ -137,17 +137,17 @@ function Modal({ open, editing, uid, onClose, onSave }: {
   open: boolean; editing: Tx | null; uid: string | null;
   onClose: () => void; onSave: (data: Omit<Tx, "id">) => Promise<void>;
 }) {
-  const [type, setType]     = useState<TxType>("entrada");
-  const [desc, setDesc]     = useState("");
-  const [cat, setCat]       = useState("");
+  const [type, setType] = useState<TxType>("entrada");
+  const [desc, setDesc] = useState("");
+  const [cat, setCat] = useState("");
   const [rawAmt, setRawAmt] = useState("");
-  const [date, setDate]     = useState(TODAY);
-  const [note, setNote]     = useState("");
+  const [date, setDate] = useState(TODAY);
+  const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState("");
+  const [err, setErr] = useState("");
   const [nfFile, setNfFile] = useState<File | null>(null);
   const [nfPreview, setNfPreview] = useState("");
-  const [nfUrl, setNfUrl]   = useState("");
+  const [nfUrl, setNfUrl] = useState("");
   const [nfName, setNfName] = useState("");
   const [scanning, setScanning] = useState(false);
   const nfRef = useRef<HTMLInputElement>(null);
@@ -166,11 +166,11 @@ function Modal({ open, editing, uid, onClose, onSave }: {
 
   if (!open) return null;
 
-  const amount  = parseAmount(rawAmt);
-  const descOk  = desc.trim().length >= 2;
-  const catOk   = cat !== "";
-  const amtOk   = amount > 0;
-  const dateOk  = date !== "";
+  const amount = parseAmount(rawAmt);
+  const descOk = desc.trim().length >= 2;
+  const catOk = cat !== "";
+  const amtOk = amount > 0;
+  const dateOk = date !== "";
   const canSave = descOk && catOk && amtOk && dateOk;
 
   const handleNfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -198,14 +198,14 @@ function Modal({ open, editing, uid, onClose, onSave }: {
         const mediaType = nfFile.type || (nfFile.name.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
         body = { type: "file", base64, mediaType };
       }
-      const res  = await fetch("/api/analyze-nf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch("/api/analyze-nf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
       if (data.description) setDesc(data.description.slice(0, 60));
-      if (data.amount)      setRawAmt(String(data.amount).replace(".", ","));
-      if (data.date)        setDate(data.date);
-      if (data.note)        setNote(data.note);
-      const cats  = type === "entrada" ? CAT.entrada : CAT.saida;
+      if (data.amount) setRawAmt(String(data.amount).replace(".", ","));
+      if (data.date) setDate(data.date);
+      if (data.note) setNote(data.note);
+      const cats = type === "entrada" ? CAT.entrada : CAT.saida;
       const match = cats.find(c => c.toLowerCase().includes((data.category ?? "").toLowerCase()) || (data.category ?? "").toLowerCase().includes(c.toLowerCase()));
       if (match) setCat(match);
     } catch (e: any) { setErr(`Erro ao ler NF: ${e.message}`); }
@@ -239,7 +239,7 @@ function Modal({ open, editing, uid, onClose, onSave }: {
         }
       }
       const saveData: any = { type, description: desc.trim(), category: cat, amount, date, note: note.trim(), createdAt: editing?.createdAt ?? Date.now() };
-      if (nfData.url)  saveData.nfUrl  = nfData.url;
+      if (nfData.url) saveData.nfUrl = nfData.url;
       if (nfData.name) saveData.nfName = nfData.name;
       await onSave(saveData);
       onClose();
@@ -400,10 +400,10 @@ type ImportStep = "input" | "loading" | "preview" | "saving" | "done";
 function ImportModal({ open, onClose, onImport }: {
   open: boolean; onClose: () => void; onImport: (txs: ImportedTx[]) => Promise<void>;
 }) {
-  const [step, setStep]         = useState<ImportStep>("input");
-  const [text, setText]         = useState("");
-  const [preview, setPreview]   = useState<ImportedTx[]>([]);
-  const [errMsg, setErrMsg]     = useState("");
+  const [step, setStep] = useState<ImportStep>("input");
+  const [text, setText] = useState("");
+  const [preview, setPreview] = useState<ImportedTx[]>([]);
+  const [errMsg, setErrMsg] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -422,23 +422,23 @@ function ImportModal({ open, onClose, onImport }: {
   };
 
   const normalizeCategory = (raw: string, type: TxType): string => {
-    const cats  = type === "entrada" ? CAT.entrada : CAT.saida;
+    const cats = type === "entrada" ? CAT.entrada : CAT.saida;
     const match = cats.find(c => c.toLowerCase().includes(raw.toLowerCase()) || raw.toLowerCase().includes(c.toLowerCase()));
     if (match) return match;
     const r = raw.toLowerCase();
     if (type === "entrada") {
       if (r.includes("salário") || r.includes("salario") || r.includes("folha")) return "Recebimento de clientes";
-      if (r.includes("venda") || r.includes("pix receb"))                         return "Vendas";
-      if (r.includes("invest"))                                                    return "Investimentos";
-      if (r.includes("serviç") || r.includes("servic") || r.includes("freela"))  return "Serviços prestados";
+      if (r.includes("venda") || r.includes("pix receb")) return "Vendas";
+      if (r.includes("invest")) return "Investimentos";
+      if (r.includes("serviç") || r.includes("servic") || r.includes("freela")) return "Serviços prestados";
       return "Outros recebimentos";
     } else {
-      if (r.includes("aluguel"))                                                    return "Aluguel";
-      if (r.includes("fornec") || r.includes("compra") || r.includes("mercado"))  return "Fornecedores";
-      if (r.includes("folha") || r.includes("salário") || r.includes("salario"))  return "Folha de pagamento";
-      if (r.includes("imposto") || r.includes("tributo") || r.includes("das"))    return "Impostos";
-      if (r.includes("market") || r.includes("publi"))                             return "Marketing";
-      if (r.includes("softw") || r.includes("ti ") || r.includes("assinatura"))   return "TI / Software";
+      if (r.includes("aluguel")) return "Aluguel";
+      if (r.includes("fornec") || r.includes("compra") || r.includes("mercado")) return "Fornecedores";
+      if (r.includes("folha") || r.includes("salário") || r.includes("salario")) return "Folha de pagamento";
+      if (r.includes("imposto") || r.includes("tributo") || r.includes("das")) return "Impostos";
+      if (r.includes("market") || r.includes("publi")) return "Marketing";
+      if (r.includes("softw") || r.includes("ti ") || r.includes("assinatura")) return "TI / Software";
       return "Outros gastos";
     }
   };
@@ -447,20 +447,20 @@ function ImportModal({ open, onClose, onImport }: {
     if (!text.trim()) return;
     setStep("loading"); setErrMsg("");
     try {
-      const res  = await fetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const res = await fetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
       const rawText = (data.content as any[])?.map((c: any) => c.text || "").join("") ?? "";
-      const clean   = rawText.replace(/```json|```/g, "").trim();
-      const parsed  = JSON.parse(clean);
+      const clean = rawText.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
       if (!parsed.transactions?.length) { setErrMsg("Nenhuma transação encontrada."); setStep("input"); return; }
       const normalized: ImportedTx[] = parsed.transactions.map((t: any) => ({
-        type:        (t.type === "entrada" || t.type === "saida") ? t.type : "saida",
+        type: (t.type === "entrada" || t.type === "saida") ? t.type : "saida",
         description: String(t.description ?? "Sem descrição").slice(0, 60),
-        category:    normalizeCategory(String(t.category ?? ""), t.type === "entrada" ? "entrada" : "saida"),
-        amount:      Math.abs(Number(t.amount) || 0),
-        date:        String(t.date ?? TODAY),
-        note:        String(t.note ?? ""),
+        category: normalizeCategory(String(t.category ?? ""), t.type === "entrada" ? "entrada" : "saida"),
+        amount: Math.abs(Number(t.amount) || 0),
+        date: String(t.date ?? TODAY),
+        note: String(t.note ?? ""),
       }));
       setPreview(normalized);
       setSelected(new Set(normalized.map((_, i) => i)));
@@ -477,7 +477,7 @@ function ImportModal({ open, onClose, onImport }: {
   };
 
   const toggleAll = () => { selected.size === preview.length ? setSelected(new Set()) : setSelected(new Set(preview.map((_, i) => i))); };
-  const toggle    = (i: number) => { const s = new Set(selected); s.has(i) ? s.delete(i) : s.add(i); setSelected(s); };
+  const toggle = (i: number) => { const s = new Set(selected); s.has(i) ? s.delete(i) : s.add(i); setSelected(s); };
 
   return (
     <div className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
@@ -495,11 +495,11 @@ function ImportModal({ open, onClose, onImport }: {
             <div>
               <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Importar com IA</p>
               <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
-                {step === "input"   && "Cole ou faça upload de seu extrato"}
+                {step === "input" && "Cole ou faça upload de seu extrato"}
                 {step === "loading" && "Analisando transações…"}
                 {step === "preview" && `${preview.length} transações encontradas`}
-                {step === "saving"  && "Salvando…"}
-                {step === "done"    && "Importação concluída!"}
+                {step === "saving" && "Salvando…"}
+                {step === "done" && "Importação concluída!"}
               </p>
             </div>
           </div>
@@ -561,9 +561,9 @@ function ImportModal({ open, onClose, onImport }: {
             <>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Entradas",     val: preview.filter(t => t.type === "entrada").length, color: "#059669", bg: "#dcfce7" },
-                  { label: "Saídas",       val: preview.filter(t => t.type === "saida").length,   color: "#dc2626", bg: "#fee2e2" },
-                  { label: "Selecionados", val: selected.size,                                     color: "#2563eb", bg: "#dbeafe" },
+                  { label: "Entradas", val: preview.filter(t => t.type === "entrada").length, color: "#059669", bg: "#dcfce7" },
+                  { label: "Saídas", val: preview.filter(t => t.type === "saida").length, color: "#dc2626", bg: "#fee2e2" },
+                  { label: "Selecionados", val: selected.size, color: "#2563eb", bg: "#dbeafe" },
                 ].map(({ label, val, color, bg }) => (
                   <div key={label} className="rounded-xl p-3 text-center" style={{ background: bg }}>
                     <p className="text-lg font-heading font-bold" style={{ color }}>{val}</p>
@@ -584,7 +584,7 @@ function ImportModal({ open, onClose, onImport }: {
               <div className="space-y-1.5">
                 {preview.map((tx, i) => {
                   const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
-                  const isSel   = selected.has(i);
+                  const isSel = selected.has(i);
                   return (
                     <button key={i} onClick={() => toggle(i)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all cursor-pointer text-left`}
@@ -668,20 +668,20 @@ function ImportModal({ open, onClose, onImport }: {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  const [uid, setUid]             = useState<string | null>(null);
-  const [userName, setUserName]   = useState("");
+  const [uid, setUid] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [txs, setTxs]             = useState<Tx[]>([]);
+  const [txs, setTxs] = useState<Tx[]>([]);
   const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
-  const [errMsg, setErrMsg]       = useState("");
-  const [modal, setModal]         = useState(false);
-  const [editing, setEditing]     = useState<Tx | null>(null);
+  const [errMsg, setErrMsg] = useState("");
+  const [modal, setModal] = useState(false);
+  const [editing, setEditing] = useState<Tx | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [filter, setFilter]       = useState<"all" | TxType>("all");
-  const [search, setSearch]       = useState("");
+  const [filter, setFilter] = useState<"all" | TxType>("all");
+  const [search, setSearch] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [deleting, setDeleting]   = useState(false);
-  const [previsao, setPrevisao]   = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [previsao, setPrevisao] = useState(0);
   const [previsaoOpen, setPrevisaoOpen] = useState(false);
   const [hideValues, setHideValues] = useState(false);
 
@@ -709,13 +709,14 @@ export default function CashFlowPage() {
 
   useEffect(() => {
     let snapUnsub: (() => void) | undefined;
+    let snapCenterUnsub: (() => void) | undefined;  // ← NOVO
     let authUnsub: (() => void) | undefined;
     (async () => {
       try {
-        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot }] = await Promise.all([
+        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, where }] = await Promise.all([
           import("../../lib/firebase"),
           import("firebase/auth"),
-          import("firebase/firestore"),
+          import("firebase/firestore"),  // ← Adicione 'where' aqui se não tiver
         ]);
         const { auth, db } = await getFirebase();
         authUnsub = onAuthStateChanged(auth, (u) => {
@@ -723,22 +724,38 @@ export default function CashFlowPage() {
           setUid(u.uid);
           setUserName(u.displayName ?? u.email ?? "Usuário");
           setUserEmail(u.email ?? "");
+
+          // ── Listener de transações ──
           snapUnsub?.();
           const q = query(collection(db, "users", u.uid, "cashflow"), orderBy("createdAt", "desc"));
           snapUnsub = onSnapshot(q,
             (snap) => { setTxs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Tx))); setPageState("ready"); },
-            (err)  => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
+            (err) => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
+          );
+
+          // ── NOVO: Listener de orçamento total (centros de custo) ──
+          snapCenterUnsub?.();
+          const centerQ = query(collection(db, "costCenters"), where("userId", "==", u.uid));
+          snapCenterUnsub = onSnapshot(
+            centerQ,
+            (snap) => {
+              const totalBudget = snap.docs.reduce((sum, doc) => sum + (doc.data().budget || 0), 0);
+              setPrevisao(totalBudget);
+            },
+            (err) => {
+              console.debug("Aviso ao sincronizar orçamento:", err.code);
+            }
           );
         });
       } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
     })();
-    return () => { authUnsub?.(); snapUnsub?.(); };
+    return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); };  // ← Adicione snapCenterUnsub?.()
   }, []);
 
   async function handleLogout() {
     const { getFirebase } = await import("../../lib/firebase");
-    const { signOut }     = await import("firebase/auth");
-    const { auth }        = await getFirebase();
+    const { signOut } = await import("firebase/auth");
+    const { auth } = await getFirebase();
     await signOut(auth);
     window.location.href = "/login";
   }
@@ -749,7 +766,7 @@ export default function CashFlowPage() {
     const { db } = await getFirebase();
     const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
     if (editing) await updateDoc(doc(db, "users", uid, "cashflow", editing.id), clean as any);
-    else         await addDoc(collection(db, "users", uid, "cashflow"), clean);
+    else await addDoc(collection(db, "users", uid, "cashflow"), clean);
   }
 
   async function handleImport(importedTxs: ImportedTx[]) {
@@ -774,8 +791,8 @@ export default function CashFlowPage() {
   // ─── Métricas ────────────────────────────────────────────────────────────────
 
   const entradas = useMemo(() => txs.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0), [txs]);
-  const saidas   = useMemo(() => txs.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0), [txs]);
-  const saldo    = entradas - saidas;
+  const saidas = useMemo(() => txs.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0), [txs]);
+  const saldo = entradas - saidas;
   const superavitDeficit = saldo - previsao;
 
   const filtered = useMemo(() => {
@@ -792,11 +809,11 @@ export default function CashFlowPage() {
   const displayValue = (val: number) => hideValues ? "• • •" : toBRL(val);
 
   const kpis = [
-    { label: "Meta de gastos", val: previsao,         Icon: ClipboardList,  ibg: "#eff6ff",  color: "#3b82f6", sub: "Clique para editar", clickable: true, onClick: () => setPrevisaoOpen(true) },
-    { label: "Entradas",       val: entradas,         Icon: ArrowUpRight,   ibg: "#dcfce7",  color: "#059669", sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
-    { label: "Saídas",         val: saidas,           Icon: ArrowDownRight, ibg: "#fee2e2",  color: "#dc2626", sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
-    { label: "Saldo",          val: saldo,            Icon: Wallet,         ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },
-    { label: "Resultado",      val: superavitDeficit, Icon: TrendingUp,     ibg: superavitDeficit >= 0 ? "#dcfce7" : "#fee2e2", color: superavitDeficit >= 0 ? "#059669" : "#dc2626", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
+    { label: "Meta de gastos", val: previsao, Icon: ClipboardList, ibg: "#eff6ff", color: "#3b82f6" },
+    { label: "Entradas", val: entradas, Icon: ArrowUpRight, ibg: "#dcfce7", color: "#059669", sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
+    { label: "Saídas", val: saidas, Icon: ArrowDownRight, ibg: "#fee2e2", color: "#dc2626", sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
+    { label: "Saldo", val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },
+    { label: "Resultado", val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "#dcfce7" : "#fee2e2", color: superavitDeficit >= 0 ? "#059669" : "#dc2626", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
   ];
 
   if (pageState === "loading") return (
@@ -941,14 +958,13 @@ export default function CashFlowPage() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-          {kpis.map(({ label, val, Icon, ibg, color, sub, clickable, onClick }, idx) => {
-            const total   = entradas + saidas;
-            const pct     = total > 0 ? (Math.abs(val) / total) * 100 : 0;
+          {kpis.map(({ label, val, Icon, ibg, color, sub}, idx) => {
+            const total = entradas + saidas;
+            const pct = total > 0 ? (Math.abs(val) / total) * 100 : 0;
             const showBar = label === "Entradas" || label === "Saídas";
             const isSaldo = label === "Saldo" || label === "Resultado";
             return (
-              <div key={label} className={`cf-kpi kin p-3 sm:p-4 flex flex-col gap-2 ${clickable ? "clickable" : ""}`}
-                style={{ animationDelay: `${idx * 50}ms` }} onClick={onClick}>
+              <div key={label} className={`cf-kpi kin p-3 sm:p-4 flex flex-col gap-2`}>
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>{label}</p>
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: ibg }}>
@@ -993,9 +1009,9 @@ export default function CashFlowPage() {
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {([
-              { f: "all"     as const, label: "Todos",    icon: null as LucideIcon | null },
+              { f: "all" as const, label: "Todos", icon: null as LucideIcon | null },
               { f: "entrada" as const, label: "Entradas", icon: BanknoteArrowUp as LucideIcon },
-              { f: "saida"   as const, label: "Saídas",   icon: BanknoteArrowDown as LucideIcon },
+              { f: "saida" as const, label: "Saídas", icon: BanknoteArrowDown as LucideIcon },
             ]).map(({ f, label, icon: Icon }) => (
               <button key={f} onClick={() => setFilter(f)}
                 className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-all select-none"
@@ -1046,10 +1062,10 @@ export default function CashFlowPage() {
         ) : (
           <div className="space-y-3">
             {grouped.map(([date, items]) => {
-              const net    = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
+              const net = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
               const isOpen = openGroups.has(date);
               // Altura estimada: ~68px por transação
-              const maxH   = `${items.length * 72}px`;
+              const maxH = `${items.length * 72}px`;
 
               return (
                 <div key={date} className="cf-card overflow-hidden">
