@@ -74,6 +74,12 @@ const toBRL = (n: number) =>
 const labelDate = (d: string) =>
   new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 
+const labelMonthYear = (yearMonth: string) => {
+  const [year, month] = yearMonth.split("-");
+  const date = new Date(`${year}-${month}-01T12:00:00`);
+  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(/^\w/, c => c.toUpperCase());
+};
+
 const shortDate = (d: string) =>
   new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "numeric" });
 
@@ -686,10 +692,19 @@ export default function CashFlowPage() {
   const [hideValues, setHideValues] = useState(false);
 
   // ─── Accordion state ──────────────────────────────────────────────────────
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
+  const [openDays, setOpenDays] = useState<Set<string>>(new Set());
 
-  const toggleGroup = useCallback((date: string) => {
-    setOpenGroups(prev => {
+  const toggleMonth = useCallback((yearMonth: string) => {
+    setOpenMonths(prev => {
+      const next = new Set(prev);
+      next.has(yearMonth) ? next.delete(yearMonth) : next.add(yearMonth);
+      return next;
+    });
+  }, []);
+
+  const toggleDay = useCallback((date: string) => {
+    setOpenDays(prev => {
       const next = new Set(prev);
       next.has(date) ? next.delete(date) : next.add(date);
       return next;
@@ -698,11 +713,12 @@ export default function CashFlowPage() {
 
   useEffect(() => {
     if (txs.length > 0) {
-      // Abre o grupo mais recente automaticamente na primeira carga
-      setOpenGroups(prev => {
+      // Abre o mês mais recente automaticamente na primeira carga
+      setOpenMonths(prev => {
         if (prev.size > 0) return prev;
         const firstDate = txs.reduce((max, t) => t.date > max ? t.date : max, "");
-        return new Set([firstDate]);
+        const yearMonth = firstDate.substring(0, 7);
+        return new Set([yearMonth]);
       });
     }
   }, [txs.length > 0]);
@@ -800,10 +816,32 @@ export default function CashFlowPage() {
     return txs.filter(t => filter === "all" || t.type === filter).filter(t => !q || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
   }, [txs, filter, search]);
 
+  // Agrupar por mês/ano, depois por dia dentro de cada mês
   const grouped = useMemo(() => {
-    const map = new Map<string, Tx[]>();
-    filtered.forEach(t => { const arr = map.get(t.date) ?? []; arr.push(t); map.set(t.date, arr); });
-    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+    const monthMap = new Map<string, Map<string, Tx[]>>();
+    
+    filtered.forEach(t => {
+      const yearMonth = t.date.substring(0, 7); // "YYYY-MM" ex: "2026-01"
+      
+      if (!monthMap.has(yearMonth)) {
+        monthMap.set(yearMonth, new Map());
+      }
+      
+      const dayMap = monthMap.get(yearMonth)!;
+      const arr = dayMap.get(t.date) ?? [];
+      arr.push(t);
+      dayMap.set(t.date, arr);
+    });
+    
+    // Converter em estrutura e ordenar (meses mais recentes primeiro)
+    const result = [...monthMap.entries()]
+      .map(([yearMonth, dayMap]) => ({
+        yearMonth,
+        days: [...dayMap.entries()].sort((a, b) => b[0].localeCompare(a[0])),
+      }))
+      .sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+    
+    return result;
   }, [filtered]);
 
   const displayValue = (val: number) => hideValues ? "• • •" : toBRL(val);
@@ -1060,121 +1098,193 @@ export default function CashFlowPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-4 sm:space-y-5">
-            {grouped.map(([date, items]) => {
-              const net = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
-              const entradasDia = items.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0);
-              const saidasDia = items.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0);
-              const isOpen = openGroups.has(date);
-              const maxH = `${items.length * 72}px`;
+          <div className="space-y-5 sm:space-y-6">
+            {/* ═══ MESES ═══ */}
+            {grouped.map(({ yearMonth, days }) => {
+              const isMonthOpen = openMonths.has(yearMonth);
+              const monthTotal = days.reduce((sum, [, items]) => {
+                return sum + items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
+              }, 0);
+              const monthEntradas = days.reduce((sum, [, items]) => {
+                return sum + items.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0);
+              }, 0);
+              const monthSaidas = days.reduce((sum, [, items]) => {
+                return sum + items.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0);
+              }, 0);
+              const totalTxs = days.reduce((sum, [, items]) => sum + items.length, 0);
 
               return (
-                <div key={date} className="cf-card overflow-hidden">
-
-                  {/* ── Header clicável (accordion trigger) com melhor separação ── */}
+                <div key={yearMonth} className="space-y-2">
+                  {/* ── Header do Mês ── */}
                   <button
-                    className="cf-group-header"
-                    onClick={() => toggleGroup(date)}
-                    aria-expanded={isOpen}
+                    onClick={() => toggleMonth(yearMonth)}
+                    className="w-full cf-card flex items-center justify-between p-4 rounded-xl font-semibold transition-all hover:border-opacity-100 cursor-pointer"
                     style={{
-                      borderBottom: isOpen ? "1px solid var(--cf-border)" : "none",
-                      borderRadius: isOpen ? "16px 16px 0 0" : "16px",
-                      padding: "16px 20px",
+                      border: "2px solid var(--cf-border)",
+                      color: "var(--cf-text)",
                     }}
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0"
+                    <div className="flex items-center gap-3 flex-1 text-left">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                         style={{ background: "var(--cf-input)" }}>
-                        <Calendar size={16} style={{ color: "var(--cf-text3)" }} />
+                        <Calendar size={18} style={{ color: "var(--cf-text2)" }} />
                       </div>
-                      <div className="text-left">
-                        <p className="text-sm font-bold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</p>
+                      <div>
+                        <p className="text-base font-heading font-bold" style={{ color: "var(--cf-text)" }}>{labelMonthYear(yearMonth)}</p>
                         <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
-                          {items.length} transação{items.length !== 1 ? "ões" : ""}
+                          {totalTxs} transação{totalTxs !== 1 ? "ões" : ""}
                         </p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right hidden sm:block">
-                        {entradasDia > 0 && (
+                        {monthEntradas > 0 && (
                           <p className="text-xs font-semibold" style={{ color: "#059669" }}>
-                            +{displayValue(entradasDia)}
+                            +{displayValue(monthEntradas)}
                           </p>
                         )}
-                        {saidasDia > 0 && (
+                        {monthSaidas > 0 && (
                           <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
-                            -{displayValue(saidasDia)}
+                            -{displayValue(monthSaidas)}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
-                        <span className="mono text-sm font-bold block" style={{ color: net >= 0 ? "#059669" : "#dc2626" }}>
-                          {hideValues ? "• • •" : (net >= 0 ? "+" : "") + toBRL(net)}
+                        <span className="mono text-sm font-bold block" style={{ color: monthTotal >= 0 ? "#059669" : "#dc2626" }}>
+                          {hideValues ? "• • •" : (monthTotal >= 0 ? "+" : "") + toBRL(monthTotal)}
                         </span>
                       </div>
                       <ChevronDown
-                        size={16}
-                        className={`cf-chevron ${isOpen ? "open" : ""}`}
+                        size={18}
+                        className={`cf-chevron transition-transform ${isMonthOpen ? "open" : ""}`}
                         style={{ color: "var(--cf-text3)" }}
                       />
                     </div>
                   </button>
 
-                  {/* ── Corpo colapsável ── */}
-                  <div
-                    className={`cf-group-body ${isOpen ? "open" : "closed"}`}
-                    style={{ maxHeight: isOpen ? maxH : "0px" }}
-                  >
-                    {items.map((tx) => {
-                      const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
-                      return (
-                        <div key={tx.id} className="cf-tx flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3.5">
-                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
-                            style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2" }}>
-                            <CatIcon size={16} style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start sm:items-center gap-1.5 flex-col sm:flex-row sm:gap-2 mb-0.5">
-                              <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</span>
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
-                                style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2", color: tx.type === "entrada" ? "#15803d" : "#991b1b" }}>
-                                {tx.category}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {tx.note && <p className="text-xs truncate" style={{ color: "var(--cf-text2)" }}>📝 {tx.note}</p>}
-                              {tx.nfUrl && (
-                                <a href={tx.nfUrl} target="_blank" rel="noreferrer"
-                                  className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors hover:opacity-70 cursor-pointer"
-                                  style={{ color: "#3b82f6" }} title={tx.nfName ?? "Ver Nota Fiscal"}>
-                                  <Paperclip size={11} />
-                                  <span className="hidden sm:inline truncate max-w-24">{tx.nfName ?? "NF"}</span>
-                                  <span className="sm:hidden">NF</span>
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
-                            {hideValues ? "• • •" : (tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}
-                          </span>
-                          <div className="cf-txa flex items-center gap-1 shrink-0">
-                            <button onClick={() => { setEditing(tx); setModal(true); }}
-                              className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
-                              style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-                              <Edit3 size={13} />
-                            </button>
-                            <button onClick={() => setConfirmId(tx.id)}
-                              className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
-                              style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {/* ── Dias do Mês (colapsável) ── */}
+                  {isMonthOpen && (
+                    <div className="space-y-2 ml-2">
+                      {days.map(([date, items]) => {
+                        const isDayOpen = openDays.has(date);
+                        const dayNet = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
+                        const dayEntradas = items.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0);
+                        const daySaidas = items.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0);
+                        const maxH = `${items.length * 72}px`;
 
+                        return (
+                          <div key={date} className="cf-card overflow-hidden">
+
+                            {/* ── Header do Dia ── */}
+                            <button
+                              className="cf-group-header"
+                              onClick={() => toggleDay(date)}
+                              aria-expanded={isDayOpen}
+                              style={{
+                                borderBottom: isDayOpen ? "1px solid var(--cf-border)" : "none",
+                                borderRadius: isDayOpen ? "16px 16px 0 0" : "16px",
+                                padding: "14px 18px",
+                              }}
+                            >
+                              <div className="flex items-center gap-2.5 flex-1">
+                                <div className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
+                                  style={{ background: "var(--cf-input)" }}>
+                                  <Calendar size={14} style={{ color: "var(--cf-text3)" }} />
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</p>
+                                  <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
+                                    {items.length} transação{items.length !== 1 ? "ões" : ""}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2.5 shrink-0">
+                                <div className="text-right hidden sm:block">
+                                  {dayEntradas > 0 && (
+                                    <p className="text-xs font-semibold" style={{ color: "#059669" }}>
+                                      +{displayValue(dayEntradas)}
+                                    </p>
+                                  )}
+                                  {daySaidas > 0 && (
+                                    <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
+                                      -{displayValue(daySaidas)}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <span className="mono text-xs font-bold block" style={{ color: dayNet >= 0 ? "#059669" : "#dc2626" }}>
+                                    {hideValues ? "• • •" : (dayNet >= 0 ? "+" : "") + toBRL(dayNet)}
+                                  </span>
+                                </div>
+                                <ChevronDown
+                                  size={14}
+                                  className={`cf-chevron ${isDayOpen ? "open" : ""}`}
+                                  style={{ color: "var(--cf-text3)" }}
+                                />
+                              </div>
+                            </button>
+
+                            {/* ── Transações do Dia (colapsável) ── */}
+                            <div
+                              className={`cf-group-body ${isDayOpen ? "open" : "closed"}`}
+                              style={{ maxHeight: isDayOpen ? maxH : "0px" }}
+                            >
+                              {items.map((tx) => {
+                                const CatIcon = CAT_ICON[tx.category] ?? (tx.type === "entrada" ? ArrowUpRight : ArrowDownRight);
+                                return (
+                                  <div key={tx.id} className="cf-tx flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3.5">
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
+                                      style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2" }}>
+                                      <CatIcon size={16} style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start sm:items-center gap-1.5 flex-col sm:flex-row sm:gap-2 mb-0.5">
+                                        <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</span>
+                                        <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                                          style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2", color: tx.type === "entrada" ? "#15803d" : "#991b1b" }}>
+                                          {tx.category}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {tx.note && <p className="text-xs truncate" style={{ color: "var(--cf-text2)" }}>📝 {tx.note}</p>}
+                                        {tx.nfUrl && (
+                                          <a href={tx.nfUrl} target="_blank" rel="noreferrer"
+                                            className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors hover:opacity-70 cursor-pointer"
+                                            style={{ color: "#3b82f6" }} title={tx.nfName ?? "Ver Nota Fiscal"}>
+                                            <Paperclip size={11} />
+                                            <span className="hidden sm:inline truncate max-w-24">{tx.nfName ?? "NF"}</span>
+                                            <span className="sm:hidden">NF</span>
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
+                                      {hideValues ? "• • •" : (tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}
+                                    </span>
+                                    <div className="cf-txa flex items-center gap-1 shrink-0">
+                                      <button onClick={() => { setEditing(tx); setModal(true); }}
+                                        className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
+                                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                                        <Edit3 size={13} />
+                                      </button>
+                                      <button onClick={() => setConfirmId(tx.id)}
+                                        className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
+                                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
