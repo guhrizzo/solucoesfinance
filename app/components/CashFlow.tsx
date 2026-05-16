@@ -709,14 +709,14 @@ export default function CashFlowPage() {
 
   useEffect(() => {
     let snapUnsub: (() => void) | undefined;
-    let snapCenterUnsub: (() => void) | undefined;  // ← NOVO
+    let snapCenterUnsub: (() => void) | undefined;
     let authUnsub: (() => void) | undefined;
     (async () => {
       try {
         const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, where }] = await Promise.all([
           import("../../lib/firebase"),
           import("firebase/auth"),
-          import("firebase/firestore"),  // ← Adicione 'where' aqui se não tiver
+          import("firebase/firestore"),
         ]);
         const { auth, db } = await getFirebase();
         authUnsub = onAuthStateChanged(auth, (u) => {
@@ -733,7 +733,7 @@ export default function CashFlowPage() {
             (err) => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
           );
 
-          // ── NOVO: Listener de orçamento total (centros de custo) ──
+          // ── Listener de orçamento total (centros de custo) ──
           snapCenterUnsub?.();
           const centerQ = query(collection(db, "costCenters"), where("userId", "==", u.uid));
           snapCenterUnsub = onSnapshot(
@@ -749,7 +749,7 @@ export default function CashFlowPage() {
         });
       } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
     })();
-    return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); };  // ← Adicione snapCenterUnsub?.()
+    return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); };
   }, []);
 
   async function handleLogout() {
@@ -863,7 +863,7 @@ export default function CashFlowPage() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 20px;
+          padding: 16px 20px;
           background: var(--cf-txhdr);
           border: none;
           text-align: left;
@@ -1060,17 +1060,18 @@ export default function CashFlowPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4 sm:space-y-5">
             {grouped.map(([date, items]) => {
               const net = items.reduce((s, t) => t.type === "entrada" ? s + t.amount : s - t.amount, 0);
+              const entradasDia = items.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0);
+              const saidasDia = items.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0);
               const isOpen = openGroups.has(date);
-              // Altura estimada: ~68px por transação
               const maxH = `${items.length * 72}px`;
 
               return (
                 <div key={date} className="cf-card overflow-hidden">
 
-                  {/* ── Header clicável (accordion trigger) ── */}
+                  {/* ── Header clicável (accordion trigger) com melhor separação ── */}
                   <button
                     className="cf-group-header"
                     onClick={() => toggleGroup(date)}
@@ -1078,22 +1079,42 @@ export default function CashFlowPage() {
                     style={{
                       borderBottom: isOpen ? "1px solid var(--cf-border)" : "none",
                       borderRadius: isOpen ? "16px 16px 0 0" : "16px",
+                      padding: "16px 20px",
                     }}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Calendar size={12} style={{ color: "var(--cf-text3)" }} />
-                      <span className="text-xs font-semibold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-                        {items.length}
-                      </span>
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0"
+                        style={{ background: "var(--cf-input)" }}>
+                        <Calendar size={16} style={{ color: "var(--cf-text3)" }} />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
+                          {items.length} transação{items.length !== 1 ? "ões" : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="mono text-xs font-bold" style={{ color: net >= 0 ? "#059669" : "#dc2626" }}>
-                        {hideValues ? "• • •" : (net >= 0 ? "+" : "") + toBRL(net)}
-                      </span>
+                    
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right hidden sm:block">
+                        {entradasDia > 0 && (
+                          <p className="text-xs font-semibold" style={{ color: "#059669" }}>
+                            +{displayValue(entradasDia)}
+                          </p>
+                        )}
+                        {saidasDia > 0 && (
+                          <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
+                            -{displayValue(saidasDia)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="mono text-sm font-bold block" style={{ color: net >= 0 ? "#059669" : "#dc2626" }}>
+                          {hideValues ? "• • •" : (net >= 0 ? "+" : "") + toBRL(net)}
+                        </span>
+                      </div>
                       <ChevronDown
-                        size={14}
+                        size={16}
                         className={`cf-chevron ${isOpen ? "open" : ""}`}
                         style={{ color: "var(--cf-text3)" }}
                       />
