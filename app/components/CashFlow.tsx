@@ -72,7 +72,7 @@ const toBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const labelDate = (d: string) =>
-  new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).replace(/\./g, "");
 
 const labelMonthYear = (yearMonth: string) => {
   const [year, month] = yearMonth.split("-");
@@ -1118,10 +1118,11 @@ export default function CashFlowPage() {
                   {/* ── Header do Mês ── */}
                   <button
                     onClick={() => toggleMonth(yearMonth)}
-                    className="w-full cf-card flex items-center justify-between p-4 rounded-xl font-semibold transition-all hover:border-opacity-100 cursor-pointer"
+                    className="w-full flex items-center justify-between p-4 rounded-xl font-semibold transition-all hover:opacity-80 cursor-pointer"
                     style={{
-                      border: "2px solid var(--cf-border)",
+                      background: "var(--cf-card)",
                       color: "var(--cf-text)",
+                      border: "none"
                     }}
                   >
                     <div className="flex items-center gap-3 flex-1 text-left">
@@ -1132,7 +1133,7 @@ export default function CashFlowPage() {
                       <div>
                         <p className="text-base font-heading font-bold" style={{ color: "var(--cf-text)" }}>{labelMonthYear(yearMonth)}</p>
                         <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
-                          {totalTxs} transação{totalTxs !== 1 ? "ões" : ""}
+                          {totalTxs} {totalTxs === 1 ? "transação" : "transações"}
                         </p>
                       </div>
                     </div>
@@ -1195,7 +1196,7 @@ export default function CashFlowPage() {
                                 <div className="text-left">
                                   <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</p>
                                   <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
-                                    {items.length} transação{items.length !== 1 ? "ões" : ""}
+                                    {items.length} {items.length === 1 ? "transação" : "transações"}
                                   </p>
                                 </div>
                               </div>
