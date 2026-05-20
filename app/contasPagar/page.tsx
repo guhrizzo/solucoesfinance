@@ -8,7 +8,7 @@ import {
     CalendarClock, Loader2, Search, Filter,
     CheckCircle2, CircleDollarSign, Repeat, Settings2,
     ArrowDownRight, Tag, Building2, Zap, Receipt,
-    Bell, type LucideIcon,
+    Bell, Image as ImageIcon, Trash, type LucideIcon,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -26,6 +26,7 @@ interface Bill {
     status: BillStatus;
     recurrence: Recurrence;
     notes: string;
+    photos: string[];      // URLs de Storage
     paidAt?: string;
     createdAt: number;
     userId: string;
@@ -143,6 +144,8 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
     const [recurrence, setRecurrence] = useState<Recurrence>("unica");
     const [notes, setNotes] = useState("");
     const [status, setStatus] = useState<BillStatus>("pendente");
+    const [photos, setPhotos] = useState<string[]>([]);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
 
@@ -155,6 +158,7 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
         setRecurrence(editing?.recurrence ?? "unica");
         setNotes(editing?.notes ?? "");
         setStatus(editing?.status ?? "pendente");
+        setPhotos(editing?.photos ?? []);
         setSaving(false);
         setErr("");
     }, [open]);
@@ -164,6 +168,37 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
     const amount = parseAmount(rawAmt);
     const canSave = title.trim().length >= 2 && amount > 0 && dueDate !== "";
 
+    async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingPhoto(true);
+        try {
+            const [{ getFirebase }, { ref, uploadBytes, getDownloadURL }] = await Promise.all([
+                import("../../lib/firebase"),
+                import("firebase/storage"),
+            ]);
+            const { storage } = await getFirebase();
+            const timestamp = Date.now();
+            const filename = `${timestamp}-${file.name}`;
+            const storageRef = ref(storage, `bills/${filename}`);
+            
+            await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(storageRef);
+            
+            setPhotos(prev => [...prev, url]);
+            setErr("");
+        } catch (e: any) {
+            setErr(`Erro ao upload: ${e.message}`);
+        } finally {
+            setUploadingPhoto(false);
+        }
+    }
+
+    function removePhoto(idx: number) {
+        setPhotos(prev => prev.filter((_, i) => i !== idx));
+    }
+
     async function submit() {
         if (!canSave || saving) return;
         setSaving(true); setErr("");
@@ -171,6 +206,7 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
             await onSave({
                 title: title.trim(), amount, dueDate, category,
                 recurrence, notes: notes.trim(), status,
+                photos,
                 paidAt: editing?.paidAt,
             });
             onClose();
@@ -296,6 +332,44 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
                                 );
                             })}
                         </div>
+                    </div>
+
+                    {/* Fotos */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                            Fotos (boleto, nota fiscal...) — {photos.length}
+                        </label>
+                        
+                        {/* Gallery de fotos */}
+                        {photos.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2 mb-2">
+                                {photos.map((url, idx) => (
+                                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                                        <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                                        <button
+                                            onClick={() => removePhoto(idx)}
+                                            className="absolute top-1 right-1 p-1 rounded-lg cursor-pointer"
+                                            style={{ background: "rgba(0,0,0,0.6)" }}>
+                                            <Trash size={12} style={{ color: "white" }} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Input de upload */}
+                        <label className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border-2 border-dashed cursor-pointer transition-all"
+                            style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            <ImageIcon size={16} />
+                            {uploadingPhoto ? "Enviando..." : "Adicionar foto"}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                disabled={uploadingPhoto}
+                                className="hidden"
+                            />
+                        </label>
                     </div>
 
                     {/* Observação */}
@@ -449,6 +523,12 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
                                     {bill.recurrence !== "unica" && (
                                         <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text3)" }}>
                                             <Repeat size={10} /> {RECURRENCE_LABEL[bill.recurrence]}
+                                        </span>
+                                    )}
+                                    {bill?.photos?.length > 0 && (
+                                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                                            style={{ background: "#3b82f6" + "20", color: "#3b82f6" }}>
+                                            <ImageIcon size={10} /> {bill?.photos?.length} foto{bill?.photos?.length !== 1 ? "s" : ""}
                                         </span>
                                     )}
                                 </div>
@@ -693,6 +773,30 @@ export default function ContasPagarPage() {
         });
 
         showToast("Pago! Lançado no Fluxo de Caixa ✓");
+    }
+
+    // ── Atualizar categoria e sincronizar cashflow se a conta já está no fluxo ──
+    async function handleUpdateCategory(billId: string, oldCategory: string, newCategory: string, bill: Bill) {
+        if (!uid || oldCategory === newCategory) return;
+        
+        const [{ getFirebase }, { doc, updateDoc, collection, query, where, getDocs }] = await Promise.all([
+            import("../../lib/firebase"),
+            import("firebase/firestore"),
+        ]);
+        const { db } = await getFirebase();
+
+        // Atualiza a categoria na conta
+        await updateDoc(doc(db, "users", uid, "bills", billId), { category: newCategory });
+
+        // Se a conta já tem um registro no cashflow (status pago), atualiza lá também
+        if (bill.status === "pago" && bill.cashflowId) {
+            await updateDoc(doc(db, "users", uid, "cashflow", bill.cashflowId), {
+                category: CAT_TO_CASHFLOW[newCategory] ?? "Outros gastos",
+            });
+            showToast("Categoria atualizada em contas e fluxo de caixa");
+        } else {
+            showToast("Categoria atualizada!");
+        }
     }
 
     // ── Excluir conta ──────────────────────────────────────────────────────────
