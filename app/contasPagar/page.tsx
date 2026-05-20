@@ -8,7 +8,7 @@ import {
     CalendarClock, Loader2, Search, Filter,
     CheckCircle2, CircleDollarSign, Repeat, Settings2,
     ArrowDownRight, Tag, Building2, Zap, Receipt,
-    Bell, Image as ImageIcon, Trash, type LucideIcon,
+    Bell, Image as ImageIcon, Trash, ChevronLeft, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -471,6 +471,72 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
     );
 }
 
+// ─── Photo Gallery Modal ──────────────────────────────────────────────────────
+
+function PhotoGalleryModal({ open, photos, onClose }: {
+    open: boolean;
+    photos: string[];
+    onClose: () => void;
+}) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        if (open) setCurrentIndex(0);
+    }, [open]);
+
+    if (!open || photos.length === 0) return null;
+
+    const current = photos[currentIndex];
+    const handlePrev = () => setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
+    const handleNext = () => setCurrentIndex((prev) => (prev + 1) % photos.length);
+
+    return (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+            onClick={onClose}>
+            <div className="relative w-full h-full flex items-center justify-center p-4"
+                onClick={(e) => e.stopPropagation()}>
+                {/* Imagem principal */}
+                <div className="relative max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center">
+                    <img src={current} alt={`Foto ${currentIndex + 1}`}
+                        className="max-w-full max-h-full object-contain rounded-xl" />
+                </div>
+
+                {/* Navegação */}
+                {photos.length > 1 && (
+                    <>
+                        <button onClick={handlePrev}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
+                            style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
+                            <ChevronLeft size={24} />
+                        </button>
+                        <button onClick={handleNext}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
+                            style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
+                            <ChevronRight size={24} />
+                        </button>
+                    </>
+                )}
+
+                {/* Indicador de página */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-2 rounded-full"
+                    style={{ background: "rgba(255,255,255,0.15)" }}>
+                    <span className="text-sm text-white font-medium">
+                        {currentIndex + 1} / {photos.length}
+                    </span>
+                </div>
+
+                {/* Botão fechar */}
+                <button onClick={onClose}
+                    className="absolute top-4 right-4 p-2 rounded-lg cursor-pointer transition-all hover:scale-110"
+                    style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
+                    <X size={20} />
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // ─── Bill Card ────────────────────────────────────────────────────────────────
 
 function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
@@ -481,6 +547,7 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
     onPay: () => Promise<void>;
 }) {
     const [paying, setPaying] = useState(false);
+    const [showPhotos, setShowPhotos] = useState(false);
     const days = daysUntil(bill.dueDate);
     const status: BillStatus = bill._status;
     const meta = STATUS_META[status];
@@ -526,7 +593,8 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
                                         </span>
                                     )}
                                     {bill?.photos?.length > 0 && (
-                                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                                        <span onClick={() => setShowPhotos(true)}
+                                            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full cursor-pointer transition-all hover:opacity-80"
                                             style={{ background: "#3b82f6" + "20", color: "#3b82f6" }}>
                                             <ImageIcon size={10} /> {bill?.photos?.length} foto{bill?.photos?.length !== 1 ? "s" : ""}
                                         </span>
@@ -592,6 +660,7 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
                     </button>
                 </div>
             </div>
+            <PhotoGalleryModal open={showPhotos} photos={bill?.photos ?? []} onClose={() => setShowPhotos(false)} />
         </div>
     );
 }
