@@ -690,6 +690,8 @@ export default function CashFlowPage() {
   const [previsao, setPrevisao] = useState(0);
   const [previsaoOpen, setPrevisaoOpen] = useState(false);
   const [hideValues, setHideValues] = useState(false);
+  const [costCenterBudget, setCostCenterBudget] = useState(0);
+  const [pendingBillsTotal, setPendingBillsTotal] = useState(0);
 
   // ─── Accordion state ──────────────────────────────────────────────────────
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -711,6 +713,17 @@ export default function CashFlowPage() {
     });
   }, []);
 
+  // ── Função para atualizar previsão com base em orçamentos e contas pendentes ──
+  const updatePrevisao = useCallback((newCostCenterBudget?: number, newPendingBillsTotal?: number) => {
+    setCostCenterBudget(prev => newCostCenterBudget !== undefined ? newCostCenterBudget : prev);
+    setPendingBillsTotal(prev => newPendingBillsTotal !== undefined ? newPendingBillsTotal : prev);
+    
+    const centerBudget = newCostCenterBudget !== undefined ? newCostCenterBudget : costCenterBudget;
+    const billsTotal = newPendingBillsTotal !== undefined ? newPendingBillsTotal : pendingBillsTotal;
+    
+    setPrevisao(centerBudget + billsTotal);
+  }, [costCenterBudget, pendingBillsTotal]);
+
   useEffect(() => {
     if (txs.length > 0) {
       // Abre o mês mais recente automaticamente na primeira carga
@@ -726,6 +739,7 @@ export default function CashFlowPage() {
   useEffect(() => {
     let snapUnsub: (() => void) | undefined;
     let snapCenterUnsub: (() => void) | undefined;
+    let snapBillsUnsub: (() => void) | undefined;
     let authUnsub: (() => void) | undefined;
     (async () => {
       try {
@@ -756,16 +770,35 @@ export default function CashFlowPage() {
             centerQ,
             (snap) => {
               const totalBudget = snap.docs.reduce((sum, doc) => sum + (doc.data().budget || 0), 0);
-              setPrevisao(totalBudget);
+              // Calcula previsão com contas pendentes adicionadas
+              updatePrevisao(totalBudget);
             },
             (err) => {
               console.debug("Aviso ao sincronizar orçamento:", err.code);
             }
           );
+
+          // ── Listener de contas pendentes (contas a pagar) ──
+          snapBillsUnsub?.();
+          const billsQ = query(
+            collection(db, "users", u.uid, "bills"),
+            where("status", "in", ["pendente", "vencido", "agendado"])
+          );
+          snapBillsUnsub = onSnapshot(
+            billsQ,
+            (snap) => {
+              const billsTotal = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+              // Atualiza previsão incluindo contas pendentes
+              updatePrevisao(undefined, billsTotal);
+            },
+            (err) => {
+              console.debug("Aviso ao sincronizar contas pendentes:", err.code);
+            }
+          );
         });
       } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
     })();
-    return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); };
+    return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); };
   }, []);
 
   async function handleLogout() {
