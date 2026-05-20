@@ -25,7 +25,7 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard",        href: "/dashboard" },
   { icon: TrendingUp,      label: "Fluxo de caixa",   href: "/fluxo-caixa" },
   { icon: FileText,        label: "Relatórios",        href: "/relatorios" },
-  { icon: CreditCard,      label: "Contas a pagar",    href: "/contas-pagar" },
+  { icon: CreditCard,      label: "Contas a pagar",    href: "/contasPagar" },
   { icon: DollarSign,      label: "Contas a receber",  href: "/contasReceber" },
   { icon: BarChart2,       label: "Centro de custos",  href: "/costCenter" },
   { icon: Users,           label: "Usuários",          href: "/users" },
