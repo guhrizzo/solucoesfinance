@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
+import { useToast } from "./useToast";
+import { ToastContainer } from "./ToastContainer";
+import { useBillBadges } from "./Usebillbadges";
 
 interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; }
 interface NavbarProps {
@@ -22,7 +25,7 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard",        href: "/dashboard" },
   { icon: TrendingUp,      label: "Fluxo de caixa",   href: "/fluxo-caixa" },
   { icon: FileText,        label: "Relatórios",        href: "/relatorios" },
-  { icon: CreditCard,      label: "Contas a pagar",    href: "/contasPagar", badge: 4 },
+  { icon: CreditCard,      label: "Contas a pagar",    href: "/contas-pagar" },
   { icon: DollarSign,      label: "Contas a receber",  href: "/contasReceber" },
   { icon: BarChart2,       label: "Centro de custos",  href: "/costCenter" },
   { icon: Users,           label: "Usuários",          href: "/users" },
@@ -269,9 +272,15 @@ const css = `
     display: flex; justify-content: space-around; align-items: center;
     padding: 6px 8px 10px;
   }
-  .nxfi-mobile-link { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 12px; border-radius: 12px; text-decoration: none; transition: all 0.15s; color: var(--nav-text3); font-size: 0.65rem; font-weight: 500; }
+  .nxfi-mobile-link { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 12px; border-radius: 12px; text-decoration: none; transition: all 0.15s; color: var(--nav-text3); font-size: 0.65rem; font-weight: 500; position: relative; }
   .nxfi-mobile-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
   .nxfi-mobile-link.active { color: #1565c0; }
+  .nxfi-mobile-link .badge {
+    position: absolute; top: 0; right: 4px;
+    background: #ef4444; color: white; font-size: 0.65rem;
+    font-weight: 700; padding: 1px 5px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace; line-height: 1;
+  }
 
   .nxfi-sidebar-vertical {
     position: fixed; top: 0; left: 0; height: 100vh; z-index: 50;
@@ -348,7 +357,9 @@ export default function Navbar({
   const [userOpen,   setUserOpen]   = useState(false);
 
   const { dark, toggle }           = useTheme();
-  const { layout, toggle: toggleLayout } = useNavbarLayout(); // ← sem mounted
+  const { layout, toggle: toggleLayout } = useNavbarLayout();
+  const { toasts, show: showToast, remove: removeToast } = useToast();
+  const { billSummary } = useBillBadges(); // ← Pega o resumo de contas
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef  = useRef<HTMLDivElement>(null);
@@ -385,11 +396,33 @@ export default function Navbar({
         (child as HTMLElement).style.marginLeft = "";
       });
     };
-  }, [layout]); // ← sem mounted na dep
+  }, [layout]);
 
   const initial    = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U";
   const firstName  = user?.displayName?.split(" ")[0] ?? "Usuário";
   const unreadCount = notifications.length;
+
+  // Cria dinamicamente os navItems com badge real
+  const navItemsWithBadge = navItems.map(item => {
+    if (item.label === "Contas a pagar") {
+      return { ...item, badge: billSummary.totalPending };
+    }
+    return item;
+  });
+
+  // Handler para logout com toast
+  const handleLogout = async () => {
+    showToast("Desconectando...", "info");
+    setTimeout(() => {
+      onLogout?.();
+    }, 1500);
+  };
+
+  // Handler para marcar como lido com toast
+  const handleMarkAsRead = () => {
+    showToast("Notificações marcadas como lidas", "success");
+    setNotifOpen(false);
+  };
 
   // ── Sidebar vertical via Portal ──
   const sidebarJSX = (
@@ -402,7 +435,7 @@ export default function Navbar({
         </a>
         <nav className="nxfi-vertical-nav">
           <div className="nxfi-vertical-section">Menu Principal</div>
-          {navItems.map((item) => (
+          {navItemsWithBadge.map((item) => (
             <a
               key={item.label}
               href={item.href}
@@ -410,7 +443,7 @@ export default function Navbar({
             >
               <item.icon size={16} />
               <span style={{ flex: 1 }}>{item.label}</span>
-              {item.badge && <span className="badge">{item.badge}</span>}
+              {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
             </a>
           ))}
         </nav>
@@ -427,7 +460,7 @@ export default function Navbar({
             <Settings size={16} />
             <span>Configurações</span>
           </button>
-          <button className="nxfi-vertical-footer-btn danger" onClick={onLogout}>
+          <button className="nxfi-vertical-footer-btn danger" onClick={handleLogout}>
             <LogOut size={16} />
             <span>Sair</span>
           </button>
@@ -437,7 +470,12 @@ export default function Navbar({
   );
 
   if (layout === "vertical") {
-    return createPortal(sidebarJSX, document.body);
+    return (
+      <>
+        {createPortal(sidebarJSX, document.body)}
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+      </>
+    );
   }
 
   // ── Layout Horizontal ──
@@ -456,11 +494,11 @@ export default function Navbar({
         </a>
 
         <div className="nxfi-nav-links">
-          {navItems.map((item) => (
+          {navItemsWithBadge.map((item) => (
             <a key={item.label} href={item.href} className={`nxfi-nav-link ${activePath === item.href ? "active" : ""}`}>
               <item.icon size={14} />
               {item.label}
-              {item.badge && <span className="badge">{item.badge}</span>}
+              {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
             </a>
           ))}
         </div>
@@ -494,7 +532,7 @@ export default function Navbar({
               <div className="nxfi-dropdown nxfi-notif-drop">
                 <div className="nxfi-notif-header">
                   <h3>Notificações <span style={{ color: "var(--nav-text3)", fontWeight: 400 }}>({unreadCount})</span></h3>
-                  <button>Marcar como lido</button>
+                  <button onClick={handleMarkAsRead}>Marcar como lido</button>
                 </div>
                 {notifications.map((n) => (
                   <div key={n.id} className="nxfi-notif-item">
@@ -532,18 +570,18 @@ export default function Navbar({
                 </div>
                 <div style={{ padding: "6px 0" }}>
                   {[
-                    { icon: UserCircle, label: "Meu perfil" },
-                    { icon: Zap,        label: "Plano & faturamento" },
-                    { icon: HelpCircle, label: "Ajuda & suporte" },
-                    { icon: Settings,   label: "Configurações" },
+                    { icon: UserCircle, label: "Meu perfil", action: () => showToast("Abrindo perfil...", "info") },
+                    { icon: Zap,        label: "Plano & faturamento", action: () => showToast("Abrindo plano...", "info") },
+                    { icon: HelpCircle, label: "Ajuda & suporte", action: () => showToast("Redirecionando para ajuda...", "info") },
+                    { icon: Settings,   label: "Configurações", action: () => showToast("Abrindo configurações...", "info") },
                   ].map((item) => (
-                    <button key={item.label} className="nxfi-drop-item">
+                    <button key={item.label} className="nxfi-drop-item" onClick={item.action}>
                       <item.icon size={14} />
                       {item.label}
                     </button>
                   ))}
                   <div className="nxfi-drop-divider" />
-                  <button className="nxfi-drop-item danger" onClick={onLogout}>
+                  <button className="nxfi-drop-item danger" onClick={handleLogout}>
                     <LogOut size={14} />
                     Sair da conta
                   </button>
@@ -569,7 +607,7 @@ export default function Navbar({
             </div>
             <nav className="nxfi-sidebar-nav">
               <div className="nxfi-sidebar-section">Menu principal</div>
-              {navItems.map((item) => (
+              {navItemsWithBadge.map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
@@ -579,7 +617,7 @@ export default function Navbar({
                   <item.icon size={16} />
                   {item.label}
                   {activePath === item.href && <span className="dot" />}
-                  {item.badge && <span className="badge">{item.badge}</span>}
+                  {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
                 </a>
               ))}
             </nav>
@@ -592,7 +630,7 @@ export default function Navbar({
                 <Settings size={16} />
                 Configurações
               </button>
-              <button className="nxfi-sidebar-footer-btn danger" onClick={onLogout}>
+              <button className="nxfi-sidebar-footer-btn danger" onClick={handleLogout}>
                 <LogOut size={16} />
                 Sair da conta
               </button>
@@ -602,19 +640,18 @@ export default function Navbar({
       )}
 
       <nav className="nxfi-mobile-nav">
-        {[
-          { icon: LayoutDashboard, label: "Início",     href: "/dashboard" },
-          { icon: TrendingUp,      label: "Caixa",      href: "/fluxo-caixa" },
-          { icon: FileText,        label: "Relatórios", href: "/relatorios" },
-          { icon: CreditCard,      label: "Contas",     href: "/contasPagar" },
-          { icon: Settings,        label: "Config.",    href: "#" },
-        ].map((item) => (
+        {navItemsWithBadge.map((item) => (
           <a key={item.label} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
-            <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />
+            <div style={{ position: "relative" }}>
+              <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />
+              {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
+            </div>
             {item.label}
           </a>
         ))}
       </nav>
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
   );
 }
