@@ -104,6 +104,26 @@ function parseAmount(raw: string): number {
     return parseFloat(s) || 0;
 }
 
+// Formata número com separador de mil (.)
+function formatAmount(raw: string): string {
+    // Remove tudo que não é número, vírgula ou ponto
+    let s = raw.replace(/[^\d,.]/g, "");
+    
+    // Se estiver vazio, retorna vazio
+    if (!s) return "";
+    
+    // Se tem vírgula (formato brasileiro), separa inteiros e decimais
+    if (s.includes(",")) {
+        const [intPart, decPart] = s.split(",");
+        const formatted = intPart.replace(/\./g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return decPart !== undefined ? formatted + "," + decPart : formatted;
+    }
+    
+    // Se só tem ponto, trata como separador de mil (remover e reformatar)
+    s = s.replace(/\./g, "");
+    return s.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 if (typeof window !== "undefined") {
     import("../../lib/firebase");
     import("firebase/auth");
@@ -266,7 +286,7 @@ function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProp
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Valor (R$)</label>
-                            <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(e.target.value)}
+                            <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
