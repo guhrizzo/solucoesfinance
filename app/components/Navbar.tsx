@@ -12,6 +12,7 @@ import { useNavbarLayout } from "../hooks/useNavbarLayout";
 import { useToast } from "./useToast";
 import { ToastContainer } from "./ToastContainer";
 import { useBillBadges } from "./Usebillbadges";
+import { useReceivableBadges } from "./useReceivableBadges";
 
 interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; }
 interface NavbarProps {
@@ -138,6 +139,9 @@ const css = `
     font-weight: 700; padding: 1px 5px; border-radius: 100px;
     font-family: 'JetBrains Mono', monospace; line-height: 1.4;
   }
+  .nxfi-nav-link .badge.green {
+    background: #10b981; color: white;
+  }
 
   .nxfi-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
@@ -260,6 +264,7 @@ const css = `
   .nxfi-sidebar-link.active { color: white; background: rgba(21,101,192,0.25); border-color: rgba(66,165,245,0.2); font-weight: 600; }
   .nxfi-sidebar-link .dot   { width: 6px; height: 6px; border-radius: 50%; background: #42a5f5; margin-left: auto; }
   .nxfi-sidebar-link .badge { margin-left: auto; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 100px; font-family: 'JetBrains Mono', monospace; }
+  .nxfi-sidebar-link .badge.green { background: #10b981; color: white; }
   .nxfi-sidebar-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; }
   .nxfi-sidebar-footer-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 500; cursor: pointer; width: 100%; background: none; border: none; transition: all 0.15s; font-family: 'Sora', sans-serif; color: rgba(147,197,253,0.55); }
   .nxfi-sidebar-footer-btn:hover { color: white; background: rgba(255,255,255,0.06); }
@@ -280,6 +285,9 @@ const css = `
     background: #ef4444; color: white; font-size: 0.65rem;
     font-weight: 700; padding: 1px 5px; border-radius: 100px;
     font-family: 'JetBrains Mono', monospace; line-height: 1;
+  }
+  .nxfi-mobile-link .badge.green {
+    background: #10b981; color: white;
   }
 
   .nxfi-sidebar-vertical {
@@ -320,6 +328,9 @@ const css = `
     font-weight: 700; padding: 1px 5px; border-radius: 100px;
     font-family: 'JetBrains Mono', monospace; line-height: 1.4; margin-left: auto;
   }
+  .nxfi-vertical-link .badge.green {
+    background: #10b981; color: white; margin-left: auto;
+  }
   .nxfi-vertical-footer {
     padding: 12px 8px; border-top: 1px solid var(--nav-border);
     display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;
@@ -359,7 +370,8 @@ export default function Navbar({
   const { dark, toggle }           = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
   const { toasts, show: showToast, remove: removeToast } = useToast();
-  const { billSummary } = useBillBadges(); // ← Pega o resumo de contas
+  const { billSummary } = useBillBadges();
+  const { receivableSummary } = useReceivableBadges();
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef  = useRef<HTMLDivElement>(null);
@@ -402,10 +414,13 @@ export default function Navbar({
   const firstName  = user?.displayName?.split(" ")[0] ?? "Usuário";
   const unreadCount = notifications.length;
 
-  // Cria dinamicamente os navItems com badge real
-  const navItemsWithBadge = navItems.map(item => {
+  // Cria dinamicamente os navItems com badges reais
+  const navItemsWithBadges = navItems.map(item => {
     if (item.label === "Contas a pagar") {
       return { ...item, badge: billSummary.totalPending };
+    }
+    if (item.label === "Contas a receber") {
+      return { ...item, badge: receivableSummary.totalPending };
     }
     return item;
   });
@@ -435,7 +450,7 @@ export default function Navbar({
         </a>
         <nav className="nxfi-vertical-nav">
           <div className="nxfi-vertical-section">Menu Principal</div>
-          {navItemsWithBadge.map((item) => (
+          {navItemsWithBadges.map((item) => (
             <a
               key={item.label}
               href={item.href}
@@ -443,7 +458,9 @@ export default function Navbar({
             >
               <item.icon size={16} />
               <span style={{ flex: 1 }}>{item.label}</span>
-              {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+              )}
             </a>
           ))}
         </nav>
@@ -494,11 +511,13 @@ export default function Navbar({
         </a>
 
         <div className="nxfi-nav-links">
-          {navItemsWithBadge.map((item) => (
+          {navItemsWithBadges.map((item) => (
             <a key={item.label} href={item.href} className={`nxfi-nav-link ${activePath === item.href ? "active" : ""}`}>
               <item.icon size={14} />
               {item.label}
-              {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+              )}
             </a>
           ))}
         </div>
@@ -607,7 +626,7 @@ export default function Navbar({
             </div>
             <nav className="nxfi-sidebar-nav">
               <div className="nxfi-sidebar-section">Menu principal</div>
-              {navItemsWithBadge.map((item) => (
+              {navItemsWithBadges.map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
@@ -617,7 +636,9 @@ export default function Navbar({
                   <item.icon size={16} />
                   {item.label}
                   {activePath === item.href && <span className="dot" />}
-                  {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+                  )}
                 </a>
               ))}
             </nav>
@@ -640,11 +661,13 @@ export default function Navbar({
       )}
 
       <nav className="nxfi-mobile-nav">
-        {navItemsWithBadge.map((item) => (
+        {navItemsWithBadges.map((item) => (
           <a key={item.label} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
             <div style={{ position: "relative" }}>
               <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />
-              {item.badge !== undefined && item.badge > 0 && <span className="badge">{item.badge}</span>}
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+              )}
             </div>
             {item.label}
           </a>

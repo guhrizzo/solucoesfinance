@@ -112,7 +112,7 @@ function PrevisaoModal({ open, value, onClose, onSave }: {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Meta de gastos</h3>
-            <p className="text-xs mt-2" style={{ color: "var(--cf-text2)" }}>Defina um orçamento para comparar com o realizado</p>
+            <p className="text-xs mt-2" style={{ color: "var(--cf-text2)" }}>Orçamento + Contas a pagar - Contas a receber (pendentes)</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg cursor-pointer"
             style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
@@ -692,6 +692,7 @@ export default function CashFlowPage() {
   const [hideValues, setHideValues] = useState(false);
   const [costCenterBudget, setCostCenterBudget] = useState(0);
   const [pendingBillsTotal, setPendingBillsTotal] = useState(0);
+  const [pendingReceivablesTotal, setPendingReceivablesTotal] = useState(0);
 
   // ─── Accordion state ──────────────────────────────────────────────────────
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -713,16 +714,18 @@ export default function CashFlowPage() {
     });
   }, []);
 
-  // ── Função para atualizar previsão com base em orçamentos e contas pendentes ──
-  const updatePrevisao = useCallback((newCostCenterBudget?: number, newPendingBillsTotal?: number) => {
-    setCostCenterBudget(prev => newCostCenterBudget !== undefined ? newCostCenterBudget : prev);
-    setPendingBillsTotal(prev => newPendingBillsTotal !== undefined ? newPendingBillsTotal : prev);
-    
-    const centerBudget = newCostCenterBudget !== undefined ? newCostCenterBudget : costCenterBudget;
-    const billsTotal = newPendingBillsTotal !== undefined ? newPendingBillsTotal : pendingBillsTotal;
-    
-    setPrevisao(centerBudget + billsTotal);
-  }, [costCenterBudget, pendingBillsTotal]);
+  // ── Função para atualizar previsão com base em orçamentos, contas a pagar e contas a receber ──
+  const updatePrevisao = useCallback((newCostCenterBudget?: number, newPendingBillsTotal?: number, newPendingReceivablesTotal?: number) => {
+    if (newCostCenterBudget !== undefined) setCostCenterBudget(newCostCenterBudget);
+    if (newPendingBillsTotal !== undefined) setPendingBillsTotal(newPendingBillsTotal);
+    if (newPendingReceivablesTotal !== undefined) setPendingReceivablesTotal(newPendingReceivablesTotal);
+  }, []);
+
+  // ── Effect para recalcular previsão quando qualquer valor muda ──
+  useEffect(() => {
+    const newPrevisao = costCenterBudget + pendingBillsTotal - pendingReceivablesTotal;
+    setPrevisao(newPrevisao);
+  }, [costCenterBudget, pendingBillsTotal, pendingReceivablesTotal]);
 
   useEffect(() => {
     if (txs.length > 0) {
@@ -736,70 +739,89 @@ export default function CashFlowPage() {
     }
   }, [txs.length > 0]);
 
-  useEffect(() => {
-    let snapUnsub: (() => void) | undefined;
-    let snapCenterUnsub: (() => void) | undefined;
-    let snapBillsUnsub: (() => void) | undefined;
-    let authUnsub: (() => void) | undefined;
-    (async () => {
-      try {
-        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, where }] = await Promise.all([
-          import("../../lib/firebase"),
-          import("firebase/auth"),
-          import("firebase/firestore"),
-        ]);
-        const { auth, db } = await getFirebase();
-        authUnsub = onAuthStateChanged(auth, (u) => {
-          if (!u) { window.location.href = "/login"; return; }
-          setUid(u.uid);
-          setUserName(u.displayName ?? u.email ?? "Usuário");
-          setUserEmail(u.email ?? "");
+   useEffect(() => {
+     let snapUnsub: (() => void) | undefined;
+     let snapCenterUnsub: (() => void) | undefined;
+     let snapBillsUnsub: (() => void) | undefined;
+     let snapReceivablesUnsub: (() => void) | undefined;
+     let authUnsub: (() => void) | undefined;
+     (async () => {
+       try {
+         const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, where }] = await Promise.all([
+           import("../../lib/firebase"),
+           import("firebase/auth"),
+           import("firebase/firestore"),
+         ]);
+         const { auth, db } = await getFirebase();
+         authUnsub = onAuthStateChanged(auth, (u) => {
+           if (!u) { window.location.href = "/login"; return; }
+           setUid(u.uid);
+           setUserName(u.displayName ?? u.email ?? "Usuário");
+           setUserEmail(u.email ?? "");
 
-          // ── Listener de transações ──
-          snapUnsub?.();
-          const q = query(collection(db, "users", u.uid, "cashflow"), orderBy("createdAt", "desc"));
-          snapUnsub = onSnapshot(q,
-            (snap) => { setTxs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Tx))); setPageState("ready"); },
-            (err) => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
-          );
+           // ── Listener de transações ──
+           snapUnsub?.();
+           const q = query(collection(db, "users", u.uid, "cashflow"), orderBy("createdAt", "desc"));
+           snapUnsub = onSnapshot(q,
+             (snap) => { setTxs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Tx))); setPageState("ready"); },
+             (err) => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
+           );
 
-          // ── Listener de orçamento total (centros de custo) ──
-          snapCenterUnsub?.();
-          const centerQ = query(collection(db, "costCenters"), where("userId", "==", u.uid));
-          snapCenterUnsub = onSnapshot(
-            centerQ,
-            (snap) => {
-              const totalBudget = snap.docs.reduce((sum, doc) => sum + (doc.data().budget || 0), 0);
-              // Calcula previsão com contas pendentes adicionadas
-              updatePrevisao(totalBudget);
-            },
-            (err) => {
-              console.debug("Aviso ao sincronizar orçamento:", err.code);
-            }
-          );
+           // ── Listener de orçamento total (centros de custo) ──
+           snapCenterUnsub?.();
+           const centerQ = query(collection(db, "costCenters"), where("userId", "==", u.uid));
+           snapCenterUnsub = onSnapshot(
+             centerQ,
+             (snap) => {
+               const totalBudget = snap.docs.reduce((sum, doc) => sum + (doc.data().budget || 0), 0);
+               // Calcula previsão com contas pendentes adicionadas
+               updatePrevisao(totalBudget);
+             },
+             (err) => {
+               console.debug("Aviso ao sincronizar orçamento:", err.code);
+             }
+           );
 
-          // ── Listener de contas pendentes (contas a pagar) ──
-          snapBillsUnsub?.();
-          const billsQ = query(
-            collection(db, "users", u.uid, "bills"),
-            where("status", "in", ["pendente", "vencido", "agendado"])
-          );
-          snapBillsUnsub = onSnapshot(
-            billsQ,
-            (snap) => {
-              const billsTotal = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-              // Atualiza previsão incluindo contas pendentes
-              updatePrevisao(undefined, billsTotal);
-            },
-            (err) => {
-              console.debug("Aviso ao sincronizar contas pendentes:", err.code);
-            }
-          );
-        });
-      } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
-    })();
-    return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); };
-  }, []);
+           // ── Listener de contas pendentes (contas a pagar) ──
+           snapBillsUnsub?.();
+           const billsQ = query(
+             collection(db, "users", u.uid, "bills"),
+             where("status", "in", ["pendente", "vencido", "agendado"])
+           );
+           snapBillsUnsub = onSnapshot(
+             billsQ,
+             (snap) => {
+               const billsTotal = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+               // Atualiza previsão incluindo contas pendentes
+               updatePrevisao(undefined, billsTotal);
+             },
+             (err) => {
+               console.debug("Aviso ao sincronizar contas pendentes:", err.code);
+             }
+           );
+
+           // ── Listener de contas a receber pendentes ──
+           snapReceivablesUnsub?.();
+           const receivablesQ = query(
+             collection(db, "users", u.uid, "receivables"),
+             where("status", "in", ["pendente", "atrasado", "agendado"])
+           );
+           snapReceivablesUnsub = onSnapshot(
+             receivablesQ,
+             (snap) => {
+               const receivablesTotal = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+               // Contas a receber pendentes também contam para meta de gastos
+               updatePrevisao(undefined, undefined, receivablesTotal);
+             },
+             (err) => {
+               console.debug("Aviso ao sincronizar contas a receber:", err.code);
+             }
+           );
+         });
+       } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
+     })();
+     return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); snapReceivablesUnsub?.(); };
+   }, []);
 
   async function handleLogout() {
     const { getFirebase } = await import("../../lib/firebase");
@@ -914,9 +936,9 @@ export default function CashFlowPage() {
         .mono { font-family: 'JetBrains Mono', monospace; }
 
         .cf-card { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; }
-        .cf-kpi { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px;
-          transition: all .2s cubic-bezier(.4, 0, .2, 1); }
-        .cf-kpi:hover { border-color: var(--cf-text3); transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
+         .cf-kpi { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px;
+           transition: all .2s cubic-bezier(.4, 0, .2, 1); }
+         .cf-kpi:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
         .cf-kpi.clickable { cursor: pointer; }
         .cf-kpi.clickable:active { transform: translateY(0); }
 
