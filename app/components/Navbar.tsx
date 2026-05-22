@@ -6,6 +6,7 @@ import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, Calendar, Settings,
   LogOut, ClipboardList, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap, PanelLeft,
+  Landmark,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
@@ -23,19 +24,21 @@ interface NavbarProps {
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard",        href: "/dashboard" },
-  { icon: TrendingUp,      label: "Fluxo de caixa",   href: "/fluxo-caixa" },
-  { icon: FileText,        label: "Relatórios",        href: "/relatorios" },
-  { icon: CreditCard,      label: "Contas a pagar",    href: "/contasPagar" },
-  { icon: DollarSign,      label: "Contas a receber",  href: "/contasReceber" },
-  { icon: BarChart2,       label: "Centro de custos",  href: "/costCenter" },
-  { icon: Users,           label: "Usuários",          href: "/users" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: TrendingUp, label: "Fluxo de caixa", href: "/fluxo-caixa" },
+  { icon: FileText, label: "Relatórios", href: "/relatorios" },
+  { icon: CreditCard, label: "Contas a pagar", href: "/contasPagar" },
+  { icon: Landmark, label: "Impostos", href:"/impostos" },
+  { icon: DollarSign, label: "Contas a receber", href: "/contasReceber" },
+  { icon: BarChart2, label: "Centro de custos", href: "/costCenter" },
+  { icon: Users, label: "Usuários", href: "/users" },
+  
 ];
 
 const notifications = [
-  { id: 1, title: "Vencimento próximo",  desc: "Simples Nacional vence em 2 dias",                  time: "há 10 min", urgent: true  },
-  { id: 2, title: "Nova transação",      desc: "Recebimento de Delta Tecnologia — R$ 134.000",      time: "há 35 min", urgent: false },
-  { id: 3, title: "Meta atingida",       desc: "Lucro líquido superou projeção de outubro",         time: "há 2h",     urgent: false },
+  { id: 1, title: "Vencimento próximo", desc: "Simples Nacional vence em 2 dias", time: "há 10 min", urgent: true },
+  { id: 2, title: "Nova transação", desc: "Recebimento de Delta Tecnologia — R$ 134.000", time: "há 35 min", urgent: false },
+  { id: 3, title: "Meta atingida", desc: "Lucro líquido superou projeção de outubro", time: "há 2h", urgent: false },
 ];
 
 const css = `
@@ -364,23 +367,23 @@ export default function Navbar({
   onLogout,
 }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [notifOpen,  setNotifOpen]  = useState(false);
-  const [userOpen,   setUserOpen]   = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
 
-  const { dark, toggle }           = useTheme();
+  const { dark, toggle } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
   const { toasts, show: showToast, remove: removeToast } = useToast();
   const { billSummary } = useBillBadges();
   const { receivableSummary } = useReceivableBadges();
 
   const notifRef = useRef<HTMLDivElement>(null);
-  const userRef  = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
 
   // Fecha dropdowns ao clicar fora
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
-      if (userRef.current  && !userRef.current.contains(e.target as Node))  setUserOpen(false);
+      if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -410,8 +413,8 @@ export default function Navbar({
     };
   }, [layout]);
 
-  const initial    = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U";
-  const firstName  = user?.displayName?.split(" ")[0] ?? "Usuário";
+  const initial = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U";
+  const firstName = user?.displayName?.split(" ")[0] ?? "Usuário";
   const unreadCount = notifications.length;
 
   // Cria dinamicamente os navItems com badges reais
@@ -590,9 +593,9 @@ export default function Navbar({
                 <div style={{ padding: "6px 0" }}>
                   {[
                     { icon: UserCircle, label: "Meu perfil", action: () => showToast("Abrindo perfil...", "info") },
-                    { icon: Zap,        label: "Plano & faturamento", action: () => showToast("Abrindo plano...", "info") },
+                    { icon: Zap, label: "Plano & faturamento", action: () => showToast("Abrindo plano...", "info") },
                     { icon: HelpCircle, label: "Ajuda & suporte", action: () => showToast("Redirecionando para ajuda...", "info") },
-                    { icon: Settings,   label: "Configurações", action: () => showToast("Abrindo configurações...", "info") },
+                    { icon: Settings, label: "Configurações", action: () => showToast("Abrindo configurações...", "info") },
                   ].map((item) => (
                     <button key={item.label} className="nxfi-drop-item" onClick={item.action}>
                       <item.icon size={14} />
