@@ -143,13 +143,15 @@ function parseAmount(raw: string): number {
 function formatAmount(raw: string): string {
     let s = raw.replace(/[^\d,.]/g, "");
     if (!s) return "";
+    // Se tem vírgula, formata com separador de milhares
     if (s.includes(",")) {
         const [intPart, decPart] = s.split(",");
         const formatted = intPart.replace(/\./g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         return decPart !== undefined ? formatted + "," + decPart : formatted;
     }
-    s = s.replace(/\./g, "");
-    return s.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    // Se não tem vírgula, retorna apenas os dígitos sem formatação de milhares
+    // Isso permite o usuário digitar valores sem separadores
+    return s;
 }
 
 if (typeof window !== "undefined") {

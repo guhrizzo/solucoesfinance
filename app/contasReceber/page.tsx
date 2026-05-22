@@ -119,9 +119,9 @@ function formatAmount(raw: string): string {
         return decPart !== undefined ? formatted + "," + decPart : formatted;
     }
     
-    // Se só tem ponto, trata como separador de mil (remover e reformatar)
-    s = s.replace(/\./g, "");
-    return s.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    // Se não tem vírgula, retorna apenas os dígitos sem formatação de milhares
+    // Isso permite o usuário digitar valores sem separadores
+    return s;
 }
 
 if (typeof window !== "undefined") {

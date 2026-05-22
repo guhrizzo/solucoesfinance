@@ -692,6 +692,7 @@ export default function CashFlowPage() {
   const [hideValues, setHideValues] = useState(false);
   const [costCenterBudget, setCostCenterBudget] = useState(0);
   const [pendingBillsTotal, setPendingBillsTotal] = useState(0);
+  const [pendingTaxesTotal, setPendingTaxesTotal] = useState(0);
 
   // ─── Accordion state ──────────────────────────────────────────────────────
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -713,17 +714,18 @@ export default function CashFlowPage() {
     });
   }, []);
 
-  // ── Função para atualizar previsão com base em orçamentos e contas a pagar ──
-  const updatePrevisao = useCallback((newCostCenterBudget?: number, newPendingBillsTotal?: number) => {
+  // ── Função para atualizar previsão com base em orçamentos, contas a pagar e impostos ──
+  const updatePrevisao = useCallback((newCostCenterBudget?: number, newPendingBillsTotal?: number, newPendingTaxesTotal?: number) => {
     if (newCostCenterBudget !== undefined) setCostCenterBudget(newCostCenterBudget);
     if (newPendingBillsTotal !== undefined) setPendingBillsTotal(newPendingBillsTotal);
+    if (newPendingTaxesTotal !== undefined) setPendingTaxesTotal(newPendingTaxesTotal);
   }, []);
 
   // ── Effect para recalcular previsão quando qualquer valor muda ──
   useEffect(() => {
-    const newPrevisao = costCenterBudget + pendingBillsTotal;
+    const newPrevisao = costCenterBudget + pendingBillsTotal + pendingTaxesTotal;
     setPrevisao(newPrevisao);
-  }, [costCenterBudget, pendingBillsTotal]);
+  }, [costCenterBudget, pendingBillsTotal, pendingTaxesTotal]);
 
   useEffect(() => {
     if (txs.length > 0) {
@@ -741,6 +743,7 @@ export default function CashFlowPage() {
       let snapUnsub: (() => void) | undefined;
       let snapCenterUnsub: (() => void) | undefined;
       let snapBillsUnsub: (() => void) | undefined;
+      let snapTaxesUnsub: (() => void) | undefined;
       let authUnsub: (() => void) | undefined;
       (async () => {
         try {
@@ -796,10 +799,28 @@ export default function CashFlowPage() {
                 console.debug("Aviso ao sincronizar contas pendentes:", err.code);
               }
             );
+
+            // ── Listener de impostos pendentes ──
+            snapTaxesUnsub?.();
+            const taxesQ = query(
+              collection(db, "users", u.uid, "taxes"),
+              where("status", "in", ["nao_pago", "atraso", "agendado"])
+            );
+            snapTaxesUnsub = onSnapshot(
+              taxesQ,
+              (snap) => {
+                const taxesTotal = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+                // Atualiza previsão incluindo impostos pendentes
+                updatePrevisao(undefined, undefined, taxesTotal);
+              },
+              (err) => {
+                console.debug("Aviso ao sincronizar impostos:", err.code);
+              }
+            );
           });
         } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
       })();
-      return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); };
+      return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); snapTaxesUnsub?.(); };
     }, []);
 
   async function handleLogout() {
