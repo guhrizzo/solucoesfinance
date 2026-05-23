@@ -106,6 +106,17 @@ const STATUS_META: Record<TaxStatus, { label: string; bg: string; color: string;
     agendado: { label: "Agendado", bg: "#dbeafe", color: "#1d4ed8", border: "#bfdbfe", icon: Calendar },
 };
 
+// Mapeamento de tipo de imposto → categoria do cashflow
+const TAX_TYPE_TO_CATEGORY: Record<TaxType, string> = {
+    irpf: "Impostos",
+    irpj: "Impostos",
+    pis_cofins: "Impostos",
+    icms: "Impostos",
+    iss: "Impostos",
+    impostos_estaduais: "Impostos",
+    outro: "Impostos",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const toBRL = (n: number) =>
