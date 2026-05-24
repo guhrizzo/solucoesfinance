@@ -10,6 +10,7 @@ import {
     FileText, Clock, Building2, BarChart3, Download,
     ChevronLeft, ChevronRight, type LucideIcon,
     AlertCircle, Info, Eye, EyeOff, Zap, Target,
+    Home, Car, Shield, Briefcase, Package, HelpCircle, Globe,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -17,7 +18,13 @@ import Navbar from "../components/Navbar";
 
 type TaxStatus = "nao_pago" | "pago" | "atraso" | "agendado";
 type TaxFrequency = "mensal" | "trimestral" | "semestral" | "anual";
-type TaxType = "irpf" | "irpj" | "pis_cofins" | "icms" | "iss" | "impostos_estaduais" | "outro";
+type TaxSphere = "federal" | "estadual" | "municipal" | "outro";
+
+type TaxType =
+    | "simples_nacional" | "irpf" | "irpj" | "pis" | "cofins" | "csll" | "ipi" | "iof" | "itr" | "inss" | "fgts" // Federais
+    | "icms" | "ipva" | "itcmd" // Estaduais
+    | "iss" | "iptu" | "itbi" // Municipais
+    | "outro";
 
 interface Tax {
     id: string;
@@ -40,55 +47,163 @@ interface Tax {
 
 const TODAY = new Date().toISOString().split("T")[0];
 
-const TAX_TYPES: { id: TaxType; label: string; icon: LucideIcon; color: string; description: string }[] = [
+interface TaxTypeMeta {
+    id: TaxType;
+    label: string;
+    icon: LucideIcon;
+    color: string;
+    description: string;
+    esfera: TaxSphere;
+}
+
+const TAX_TYPES: TaxTypeMeta[] = [
+    // Federais (Tons de Azul)
+    {
+        id: "simples_nacional",
+        label: "Simples Nacional",
+        icon: Zap,
+        color: "#1e40af",
+        description: "Regime Unificado de Impostos (DAS)",
+        esfera: "federal",
+    },
     {
         id: "irpf",
         label: "IRPF",
         icon: DollarSign,
-        color: "#ef4444",
+        color: "#2563eb",
         description: "Imposto de Renda Pessoa Física",
+        esfera: "federal",
     },
     {
         id: "irpj",
         label: "IRPJ",
         icon: Building2,
-        color: "#f59e0b",
+        color: "#1d4ed8",
         description: "Imposto de Renda Pessoa Jurídica",
+        esfera: "federal",
     },
     {
-        id: "pis_cofins",
-        label: "PIS/COFINS",
+        id: "pis",
+        label: "PIS",
         icon: Percent,
-        color: "#3b82f6",
-        description: "Contribuição Social e PIS",
+        color: "#0284c7",
+        description: "Programa de Integração Social",
+        esfera: "federal",
     },
+    {
+        id: "cofins",
+        label: "COFINS",
+        icon: BarChart3,
+        color: "#0369a1",
+        description: "Contribuição para Financiamento da Seguridade Social",
+        esfera: "federal",
+    },
+    {
+        id: "csll",
+        label: "CSLL",
+        icon: TrendingUp,
+        color: "#0891b2",
+        description: "Contribuição Social sobre o Lucro Líquido",
+        esfera: "federal",
+    },
+    {
+        id: "ipi",
+        label: "IPI",
+        icon: Package,
+        color: "#0e7490",
+        description: "Imposto sobre Produtos Industrializados",
+        esfera: "federal",
+    },
+    {
+        id: "iof",
+        label: "IOF",
+        icon: DollarSign,
+        color: "#4f46e5",
+        description: "Imposto sobre Operações Financeiras",
+        esfera: "federal",
+    },
+    {
+        id: "itr",
+        label: "ITR",
+        icon: Globe,
+        color: "#4338ca",
+        description: "Imposto Territorial Rural",
+        esfera: "federal",
+    },
+    {
+        id: "inss",
+        label: "INSS",
+        icon: Shield,
+        color: "#06b6d4",
+        description: "Previdência Social",
+        esfera: "federal",
+    },
+    {
+        id: "fgts",
+        label: "FGTS",
+        icon: Briefcase,
+        color: "#0891b2",
+        description: "Fundo de Garantia do Tempo de Serviço",
+        esfera: "federal",
+    },
+    // Estaduais (Tons de Roxo/Rosa)
     {
         id: "icms",
         label: "ICMS",
         icon: TrendingUp,
-        color: "#8b5cf6",
-        description: "Imposto sobre Circulação de Mercadorias",
+        color: "#7c3aed",
+        description: "Imposto sobre Circulação de Mercadorias e Serviços",
+        esfera: "estadual",
     },
+    {
+        id: "ipva",
+        label: "IPVA",
+        icon: Car,
+        color: "#9333ea",
+        description: "Imposto sobre a Propriedade de Veículos Automotores",
+        esfera: "estadual",
+    },
+    {
+        id: "itcmd",
+        label: "ITCMD",
+        icon: FileText,
+        color: "#c084fc",
+        description: "Imposto sobre Transmissão Causa Mortis e Doação",
+        esfera: "estadual",
+    },
+    // Municipais (Tons de Verde/Teal)
     {
         id: "iss",
         label: "ISS",
         icon: FileText,
-        color: "#06b6d4",
+        color: "#059669",
         description: "Imposto Sobre Serviços",
+        esfera: "municipal",
     },
     {
-        id: "impostos_estaduais",
-        label: "Estaduais",
-        icon: AlertCircle,
-        color: "#14b8a6",
-        description: "Impostos Estaduais",
+        id: "iptu",
+        label: "IPTU",
+        icon: Home,
+        color: "#10b981",
+        description: "Imposto Predial e Territorial Urbano",
+        esfera: "municipal",
     },
+    {
+        id: "itbi",
+        label: "ITBI",
+        icon: Building2,
+        color: "#0d9488",
+        description: "Imposto sobre Transmissão de Bens Imóveis",
+        esfera: "municipal",
+    },
+    // Outros
     {
         id: "outro",
         label: "Outro",
-        icon: Zap,
+        icon: HelpCircle,
         color: "#6366f1",
-        description: "Outros impostos",
+        description: "Outros impostos e taxas",
+        esfera: "outro",
     },
 ];
 
@@ -108,12 +223,23 @@ const STATUS_META: Record<TaxStatus, { label: string; bg: string; color: string;
 
 // Mapeamento de tipo de imposto → categoria do cashflow
 const TAX_TYPE_TO_CATEGORY: Record<TaxType, string> = {
+    simples_nacional: "Impostos",
     irpf: "Impostos",
     irpj: "Impostos",
-    pis_cofins: "Impostos",
+    pis: "Impostos",
+    cofins: "Impostos",
+    csll: "Impostos",
+    ipi: "Impostos",
+    iof: "Impostos",
+    itr: "Impostos",
+    inss: "Impostos",
+    fgts: "Impostos",
     icms: "Impostos",
+    ipva: "Impostos",
+    itcmd: "Impostos",
     iss: "Impostos",
-    impostos_estaduais: "Impostos",
+    iptu: "Impostos",
+    itbi: "Impostos",
     outro: "Impostos",
 };
 
@@ -199,7 +325,8 @@ interface TaxModalProps {
 
 function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
     const [name, setName] = useState("");
-    const [type, setType] = useState<TaxType>("irpf");
+    const [type, setType] = useState<TaxType>("simples_nacional");
+    const [activeSphere, setActiveSphere] = useState<TaxSphere>("federal");
     const [rawAmt, setRawAmt] = useState("");
     const [estimatedRawAmt, setEstimatedRawAmt] = useState("");
     const [dueDate, setDueDate] = useState(TODAY);
@@ -214,7 +341,10 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
     useEffect(() => {
         if (!open) return;
         setName(editing?.name ?? "");
-        setType(editing?.type ?? "irpf");
+        const initialType = editing?.type ?? "simples_nacional";
+        setType(initialType);
+        const meta = getTaxMeta(initialType);
+        setActiveSphere(meta?.esfera ?? "federal");
         setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
         setEstimatedRawAmt(editing && editing.estimatedAmount ? editing.estimatedAmount.toFixed(2).replace(".", ",") : "");
         setDueDate(editing?.dueDate ?? TODAY);
@@ -289,7 +419,7 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
     const typeMeta = getTaxMeta(type);
 
     return (
-        <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
+        <div className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
             style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
             <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
                 style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
@@ -335,19 +465,46 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
                     </div>
 
                     {/* Tipo de imposto */}
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Tipo de imposto</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {TAX_TYPES.map(t => {
+                        
+                        {/* Abas por Esfera Tributária */}
+                        <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)" }}>
+                            {(["federal", "estadual", "municipal", "outro"] as const).map(s => {
+                                const active = activeSphere === s;
+                                const sphereLabels: Record<TaxSphere, string> = {
+                                    federal: "Federal",
+                                    estadual: "Estadual",
+                                    municipal: "Municipal",
+                                    outro: "Outro",
+                                };
+                                return (
+                                    <button key={s} type="button" onClick={() => setActiveSphere(s)}
+                                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-center transition-all border-none"
+                                        style={active
+                                            ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+                                            : { color: "var(--cf-text2)", background: "transparent" }}>
+                                        {sphereLabels[s]}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Grid de Seleção de Tipo de Imposto */}
+                        <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1">
+                            {TAX_TYPES.filter(t => t.esfera === activeSphere).map(t => {
                                 const sel = type === t.id;
                                 return (
-                                    <button key={t.id} onClick={() => setType(t.id)}
-                                        className="flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all"
+                                    <button key={t.id} type="button" onClick={() => setType(t.id)}
+                                        className="flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all text-left w-full"
                                         style={sel
                                             ? { borderColor: t.color, background: t.color + "18", color: t.color }
                                             : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text2)" }}>
-                                        <span className="flex items-center gap-1">
+                                        <span className="flex items-center gap-1 font-bold">
                                             <t.icon size={12} /> {t.label}
+                                        </span>
+                                        <span className="text-[9px] opacity-80 font-normal leading-tight">
+                                            {t.description}
                                         </span>
                                     </button>
                                 );
@@ -626,7 +783,7 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
         warn: "#f59e0b",
     };
     return (
-        <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+        <div className="fixed top-4 right-4 z-9999 flex flex-col gap-2 pointer-events-none">
             {toasts.map(t => (
                 <div key={t.id} className="px-4 py-3 rounded-xl flex items-center gap-2 shadow-xl text-sm font-semibold text-white pointer-events-auto"
                     style={{ background: colors[t.type], animation: "slideUp .3s ease" }}>
@@ -658,6 +815,7 @@ export default function ImpostosPage() {
     const [alertDays, setAlertDays] = useState(7);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"todos" | TaxStatus>("todos");
+    const [filterSphere, setFilterSphere] = useState<"todos" | TaxSphere>("todos");
     const [filterType, setFilterType] = useState("todos");
 
     const { toasts, show: showToast } = useToast();
@@ -805,11 +963,15 @@ export default function ImpostosPage() {
         const q = search.toLowerCase();
         return enriched.filter(t => {
             if (filterStatus !== "todos" && t._status !== filterStatus) return false;
+            if (filterSphere !== "todos") {
+                const meta = getTaxMeta(t.type);
+                if (meta?.esfera !== filterSphere) return false;
+            }
             if (filterType !== "todos" && t.type !== filterType) return false;
             if (q && !t.name.toLowerCase().includes(q) && !t.notes.toLowerCase().includes(q)) return false;
             return true;
         });
-    }, [enriched, filterStatus, filterType, search]);
+    }, [enriched, filterStatus, filterSphere, filterType, search]);
 
     const sections = useMemo(() => [
         { key: "atraso", label: "Em Atraso", color: "#dc2626", taxes: filtered.filter(t => t._status === "atraso") },
@@ -885,7 +1047,7 @@ export default function ImpostosPage() {
             />
 
             {confirmId && (
-                <div className="fixed inset-0 z-[990] flex items-center justify-center p-4"
+                <div className="fixed inset-0 z-990 flex items-center justify-center p-4"
                     style={{ background: "rgba(13,17,23,0.5)", backdropFilter: "blur(8px)" }}>
                     <div className="cf-card p-6 w-full max-w-xs text-center"
                         style={{ animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
@@ -988,6 +1150,25 @@ export default function ImpostosPage() {
                             );
                         })}
                         <div className="ml-auto flex items-center gap-2 shrink-0">
+                            {/* Filtro por Esfera */}
+                            <div className="relative">
+                                <Filter size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                                    style={{ color: "var(--cf-text3)" }} />
+                                <select value={filterSphere} onChange={e => {
+                                    setFilterSphere(e.target.value as "todos" | TaxSphere);
+                                    setFilterType("todos"); // Reseta o tipo de imposto
+                                }}
+                                    className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
+                                    style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
+                                    <option value="todos">Todas esferas</option>
+                                    <option value="federal">Federal</option>
+                                    <option value="estadual">Estadual</option>
+                                    <option value="municipal">Municipal</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+
+                            {/* Filtro por Tipo */}
                             <div className="relative">
                                 <Filter size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
                                     style={{ color: "var(--cf-text3)" }} />
@@ -995,7 +1176,34 @@ export default function ImpostosPage() {
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
                                     <option value="todos">Todos tipos</option>
-                                    {TAX_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                    {(filterSphere === "todos" || filterSphere === "federal") && (
+                                        <optgroup label="Federais">
+                                            {TAX_TYPES.filter(t => t.esfera === "federal").map(t => (
+                                                <option key={t.id} value={t.id}>{t.label}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    {(filterSphere === "todos" || filterSphere === "estadual") && (
+                                        <optgroup label="Estaduais">
+                                            {TAX_TYPES.filter(t => t.esfera === "estadual").map(t => (
+                                                <option key={t.id} value={t.id}>{t.label}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    {(filterSphere === "todos" || filterSphere === "municipal") && (
+                                        <optgroup label="Municipais">
+                                            {TAX_TYPES.filter(t => t.esfera === "municipal").map(t => (
+                                                <option key={t.id} value={t.id}>{t.label}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    {(filterSphere === "todos" || filterSphere === "outro") && (
+                                        <optgroup label="Outros">
+                                            {TAX_TYPES.filter(t => t.esfera === "outro").map(t => (
+                                                <option key={t.id} value={t.id}>{t.label}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
                                 </select>
                             </div>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text3)" }}>
@@ -1013,16 +1221,16 @@ export default function ImpostosPage() {
                             <Target size={24} style={{ color: "var(--cf-text3)" }} />
                         </div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-                            {search || filterStatus !== "todos" || filterType !== "todos"
+                            {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
                                 ? "Nenhum resultado"
                                 : "Nenhum imposto cadastrado"}
                         </p>
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text2)" }}>
-                            {search || filterStatus !== "todos" || filterType !== "todos"
+                            {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
                                 ? "Ajuste os filtros para ver outros impostos."
                                 : "Comece a rastrear seus impostos e receba alertas antes dos prazos."}
                         </p>
-                        {!search && filterStatus === "todos" && filterType === "todos" && (
+                        {!search && filterStatus === "todos" && filterType === "todos" && filterSphere === "todos" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}
                                 className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer mt-2"
                                 style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
