@@ -442,16 +442,15 @@ textarea::placeholder {
   border-color: var(--cf-border-alt);
 }
 
-/* ────────────────────────────────────────────────────────────────── */
-/* BLUR & MODAL STATES */
-/* ────────────────────────────────────────────────────────────────── */
 
-body.modal-open .nxfi-nav,
-body.modal-open .nxfi-sidebar-vertical {
-  filter: blur(3px);
+
+body.modal-open .nxfi-nav > *:not(style),
+body.modal-open .nxfi-mobile-nav > *:not(style),
+body.modal-open .nxfi-sidebar-vertical > *:not(style) {
+  filter: blur(4px) brightness(0.7);
   transition: filter 0.3s ease;
-  pointer-events: none;
 }
+
 
 /* ────────────────────────────────────────────────────────────────── */
 /* TEXT UTILITIES */

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, Calendar, Settings,
   LogOut, ClipboardList, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap, PanelLeft,
-  Landmark,
+  Landmark, Boxes,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { icon: Landmark, label: "Impostos", href:"/impostos" },
   { icon: DollarSign, label: "Contas a receber", href: "/contasReceber" },
   { icon: BarChart2, label: "Centro de custos", href: "/costCenter" },
+  { icon: Boxes, label: "Estoque", href: "/estoque" },
   { icon: Users, label: "Usuários", href: "/users" },
   
 ];
@@ -297,8 +298,8 @@ const css = `
     position: fixed; top: 0; left: 0; height: 100vh; z-index: 50;
     width: 260px; display: flex; flex-direction: column; flex-shrink: 0;
     background: var(--nav-bg);
-    border-right: 1px solid var(--nav-border);
-    box-shadow: 1px 0 0 var(--nav-border);
+    
+    
     overflow-y: auto; overflow-x: hidden;
   }
   .nxfi-vertical-logo {
