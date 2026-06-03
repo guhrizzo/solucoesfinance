@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log("[Webhook Shopee] Recebido evento:", body);
 
-    const { getFirebase } = await import("../../../../lib/firebase");
+    const { getFirebase } = await import("@/lib/firebase");
     const { db } = await getFirebase();
     const { collection, getDocs, query, where, doc, updateDoc } = await import("firebase/firestore");
 

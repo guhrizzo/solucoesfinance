@@ -91,7 +91,7 @@ function parseAmount(raw: string): number {
 }
 
 if (typeof window !== "undefined") {
-  import("../../lib/firebase");
+  import("@/lib/firebase");
   import("firebase/auth");
   import("firebase/firestore");
 }
@@ -222,7 +222,7 @@ function Modal({ open, editing, uid, onClose, onSave }: {
     if (!nfFile || !uid) return { url: nfUrl, name: nfName };
     const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout: Firebase Storage pode não estar ativado.")), 15000));
     const upload = async () => {
-      const [{ getFirebase }, { ref, uploadBytes, getDownloadURL }] = await Promise.all([import("../../lib/firebase"), import("firebase/storage")]);
+      const [{ getFirebase }, { ref, uploadBytes, getDownloadURL }] = await Promise.all([import("@/lib/firebase"), import("firebase/storage")]);
       const { storage } = await getFirebase();
       const storageRef = ref(storage, `users/${uid}/nfs/${Date.now()}_${nfFile.name}`);
       await uploadBytes(storageRef, nfFile);
@@ -748,7 +748,7 @@ export default function CashFlowPage() {
       (async () => {
         try {
           const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, where }] = await Promise.all([
-            import("../../lib/firebase"),
+            import("@/lib/firebase"),
             import("firebase/auth"),
             import("firebase/firestore"),
           ]);
@@ -824,7 +824,7 @@ export default function CashFlowPage() {
     }, []);
 
   async function handleLogout() {
-    const { getFirebase } = await import("../../lib/firebase");
+    const { getFirebase } = await import("@/lib/firebase");
     const { signOut } = await import("firebase/auth");
     const { auth } = await getFirebase();
     await signOut(auth);
@@ -833,7 +833,7 @@ export default function CashFlowPage() {
 
   async function handleSave(data: Omit<Tx, "id">) {
     if (!uid) throw new Error("Usuário não autenticado");
-    const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([import("../../lib/firebase"), import("firebase/firestore")]);
+    const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
     const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
     if (editing) await updateDoc(doc(db, "users", uid, "cashflow", editing.id), clean as any);
@@ -842,7 +842,7 @@ export default function CashFlowPage() {
 
   async function handleImport(importedTxs: ImportedTx[]) {
     if (!uid) throw new Error("Usuário não autenticado");
-    const [{ getFirebase }, { collection, addDoc }] = await Promise.all([import("../../lib/firebase"), import("firebase/firestore")]);
+    const [{ getFirebase }, { collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
     await Promise.all(importedTxs.map(tx => addDoc(collection(db, "users", uid, "cashflow"), { ...tx, createdAt: Date.now() })));
   }
@@ -851,7 +851,7 @@ export default function CashFlowPage() {
     if (!confirmId || !uid || deleting) return;
     setDeleting(true);
     try {
-      const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([import("../../lib/firebase"), import("firebase/firestore")]);
+      const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
       const { db } = await getFirebase();
       await deleteDoc(doc(db, "users", uid, "cashflow", confirmId));
       setConfirmId(null);

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const isMock = isMockParam || !partnerId || partnerId === "SEU_PARTNER_ID_AQUI";
 
   try {
-    const { getFirebase } = await import("../../../../lib/firebase");
+    const { getFirebase } = await import("@/lib/firebase");
     const { db } = await getFirebase();
     const { collection, addDoc, getDocs, query, where, doc, setDoc } = await import("firebase/firestore");
 

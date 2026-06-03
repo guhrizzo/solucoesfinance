@@ -33,7 +33,7 @@ const getErrorMessage = (code: string) =>
 
 // ── Firebase lazy helpers ─────────────────────────────────────────────────────
 async function registerWithEmail(name: string, email: string, password: string) {
-  const { getFirebase } = await import("../../lib/firebase");
+  const { getFirebase } = await import("@/lib/firebase");
   const { createUserWithEmailAndPassword, updateProfile } = await import("firebase/auth");
   const { auth } = await getFirebase();
   const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -42,7 +42,7 @@ async function registerWithEmail(name: string, email: string, password: string) 
 }
 
 async function registerWithGoogle() {
-  const { getFirebase } = await import("../../lib/firebase");
+  const { getFirebase } = await import("@/lib/firebase");
   const { signInWithPopup } = await import("firebase/auth");
   const { auth, googleProvider } = await getFirebase();
   return signInWithPopup(auth, googleProvider);

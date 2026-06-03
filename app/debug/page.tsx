@@ -52,7 +52,7 @@ export default function FirebaseDebug() {
         add("info", "── Importando módulos Firebase ──");
         let getFirebase: any;
         try {
-            const mod = await import("../../lib/firebase");
+            const mod = await import("@/lib/firebase");
             getFirebase = mod.getFirebase;
             add("ok", "import('@/lib/firebase') ✓");
         } catch (e: any) {
@@ -104,7 +104,7 @@ export default function FirebaseDebug() {
         // ── 5. Testar Firestore ──────────────────────────────────────────────────
         add("info", "── Testando Firestore ──");
         try {
-            const { getFirebase: gf } = await import("../../lib/firebase");
+            const { getFirebase: gf } = await import("@/lib/firebase");
             const { db } = await gf();
             const { doc, getDoc } = await import("firebase/firestore");
             await getDoc(doc(db, "_debug_", "ping"));

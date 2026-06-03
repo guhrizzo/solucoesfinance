@@ -8,7 +8,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
     }
 
-    const { getFirebase } = await import("../../../../lib/firebase");
+    const { getFirebase } = await import("@/lib/firebase");
     const { db } = await getFirebase();
     const { collection, getDocs, query, where, doc, updateDoc, addDoc, setDoc } = await import("firebase/firestore");
 

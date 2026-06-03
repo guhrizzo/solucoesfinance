@@ -125,7 +125,7 @@ function formatAmount(raw: string): string {
 }
 
 if (typeof window !== "undefined") {
-    import("../../lib/firebase");
+    import("@/lib/firebase");
     import("firebase/auth");
     import("firebase/firestore");
 }
@@ -195,7 +195,7 @@ function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProp
         setUploadingPhoto(true);
         try {
             const [{ getFirebase }, { ref, uploadBytes, getDownloadURL }] = await Promise.all([
-                import("../../lib/firebase"),
+                import("@/lib/firebase"),
                 import("firebase/storage"),
             ]);
             const { storage } = await getFirebase();
@@ -753,7 +753,7 @@ export default function ContasReceberPage() {
             try {
                 const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot }] =
                     await Promise.all([
-                        import("../../lib/firebase"),
+                        import("@/lib/firebase"),
                         import("firebase/auth"),
                         import("firebase/firestore"),
                     ]);
@@ -811,7 +811,7 @@ export default function ContasReceberPage() {
 
     // ── Logout ─────────────────────────────────────────────────────────────────
     async function handleLogout() {
-        const { getFirebase } = await import("../../lib/firebase");
+        const { getFirebase } = await import("@/lib/firebase");
         const { signOut } = await import("firebase/auth");
         const { auth } = await getFirebase();
         await signOut(auth);
@@ -822,7 +822,7 @@ export default function ContasReceberPage() {
     async function handleSave(data: Omit<Receivable, "id" | "userId" | "createdAt">) {
         if (!uid) throw new Error("Não autenticado");
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
-            import("../../lib/firebase"),
+            import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
         const { db } = await getFirebase();
@@ -842,7 +842,7 @@ export default function ContasReceberPage() {
     async function handleReceive(receivable: Receivable) {
         if (!uid) return;
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
-            import("../../lib/firebase"),
+            import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
         const { db } = await getFirebase();
@@ -870,7 +870,7 @@ export default function ContasReceberPage() {
         setDeleting(true);
         try {
             const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
-                import("../../lib/firebase"),
+                import("@/lib/firebase"),
                 import("firebase/firestore"),
             ]);
             const { db } = await getFirebase();

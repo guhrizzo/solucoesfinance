@@ -99,7 +99,7 @@ export default function EstoquePage() {
 
     (async () => {
       try {
-        const { getFirebase } = await import("../../lib/firebase");
+        const { getFirebase } = await import("@/lib/firebase");
         const { db } = await getFirebase();
         const { collection, onSnapshot, query, where } = await import("firebase/firestore");
 
@@ -219,7 +219,7 @@ export default function EstoquePage() {
 
     setFormSaving(true);
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { collection, addDoc, updateDoc, doc, query, where, getDocs } = await import("firebase/firestore");
 
@@ -293,7 +293,7 @@ export default function EstoquePage() {
     if (!confirm(`Deseja realmente remover o produto ${sku} e todos os seus vínculos com anúncios?`)) return;
 
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { doc, deleteDoc, collection, query, where, getDocs } = await import("firebase/firestore");
 
@@ -319,7 +319,7 @@ export default function EstoquePage() {
     if (!confirm(`Deseja desconectar a conta integrada da plataforma ${platform}? Seus anúncios vinculados não serão mais sincronizados.`)) return;
 
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { doc, deleteDoc, collection, query, where, getDocs } = await import("firebase/firestore");
 
@@ -347,7 +347,7 @@ export default function EstoquePage() {
 
     setFormVinculoSaving(true);
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { collection, addDoc, getDocs, query, where } = await import("firebase/firestore");
 
@@ -406,7 +406,7 @@ export default function EstoquePage() {
     if (!confirm("Deseja realmente desvincular este anúncio do produto central?")) return;
 
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { doc, deleteDoc } = await import("firebase/firestore");
 

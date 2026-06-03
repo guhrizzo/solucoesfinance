@@ -32,21 +32,21 @@ const getErrorMessage = (code: string, raw?: string) => {
 // nunca no corpo do módulo — isso evita o erro de prerender.
 
 async function loginWithEmail(email: string, password: string) {
-  const { getFirebase } = await import("../../lib/firebase");
+  const { getFirebase } = await import("@/lib/firebase");
   const { signInWithEmailAndPassword } = await import("firebase/auth");
   const { auth } = await getFirebase();
   return signInWithEmailAndPassword(auth, email, password);
 }
 
 async function loginWithGoogle() {
-  const { getFirebase } = await import("../../lib/firebase");
+  const { getFirebase } = await import("@/lib/firebase");
   const { signInWithPopup } = await import("firebase/auth");
   const { auth, googleProvider } = await getFirebase();
   return signInWithPopup(auth, googleProvider);
 }
 
 async function resetPassword(email: string) {
-  const { getFirebase } = await import("../../lib/firebase");
+  const { getFirebase } = await import("@/lib/firebase");
   const { sendPasswordResetEmail } = await import("firebase/auth");
   const { auth } = await getFirebase();
   return sendPasswordResetEmail(auth, email);

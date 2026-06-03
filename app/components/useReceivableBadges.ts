@@ -20,7 +20,7 @@ export function useReceivableBadges() {
             try {
                 const [{ getFirebase }, { onAuthStateChanged }, { collection, query, onSnapshot }] =
                     await Promise.all([
-                        import("../../lib/firebase"),
+                        import("@/lib/firebase"),
                         import("firebase/auth"),
                         import("firebase/firestore"),
                     ]);

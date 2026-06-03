@@ -25,7 +25,7 @@ export function useBillBadges() {
         const savedAlertDays = Number(localStorage.getItem("nexusfi:alertDays")) || 5;
 
         const [{ getFirebase }, { collection, query, getDocs }] = await Promise.all([
-          import("../../lib/firebase"),
+          import("@/lib/firebase"),
           import("firebase/firestore"),
         ]);
 

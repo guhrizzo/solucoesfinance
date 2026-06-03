@@ -285,7 +285,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
     setErr("");
 
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const {
         collection, addDoc, updateDoc, doc,
@@ -733,7 +733,7 @@ export default function CostCenterPage() {
 
     (async () => {
       try {
-        const { getFirebase } = await import("../../lib/firebase");
+        const { getFirebase } = await import("@/lib/firebase");
         const { auth, db } = await getFirebase();
         const { onAuthStateChanged } = await import("firebase/auth");
         const { collection, query, where, onSnapshot } = await import("firebase/firestore");
@@ -783,7 +783,7 @@ export default function CostCenterPage() {
         showToast("Preencha todos os campos corretamente", "err"); return;
       }
 
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { collection, addDoc, updateDoc, doc } = await import("firebase/firestore");
 
@@ -823,7 +823,7 @@ export default function CostCenterPage() {
     if (confirmModal.type !== "delete-center") return;
     setConfirmModal(prev => ({ ...prev, loading: true }));
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { deleteDoc, doc } = await import("firebase/firestore");
       await deleteDoc(doc(db, "costCenters", confirmModal.id));
@@ -844,7 +844,7 @@ export default function CostCenterPage() {
     if (confirmModal.type !== "delete-expense") return;
     setConfirmModal(prev => ({ ...prev, loading: true }));
     try {
-      const { getFirebase } = await import("../../lib/firebase");
+      const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
       const { deleteDoc, doc, collection, query, where, getDocs, updateDoc } = await import("firebase/firestore");
 

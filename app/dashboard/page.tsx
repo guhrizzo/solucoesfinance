@@ -75,7 +75,7 @@ export default function Dashboard() {
   useEffect(() => {
     let unsub: (() => void) | undefined;
     (async () => {
-      const { getFirebase }        = await import("../../lib/firebase");
+      const { getFirebase }        = await import("@/lib/firebase");
       const { auth }               = await getFirebase();
       const { onAuthStateChanged } = await import("firebase/auth");
       unsub = onAuthStateChanged(auth, (u) => {

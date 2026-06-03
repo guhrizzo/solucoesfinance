@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log("[Webhook Mercado Livre] Recebido evento:", body);
 
-    const { getFirebase } = await import("../../../../lib/firebase");
+    const { getFirebase } = await import("@/lib/firebase");
     const { db } = await getFirebase();
     const { collection, getDocs, query, where, doc, updateDoc, increment } = await import("firebase/firestore");
 
