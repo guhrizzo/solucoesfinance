@@ -175,19 +175,29 @@ export async function GET(request: Request) {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
-        if (searchItemsRes.ok) {
-          const searchData = await searchItemsRes.json();
-          const itemIds: string[] = searchData.results || [];
+        if (!searchItemsRes.ok) {
+          console.error("Erro ao buscar itens do Mercado Livre:", {
+            status: searchItemsRes.status,
+            statusText: searchItemsRes.statusText,
+          });
+          
+          // Se não conseguir buscar itens (permissão insuficiente), redireciona normalmente
+          // Isso permite que o usuário continuar mesmo com limitações de API
+          return NextResponse.redirect(new URL("/estoque?integration=ml_success&warning=limited_permissions", request.url));
+        }
 
-          if (itemIds.length > 0) {
-            // ML API permite buscar até 20 itens em lote
-            const batchIds = itemIds.slice(0, 20).join(",");
-            const detailsRes = await fetch(`https://api.mercadolibre.com/items?ids=${batchIds}`, {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
+        const searchData = await searchItemsRes.json();
+        const itemIds: string[] = searchData.results || [];
 
-            if (detailsRes.ok) {
-              const itemsDetails = await detailsRes.json();
+        if (itemIds.length > 0) {
+          // ML API permite buscar até 20 itens em lote
+          const batchIds = itemIds.slice(0, 20).join(",");
+          const detailsRes = await fetch(`https://api.mercadolibre.com/items?ids=${batchIds}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+          if (detailsRes.ok) {
+            const itemsDetails = await detailsRes.json();
 
               for (const itemWrapper of itemsDetails) {
                 if (itemWrapper.code === 200 && itemWrapper.body) {
