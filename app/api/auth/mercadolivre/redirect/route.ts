@@ -14,7 +14,16 @@ export async function GET(request: Request) {
   // Se não estiver configurado ou for o padrão de exemplo, entra no modo simulado (mock)
   const isMock = !clientId || clientId === "SEU_CLIENT_ID_AQUI";
 
+  console.log("🔍 Mercado Livre Redirect Debug:", {
+    userId,
+    clientId: clientId ? "✓ Configured" : "✗ Missing",
+    redirectUri,
+    isMock,
+    env: process.env.NODE_ENV,
+  });
+
   if (isMock) {
+    console.log("📱 Usando modo simulado (mock) - credenciais não configuradas");
     // Redireciona para o callback simulando o retorno do Mercado Livre
     const callbackUrl = new URL("/api/auth/mercadolivre/callback", request.url);
     callbackUrl.searchParams.set("code", "mock_code_ml_123456");
@@ -24,9 +33,11 @@ export async function GET(request: Request) {
   }
 
   // Modo real: redireciona para o OAuth2 do Mercado Livre
-  const mlAuthUrl = `https://auth.mercadolibre.com.br/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
+  const mlAuthUrl = `https://auth.mercadolibre.com/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
     redirectUri || ""
   )}&state=${userId}`;
+
+  console.log("🔗 Mercado Livre Auth URL:", mlAuthUrl);
 
   return NextResponse.redirect(mlAuthUrl);
 }
