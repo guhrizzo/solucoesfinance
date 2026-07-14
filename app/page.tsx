@@ -214,7 +214,7 @@ export default function FinanceHome() {
 
           <div className="hidden md:flex items-center gap-8">
             {["Funcionalidades", "Planos", "Integrações", "Casos de uso", "Contato"].map((item) => (
-              <a key={item} href="#" className="text-blue-100/70 hover:text-white text-sm font-medium transition-colors">
+              <a key={item} href={item === "Planos" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium transition-colors">
                 {item}
               </a>
             ))}
@@ -241,7 +241,7 @@ export default function FinanceHome() {
         {menuOpen && (
           <div className="md:hidden nav-blur px-6 pb-6 flex flex-col gap-4">
             {["Funcionalidades", "Planos", "Integrações", "Casos de uso", "Contato"].map((item) => (
-              <a key={item} href="#" className="text-blue-100/70 hover:text-white text-sm font-medium py-1 transition-colors">
+              <a key={item} href={item === "Planos" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium py-1 transition-colors">
                 {item}
               </a>
             ))}
@@ -483,6 +483,98 @@ export default function FinanceHome() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Cards */}
+      <section className="py-24 bg-white" id="planos">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-xl mx-auto text-center mb-14">
+            <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-3">Planos e preços</p>
+            <h2 className="text-4xl font-extrabold text-blue-950 leading-tight">
+              Escolha o plano ideal para sua empresa
+            </h2>
+            <p className="text-slate-500 mt-4 leading-relaxed">
+              Teste grátis por <span className="text-blue-600 font-semibold">3 dias (72h)</span> em qualquer plano. Sem cartão de crédito, sem compromisso.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+            {/* Essencial */}
+            <div className="relative bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
+              <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100/40 flex items-center justify-center mb-5">
+                <Zap size={20} className="text-blue-600" />
+              </div>
+              <h3 className="text-blue-950 text-xl font-bold mb-1">Essencial</h3>
+              <p className="text-slate-400 text-sm mb-5">Para pequenas empresas e MEIs</p>
+              <div className="mb-2">
+                <span className="text-blue-950 text-4xl font-extrabold">R$ 49,90</span>
+                <span className="text-slate-400 text-sm font-medium">/mês</span>
+              </div>
+              <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
+                3 dias grátis (72h) para testar
+              </p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "Fluxo de caixa básico",
+                  "Contas a pagar e receber",
+                  "Até 2 usuários",
+                  "Relatórios mensais",
+                  "Suporte por e-mail",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2.5 text-slate-600 text-sm">
+                    <CheckCircle size={15} className="text-green-500 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button className="w-full py-3 rounded-xl border border-blue-200 text-blue-600 font-semibold text-sm hover:bg-blue-50 transition-colors cursor-pointer">
+                Testar grátis por 72h
+              </button>
+            </div>
+
+            {/* Profissional — Destaque */}
+            <div className="relative bg-white rounded-2xl p-8 border-2 border-blue-500 shadow-lg shadow-blue-500/10 hover:shadow-xl hover:shadow-blue-500/15 hover:-translate-y-1 transition-all duration-300 flex flex-col z-10">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                <span className="bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+                  Mais popular
+                </span>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center mb-5">
+                <BarChart2 size={20} className="text-white" />
+              </div>
+              <h3 className="text-blue-950 text-xl font-bold mb-1">Profissional</h3>
+              <p className="text-slate-400 text-sm mb-5">Para empresas em crescimento</p>
+              <div className="mb-2">
+                <span className="text-blue-950 text-4xl font-extrabold">R$ 69,90</span>
+                <span className="text-slate-400 text-sm font-medium">/mês</span>
+              </div>
+              <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
+                3 dias grátis (72h) para testar
+              </p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "Tudo do plano Essencial",
+                  "Fluxo de caixa em tempo real",
+                  "Centro de custos ilimitado",
+                  "Até 10 usuários",
+                  "Relatórios automáticos (DRE)",
+                  "Integração com contabilidade",
+                  "Suporte prioritário",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2.5 text-slate-600 text-sm">
+                    <CheckCircle size={15} className="text-green-500 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all cursor-pointer">
+                Testar grátis por 72h
+              </button>
+            </div>
           </div>
         </div>
       </section>

@@ -5,7 +5,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, CheckCircle, AlertCircle,
   Calendar, ArrowUpRight, ArrowDownRight, Sparkles, Landmark,
   FileText, Check, Plus, Search, RefreshCw, Upload, ShieldCheck,
-  ChevronRight, ArrowRight, X, AlertTriangle, Eye, EyeOff
+  ChevronRight, ArrowRight, X, AlertTriangle, Eye, EyeOff, Calculator, BarChart3, PieChart, Activity
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -44,6 +44,14 @@ export default function RelatoriosPage() {
   const [filterPeriod, setFilterPeriod] = useState<"7d" | "30d" | "mes" | "ano">("30d");
   const [searchQuery, setSearchQuery] = useState("");
   const [hideValues, setHideValues] = useState(false);
+
+  type TabType = "fluxo" | "faturamento" | "dre" | "precificacao";
+  const [activeTab, setActiveTab] = useState<TabType>("fluxo");
+
+  // Estados de Precificação
+  const [precCusto, setPrecCusto] = useState<number | "">("");
+  const [precImposto, setPrecImposto] = useState<number | "">("");
+  const [precMargem, setPrecMargem] = useState<number | "">("");
 
   // Estados de conciliação bancária
   const [statement, setStatement] = useState<BankStatementItem[]>([]);
@@ -139,6 +147,49 @@ export default function RelatoriosPage() {
 
     return { entradas, saidas, saldo, taxaConciliacao, total: filteredTxs.length };
   }, [filteredTxs]);
+
+  // Cálculos do DRE
+  const dreData = useMemo(() => {
+    let receita = 0;
+    let impostos = 0;
+    let cmv = 0;
+    let despesas = 0;
+
+    filteredTxs.forEach(tx => {
+      const catLower = tx.category.toLowerCase();
+      if (tx.type === "entrada") {
+        receita += tx.amount;
+      } else {
+        if (catLower.includes("imposto") || catLower.includes("taxa") || catLower.includes("tributo")) {
+          impostos += tx.amount;
+        } else if (catLower.includes("fornecedor") || catLower.includes("produto") || catLower.includes("mercadoria") || catLower.includes("compra")) {
+          cmv += tx.amount;
+        } else {
+          despesas += tx.amount;
+        }
+      }
+    });
+
+    const receitaLiquida = receita - impostos;
+    const lucroBruto = receitaLiquida - cmv;
+    const lucroLiquido = lucroBruto - despesas;
+    const margemLiquida = receita > 0 ? (lucroLiquido / receita) * 100 : 0;
+
+    return { receita, impostos, receitaLiquida, cmv, lucroBruto, despesas, lucroLiquido, margemLiquida };
+  }, [filteredTxs]);
+
+  // Cálculos de Precificação (Markup)
+  const precSugestao = useMemo(() => {
+    const c = Number(precCusto) || 0;
+    const i = Number(precImposto) || 0;
+    const m = Number(precMargem) || 0;
+
+    if (c === 0) return 0;
+    const deducoes = (i + m) / 100;
+    if (deducoes >= 1) return -1; // Inviável
+
+    return c / (1 - deducoes);
+  }, [precCusto, precImposto, precMargem]);
 
   // Categorias de Entrada e Saída agrupadas
   const categoryBreakdown = useMemo(() => {
@@ -360,7 +411,33 @@ export default function RelatoriosPage() {
           </div>
         </div>
 
-        {/* KPIs */}
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b scrollbar-hide" style={{ borderColor: "var(--db-border)" }}>
+          {[
+            { id: "fluxo", label: "Fluxo de Caixa", icon: Activity },
+            { id: "faturamento", label: "Faturamento", icon: BarChart3 },
+            { id: "dre", label: "DRE", icon: FileText },
+            { id: "precificacao", label: "Precificação", icon: Calculator },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as TabType)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer"
+              style={{
+                color: activeTab === tab.id ? "var(--primary)" : "var(--db-text-2)",
+                borderColor: activeTab === tab.id ? "var(--primary)" : "transparent",
+              }}
+            >
+              <tab.icon size={16} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Aba: Fluxo de Caixa */}
+        {activeTab === "fluxo" && (
+          <div className="space-y-6 fade-in">
+            {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Card Entradas */}
@@ -678,6 +755,200 @@ export default function RelatoriosPage() {
             </table>
           </div>
         </div>
+
+          </div>
+        )}
+
+        {/* Aba: Faturamento */}
+        {activeTab === "faturamento" && (
+          <div className="space-y-6 fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="cf-card p-6 flex flex-col items-center justify-center text-center space-y-2">
+                <BarChart3 className="text-primary mb-2" size={32} />
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Receita Bruta</p>
+                <p className="text-4xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
+                  {hideValues ? "••••••" : toBRL(dreData.receita)}
+                </p>
+              </div>
+              <div className="cf-card p-6 flex flex-col items-center justify-center text-center space-y-2">
+                <Activity className="text-primary mb-2" size={32} />
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Ticket Médio Estimado</p>
+                <p className="text-4xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
+                  {hideValues ? "••••••" : toBRL(dreData.receita / (filteredTxs.filter(t => t.type === "entrada").length || 1))}
+                </p>
+              </div>
+            </div>
+
+            <div className="cf-card p-6">
+              <h3 className="font-heading text-lg font-bold mb-4" style={{ color: "var(--db-text)" }}>Maiores Fontes de Faturamento</h3>
+              <div className="space-y-4">
+                {categoryBreakdown.filter(c => c.type === "entrada").length === 0 ? (
+                  <p className="text-sm" style={{ color: "var(--db-text-3)" }}>Nenhum faturamento registrado no período.</p>
+                ) : (
+                  categoryBreakdown.filter(c => c.type === "entrada").map((cat, i) => {
+                    const maxAmt = Math.max(...categoryBreakdown.filter(c => c.type === "entrada").map(c => c.total)) || 1;
+                    const pct = (cat.total / maxAmt) * 100;
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm font-semibold">
+                          <span style={{ color: "var(--db-text)" }}>{cat.name}</span>
+                          <span style={{ color: "var(--success)" }}>
+                            {hideValues ? "•••" : toBRL(cat.total)}
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500 bg-emerald-500" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Aba: DRE */}
+        {activeTab === "dre" && (
+          <div className="space-y-6 fade-in">
+            <div className="cf-card p-6 sm:p-8">
+              <div className="mb-6 flex items-center gap-3">
+                <FileText className="text-primary" size={24} />
+                <div>
+                  <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>
+                    Demonstração do Resultado do Exercício
+                  </h2>
+                  <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Visão simplificada baseada nas categorias de fluxo de caixa</p>
+                </div>
+              </div>
+
+              <div className="space-y-0 rounded-xl overflow-hidden border" style={{ borderColor: "var(--db-border)" }}>
+                {/* Linha Receita */}
+                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50">
+                  <span className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Receita Operacional Bruta</span>
+                  <span className="font-mono font-bold" style={{ color: "var(--success)" }}>{hideValues ? "••••••" : toBRL(dreData.receita)}</span>
+                </div>
+                {/* Linha Impostos */}
+                <div className="flex justify-between items-center p-4 border-t" style={{ borderColor: "var(--db-border)" }}>
+                  <span className="text-sm" style={{ color: "var(--db-text-2)" }}>(-) Deduções e Impostos</span>
+                  <span className="font-mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : `-${toBRL(dreData.impostos)}`}</span>
+                </div>
+                {/* Receita Líquida */}
+                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border-t" style={{ borderColor: "var(--db-border)" }}>
+                  <span className="font-bold text-sm" style={{ color: "var(--db-text)" }}>= Receita Operacional Líquida</span>
+                  <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.receitaLiquida)}</span>
+                </div>
+                {/* CMV */}
+                <div className="flex justify-between items-center p-4 border-t" style={{ borderColor: "var(--db-border)" }}>
+                  <span className="text-sm" style={{ color: "var(--db-text-2)" }}>(-) Custo da Mercadoria Vendida (CMV)</span>
+                  <span className="font-mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : `-${toBRL(dreData.cmv)}`}</span>
+                </div>
+                {/* Lucro Bruto */}
+                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border-t" style={{ borderColor: "var(--db-border)" }}>
+                  <span className="font-bold text-sm" style={{ color: "var(--db-text)" }}>= Lucro Bruto</span>
+                  <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.lucroBruto)}</span>
+                </div>
+                {/* Despesas */}
+                <div className="flex justify-between items-center p-4 border-t" style={{ borderColor: "var(--db-border)" }}>
+                  <span className="text-sm" style={{ color: "var(--db-text-2)" }}>(-) Despesas Operacionais</span>
+                  <span className="font-mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : `-${toBRL(dreData.despesas)}`}</span>
+                </div>
+                {/* Lucro Líquido */}
+                <div className="flex justify-between items-center p-5 bg-slate-100 dark:bg-slate-900 border-t" style={{ borderColor: "var(--db-border)" }}>
+                  <span className="font-extrabold text-base uppercase tracking-wider" style={{ color: "var(--db-text)" }}>= Lucro Líquido do Exercício</span>
+                  <div className="text-right">
+                    <span className="font-mono font-extrabold text-xl" style={{ color: dreData.lucroLiquido >= 0 ? "var(--success)" : "var(--danger)" }}>
+                      {hideValues ? "••••••" : toBRL(dreData.lucroLiquido)}
+                    </span>
+                    <p className="text-[10px] font-bold mt-1" style={{ color: "var(--db-text-2)" }}>
+                      Margem Líquida: {dreData.margemLiquida.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Aba: Precificação */}
+        {activeTab === "precificacao" && (
+          <div className="space-y-6 fade-in">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="cf-card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Calculator className="text-primary" size={24} />
+                  <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>
+                    Calculadora de Precificação
+                  </h2>
+                </div>
+                <p className="text-sm mb-6" style={{ color: "var(--db-text-2)" }}>
+                  Descubra o preço de venda ideal com base no método Markup, garantindo que você atinja a margem de lucro desejada após o pagamento de impostos.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--db-text)" }}>Custo do Produto (R$)</label>
+                    <input 
+                      type="number" 
+                      value={precCusto} 
+                      onChange={(e) => setPrecCusto(Number(e.target.value))} 
+                      className="w-full p-2.5 rounded-lg border outline-none font-mono" 
+                      style={{ background: "var(--cf-input)", borderColor: "var(--db-border)", color: "var(--db-text)" }} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--db-text)" }}>Impostos e Taxas (%)</label>
+                    <input 
+                      type="number" 
+                      value={precImposto} 
+                      onChange={(e) => setPrecImposto(Number(e.target.value))} 
+                      className="w-full p-2.5 rounded-lg border outline-none font-mono" 
+                      style={{ background: "var(--cf-input)", borderColor: "var(--db-border)", color: "var(--db-text)" }} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--db-text)" }}>Margem de Lucro Desejada (%)</label>
+                    <input 
+                      type="number" 
+                      value={precMargem} 
+                      onChange={(e) => setPrecMargem(Number(e.target.value))} 
+                      className="w-full p-2.5 rounded-lg border outline-none font-mono" 
+                      style={{ background: "var(--cf-input)", borderColor: "var(--db-border)", color: "var(--db-text)" }} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="cf-card p-6 flex flex-col justify-center text-center">
+                <h3 className="font-heading text-lg font-bold mb-2" style={{ color: "var(--db-text)" }}>Preço de Venda Sugerido</h3>
+                {precSugestao === -1 ? (
+                  <div className="text-rose-500 font-bold mt-4 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/20">
+                    Sua margem e impostos superam ou igualam 100%. É impossível precificar.
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-5xl font-extrabold mono mt-4 mb-6" style={{ color: "var(--primary)" }}>
+                      {toBRL(precSugestao)}
+                    </div>
+                    <div className="space-y-3 mt-auto border-t pt-4 text-sm" style={{ borderColor: "var(--db-border)" }}>
+                      <div className="flex justify-between">
+                        <span style={{ color: "var(--db-text-2)" }}>Custos:</span>
+                        <span className="font-mono font-semibold" style={{ color: "var(--db-text)" }}>{toBRL(Number(precCusto) || 0)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: "var(--db-text-2)" }}>Impostos Estimados:</span>
+                        <span className="font-mono font-semibold" style={{ color: "var(--danger)" }}>{toBRL(precSugestao * ((Number(precImposto) || 0)/100))}</span>
+                      </div>
+                      <div className="flex justify-between font-bold">
+                        <span style={{ color: "var(--db-text)" }}>Lucro Líquido:</span>
+                        <span className="font-mono text-emerald-500">{toBRL(precSugestao * ((Number(precMargem) || 0)/100))}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
     </>
