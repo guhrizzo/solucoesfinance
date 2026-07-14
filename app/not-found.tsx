@@ -1,6 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 export default function NotFound() {
+  const [pathName, setPathName] = useState("");
+
+  useEffect(() => {
+    setPathName(window.location.pathname);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden relative">
       <style>{`
@@ -357,7 +365,7 @@ export default function NotFound() {
 
         <div className="code-hint">
           <p>rota solicitada</p>
-          <code>{typeof window !== "undefined" ? window.location.pathname : "/rota-inexistente"}</code>
+          <code>{pathName || "/rota-inexistente"}</code>
         </div>
       </div>
     </div>

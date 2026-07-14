@@ -1046,11 +1046,12 @@ export default function EstoquePage() {
                     </span>
                   ) : (
                     <button
-                      onClick={() => handleConnectAccount("shopee")}
-                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
+                      disabled
+                      title="Esta integração está em construção"
+                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-not-allowed opacity-50"
                       style={{ background: "var(--primary)", color: "white" }}
                     >
-                      Conectar Conta
+                      Em Construção
                     </button>
                   )}
                 </div>

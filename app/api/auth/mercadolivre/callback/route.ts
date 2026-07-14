@@ -272,7 +272,6 @@ export async function GET(request: Request) {
               }
             }
           }
-        }
       } catch (err) {
         console.error("Erro ao importar anúncios reais do ML:", err);
         // Não quebra a rota, apenas continua redirecionando
