@@ -538,7 +538,7 @@ export default function FinanceHome() {
             {/* Profissional — Destaque */}
             <div className="relative bg-white rounded-2xl p-8 border-2 border-blue-500 shadow-lg shadow-blue-500/10 hover:shadow-xl hover:shadow-blue-500/15 hover:-translate-y-1 transition-all duration-300 flex flex-col z-10">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+                <span className="bg-linear-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
                   Mais popular
                 </span>
               </div>
@@ -571,7 +571,7 @@ export default function FinanceHome() {
                   </li>
                 ))}
               </ul>
-              <button className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all cursor-pointer">
+              <button className="w-full py-3 rounded-xl bg-linear-to-r from-blue-600 to-blue-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all cursor-pointer">
                 Testar grátis por 72h
               </button>
             </div>
