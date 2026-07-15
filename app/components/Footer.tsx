@@ -42,7 +42,12 @@ export default function Footer() {
                 <ul className="space-y-2">
                   {col.links.map((l) => (
                     <li key={l}>
-                      <a href="#" className="text-blue-300/50 hover:text-white text-sm transition-colors">{l}</a>
+                      <a 
+                        href={l === "API" ? "/developer" : "#"} 
+                        className="text-blue-300/50 hover:text-white text-sm transition-colors"
+                      >
+                        {l}
+                      </a>
                     </li>
                   ))}
                 </ul>
