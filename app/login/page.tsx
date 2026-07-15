@@ -199,7 +199,7 @@ export default function LoginPage() {
             <ClipboardList size={18} className="text-white" />
           </div>
           <span className="text-white font-bold text-xl tracking-tight">
-            Nexus<span className="text-blue-400">Fi</span>
+            Midas <span className="text-blue-400">Touch</span>
           </span>
         </div>
 
@@ -267,7 +267,7 @@ export default function LoginPage() {
               <ClipboardList size={16} className="text-white" />
             </div>
             <span className="text-blue-950 font-bold text-lg tracking-tight">
-              Nexus<span className="text-blue-500">Fi</span>
+              Midas <span className="text-blue-500">Touch</span>
             </span>
           </div>
 

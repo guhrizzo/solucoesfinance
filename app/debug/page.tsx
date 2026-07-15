@@ -79,7 +79,7 @@ export default function FirebaseDebug() {
         add("info", "── Testando Auth (email/senha) ──");
         try {
             const { signInWithEmailAndPassword } = await import("firebase/auth");
-            await signInWithEmailAndPassword(auth, "debug-test-404@nexusfi.dev", "wrongpassword123");
+            await signInWithEmailAndPassword(auth, "debug-test-404@midastouch.dev", "wrongpassword123");
             add("warn", "Login retornou sucesso inesperadamente");
         } catch (e: any) {
             const code: string = e.code ?? "sem-codigo";
@@ -156,9 +156,9 @@ export default function FirebaseDebug() {
                             background: "linear-gradient(135deg,#1565c0,#42a5f5)",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             fontSize: 14, fontWeight: 800, color: "white",
-                        }}>N</div>
+                        }}>M</div>
                         <span style={{ color: "white", fontWeight: 700, fontSize: 16 }}>
-                            NexusFi <span style={{ color: "#42a5f5" }}>Firebase Debugger</span>
+                            Midas Touch <span style={{ color: "#42a5f5" }}>Firebase Debugger</span>
                         </span>
                     </div>
                     <p style={{ color: "#64748b", fontSize: 12, margin: 0 }}>

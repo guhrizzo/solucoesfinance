@@ -293,7 +293,7 @@ export default function RegisterPage() {
             <ClipboardList size={18} className="text-white" />
           </div>
           <span className="text-white font-bold text-xl tracking-tight">
-            Nexus<span className="text-blue-400">Fi</span>
+            Midas <span className="text-blue-400">Touch</span>
           </span>
         </div>
 
@@ -374,7 +374,7 @@ export default function RegisterPage() {
               <ClipboardList size={15} className="text-white" />
             </div>
             <span className="text-blue-950 font-bold text-lg tracking-tight">
-              Nexus<span className="text-blue-500">Fi</span>
+              Midas <span className="text-blue-500">Touch</span>
             </span>
           </div>
 
@@ -554,7 +554,7 @@ export default function RegisterPage() {
                   <a href="#" className="text-blue-600 font-semibold hover:underline">Termos de Uso</a>
                   {" "}e a{" "}
                   <a href="#" className="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>{" "}
-                  do NexusFi.
+                  do Midas Touch.
                 </p>
               </div>
             </div>
@@ -592,7 +592,7 @@ export default function RegisterPage() {
               ))}
             </div>
             <p className="text-slate-400 text-xs">
-              <span className="font-semibold text-blue-950">+12.400 empresas</span> já usam o NexusFi
+              <span className="font-semibold text-blue-950">+12.400 empresas</span> já usam o Midas Touch
             </p>
           </div>
 

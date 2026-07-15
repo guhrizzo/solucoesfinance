@@ -10,7 +10,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "NexusFi — Gestão financeira empresarial",
+  title: "Midas Touch — Gestão financeira empresarial",
   description:
     "Centralize o financeiro da sua empresa: fluxo de caixa, contas a pagar e receber, relatórios automáticos e controle de custos.",
   keywords: [
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
     "relatórios financeiros",
     "PME",
   ],
-  authors: [{ name: "NexusFi" }],
+  authors: [{ name: "Midas Touch" }],
   openGraph: {
-    title: "NexusFi — Gestão financeira empresarial",
+    title: "Midas Touch — Gestão financeira empresarial",
     description:
       "Plataforma completa para organizar as finanças da sua empresa com dados em tempo real.",
     type: "website",

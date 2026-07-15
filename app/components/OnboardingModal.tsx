@@ -76,7 +76,7 @@ const STEPS: Step[] = [
     title: "Tudo pronto! 🎉",
     icon: <BarChart3 size={48} strokeWidth={1.5} className="text-blue-500" />,
     description:
-      "Seu perfil foi configurado. Agora o NexusFi vai personalizar relatórios, metas e insights financeiros de acordo com o seu negócio. Vamos começar?",
+      "Seu perfil foi configurado. Agora o Midas Touch vai personalizar relatórios, metas e insights financeiros de acordo com o seu negócio. Vamos começar?",
   },
 ];
 

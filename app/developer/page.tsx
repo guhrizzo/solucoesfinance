@@ -25,7 +25,7 @@ export default function DeveloperPage() {
             <Code size={16} className="text-white" />
           </div>
           <span className="text-white font-bold text-lg tracking-tight">
-            Nexus<span className="text-blue-400">Fi</span>
+            Midas <span className="text-blue-400">Touch</span>
             <span className="ml-2 text-xs font-mono bg-blue-950 text-blue-400 border border-blue-900/50 px-2 py-0.5 rounded-full">
               Dev
             </span>
@@ -53,7 +53,7 @@ export default function DeveloperPage() {
           <h1 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight mb-6">
             Conectando o{" "}
             <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-              NexusFi
+              Midas Touch
             </span>{" "}
             ao seu ecossistema
           </h1>
@@ -88,7 +88,7 @@ export default function DeveloperPage() {
                 <span className="w-3 h-3 rounded-full bg-green-500/80" />
               </div>
               <span className="text-xs font-mono text-slate-500 flex items-center gap-1.5">
-                <Terminal size={12} /> nexusfi-api.json
+                <Terminal size={12} /> midastouch-api.json
               </span>
             </div>
 
@@ -104,7 +104,7 @@ export default function DeveloperPage() {
               </div>
               <div className="pl-4">
                 <span className="text-blue-400">"project"</span>:{" "}
-                <span className="text-emerald-400">"NexusFi Developer Platform"</span>,
+                <span className="text-emerald-400">"Midas Touch Developer Platform"</span>,
               </div>
               <div className="pl-4">
                 <span className="text-blue-400">"current_focus"</span>:{" "}
@@ -150,7 +150,7 @@ export default function DeveloperPage() {
 
       {/* Footer copyright */}
       <footer className="relative z-10 max-w-7xl mx-auto w-full px-6 py-6 text-center text-xs text-slate-500 border-t border-slate-800/50">
-        &copy; {new Date().getFullYear()} NexusFi. Todos os direitos reservados.
+        &copy; {new Date().getFullYear()} Midas Touch. Todos os direitos reservados.
       </footer>
     </div>
   );
