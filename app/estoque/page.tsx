@@ -89,6 +89,39 @@ export default function EstoquePage() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Redireciona usuários do ramo de Serviço para o dashboard (bloqueio de rota)
+  useEffect(() => {
+    if (!user) return;
+
+    const cached = localStorage.getItem(`onboarding_ramo_${user.uid}`);
+    if (cached) {
+      try {
+        const ramo = JSON.parse(cached);
+        if (ramo.includes("Serviço")) {
+          window.location.href = "/dashboard";
+          return;
+        }
+      } catch (e) {}
+    }
+
+    (async () => {
+      try {
+        const { getFirebase } = await import("@/lib/firebase");
+        const { db } = await getFirebase();
+        const { doc, getDoc } = await import("firebase/firestore");
+        const snap = await getDoc(doc(db, "users", user.uid, "profile", "onboarding"));
+        if (snap.exists()) {
+          const answers = snap.data()?.answers;
+          if (answers?.ramo?.includes("Serviço")) {
+            window.location.href = "/dashboard";
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao verificar ramo em estoque:", err);
+      }
+    })();
+  }, [user]);
+
   // Carregar dados em tempo real do Firestore
   useEffect(() => {
     if (!user) return;

@@ -17,7 +17,7 @@ import { useReceivableBadges } from "./useReceivableBadges";
 
 interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; }
 interface NavbarProps {
-  user?: { displayName: string | null; email: string | null } | null;
+  user?: { displayName: string | null; email: string | null; uid?: string | null } | null;
   period?: string;
   activePath?: string;
   onLogout?: () => void;
@@ -370,6 +370,7 @@ export default function Navbar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [isServico, setIsServico] = useState(false);
 
   const { dark, toggle } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
@@ -388,6 +389,46 @@ export default function Navbar({
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Monitora o ramo do usuário (serviço ou outro)
+  useEffect(() => {
+    let unsubAuth: (() => void) | undefined;
+    (async () => {
+      try {
+        const { getFirebase } = await import("@/lib/firebase");
+        const { db, auth } = await getFirebase();
+        const { onAuthStateChanged } = await import("firebase/auth");
+        const { doc, getDoc } = await import("firebase/firestore");
+
+        unsubAuth = onAuthStateChanged(auth, async (u) => {
+          if (u) {
+            // Tenta obter o cache do localStorage imediatamente para evitar flash/layout shift
+            const cached = localStorage.getItem(`onboarding_ramo_${u.uid}`);
+            if (cached) {
+              try {
+                const ramo = JSON.parse(cached);
+                setIsServico(ramo.includes("Serviço"));
+              } catch (e) {}
+            }
+
+            // Busca no Firestore para confirmar o estado real
+            const snap = await getDoc(doc(db, "users", u.uid, "profile", "onboarding"));
+            if (snap.exists()) {
+              const answers = snap.data()?.answers;
+              const ramo = answers?.ramo || [];
+              const hasServico = ramo.includes("Serviço");
+              setIsServico(hasServico);
+              localStorage.setItem(`onboarding_ramo_${u.uid}`, JSON.stringify(ramo));
+            }
+          }
+        });
+      } catch (err) {
+        console.error("Erro ao verificar ramo do usuário no Navbar:", err);
+      }
+    })();
+
+    return () => unsubAuth?.();
   }, []);
 
   // Empurra o conteúdo quando layout vertical
@@ -418,8 +459,16 @@ export default function Navbar({
   const firstName = user?.displayName?.split(" ")[0] ?? "Usuário";
   const unreadCount = notifications.length;
 
+  // Filtra itens com base no ramo (oculta estoque para serviços)
+  const filteredNavItems = navItems.filter(item => {
+    if (item.label === "Estoque" && isServico) {
+      return false;
+    }
+    return true;
+  });
+
   // Cria dinamicamente os navItems com badges reais
-  const navItemsWithBadges = navItems.map(item => {
+  const navItemsWithBadges = filteredNavItems.map(item => {
     if (item.label === "Contas a pagar") {
       return { ...item, badge: billSummary.totalPending };
     }

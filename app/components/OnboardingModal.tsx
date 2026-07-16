@@ -427,6 +427,23 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
                     );
                   })}
                 </div>
+                {current.id === "ramo" && selected.includes("Serviço") && (
+                  <div style={{
+                    marginTop: 12,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    background: dark ? "rgba(245, 158, 11, 0.1)" : "#fef3c7",
+                    border: `1px solid ${dark ? "rgba(245, 158, 11, 0.2)" : "#fde68a"}`,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                  }}>
+                    <span style={{ color: "#d97706", fontSize: 16, lineHeight: 1 }}>⚠️</span>
+                    <p style={{ margin: 0, fontSize: 11, color: dark ? "#fbbf24" : "#b45309", lineHeight: 1.4, fontFamily: "Sora, sans-serif" }}>
+                      <strong>Aviso:</strong> Ao escolher a opção de <strong>Serviço</strong>, a funcionalidade de controle de estoque não estará disponível.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

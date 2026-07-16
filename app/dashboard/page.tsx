@@ -105,7 +105,13 @@ export default function Dashboard() {
           setUser({ displayName: u.displayName, email: u.email, uid: u.uid });
 
           getDoc(doc(db, "users", u.uid, "profile", "onboarding"))
-            .then((snap) => setShowOnboarding(!snap.exists() || !snap.data()?.completed))
+            .then((snap) => {
+              const completed = snap.exists() && snap.data()?.completed;
+              setShowOnboarding(!completed);
+              if (completed && typeof window !== "undefined") {
+                localStorage.setItem(`onboarding_ramo_${u.uid}`, JSON.stringify(snap.data()?.answers?.ramo || []));
+              }
+            })
             .catch((err) => console.error("Erro ao carregar onboarding:", err));
 
           // Listener de Lançamentos de Fluxo de Caixa
@@ -420,6 +426,9 @@ export default function Dashboard() {
               answers,
               completedAt: Date.now(),
             });
+            if (typeof window !== "undefined") {
+              localStorage.setItem(`onboarding_ramo_${user.uid}`, JSON.stringify(answers.ramo || []));
+            }
           } catch (err) {
             console.error("Erro ao salvar onboarding:", err);
           }
