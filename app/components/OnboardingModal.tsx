@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import {
   X, ChevronRight, Check, Building2, TrendingUp,
   Lightbulb, Store, Settings, Users, BarChart3,
-  Briefcase, ArrowRight, Sparkles,
+  Briefcase, ArrowRight, Sparkles, ShoppingCart,
 } from "lucide-react";
 
 interface Step {
@@ -65,9 +65,10 @@ const STEPS: Step[] = [
     title: "Definindo seu ramo de atuação",
     subtitle: "Qual área representa a maior parte da operação do seu negócio?",
     options: [
-      { label: "Comércio",  icon: <Store size={16} /> },
-      { label: "Serviço",   icon: <Settings size={16} /> },
-      { label: "Indústria", icon: <Building2 size={16} /> },
+      { label: "Comércio",    icon: <Store size={16} /> },
+      { label: "E-commerce",  icon: <ShoppingCart size={16} /> },
+      { label: "Indústria",   icon: <Building2 size={16} /> },
+      { label: "Serviço",     icon: <Settings size={16} /> },
     ],
   },
   {
@@ -96,12 +97,15 @@ function IllustrationInfo({ dark }: { dark: boolean }) {
   );
 }
 
+export type OnboardingAnswers = Record<string, string[]>;
+
 interface OnboardingModalProps {
   open: boolean;
   onClose: () => void;
+  onComplete?: (answers: OnboardingAnswers) => void;
 }
 
-export default function OnboardingModal({ open, onClose }: OnboardingModalProps) {
+export default function OnboardingModal({ open, onClose, onComplete }: OnboardingModalProps) {
   const [step, setStep]           = useState(0);
   const [answers, setAnswers]     = useState<Record<string, string[]>>({});
   const [selected, setSelected]   = useState<string[]>([]);
@@ -138,7 +142,14 @@ export default function OnboardingModal({ open, onClose }: OnboardingModalProps)
   const goNext = () => {
     if (animating) return;
     if (current.type === "question") setAnswers((prev) => ({ ...prev, [current.id]: selected }));
-    if (isLast) { setVisible(false); setTimeout(onClose, 300); return; }
+    if (isLast) {
+      setVisible(false);
+      setTimeout(() => {
+        onComplete?.(answers);
+        onClose();
+      }, 300);
+      return;
+    }
     setAnimating(true);
     setTimeout(() => { setStep((s) => s + 1); setSelected([]); setAnimating(false); }, 220);
   };

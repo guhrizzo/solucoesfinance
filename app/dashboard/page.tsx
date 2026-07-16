@@ -9,7 +9,7 @@ import {
   ArrowDownRight, MoreHorizontal, Filter, Download,
   RefreshCw, CheckCircle2
 } from "lucide-react";
-import OnboardingModal from "../components/OnboardingModal";
+import OnboardingModal, { type OnboardingAnswers } from "../components/OnboardingModal";
 import Navbar from "../components/Navbar";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
 };
 
 export default function Dashboard() {
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [user, setUser] = useState<{ displayName: string | null; email: string | null; uid: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
@@ -90,7 +90,7 @@ export default function Dashboard() {
 
     (async () => {
       try {
-        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot }] = await Promise.all([
+        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, doc, getDoc }] = await Promise.all([
           import("@/lib/firebase"),
           import("firebase/auth"),
           import("firebase/firestore"),
@@ -103,6 +103,10 @@ export default function Dashboard() {
             return;
           }
           setUser({ displayName: u.displayName, email: u.email, uid: u.uid });
+
+          getDoc(doc(db, "users", u.uid, "profile", "onboarding"))
+            .then((snap) => setShowOnboarding(!snap.exists() || !snap.data()?.completed))
+            .catch((err) => console.error("Erro ao carregar onboarding:", err));
 
           // Listener de Lançamentos de Fluxo de Caixa
           const txsRef = collection(db, "users", u.uid, "cashflow");
@@ -402,7 +406,25 @@ export default function Dashboard() {
         ::-webkit-scrollbar-thumb { background: var(--db-border); border-radius: 4px; }
       `}</style>
 
-      <OnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      <OnboardingModal
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={async (answers: OnboardingAnswers) => {
+          if (!user) return;
+          try {
+            const { getFirebase } = await import("@/lib/firebase");
+            const { doc, setDoc } = await import("firebase/firestore");
+            const { db } = await getFirebase();
+            await setDoc(doc(db, "users", user.uid, "profile", "onboarding"), {
+              completed: true,
+              answers,
+              completedAt: Date.now(),
+            });
+          } catch (err) {
+            console.error("Erro ao salvar onboarding:", err);
+          }
+        }}
+      />
 
       <Navbar user={user} period={currentPeriodLabel} activePath={activePath} />
 
