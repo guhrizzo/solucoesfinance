@@ -4,16 +4,35 @@
   --background: #ffffff;
   --foreground: #0f1117;
 
-  /* ── Core Colors ── */
-  --primary: #3b82f6;
-  --primary-dark: #1e40af;
-  --primary-light: #60a5fa;
+  /* ── Brand scale (single source of truth — was split between #3b82f6 and #1565c0) ── */
+  --brand-400: #42a5f5;
+  --brand-500: #1565c0;
+  --brand-600: #0d47a1;
+
+  /* ── Core Colors (kept for existing call sites; aliased to the brand/semantic scale) ── */
+  --primary: var(--brand-500);
+  --primary-dark: var(--brand-600);
+  --primary-light: var(--brand-400);
   --success: #10b981;
   --success-dark: #059669;
   --danger: #ef4444;
   --danger-dark: #dc2626;
   --warning: #f59e0b;
   --info: #06b6d4;
+
+  /* ── Semantic status tokens (light) — used by the new ui/ primitives ── */
+  --status-success-bg: #dcfce7;
+  --status-success-text: #15803d;
+  --status-success-border: #bbf7d0;
+  --status-warning-bg: #fef9c3;
+  --status-warning-text: #b45309;
+  --status-warning-border: #fde68a;
+  --status-danger-bg: #fee2e2;
+  --status-danger-text: #b91c1c;
+  --status-danger-border: #fecaca;
+  --status-info-bg: #dbeafe;
+  --status-info-text: #1d4ed8;
+  --status-info-border: #bfdbfe;
 
   /* ── Dashboard Light ── */
   --db-bg: #f8fafc;
@@ -56,6 +75,29 @@
   --cf-shadow-lg: 0 12px 20px -4px rgba(15, 25, 35, 0.15);
   --cf-shadow-xl: 0 20px 30px -6px rgba(15, 25, 35, 0.18);
 
+  /* ── Nav / shell surface (was duplicated as its own --nav-* set inside Navbar.tsx) ── */
+  --nav-bg: #ffffff;
+  --nav-border: #e8eef8;
+  --nav-shadow: 0 1px 0 #e8eef8, 0 4px 20px rgba(13, 34, 71, 0.04);
+  --nav-text: #0d2247;
+  --nav-text-2: #64748b;
+  --nav-text-3: #94a3b8;
+  --nav-link-hover-bg: #f0f7ff;
+  --nav-link-hover-color: var(--brand-500);
+  --nav-link-active-bg: rgba(21, 101, 192, 0.08);
+  --nav-link-active-border: rgba(21, 101, 192, 0.15);
+  --nav-input-bg: #f1f5fb;
+  --nav-icon-bg: #f8faff;
+  --nav-icon-hover: #f0f7ff;
+  --nav-drop-bg: #ffffff;
+  --nav-drop-border: #e8eef8;
+  --nav-drop-item-hover: #f0f7ff;
+  --nav-drop-div: #f1f5fb;
+  --nav-notif-hover: #f8faff;
+  --nav-period-bg: #f0f7ff;
+  --nav-period-hover: #dbeafe;
+  --nav-sidebar-width: 260px;
+
   /* ── Success/Entrada ── */
   --entrada-bg: #ecfdf5;
   --entrada-border: #a7f3d0;
@@ -83,6 +125,42 @@
 
   --background: #090d16;
   --foreground: #cbd5e1;
+
+  /* ── Semantic status tokens (dark) ── */
+  --status-success-bg: rgba(16, 185, 129, 0.12);
+  --status-success-text: #34d399;
+  --status-success-border: rgba(16, 185, 129, 0.25);
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-warning-text: #fbbf24;
+  --status-warning-border: rgba(245, 158, 11, 0.25);
+  --status-danger-bg: rgba(239, 68, 68, 0.12);
+  --status-danger-text: #f87171;
+  --status-danger-border: rgba(239, 68, 68, 0.25);
+  --status-info-bg: rgba(21, 101, 192, 0.15);
+  --status-info-text: #60a5fa;
+  --status-info-border: rgba(96, 165, 250, 0.25);
+
+  /* ── Nav / shell surface (dark) ── */
+  --nav-bg: #161b22;
+  --nav-border: #2a3548;
+  --nav-shadow: 0 1px 0 #2a3548, 0 4px 20px rgba(0, 0, 0, 0.2);
+  --nav-text: #e2e8f0;
+  --nav-text-2: #8899b4;
+  --nav-text-3: #4a5568;
+  --nav-link-hover-bg: rgba(59, 130, 246, 0.08);
+  --nav-link-hover-color: #60a5fa;
+  --nav-link-active-bg: rgba(59, 130, 246, 0.12);
+  --nav-link-active-border: rgba(96, 165, 250, 0.2);
+  --nav-input-bg: #0d1117;
+  --nav-icon-bg: #1c2230;
+  --nav-icon-hover: #243040;
+  --nav-drop-bg: #1c2230;
+  --nav-drop-border: #2a3548;
+  --nav-drop-item-hover: #243040;
+  --nav-drop-div: #2a3548;
+  --nav-notif-hover: #1e2a3a;
+  --nav-period-bg: rgba(59, 130, 246, 0.08);
+  --nav-period-hover: rgba(59, 130, 246, 0.15);
 
   /* ── Dashboard Dark ── */
   --db-bg: #090d16;
@@ -147,8 +225,27 @@
 body {
   background: var(--db-bg);
   color: var(--db-text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ────────────────────────────────────────────────────────────────── */
+/* APP SHELL — layout offset for the vertical navbar, replaces the    */
+/* old MutationObserver-driven marginLeft injection.                  */
+/* ────────────────────────────────────────────────────────────────── */
+
+/* Keyed off html[data-nav-layout], which the inline script in layout.tsx sets
+   synchronously before hydration — not off React state on .app-shell itself.
+   That keeps the offset flash-free AND avoids a hydration mismatch (React never
+   diffs an attribute it didn't render). */
+html[data-nav-layout="vertical"] .app-shell {
+  padding-left: var(--nav-sidebar-width);
+}
+
+@media (max-width: 1024px) {
+  html[data-nav-layout="vertical"] .app-shell {
+    padding-left: 0;
+  }
 }
 
 /* ────────────────────────────────────────────────────────────────── */

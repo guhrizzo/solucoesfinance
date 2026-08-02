@@ -3,14 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 
 export function useTheme() {
-  const [dark, setDark] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    const attr = document.documentElement.getAttribute("data-theme");
-    if (attr) return attr === "dark";
-    const saved = localStorage.getItem("nexusfi-theme");
-    if (saved) return saved === "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  });
+  // Starts false unconditionally — matches what the server always renders (it has no
+  // access to localStorage/data-theme). The mount effect below re-syncs this from the
+  // DOM attribute the inline script in layout.tsx already applied. Reading localStorage
+  // synchronously here caused the client's first render to diverge from the server's,
+  // which React detected as a hydration mismatch and reacted to by discarding and
+  // re-rendering the whole subtree on the client (visible in dev server logs as
+  // "Hydration failed because the server rendered HTML didn't match the client").
+  const [dark, setDark] = useState<boolean>(false);
 
   const observerRef = useRef<MutationObserver | null>(null);
   const internalChangeRef = useRef(false); // 👈 flag para mudanças internas
@@ -26,6 +26,7 @@ export function useTheme() {
 
   useEffect(() => {
     const currentTheme = document.documentElement.getAttribute("data-theme");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: corrects the SSR-safe `false` default to the real value once we're past hydration, not a computation that belongs in render
     if (currentTheme) setDark(currentTheme === "dark");
 
     observerRef.current = new MutationObserver(() => {

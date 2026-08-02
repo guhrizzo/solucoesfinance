@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sora } from "next/font/google";
 import "./globals.css";
 import { ThemeInitializer } from "./components/ThemeInitializer";
+import { AppShell } from "./components/AppShell";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -56,6 +57,9 @@ export default function RootLayout({
               document.documentElement.classList.toggle('light',t==='light');
               if(!localStorage.getItem('nexusfi-theme'))
                 localStorage.setItem('nexusfi-theme',t);
+
+              var l=localStorage.getItem('nexusfi-navbar-layout')||'horizontal';
+              document.documentElement.setAttribute('data-nav-layout',l);
             }catch(e){}})();`,
           }}
         />
@@ -66,7 +70,7 @@ export default function RootLayout({
         style={{ margin: 0, padding: 0 }}
       >
         <ThemeInitializer />
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

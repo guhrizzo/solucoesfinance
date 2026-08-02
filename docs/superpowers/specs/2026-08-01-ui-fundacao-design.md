@@ -70,18 +70,24 @@ Mantém o Navbar visualmente como está e preserva a funcionalidade do toggle ho
 - `app/components/ui/*.tsx` (novo)
 - `app/components/AppShell.tsx` (novo)
 - `app/components/Navbar.tsx`
-- `app/components/Footer.tsx`
+- `app/hooks/useNavbarLayout.ts`
+- `app/hooks/useTheme.ts` (fora do escopo original — ver nota abaixo)
 - `app/layout.tsx`
+
+`Footer.tsx` foi removido do escopo desta etapa durante a implementação: não é usado em nenhuma página do app interno (só na landing page e em `developer/page.tsx`), pertence à frente 3 do roadmap.
 
 Dashboard, contasPagar, contasReceber, estoque, relatorios, impostos, costCenter, users **não são alterados nesta etapa** — continuam funcionando exatamente como hoje, consumindo os tokens legados que permanecem compatíveis.
 
+**Nota sobre `useTheme.ts`**: a validação em browser revelou um hydration mismatch pré-existente — o estado inicial de `dark` era computado lendo `localStorage`/DOM de forma síncrona na primeira renderização, que diverge do HTML gerado no servidor (sem acesso a `localStorage`). React descartava e re-renderizava a árvore inteira no cliente sempre que um usuário com tema escuro salvo carregava a página. Corrigido fazendo o estado inicial ser sempre `false` (igual ao servidor) e corrigindo para o valor real em um efeito pós-montagem. Incluído nesta etapa por estar diretamente ligado à confiabilidade do sistema de tema sendo consolidado, e por ser uma correção pequena e contida.
+
 ### Validação
 
-Mudança de UI — validada visualmente no browser após a implementação:
-- Navbar em tema claro e escuro
-- Toggle de layout horizontal ↔ vertical (desktop)
-- Menu mobile (hambúrguer + bottom nav)
-- Footer
+Validado no browser (via uma rota de preview temporária, já removida, já que o Navbar só aparece em páginas autenticadas):
+- Navbar em tema claro e escuro (toggle testado, `data-theme` e tokens computados conferidos via DOM)
+- Toggle de layout horizontal ↔ vertical, incluindo persistência após reload
+- Ausência de hydration mismatch nos logs do servidor de dev, para ambos os toggles
+- Componentes `ui/` (Button, Badge, Card, Modal, MoneyInput) renderizados e funcionais
+- Type-check (`tsc --noEmit`) e lint limpos nos arquivos tocados
 - Passada rápida por Dashboard e Contas a Pagar para confirmar que a consolidação de tokens não quebrou nada visualmente (mesmo sem serem migrados ainda)
 
 ## Fora de escopo (nesta etapa)
