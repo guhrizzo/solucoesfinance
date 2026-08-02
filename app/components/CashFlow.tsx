@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Navbar from "./Navbar";
+import { Modal, Button, MoneyInput, parseAmount } from "./ui";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -83,13 +84,6 @@ const labelMonthYear = (yearMonth: string) => {
 const shortDate = (d: string) =>
   new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "numeric" });
 
-function parseAmount(raw: string): number {
-  const s = raw.trim().replace(/[^\d,.]/g, "");
-  if (!s) return 0;
-  if (s.includes(",")) return parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
-  return parseFloat(s) || 0;
-}
-
 if (typeof window !== "undefined") {
   import("@/lib/firebase");
   import("firebase/auth");
@@ -103,43 +97,27 @@ function PrevisaoModal({ open, value, onClose, onSave }: {
 }) {
   const [raw, setRaw] = useState("");
   useEffect(() => { if (open) setRaw(value > 0 ? value.toFixed(2).replace(".", ",") : ""); }, [open, value]);
-  if (!open) return null;
   const parsed = parseAmount(raw);
   return (
-    <div className="fixed inset-0 z-990 flex items-center justify-center p-4"
-      style={{ background: "rgba(13,17,23,0.5)", backdropFilter: "blur(8px)" }}>
-      <div className="cf-card p-6 w-full max-w-sm" style={{ animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Meta de gastos</h3>
-            <p className="text-xs mt-2" style={{ color: "var(--cf-text2)" }}>Orçamento + Contas a pagar - Contas a receber (pendentes)</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg cursor-pointer"
-            style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-            <X size={16} />
-          </button>
-        </div>
+    <Modal open={open} onClose={onClose} title="Meta de gastos" size="sm">
+      <div className="p-6">
+        <p className="text-xs -mt-2 mb-5" style={{ color: "var(--cf-text-2)" }}>Orçamento + Contas a pagar - Contas a receber (pendentes)</p>
         <div className="space-y-3 mb-6">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--cf-text2)" }}>Valor orçado (R$)</label>
-          <input inputMode="decimal" value={raw} onChange={(e) => setRaw(e.target.value)}
-            placeholder="0,00" autoFocus className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
-            style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--cf-text-2)" }}>Valor orçado (R$)</label>
+          <MoneyInput value={raw} onValueChange={setRaw} autoFocus />
         </div>
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold cursor-pointer"
-            style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>Cancelar</button>
-          <button onClick={() => { onSave(parsed); onClose(); }}
-            className="flex-1 py-3 rounded-xl text-sm font-bold cursor-pointer"
-            style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>Salvar</button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button variant="primary" onClick={() => { onSave(parsed); onClose(); }} className="flex-1">Salvar</Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 // ─── Modal de transação ───────────────────────────────────────────────────────
 
-function Modal({ open, editing, uid, onClose, onSave }: {
+function TransactionModal({ open, editing, uid, onClose, onSave }: {
   open: boolean; editing: Tx | null; uid: string | null;
   onClose: () => void; onSave: (data: Omit<Tx, "id">) => Promise<void>;
 }) {
@@ -255,55 +233,50 @@ function Modal({ open, editing, uid, onClose, onSave }: {
   const hasNf = nfPreview || nfUrl;
 
   return (
-    <div className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
-      style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
-      <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
-        style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.2)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
-        <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--cf-border)" }} />
-        </div>
+    <Modal open={open} onClose={onClose} size="md" mobileSheet closeDisabled={saving}>
+      <>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
           <div>
             <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{editing ? "Editar transação" : "Nova transação"}</p>
-            <p className="text-xs mt-1" style={{ color: "var(--cf-text2)" }}>Preencha ou anexe uma nota fiscal</p>
+            <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>Preencha ou anexe uma nota fiscal</p>
           </div>
           <button onClick={() => !saving && onClose()} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer"
-            style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+            style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
             <X size={16} />
           </button>
         </div>
         <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "82vh" }}>
           {err && (
             <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-              style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+              style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)", color: "var(--status-danger-text)" }}>
               <span className="mt-0.5">⚠</span> {err}
             </div>
           )}
           {/* NF */}
           <div className="space-y-2.5">
-            <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--cf-text2)" }}>
+            <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--cf-text-2)" }}>
               <Paperclip size={12} /> Anexar nota fiscal
             </label>
             {hasNf ? (
-              <div className="flex items-center gap-3 p-3.5 rounded-xl" style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(29,78,216,0.1)" }}>
-                  <FileText size={16} style={{ color: "#1d4ed8" }} />
+              <div className="flex items-center gap-3 p-3.5 rounded-xl" style={{ background: "var(--status-info-bg)", border: "1px solid var(--status-info-border)" }}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--status-info-bg)" }}>
+                  <FileText size={16} style={{ color: "var(--status-info-text)" }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate" style={{ color: "#1e40af" }}>{nfName || "Nota Fiscal"}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#60a5fa" }}>Anexada ✓</p>
+                  <p className="text-xs font-semibold truncate" style={{ color: "var(--status-info-text)" }}>{nfName || "Nota Fiscal"}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>Anexada ✓</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {(nfPreview || nfUrl) && (
                     <a href={nfPreview || nfUrl} target="_blank" rel="noreferrer"
                       className="p-1.5 rounded-lg hover:bg-opacity-70 cursor-pointer"
-                      style={{ background: "rgba(29,78,216,0.1)", color: "#1d4ed8" }}>
+                      style={{ background: "var(--status-info-bg)", color: "var(--status-info-text)" }}>
                       <ExternalLink size={12} />
                     </a>
                   )}
                   <button onClick={() => { setNfFile(null); setNfPreview(""); setNfUrl(""); setNfName(""); }}
                     className="p-1.5 rounded-lg hover:bg-opacity-70 cursor-pointer"
-                    style={{ background: "rgba(29,78,216,0.1)", color: "#60a5fa" }}>
+                    style={{ background: "var(--status-info-bg)", color: "var(--cf-text-2)" }}>
                     <X size={12} />
                   </button>
                 </div>
@@ -313,11 +286,11 @@ function Modal({ open, editing, uid, onClose, onSave }: {
                 className="w-full border-2 border-dashed rounded-xl p-4 flex items-center gap-3 transition-all hover:border-opacity-100 cursor-pointer"
                 style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)" }}>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--cf-border)" }}>
-                  <Upload size={15} style={{ color: "var(--cf-text2)" }} />
+                  <Upload size={15} style={{ color: "var(--cf-text-2)" }} />
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>PDF, imagem ou XML</p>
-                  <p className="text-xs" style={{ color: "var(--cf-text2)" }}>Clique para anexar</p>
+                  <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>Clique para anexar</p>
                 </div>
                 <input ref={nfRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.xml" className="hidden" onChange={handleNfSelect} />
               </button>
@@ -338,7 +311,7 @@ function Modal({ open, editing, uid, onClose, onSave }: {
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer"
                 style={type === t
                   ? { background: t === "entrada" ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #ef4444, #dc2626)", color: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }
-                  : { background: "transparent", color: "var(--cf-text2)" }}>
+                  : { background: "transparent", color: "var(--cf-text-2)" }}>
                 {t === "entrada" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
                 {t === "entrada" ? "Entrada" : "Saída"}
               </button>
@@ -346,14 +319,14 @@ function Modal({ open, editing, uid, onClose, onSave }: {
           </div>
           {/* Descrição */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Descrição</label>
+            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Descrição</label>
             <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Cliente XYZ, Aluguel…"
               className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
           {/* Categoria */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Categoria</label>
+            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
             <div className="relative">
               <select value={cat} onChange={(e) => setCat(e.target.value)}
                 className="w-full appearance-none rounded-xl px-4 py-3 pr-9 text-sm outline-none cursor-pointer transition-colors"
@@ -361,19 +334,17 @@ function Modal({ open, editing, uid, onClose, onSave }: {
                 <option value="">— Selecione —</option>
                 {CAT[type].map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text2)" }} />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-2)" }} />
             </div>
           </div>
           {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Valor (R$)</label>
-              <input inputMode="decimal" value={rawAmt} onChange={(e) => setRawAmt(e.target.value)} placeholder="0,00"
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono cursor-text"
-                style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
+              <MoneyInput value={rawAmt} onValueChange={setRawAmt} />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Data</label>
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer transition-colors"
                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -381,21 +352,25 @@ function Modal({ open, editing, uid, onClose, onSave }: {
           </div>
           {/* Observação */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Observação (opcional)</label>
+            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="NF #123, parcela 1/5…"
               className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
-          <button onClick={submit} disabled={!canSave || saving}
-            className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canSave && !saving ? "cursor-pointer hover:shadow-lg" : "cursor-not-allowed opacity-50"}`}
-            style={canSave && !saving
-              ? { background: type === "entrada" ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #ef4444, #dc2626)", color: "white" }
-              : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-            {saving ? <><Loader2 size={15} className="animate-spin" /> Salvando…</> : <><Check size={15} /> {editing ? "Salvar alterações" : type === "entrada" ? "Registrar entrada" : "Registrar saída"}</>}
-          </button>
+          <Button
+            onClick={submit}
+            disabled={!canSave}
+            loading={saving}
+            icon={Check}
+            variant={type === "entrada" ? "success" : "danger"}
+            size="lg"
+            className="w-full"
+          >
+            {editing ? "Salvar alterações" : type === "entrada" ? "Registrar entrada" : "Registrar saída"}
+          </Button>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 
@@ -486,13 +461,8 @@ function ImportModal({ open, onClose, onImport }: {
   const toggle = (i: number) => { const s = new Set(selected); s.has(i) ? s.delete(i) : s.add(i); setSelected(s); };
 
   return (
-    <div className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
-      style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
-      <div className="w-full sm:max-w-lg sm:rounded-2xl rounded-t-3xl overflow-hidden"
-        style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.2)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
-        <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-          <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--cf-border)" }} />
-        </div>
+    <Modal open={open} onClose={onClose} size="md" mobileSheet closeDisabled={step === "saving"}>
+      <div style={{ maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--cf-border)" }}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)" }}>
@@ -500,7 +470,7 @@ function ImportModal({ open, onClose, onImport }: {
             </div>
             <div>
               <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Importar com IA</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
+              <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
                 {step === "input" && "Cole ou faça upload de seu extrato"}
                 {step === "loading" && "Analisando transações…"}
                 {step === "preview" && `${preview.length} transações encontradas`}
@@ -511,7 +481,7 @@ function ImportModal({ open, onClose, onImport }: {
           </div>
           {step !== "saving" && (
             <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer"
-              style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+              style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
               <X size={16} />
             </button>
           )}
@@ -521,7 +491,7 @@ function ImportModal({ open, onClose, onImport }: {
             <>
               {errMsg && (
                 <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-                  style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                  style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)", color: "var(--status-danger-text)" }}>
                   <span className="shrink-0">⚠</span> {errMsg}
                 </div>
               )}
@@ -529,24 +499,24 @@ function ImportModal({ open, onClose, onImport }: {
                 className="w-full border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 transition-all hover:border-opacity-100 cursor-pointer"
                 style={{ borderColor: "var(--cf-border)" }}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--cf-input)" }}>
-                  <Upload size={18} style={{ color: "var(--cf-text2)" }} />
+                  <Upload size={18} style={{ color: "var(--cf-text-2)" }} />
                 </div>
                 <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>Fazer upload</p>
-                <p className="text-xs" style={{ color: "var(--cf-text2)" }}>.txt ou .csv do seu banco</p>
+                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>.txt ou .csv do seu banco</p>
                 <input ref={fileRef} type="file" accept=".txt,.csv" className="hidden" onChange={handleFile} />
               </button>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px" style={{ background: "var(--cf-border)" }} />
-                <span className="text-xs font-medium" style={{ color: "var(--cf-text2)" }}>ou cole o texto</span>
+                <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>ou cole o texto</span>
                 <div className="flex-1 h-px" style={{ background: "var(--cf-border)" }} />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Extrato bancário</label>
+                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Extrato bancário</label>
                 <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8}
                   placeholder={`01/03/2026  PIX RECEBIDO ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA         DB  R$ 2.200,00`}
                   className="w-full rounded-xl px-4 py-3 text-xs font-mono outline-none resize-none cursor-text"
                   style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
-                <p className="text-xs" style={{ color: "var(--cf-text2)" }}>{text.length} caracteres</p>
+                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{text.length} caracteres</p>
               </div>
             </>
           )}
@@ -559,7 +529,7 @@ function ImportModal({ open, onClose, onImport }: {
               </div>
               <div className="text-center">
                 <p className="font-heading text-sm font-bold" style={{ color: "var(--cf-text)" }}>Analisando…</p>
-                <p className="text-xs mt-2" style={{ color: "var(--cf-text2)" }}>Extraindo transações, valores e categorias</p>
+                <p className="text-xs mt-2" style={{ color: "var(--cf-text-2)" }}>Extraindo transações, valores e categorias</p>
               </div>
             </div>
           )}
@@ -573,7 +543,7 @@ function ImportModal({ open, onClose, onImport }: {
                 ].map(({ label, val, color, bg }) => (
                   <div key={label} className="rounded-xl p-3 text-center" style={{ background: bg }}>
                     <p className="text-lg font-heading font-bold" style={{ color }}>{val}</p>
-                    <p className="text-xs" style={{ color: "var(--cf-text2)" }}>{label}</p>
+                    <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{label}</p>
                   </div>
                 ))}
               </div>
@@ -585,7 +555,7 @@ function ImportModal({ open, onClose, onImport }: {
                   {selected.size === preview.length && <Check size={10} className="text-white" />}
                 </div>
                 {selected.size === preview.length ? "Desmarcar todos" : "Selecionar todos"}
-                <span className="ml-auto text-xs font-normal" style={{ color: "var(--cf-text2)" }}>{selected.size}/{preview.length}</span>
+                <span className="ml-auto text-xs font-normal" style={{ color: "var(--cf-text-2)" }}>{selected.size}/{preview.length}</span>
               </button>
               <div className="space-y-1.5">
                 {preview.map((tx, i) => {
@@ -607,7 +577,7 @@ function ImportModal({ open, onClose, onImport }: {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</p>
-                        <p className="text-xs truncate" style={{ color: "var(--cf-text2)" }}>{tx.category} · {shortDate(tx.date)}</p>
+                        <p className="text-xs truncate" style={{ color: "var(--cf-text-2)" }}>{tx.category} · {shortDate(tx.date)}</p>
                       </div>
                       <span className="text-xs font-mono font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
                         {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
@@ -624,7 +594,7 @@ function ImportModal({ open, onClose, onImport }: {
                 <CheckCircle2 size={32} className="text-emerald-600" />
               </div>
               <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Pronto!</p>
-              <p className="text-sm text-center" style={{ color: "var(--cf-text2)" }}>
+              <p className="text-sm text-center" style={{ color: "var(--cf-text-2)" }}>
                 {selected.size} transação{selected.size !== 1 ? "ões" : ""} importada{selected.size !== 1 ? "s" : ""}.
               </p>
             </div>
@@ -633,41 +603,25 @@ function ImportModal({ open, onClose, onImport }: {
         <div className="px-5 py-4 shrink-0 flex gap-2" style={{ borderTop: "1px solid var(--cf-border)" }}>
           {step === "input" && (
             <>
-              <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold cursor-pointer"
-                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>Cancelar</button>
-              <button onClick={analyze} disabled={!text.trim()}
-                className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${text.trim() ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
-                style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
-                <Sparkles size={14} /> Analisar
-              </button>
+              <Button variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
+              <Button variant="primary" icon={Sparkles} onClick={analyze} disabled={!text.trim()} className="flex-1">Analisar</Button>
             </>
           )}
           {step === "preview" && (
             <>
-              <button onClick={() => setStep("input")} className="flex-1 py-3 rounded-xl text-sm font-semibold cursor-pointer"
-                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>← Voltar</button>
-              <button onClick={confirmImport} disabled={selected.size === 0}
-                className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${selected.size > 0 ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
-                style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
-                <Check size={14} /> Importar
-              </button>
+              <Button variant="secondary" onClick={() => setStep("input")} className="flex-1">← Voltar</Button>
+              <Button variant="success" icon={Check} onClick={confirmImport} disabled={selected.size === 0} className="flex-1">Importar</Button>
             </>
           )}
           {step === "saving" && (
-            <button disabled className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
-              style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
-              <Loader2 size={14} className="animate-spin" /> Salvando…
-            </button>
+            <Button variant="secondary" disabled loading className="flex-1">Salvando…</Button>
           )}
           {step === "done" && (
-            <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer"
-              style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
-              <Check size={14} /> Concluir
-            </button>
+            <Button variant="primary" icon={Check} onClick={onClose} className="flex-1">Concluir</Button>
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -912,28 +866,24 @@ export default function CashFlowPage() {
   if (pageState === "loading") return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
       <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-      <p className="text-sm" style={{ color: "var(--cf-text2)" }}>Carregando…</p>
+      <p className="text-sm" style={{ color: "var(--cf-text-2)" }}>Carregando…</p>
     </div>
   );
 
   if (pageState === "error") return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
       <p className="font-heading text-lg font-bold text-rose-500">Erro ao conectar</p>
-      <div className="rounded-xl p-4 max-w-sm w-full text-left cf-card" style={{ background: "#fef2f2", border: "1px solid #fecdd3" }}>
+      <div className="rounded-xl p-4 max-w-sm w-full text-left cf-card" style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)" }}>
         <p className="text-xs font-mono break-all text-rose-700">{errMsg || "Erro desconhecido"}</p>
       </div>
-      <button onClick={() => window.location.reload()} className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-        style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>Tentar novamente</button>
+      <Button variant="primary" onClick={() => window.location.reload()} className="mt-2">Tentar novamente</Button>
     </div>
   );
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-        *, *::before, *::after { font-family: 'Sora', sans-serif; box-sizing: border-box; }
-        .font-heading { font-family: 'Sora', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
+        *, *::before, *::after { box-sizing: border-box; }
 
         .cf-card { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; }
          .cf-kpi { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px;
@@ -985,7 +935,7 @@ export default function CashFlowPage() {
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--cf-border); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--cf-text3); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--cf-text-3); }
         .scrollbar-none { scrollbar-width: none; }
         .scrollbar-none::-webkit-scrollbar { display: none; }
 
@@ -998,54 +948,38 @@ export default function CashFlowPage() {
 
       <Navbar user={{ displayName: userName, email: userEmail }} activePath="/fluxo-caixa" onLogout={handleLogout} />
 
-      <Modal open={modal} editing={editing} uid={uid} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
+      <TransactionModal open={modal} editing={editing} uid={uid} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
       <PrevisaoModal open={previsaoOpen} value={previsao} onClose={() => setPrevisaoOpen(false)} onSave={setPrevisao} />
 
-      {confirmId && (
-        <div className="fixed inset-0 z-990 flex items-center justify-center p-4"
-          style={{ background: "rgba(13,17,23,0.5)", backdropFilter: "blur(8px)" }}>
-          <div className="cf-card p-6 w-full max-w-xs text-center" style={{ animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#fee2e2" }}>
-              <Trash2 size={20} style={{ color: "#dc2626" }} />
-            </div>
-            <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>Excluir transação?</p>
-            <p className="text-xs mb-5" style={{ color: "var(--cf-text2)" }}>Esta ação não pode ser desfeita.</p>
-            <div className="flex gap-2">
-              <button onClick={() => setConfirmId(null)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>Cancelar</button>
-              <button onClick={handleDelete} disabled={deleting}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "white" }}>
-                {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Excluir</>}
-              </button>
-            </div>
+      <Modal open={!!confirmId} onClose={() => setConfirmId(null)} size="sm" closeDisabled={deleting}>
+        <div className="p-6 text-center">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "var(--status-danger-bg)" }}>
+            <Trash2 size={20} style={{ color: "var(--status-danger-text)" }} />
+          </div>
+          <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>Excluir transação?</p>
+          <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>Esta ação não pode ser desfeita.</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setConfirmId(null)} className="flex-1">Cancelar</Button>
+            <Button variant="danger" icon={Trash2} onClick={handleDelete} loading={deleting} className="flex-1">Excluir</Button>
           </div>
         </div>
-      )}
+      </Modal>
 
       <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 overflow-y-auto overflow-x-hidden pb-24 lg:pb-8">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>Fluxo de caixa</h1>
-            <p className="text-xs mt-1" style={{ color: "var(--cf-text2)" }}>Bem-vindo de volta, {userName.split(" ")[0]}</p>
+            <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>Bem-vindo de volta, {userName.split(" ")[0]}</p>
           </div>
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={() => setHideValues(!hideValues)}
               className="p-2 hover:bg-opacity-50 rounded-xl transition-colors cursor-pointer"
-              style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }} title="Ocultar valores">
+              style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }} title="Ocultar valores">
               {hideValues ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
-            <button onClick={() => setImportOpen(true)}
-              className="flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer transition-all"
-              style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
-              <Sparkles size={13} /> Importar extrato
-            </button>
-            <button onClick={() => { setEditing(null); setModal(true); }}
-              className="flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer transition-all"
-              style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
-              <Plus size={14} /> Nova transação
-            </button>
+            <Button variant="primary" size="sm" icon={Sparkles} onClick={() => setImportOpen(true)}>Importar extrato</Button>
+            <Button variant="success" size="sm" icon={Plus} onClick={() => { setEditing(null); setModal(true); }}>Nova transação</Button>
           </div>
         </div>
 
@@ -1059,7 +993,7 @@ export default function CashFlowPage() {
             return (
               <div key={label} className={`cf-kpi kin p-3 sm:p-4 flex flex-col gap-2`}>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>{label}</p>
+                  <p className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>{label}</p>
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: ibg }}>
                     <Icon size={15} style={{ color }} strokeWidth={2} />
                   </div>
@@ -1068,7 +1002,7 @@ export default function CashFlowPage() {
                   <p className="font-heading font-bold text-base sm:text-[17px] mono leading-tight tracking-tight" style={{ color }}>
                     {isSaldo && val > 0 ? "+" : ""}{displayValue(val)}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--cf-text3)" }}>{sub}</p>
+                  <p className="text-xs mt-1" style={{ color: "var(--cf-text-3)" }}>{sub}</p>
                 </div>
                 {showBar && total > 0 && (
                   <div className="cf-progress">
@@ -1087,15 +1021,15 @@ export default function CashFlowPage() {
           </div>
           <div className="flex-1 text-left">
             <p className="text-sm font-heading font-bold" style={{ color: "var(--cf-text)" }}>Importar com IA</p>
-            <p className="text-xs" style={{ color: "var(--cf-text2)" }}>Extraia dados do seu extrato automaticamente</p>
+            <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>Extraia dados do seu extrato automaticamente</p>
           </div>
-          <ArrowUpRight size={16} style={{ color: "var(--cf-text3)" }} />
+          <ArrowUpRight size={16} style={{ color: "var(--cf-text-3)" }} />
         </button>
 
         {/* Toolbar */}
         <div className="cf-card p-3.5 space-y-3">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text3)" }} />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-3)" }} />
             <input className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}
               placeholder="Buscar descrição ou categoria…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -1114,12 +1048,12 @@ export default function CashFlowPage() {
                     : f === "entrada"
                       ? { background: "linear-gradient(135deg, #dcfce7, #c6f6d5)", color: "#15803d", borderColor: "transparent", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }
                       : { background: "linear-gradient(135deg, #fee2e2, #fecaca)", color: "#b91c1c", borderColor: "transparent", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }
-                  : { background: "transparent", color: "var(--cf-text2)", borderColor: "var(--cf-border)" }}>
+                  : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
                 {Icon && <Icon size={12} />}
                 {label}
               </button>
             ))}
-            <span className="ml-auto text-xs shrink-0 pl-2 font-medium" style={{ color: "var(--cf-text3)" }}>
+            <span className="ml-auto text-xs shrink-0 pl-2 font-medium" style={{ color: "var(--cf-text-3)" }}>
               {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -1129,26 +1063,18 @@ export default function CashFlowPage() {
         {grouped.length === 0 ? (
           <div className="cf-card p-12 flex flex-col items-center text-center gap-3">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "var(--cf-input)" }}>
-              <TrendingUp size={24} style={{ color: "var(--cf-text3)" }} />
+              <TrendingUp size={24} style={{ color: "var(--cf-text-3)" }} />
             </div>
             <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
               {search || filter !== "all" ? "Nenhum resultado" : "Nenhuma transação"}
             </p>
-            <p className="text-xs max-w-xs" style={{ color: "var(--cf-text2)" }}>
+            <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
               {search || filter !== "all" ? "Tente ajustar os filtros." : "Adicione manualmente ou importe do seu extrato bancário."}
             </p>
             {!search && filter === "all" && (
               <div className="flex gap-2 mt-2">
-                <button onClick={() => { setEditing(null); setModal(true); }}
-                  className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer"
-                  style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
-                  <Plus size={14} /> Adicionar
-                </button>
-                <button onClick={() => setImportOpen(true)}
-                  className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer"
-                  style={{ border: "1px solid var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text)" }}>
-                  <Sparkles size={14} /> Importar
-                </button>
+                <Button variant="primary" icon={Plus} onClick={() => { setEditing(null); setModal(true); }}>Adicionar</Button>
+                <Button variant="secondary" icon={Sparkles} onClick={() => setImportOpen(true)}>Importar</Button>
               </div>
             )}
           </div>
@@ -1183,11 +1109,11 @@ export default function CashFlowPage() {
                     <div className="flex items-center gap-3 flex-1 text-left">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                         style={{ background: "var(--cf-input)" }}>
-                        <Calendar size={18} style={{ color: "var(--cf-text2)" }} />
+                        <Calendar size={18} style={{ color: "var(--cf-text-2)" }} />
                       </div>
                       <div>
                         <p className="text-base font-heading font-bold" style={{ color: "var(--cf-text)" }}>{labelMonthYear(yearMonth)}</p>
-                        <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
                           {totalTxs} {totalTxs === 1 ? "transação" : "transações"}
                         </p>
                       </div>
@@ -1214,7 +1140,7 @@ export default function CashFlowPage() {
                       <ChevronDown
                         size={18}
                         className={`cf-chevron transition-transform ${isMonthOpen ? "open" : ""}`}
-                        style={{ color: "var(--cf-text3)" }}
+                        style={{ color: "var(--cf-text-3)" }}
                       />
                     </div>
                   </button>
@@ -1246,11 +1172,11 @@ export default function CashFlowPage() {
                               <div className="flex items-center gap-2.5 flex-1">
                                 <div className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
                                   style={{ background: "var(--cf-input)" }}>
-                                  <Calendar size={14} style={{ color: "var(--cf-text3)" }} />
+                                  <Calendar size={14} style={{ color: "var(--cf-text-3)" }} />
                                 </div>
                                 <div className="text-left">
                                   <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</p>
-                                  <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
+                                  <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
                                     {items.length} {items.length === 1 ? "transação" : "transações"}
                                   </p>
                                 </div>
@@ -1277,7 +1203,7 @@ export default function CashFlowPage() {
                                 <ChevronDown
                                   size={14}
                                   className={`cf-chevron ${isDayOpen ? "open" : ""}`}
-                                  style={{ color: "var(--cf-text3)" }}
+                                  style={{ color: "var(--cf-text-3)" }}
                                 />
                               </div>
                             </button>
@@ -1304,7 +1230,7 @@ export default function CashFlowPage() {
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        {tx.note && <p className="text-xs truncate" style={{ color: "var(--cf-text2)" }}>📝 {tx.note}</p>}
+                                        {tx.note && <p className="text-xs truncate" style={{ color: "var(--cf-text-2)" }}>📝 {tx.note}</p>}
                                         {tx.nfUrl && (
                                           <a href={tx.nfUrl} target="_blank" rel="noreferrer"
                                             className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors hover:opacity-70 cursor-pointer"
@@ -1322,12 +1248,12 @@ export default function CashFlowPage() {
                                     <div className="cf-txa flex items-center gap-1 shrink-0">
                                       <button onClick={() => { setEditing(tx); setModal(true); }}
                                         className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
-                                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                                         <Edit3 size={13} />
                                       </button>
                                       <button onClick={() => setConfirmId(tx.id)}
                                         className="p-1.5 hover:bg-opacity-70 rounded-lg transition-colors cursor-pointer"
-                                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                                         <Trash2 size={13} />
                                       </button>
                                     </div>

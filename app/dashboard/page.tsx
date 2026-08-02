@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import OnboardingModal, { type OnboardingAnswers } from "../components/OnboardingModal";
 import Navbar from "../components/Navbar";
+import { Badge } from "../components/ui";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -345,7 +346,7 @@ export default function Dashboard() {
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)" }}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-sm font-semibold" style={{ color: "var(--db-text2)" }}>Sincronizando painel...</p>
+          <p className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>Sincronizando painel...</p>
         </div>
       </div>
     );
@@ -355,9 +356,6 @@ export default function Dashboard() {
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-        *, body { font-family: 'Sora', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
         * { transition: background-color .2s, border-color .2s, color .15s; }
         button, a, input, select { transition: background-color .15s, border-color .15s, color .1s, opacity .15s !important; }
 
@@ -399,10 +397,6 @@ export default function Dashboard() {
         .bill-row:hover { background: var(--db-hover); }
 
         .donut-ring { transition: stroke-dashoffset 0.8s cubic-bezier(.22,.68,0,1.2); }
-
-        .badge-pago     { background: #dcfce7; color: #16a34a; }
-        .badge-recebido { background: #dbeafe; color: #1d4ed8; }
-        .badge-pendente { background: #fef9c3; color: #b45309; }
 
         .db-divider { border-color: var(--db-border); }
         .db-progress-bg { background: var(--db-border); }
@@ -446,7 +440,7 @@ export default function Dashboard() {
             return (
               <div key={kpi.label} className="kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3 md:gap-4" style={{ animationDelay: `${i * 80}ms` }}>
                 <div className="flex items-start justify-between">
-                  <p className="text-xs font-medium" style={{ color: "var(--db-text2)" }}>{kpi.label}</p>
+                  <p className="text-xs font-medium" style={{ color: "var(--db-text-2)" }}>{kpi.label}</p>
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
                     <kpi.icon size={16} style={{ color: c.text }} />
                   </div>
@@ -458,7 +452,7 @@ export default function Dashboard() {
                       {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
                       {kpi.change}
                     </span>
-                    <span className="text-xs" style={{ color: "var(--db-text2)" }}>{kpi.sub}</span>
+                    <span className="text-xs" style={{ color: "var(--db-text-2)" }}>{kpi.sub}</span>
                   </div>
                 </div>
               </div>
@@ -473,13 +467,13 @@ export default function Dashboard() {
             <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2">
               <div>
                 <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Receita vs. Despesas</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Acumulado ano corrente — mensal</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Acumulado ano corrente — mensal</p>
               </div>
               <div className="flex items-center gap-2 md:gap-4 shrink-0">
-                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text2)" }}>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
                   <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 inline-block" /> Receita
                 </div>
-                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text2)" }}>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
                   <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--db-border)" }} /> Despesa
                 </div>
                 <button 
@@ -515,11 +509,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
               {[
                 { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color:"#42a5f5" },
-                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--db-text2)" },
+                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--db-text-2)" },
                 { label:"Saldo acumulado", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)), color:"#34d399" },
               ].map((s) => (
                 <div key={s.label}>
-                  <p className="text-xs mb-0.5 leading-tight" style={{ color: "var(--db-text2)" }}>{s.label}</p>
+                  <p className="text-xs mb-0.5 leading-tight" style={{ color: "var(--db-text-2)" }}>{s.label}</p>
                   <p className="font-bold text-xs md:text-sm mono" style={{ color: s.color }}>{s.val}</p>
                 </div>
               ))}
@@ -536,7 +530,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-1 md:space-y-2 flex-1 overflow-y-auto">
               {upcomingBillsData.length === 0 ? (
-                <div className="text-center py-8 text-xs" style={{ color: "var(--db-text3)" }}>
+                <div className="text-center py-8 text-xs" style={{ color: "var(--db-text-3)" }}>
                   Nenhuma conta pendente vencendo em breve!
                 </div>
               ) : (
@@ -552,7 +546,7 @@ export default function Dashboard() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold leading-tight truncate" style={{ color: "var(--db-text)" }}>{bill.name}</p>
-                        <p className="text-xs mono" style={{ color: "var(--db-text2)" }}>vence {bill.dueFormatted}</p>
+                        <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>vence {bill.dueFormatted}</p>
                       </div>
                     </div>
                     <p className="text-xs font-bold mono shrink-0 ml-2" style={{ color: bill.urgent ? "#f87171" : "var(--db-text)" }}>
@@ -576,7 +570,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <div>
                 <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Últimas transações</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Movimentações recentes</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Movimentações recentes</p>
               </div>
               <div className="flex items-center gap-2">
                 <a href="/fluxo-caixa" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
@@ -587,21 +581,21 @@ export default function Dashboard() {
 
             <div className="md:hidden space-y-2">
               {recentTransactions.length === 0 ? (
-                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text3)" }}>Nenhum lançamento registrado.</div>
+                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>Nenhum lançamento registrado.</div>
               ) : (
                 recentTransactions.map((tx) => (
                   <div key={tx.id} className="tx-row flex items-center justify-between p-3 rounded-xl" style={{ border: `1px solid var(--db-border)` }}>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{tx.description}</p>
-                      <p className="text-xs mono" style={{ color: "var(--db-text2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</p>
+                      <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 ml-3 shrink-0">
                       <span className={`mono text-xs font-bold ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>
                         {tx.type === "entrada" ? "+" : "-"}{hideValues ? "•••" : toBRL(tx.amount)}
                       </span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tx.reconciled ? "badge-pago" : "badge-pendente"}`}>
+                      <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
                         {tx.reconciled ? "Conciliado" : "Pendente"}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
                 ))
@@ -620,7 +614,7 @@ export default function Dashboard() {
                 <tbody>
                   {recentTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-xs" style={{ color: "var(--db-text3)" }}>Nenhuma transação registrada.</td>
+                      <td colSpan={5} className="py-8 text-center text-xs" style={{ color: "var(--db-text-3)" }}>Nenhuma transação registrada.</td>
                     </tr>
                   ) : (
                     recentTransactions.map((tx) => (
@@ -628,8 +622,8 @@ export default function Dashboard() {
                         <td className="py-3 pr-4"><p className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>{tx.description}</p></td>
                         <td className="py-3 pr-4"><span className={`text-xs font-medium ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>{tx.type === "entrada" ? "Entrada" : "Saída"}</span></td>
                         <td className="py-3 pr-4"><span className={`mono text-xs font-bold ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>{tx.type === "entrada" ? "+" : "-"}{hideValues ? "••••" : toBRL(tx.amount)}</span></td>
-                        <td className="py-3 pr-4"><span className="text-xs whitespace-nowrap" style={{ color: "var(--db-text2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span></td>
-                        <td className="py-3"><span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full ${tx.reconciled ? "badge-pago" : "badge-pendente"}`}>{tx.reconciled ? "Conciliado" : "Pendente"}</span></td>
+                        <td className="py-3 pr-4"><span className="text-xs whitespace-nowrap" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span></td>
+                        <td className="py-3"><Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">{tx.reconciled ? "Conciliado" : "Pendente"}</Badge></td>
                       </tr>
                     ))
                   )}
@@ -642,7 +636,7 @@ export default function Dashboard() {
           <div className="side-card p-4 md:p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centro de custos</h2>
-              <a href="/costCenter" style={{ color: "var(--db-text2)" }} className="hover:text-blue-400 transition-colors"><MoreHorizontal size={16} /></a>
+              <a href="/costCenter" style={{ color: "var(--db-text-2)" }} className="hover:text-blue-400 transition-colors"><MoreHorizontal size={16} /></a>
             </div>
             <div className="flex justify-center mb-4 md:mb-5">
               <svg width="130" height="130" viewBox="0 0 140 140">
@@ -663,18 +657,18 @@ export default function Dashboard() {
                 <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
                   {hideValues ? "••••" : toBRL(costCenterData.totalExpenses)}
                 </text>
-                <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text3)" fontFamily="Sora">total despesas</text>
+                <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text-3)" fontFamily="Sora">total despesas</text>
               </svg>
             </div>
             <div className="space-y-2.5 flex-1 overflow-y-auto">
               {costCenterData.centers.length === 0 ? (
-                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text3)" }}>Nenhuma despesa no período.</div>
+                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>Nenhuma despesa no período.</div>
               ) : (
                 costCenterData.centers.map((cc) => (
                   <div key={cc.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cc.color }} />
-                      <span className="text-xs truncate max-w-[80px]" style={{ color: "var(--db-text2)" }} title={cc.name}>{cc.name}</span>
+                      <span className="text-xs truncate max-w-[80px]" style={{ color: "var(--db-text-2)" }} title={cc.name}>{cc.name}</span>
                     </div>
                     <div className="flex items-center gap-2 md:gap-3">
                       <div className="w-16 md:w-20 h-1.5 rounded-full overflow-hidden db-progress-bg">
@@ -694,7 +688,7 @@ export default function Dashboard() {
           <div className="flex items-start md:items-center justify-between mb-4 gap-2">
             <div>
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Projeção de fluxo de caixa (Próximos 30 dias)</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Baseado em saldo atual e recebimentos/contas agendadas para os próximos 30 dias</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Baseado em saldo atual e recebimentos/contas agendadas para os próximos 30 dias</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
@@ -724,11 +718,11 @@ export default function Dashboard() {
             })}
           </div>
           <div className="mt-4 md:mt-5">
-            <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--db-text2)" }}>
+            <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--db-text-2)" }}>
               <span>Saldo projetado final</span>
               <span className="mono font-semibold text-emerald-400">
                 {hideValues ? "••••" : toBRL(projection.saldoProjetado)} 
-                <span className="font-normal text-xs ml-1" style={{ color: "var(--db-text2)" }}>
+                <span className="font-normal text-xs ml-1" style={{ color: "var(--db-text-2)" }}>
                   ({projection.variacaoPct >= 0 ? "+" : ""}{projection.variacaoPct.toFixed(1)}%)
                 </span>
               </span>

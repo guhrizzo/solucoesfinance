@@ -27,6 +27,13 @@ Segunda etapa do roadmap iniciado em [2026-08-01-ui-fundacao-design.md](2026-08-
 4. Trocar os campos de valor monetário (`rawAmt`) por `MoneyInput`, removendo o `parseAmount` local em favor do de `ui/Input.tsx`.
 5. Trocar cores de estado hardcoded (erro, NF anexada) pelos tokens semânticos já existentes (`--status-danger-*`, `--status-info-*`).
 
+## Descobertas adicionais durante a implementação
+
+- Uma 4ª modal (confirmação de exclusão de transação) também reimplementava a casca do zero — migrada para `ui/Modal` junto com as três previstas.
+- `ui/Modal` ganhou duas props novas (`mobileSheet`, `closeDisabled`) para cobrir um padrão real já usado pelas modais de transação/importação (bottom sheet no mobile, com drag handle, e bloqueio de fechamento enquanto salva) — sem isso, migrar essas modais perderia esse comportamento.
+- As três páginas/componentes injetavam `<style>@import url(fonts.googleapis...)</style>` redundante, carregando não só Sora (já coberto pela Fundação) mas também **JetBrains Mono**, que não estava carregado em nenhum lugar via `next/font`. Corrigido trazendo `JetBrains_Mono` para `app/layout.tsx` (mesmo padrão do Sora) e apontando `.mono` e o `--font-mono`/`--font-sans` do bloco `@theme inline` (que apontavam para `--font-geist-mono`/`--font-geist-sans`, fontes de um template padrão nunca carregadas neste projeto) para as fontes reais.
+- `Set-Content -Encoding utf8` do PowerShell introduziu um BOM (byte-order-mark) no início de 4 arquivos editados por script neste processo (incluindo `Navbar.tsx`, da etapa anterior) — removido.
+
 ## Validação
 
-Mudança de UI — validada no browser via uma rota de preview temporária (removida ao final), já que o fluxo real depende de autenticação Firebase: KPIs, gráfico, tabela de transações, os três modais (abrir/fechar/salvar), tema claro/escuro, e ausência de erros de hidratação/console.
+Mudança de UI — validada no browser via uma rota de preview temporária (com as 3 modais internas exportadas temporariamente para o teste, revertido ao final), já que o fluxo real depende de autenticação Firebase: os 3 modais originais + a modal de exclusão descoberta, badges de status, `MoneyInput` pré-preenchido, variante `mobileSheet` (desktop centralizado vs. bottom sheet mobile com drag handle), tema claro/escuro, e ausência de erros de hidratação/console. Type-check e lint comparados byte-a-byte contra o baseline antes das mudanças — nenhum problema novo introduzido.

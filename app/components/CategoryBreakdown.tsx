@@ -27,7 +27,7 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
       <button
         onClick={onToggle}
         className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold hover:bg-opacity-50 transition-all"
-        style={{ color: "var(--db-text2)", background: "var(--db-sub)" }}
+        style={{ color: "var(--db-text-2)", background: "var(--db-sub)" }}
       >
         <span>Breakdown por categoria ({withSpend.length}/{categories.length})</span>
         {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -47,7 +47,7 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
                       <span className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>
                         {cat.name}
                       </span>
-                      <span className="text-xs mono font-bold" style={{ color: "var(--db-text2)" }}>
+                      <span className="text-xs mono font-bold" style={{ color: "var(--db-text-2)" }}>
                         {pct.toFixed(1)}%
                       </span>
                     </div>
@@ -57,7 +57,7 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
                         style={{ width: `${Math.min(pct, 100)}%`, background: color, opacity: 0.7 }}
                       />
                     </div>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--db-text3)" }}>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--db-text-3)" }}>
                       R$ {cat.spent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </p>
                   </div>
@@ -65,12 +65,12 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
               );
             })
           ) : (
-            <p className="text-xs text-center" style={{ color: "var(--db-text3)" }}>
+            <p className="text-xs text-center" style={{ color: "var(--db-text-3)" }}>
               Nenhuma categoria com gastos registrados
             </p>
           )}
           {empty > 0 && (
-            <p className="text-xs px-2 py-1 rounded text-center" style={{ background: "var(--db-input)", color: "var(--db-text3)" }}>
+            <p className="text-xs px-2 py-1 rounded text-center" style={{ background: "var(--db-input)", color: "var(--db-text-3)" }}>
               +{empty} categorias sem movimento
             </p>
           )}
