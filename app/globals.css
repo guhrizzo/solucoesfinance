@@ -237,13 +237,22 @@ body {
 /* Keyed off html[data-nav-layout], which the inline script in layout.tsx sets
    synchronously before hydration — not off React state on .app-shell itself.
    That keeps the offset flash-free AND avoids a hydration mismatch (React never
-   diffs an attribute it didn't render). */
-html[data-nav-layout="vertical"] .app-shell {
+   diffs an attribute it didn't render).
+
+   data-has-nav gates the same rule to routes that actually render Navbar's
+   sidebar. data-nav-layout is a global preference (persisted in localStorage),
+   so without this a user who ever switched to the vertical layout on an
+   internal page would carry a stale left offset onto pages with no sidebar at
+   all — the landing page, login, register, etc. — pushing their content to
+   the right. Set synchronously (pre-hydration, from the URL) in layout.tsx for
+   the first paint, and kept in sync across client-side navigation by
+   AppShell.tsx. */
+html[data-nav-layout="vertical"][data-has-nav="1"] .app-shell {
   padding-left: var(--nav-sidebar-width);
 }
 
 @media (max-width: 1024px) {
-  html[data-nav-layout="vertical"] .app-shell {
+  html[data-nav-layout="vertical"][data-has-nav="1"] .app-shell {
     padding-left: 0;
   }
 }

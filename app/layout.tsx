@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Midas Touch — Gestão financeira empresarial",
+  title: "NexusFi — Gestão financeira empresarial",
   description:
     "Centralize o financeiro da sua empresa: fluxo de caixa, contas a pagar e receber, relatórios automáticos e controle de custos.",
   keywords: [
@@ -28,9 +28,9 @@ export const metadata: Metadata = {
     "relatórios financeiros",
     "PME",
   ],
-  authors: [{ name: "Midas Touch" }],
+  authors: [{ name: "NexusFi" }],
   openGraph: {
-    title: "Midas Touch — Gestão financeira empresarial",
+    title: "NexusFi — Gestão financeira empresarial",
     description:
       "Plataforma completa para organizar as finanças da sua empresa com dados em tempo real.",
     type: "website",
@@ -66,6 +66,13 @@ export default function RootLayout({
 
               var l=localStorage.getItem('nexusfi-navbar-layout')||'horizontal';
               document.documentElement.setAttribute('data-nav-layout',l);
+
+              // Keep in sync with AppShell.tsx's INTERNAL_PREFIXES list — this
+              // is the pre-hydration value so the sidebar offset (globals.css)
+              // never flashes on the first paint of a route change/hard load.
+              var internalPrefixes=['/dashboard','/fluxo-caixa','/contasPagar','/contasReceber','/costCenter','/estoque','/impostos','/relatorios'];
+              var hasNav=internalPrefixes.some(function(p){return location.pathname.indexOf(p)===0;});
+              document.documentElement.setAttribute('data-has-nav',hasNav?'1':'0');
             }catch(e){}})();`,
           }}
         />

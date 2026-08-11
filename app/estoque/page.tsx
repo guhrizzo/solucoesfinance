@@ -42,6 +42,15 @@ interface Vinculo {
 export default function EstoquePage() {
   const { user, loading: authLoading } = useAuth();
 
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  async function handleLogout() {
+    const { getFirebase } = await import("@/lib/firebase");
+    const { signOut } = await import("firebase/auth");
+    const { auth } = await getFirebase();
+    await signOut(auth);
+    window.location.href = "/login";
+  }
+
   // Estados do Banco de Dados
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
@@ -567,7 +576,7 @@ export default function EstoquePage() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
-      <Navbar activePath="/estoque" user={user} />
+      <Navbar activePath="/estoque" user={user} onLogout={handleLogout} />
 
       {/* Sistema de Toasts */}
       {toast && (

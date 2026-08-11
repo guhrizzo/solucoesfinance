@@ -209,7 +209,7 @@ export default function FinanceHome() {
             <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
               <ClipboardList size={16} className="text-white" />
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">Midas <span className="text-blue-400">Touch</span></span>
+            <span className="text-white font-bold text-lg tracking-tight">Nexus<span className="text-blue-400">Fi</span></span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
@@ -312,7 +312,7 @@ export default function FinanceHome() {
                   ))}
                 </div>
                 <p className="text-blue-200/60 text-sm">
-                  <span className="text-white font-semibold">+ 500 empresas</span> já organizam suas finanças com a Midas Touch
+                  <span className="text-white font-semibold">+ 500 empresas</span> já organizam suas finanças com a NexusFi
                 </p>
               </div>
             </div>
@@ -414,7 +414,7 @@ export default function FinanceHome() {
                 Assuma o controle.
               </h2>
               <p className="text-slate-500 leading-relaxed mb-8">
-                A maioria das empresas ainda gerencia o financeiro em planilhas descentralizadas, com risco de erros, retrabalho e falta de visibilidade. A Midas Touch resolve isso de uma vez.
+                A maioria das empresas ainda gerencia o financeiro em planilhas descentralizadas, com risco de erros, retrabalho e falta de visibilidade. A NexusFi resolve isso de uma vez.
               </p>
               <ul className="space-y-3">
                 {painPoints.map((p) => (
@@ -427,7 +427,7 @@ export default function FinanceHome() {
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
-              <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-6">Com a Midas Touch</p>
+              <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-6">Com a NexusFi</p>
               <div className="space-y-5">
                 {[
                   { label: "Dados financeiros centralizados", pct: 100 },

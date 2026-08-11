@@ -26,7 +26,7 @@ export default function Footer() {
                 <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center">
                   <TrendingUp size={14} className="text-white" />
                 </div>
-                <span className="text-white font-bold">Midas <span className="text-blue-400">Touch</span></span>
+                <span className="text-white font-bold">Nexus<span className="text-blue-400">Fi</span></span>
               </div>
               <p className="text-blue-300/50 text-sm leading-relaxed">
                 Plataforma de investimentos para o Brasil e o mundo.
@@ -55,7 +55,7 @@ export default function Footer() {
             ))}
           </div>
           <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-blue-300/30 text-center text-xs">© {new Date().getFullYear()} Midas Touch. Todos os direitos reservados. Investimentos sujeitos a riscos.</p>
+            <p className="text-blue-300/30 text-center text-xs">© {new Date().getFullYear()} NexusFi. Todos os direitos reservados. Investimentos sujeitos a riscos.</p>
             <div className="flex items-center gap-1 text-blue-300/30 text-xs">
               <Shield size={12} /> Regulado pelo Banco Central do Brasil
             </div>

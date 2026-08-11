@@ -308,7 +308,7 @@ const css = `
 `;
 
 export default function Navbar({
-  user = { displayName: "Carlos Mendes", email: "carlos@midastouch.com" },
+  user = { displayName: "Carlos Mendes", email: "carlos@nexusfi.com" },
   period = "Out 2024",
   activePath = "/dashboard",
   onLogout,
@@ -423,7 +423,7 @@ export default function Navbar({
       <aside className="nxfi-sidebar-vertical">
         <a href="/dashboard" className="nxfi-vertical-logo">
           <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
-          <span>Midas <span>Touch</span></span>
+          <span>Nexus<span>Fi</span></span>
         </a>
         <nav className="nxfi-vertical-nav">
           <div className="nxfi-vertical-section">Menu Principal</div>
@@ -484,7 +484,7 @@ export default function Navbar({
 
         <a href="/dashboard" className="nxfi-logo">
           <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
-          <span className="nxfi-logo-text">Midas <span>Touch</span></span>
+          <span className="nxfi-logo-text">Nexus<span>Fi</span></span>
         </a>
 
         <div className="nxfi-nav-links">
@@ -595,7 +595,7 @@ export default function Navbar({
             <div className="nxfi-sidebar-logo">
               <div className="nxfi-sidebar-logo-inner">
                 <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
-                <span className="nxfi-sidebar-logo-text">Midas <span>Touch</span></span>
+                <span className="nxfi-sidebar-logo-text">Nexus<span>Fi</span></span>
               </div>
               <button className="nxfi-sidebar-close" onClick={() => setMobileOpen(false)}>
                 <X size={15} />

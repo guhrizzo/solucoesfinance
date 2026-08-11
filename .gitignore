@@ -49,3 +49,6 @@ next-env.d.ts
 !.dev.vars.example
 
 !.env.example
+
+# Claude Code local state (worktrees, launch config, permissions)
+.claude/

@@ -328,8 +328,8 @@ export default function NotFound() {
 
       {/* Logo */}
       <a href="/dashboard" className="logo">
-        <div className="logo-icon">M</div>
-        <span className="logo-name">Midas <span>Touch</span></span>
+        <div className="logo-icon">N</div>
+        <span className="logo-name">Nexus<span>Fi</span></span>
       </a>
 
       {/* Conteúdo central */}

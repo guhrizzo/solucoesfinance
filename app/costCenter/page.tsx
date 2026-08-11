@@ -717,6 +717,16 @@ export default function CostCenterPage() {
   }>({ open: false, type: null, id: "", loading: false });
 
   const activePath = "/costCenter";
+
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  async function handleLogout() {
+    const { getFirebase } = await import("@/lib/firebase");
+    const { signOut } = await import("firebase/auth");
+    const { auth } = await getFirebase();
+    await signOut(auth);
+    window.location.href = "/login";
+  }
+
   const { dark } = useTheme();
   useTheme();
 
@@ -984,7 +994,7 @@ export default function CostCenterPage() {
         onCancel={() => setConfirmModal({ open: false, type: null, id: "", loading: false })}
       />
 
-      <Navbar user={user} period={period} activePath={activePath} />
+      <Navbar user={user} period={period} activePath={activePath} onLogout={handleLogout} />
 
       <ExpenseModal
         open={showExpenseModal}

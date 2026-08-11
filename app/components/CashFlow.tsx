@@ -99,7 +99,7 @@ function PrevisaoModal({ open, value, onClose, onSave }: {
   useEffect(() => { if (open) setRaw(value > 0 ? value.toFixed(2).replace(".", ",") : ""); }, [open, value]);
   const parsed = parseAmount(raw);
   return (
-    <Modal open={open} onClose={onClose} title="Meta de gastos" size="sm">
+    <Modal open={open} onClose={onClose} title="Orçamento" size="sm">
       <div className="p-6">
         <p className="text-xs -mt-2 mb-5" style={{ color: "var(--cf-text-2)" }}>Orçamento + Contas a pagar - Contas a receber (pendentes)</p>
         <div className="space-y-3 mb-6">
@@ -856,7 +856,7 @@ export default function CashFlowPage() {
   const displayValue = (val: number) => hideValues ? "• • •" : toBRL(val);
 
   const kpis = [
-    { label: "Meta de gastos", val: previsao, Icon: ClipboardList, ibg: "#eff6ff", color: "#3b82f6" },
+    { label: "Orçamento", val: previsao, Icon: ClipboardList, ibg: "#eff6ff", color: "#3b82f6" },
     { label: "Entradas", val: entradas, Icon: ArrowUpRight, ibg: "#dcfce7", color: "#059669", sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
     { label: "Saídas", val: saidas, Icon: ArrowDownRight, ibg: "#fee2e2", color: "#dc2626", sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
     { label: "Saldo", val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },

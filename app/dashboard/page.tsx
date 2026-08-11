@@ -74,6 +74,15 @@ export default function Dashboard() {
 
   const activePath = "/dashboard";
 
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  async function handleLogout() {
+    const { getFirebase } = await import("@/lib/firebase");
+    const { signOut } = await import("firebase/auth");
+    const { auth } = await getFirebase();
+    await signOut(auth);
+    window.location.href = "/login";
+  }
+
   // Obter o mês atual formatado (ex: "Out 2026")
   const currentPeriodLabel = useMemo(() => {
     const date = new Date();
@@ -429,7 +438,7 @@ export default function Dashboard() {
         }}
       />
 
-      <Navbar user={user} period={currentPeriodLabel} activePath={activePath} />
+      <Navbar user={user} period={currentPeriodLabel} activePath={activePath} onLogout={handleLogout} />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
 

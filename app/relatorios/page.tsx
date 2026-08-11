@@ -39,6 +39,15 @@ const toBRL = (n: number) =>
 export default function RelatoriosPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  async function handleLogout() {
+    const { getFirebase } = await import("@/lib/firebase");
+    const { signOut } = await import("firebase/auth");
+    const { auth } = await getFirebase();
+    await signOut(auth);
+    window.location.href = "/login";
+  }
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState<"7d" | "30d" | "mes" | "ano">("30d");
@@ -365,7 +374,7 @@ export default function RelatoriosPage() {
 
   return (
     <>
-      <Navbar activePath="/relatorios" user={user} />
+      <Navbar activePath="/relatorios" user={user} onLogout={handleLogout} />
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
         
         {/* Header */}

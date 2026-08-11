@@ -78,7 +78,7 @@ export default function ComingSoon() {
             <TrendingUp size={14} className="text-white" strokeWidth={2.5} />
           </div>
           <span className="text-[15px] font-extrabold text-slate-900 tracking-tight">
-            Midas <span className="text-blue-500">Touch</span>
+            Nexus<span className="text-blue-500">Fi</span>
           </span>
         </div>
 
