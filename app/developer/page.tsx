@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Code, Terminal, Cpu, Blocks } from "lucide-react";
+import { ArrowLeft, Terminal, Cpu, Blocks } from "lucide-react";
 
 export default function DeveloperPage() {
   return (
@@ -21,14 +21,9 @@ export default function DeveloperPage() {
       {/* Header / Logo */}
       <header className="relative z-10 max-w-7xl mx-auto w-full px-6 py-8 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Code size={16} className="text-white" />
-          </div>
-          <span className="text-white font-bold text-lg tracking-tight">
-            Nexus<span className="text-blue-400">Fi</span>
-            <span className="ml-2 text-xs font-mono bg-blue-950 text-blue-400 border border-blue-900/50 px-2 py-0.5 rounded-full">
-              Dev
-            </span>
+          <img src="/nexus_fi_logo_branco.png" alt="NexusFi" className="h-8 w-auto" />
+          <span className="text-xs font-mono bg-blue-950 text-blue-400 border border-blue-900/50 px-2 py-0.5 rounded-full">
+            Dev
           </span>
         </Link>
         <Link

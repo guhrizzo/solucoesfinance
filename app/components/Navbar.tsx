@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, Calendar, Settings,
-  LogOut, ClipboardList, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap, PanelLeft,
+  LogOut, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap, PanelLeft,
   Landmark, Boxes,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
@@ -422,8 +422,7 @@ export default function Navbar({
       <style>{css}</style>
       <aside className="nxfi-sidebar-vertical">
         <a href="/dashboard" className="nxfi-vertical-logo">
-          <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
-          <span>Nexus<span>Fi</span></span>
+          <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 42, width: "auto" }} />
         </a>
         <nav className="nxfi-vertical-nav">
           <div className="nxfi-vertical-section">Menu Principal</div>
@@ -483,8 +482,7 @@ export default function Navbar({
         </button>
 
         <a href="/dashboard" className="nxfi-logo">
-          <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
-          <span className="nxfi-logo-text">Nexus<span>Fi</span></span>
+          <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 30, width: "auto" }} />
         </a>
 
         <div className="nxfi-nav-links">
@@ -594,8 +592,7 @@ export default function Navbar({
           <aside className="nxfi-sidebar">
             <div className="nxfi-sidebar-logo">
               <div className="nxfi-sidebar-logo-inner">
-                <div className="nxfi-logo-icon"><ClipboardList size={16} color="white" /></div>
-                <span className="nxfi-sidebar-logo-text">Nexus<span>Fi</span></span>
+                <img src="/nexus_fi_logo_branco.png" alt="NexusFi" style={{ height: 30, width: "auto" }} />
               </div>
               <button className="nxfi-sidebar-close" onClick={() => setMobileOpen(false)}>
                 <X size={15} />

@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react";
-import { TrendingUp, ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle } from "lucide-react";
 
 const TARGET = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).getTime();
 
@@ -73,13 +73,8 @@ export default function ComingSoon() {
       <div className="relative z-10 w-full max-w-105 bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-xl shadow-slate-900/5">
 
         {/* logo */}
-        <div className="flex items-center justify-center gap-2.5 mb-9">
-          <div className="w-8 h-8 rounded-[10px] bg-blue-600 flex items-center justify-center shrink-0">
-            <TrendingUp size={14} className="text-white" strokeWidth={2.5} />
-          </div>
-          <span className="text-[15px] font-extrabold text-slate-900 tracking-tight">
-            Nexus<span className="text-blue-500">Fi</span>
-          </span>
+        <div className="flex items-center justify-center mb-9">
+          <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="h-8 w-auto" />
         </div>
 
         {/* animated icon */}

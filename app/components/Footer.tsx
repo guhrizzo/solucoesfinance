@@ -1,5 +1,4 @@
 import {
-  TrendingUp,
   TrendingDown,
   DollarSign,
   BarChart2,
@@ -22,11 +21,8 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center">
-                  <TrendingUp size={14} className="text-white" />
-                </div>
-                <span className="text-white font-bold">Nexus<span className="text-blue-400">Fi</span></span>
+              <div className="flex items-center mb-4">
+                <img src="/nexus_fi_logo_branco.png" alt="NexusFi" className="h-9 w-auto" />
               </div>
               <p className="text-blue-300/50 text-sm leading-relaxed">
                 Plataforma de investimentos para o Brasil e o mundo.

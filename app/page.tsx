@@ -19,7 +19,6 @@ import {
   FileText,
   Users,
   CreditCard,
-  ClipboardList,
   CheckCircle,
 } from "lucide-react";
 import Footer from "./components/Footer";
@@ -123,6 +122,16 @@ export default function FinanceHome() {
         .hero-gradient {
           background: linear-gradient(135deg, #0a1628 0%, #0d2247 40%, #0e3a7a 70%, #1565c0 100%);
         }
+        .hero-video-overlay {
+          background: linear-gradient(135deg, rgba(10,22,40,0.92) 0%, rgba(13,34,71,0.85) 40%, rgba(14,58,122,0.78) 70%, rgba(21,101,192,0.72) 100%);
+        }
+        .hero-video {
+          animation: heroZoom 24s ease-in-out infinite alternate;
+        }
+        @keyframes heroZoom {
+          0% { transform: scale(1); }
+          100% { transform: scale(1.08); }
+        }
         .card-glass {
           background: rgba(255,255,255,0.07);
           backdrop-filter: blur(12px);
@@ -205,11 +214,8 @@ export default function FinanceHome() {
       {/* Navbar */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "nav-blur" : "bg-transparent"}`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
-              <ClipboardList size={16} className="text-white" />
-            </div>
-            <span className="text-white font-bold text-lg tracking-tight">Nexus<span className="text-blue-400">Fi</span></span>
+          <div className="flex items-center">
+            <img src="/nexus_fi_logo_branco.png" alt="NexusFi" className="h-12 w-auto" />
           </div>
 
           <div className="hidden md:flex items-center gap-8">
@@ -259,6 +265,20 @@ export default function FinanceHome() {
 
       {/* Hero */}
       <section className="hero-gradient min-h-screen flex flex-col relative overflow-hidden">
+        {/* Video background */}
+        <video
+          className="hero-video absolute inset-0 w-full h-full object-cover"
+          src="/video-background.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+        />
+
+        {/* Dark gradient overlay for readability */}
+        <div className="hero-video-overlay absolute inset-0" />
+
         {/* Grid overlay */}
         <div className="absolute inset-0 opacity-5"
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
@@ -269,7 +289,7 @@ export default function FinanceHome() {
         <div className="absolute bottom-20 left-8 w-64 h-64 rounded-full opacity-10"
           style={{ background: "radial-gradient(circle, #1565c0 0%, transparent 70%)" }} />
 
-        <div className="flex-1 flex items-center max-w-7xl mx-auto px-6 pt-28 pb-16 w-full">
+        <div className="relative z-10 flex-1 flex items-center max-w-7xl mx-auto px-6 pt-28 pb-16 w-full">
           <div className="grid lg:grid-cols-2 gap-16 items-center w-full">
             {/* Left */}
             <div>
@@ -369,7 +389,7 @@ export default function FinanceHome() {
         </div>
 
         {/* Ticker */}
-        <div className="bg-blue-950/60 border-t border-white/5 py-3 overflow-hidden">
+        <div className="relative z-10 bg-blue-950/60 border-t border-white/5 py-3 overflow-hidden">
           <div className="ticker-track">
             {[...tickers, ...tickers].map((t, i) => (
               <div key={i} className="flex items-center gap-2 shrink-0">

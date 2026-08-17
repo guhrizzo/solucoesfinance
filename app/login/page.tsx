@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic"; // nunca faz prerender
 
 import { useState } from "react";
 import {
-  ClipboardList, Eye, EyeOff, ArrowRight,
+  Eye, EyeOff, ArrowRight,
   Shield, TrendingUp, Lock, Mail, AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -194,13 +194,8 @@ export default function LoginPage() {
           style={{ background: "radial-gradient(circle,#1565c0 0%,transparent 70%)" }} />
 
         {/* Logo */}
-        <div className="relative flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center">
-            <ClipboardList size={18} className="text-white" />
-          </div>
-          <span className="text-white font-bold text-xl tracking-tight">
-            Nexus<span className="text-blue-400">Fi</span>
-          </span>
+        <div className="relative flex items-center">
+          <img src="/nexus_fi_logo_branco.png" alt="NexusFi" className="h-11 w-auto" />
         </div>
 
         {/* Centro */}
@@ -262,13 +257,8 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
 
           {/* Logo mobile */}
-          <div className="flex items-center gap-2 mb-10 lg:hidden">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <ClipboardList size={16} className="text-white" />
-            </div>
-            <span className="text-blue-950 font-bold text-lg tracking-tight">
-              Nexus<span className="text-blue-500">Fi</span>
-            </span>
+          <div className="flex items-center mb-10 lg:hidden">
+            <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="h-9 w-auto" />
           </div>
 
           <div className="fade-in">

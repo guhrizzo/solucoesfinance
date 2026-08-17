@@ -328,8 +328,7 @@ export default function NotFound() {
 
       {/* Logo */}
       <a href="/dashboard" className="logo">
-        <div className="logo-icon">N</div>
-        <span className="logo-name">Nexus<span>Fi</span></span>
+        <img src="/nexus_fi_logo_branco.png" alt="NexusFi" style={{ height: 32, width: "auto" }} />
       </a>
 
       {/* Conteúdo central */}

@@ -5,7 +5,6 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import {
-  ClipboardList,
   Eye, EyeOff,
   ArrowRight,
   Shield,
@@ -288,13 +287,8 @@ export default function RegisterPage() {
         <div className="reg-glow-2" />
 
         {/* Logo */}
-        <div className="relative flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center">
-            <ClipboardList size={18} className="text-white" />
-          </div>
-          <span className="text-white font-bold text-xl tracking-tight">
-            Nexus<span className="text-blue-400">Fi</span>
-          </span>
+        <div className="relative flex items-center">
+          <img src="/nexus_fi_logo_branco.png" alt="NexusFi" className="h-11 w-auto" />
         </div>
 
         {/* Centro */}
@@ -369,13 +363,8 @@ export default function RegisterPage() {
         <div className="w-full max-w-105">
 
           {/* Logo mobile */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <ClipboardList size={15} className="text-white" />
-            </div>
-            <span className="text-blue-950 font-bold text-lg tracking-tight">
-              Nexus<span className="text-blue-500">Fi</span>
-            </span>
+          <div className="flex items-center mb-8 lg:hidden">
+            <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="h-9 w-auto" />
           </div>
 
           {/* Cabeçalho */}
