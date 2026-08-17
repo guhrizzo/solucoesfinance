@@ -268,7 +268,7 @@ export default function FinanceHome() {
         {/* Video background */}
         <video
           className="hero-video absolute inset-0 w-full h-full object-cover"
-          src="/video-background.mp4"
+          src="https://firebasestorage.googleapis.com/v0/b/finance-add95.firebasestorage.app/o/video-background.mp4?alt=media&token=93c7066d-a23b-4e66-a683-f481725c65d5"
           autoPlay
           muted
           loop
