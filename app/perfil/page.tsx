@@ -45,7 +45,6 @@ interface AppUser {
 export default function PerfilPage() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
