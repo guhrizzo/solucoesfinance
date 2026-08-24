@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { extractPendingGoogleLink } from "@/lib/authLink";
 
 // ── Erros Firebase → PT-BR ────────────────────────────────────────────────────
 const firebaseErrorMap: Record<string, string> = {
@@ -96,7 +97,16 @@ export default function RegisterPage() {
       await registerWithGoogle();
       router.push("/dashboard");
     } catch (err: any) {
-      setError(getErrorMessage(err.code));
+      const pending = await extractPendingGoogleLink(err);
+      if (pending) {
+        // Já existe conta com senha para esse e-mail — não cria um 2º
+        // usuário. O vínculo é concluído na tela de login, digitando a senha.
+        setError(
+          `Este e-mail (${pending.email}) já tem conta cadastrada com senha. Faça login com sua senha — o Google será vinculado automaticamente à mesma conta.`
+        );
+      } else {
+        setError(getErrorMessage(err.code));
+      }
     } finally {
       setGoogleLoading(false);
     }

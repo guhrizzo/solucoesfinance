@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic"; // nunca faz prerender
 import { useState } from "react";
 import {
   Eye, EyeOff, ArrowRight,
-  Shield, TrendingUp, Lock, Mail, AlertCircle,
+  Shield, TrendingUp, Lock, Mail, AlertCircle, Link2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { extractPendingGoogleLink, completeGoogleLink, type PendingGoogleLink } from "@/lib/authLink";
 
 // ── Mensagens de erro Firebase → PT-BR ───────────────────────────────────────
 const firebaseErrorMap: Record<string, string> = {
@@ -24,6 +25,8 @@ const firebaseErrorMap: Record<string, string> = {
 
 const getErrorMessage = (code: string, raw?: string) => {
   if (firebaseErrorMap[code]) return firebaseErrorMap[code];
+  // Erros da nossa própria API (ex.: reset de senha) já vêm com mensagem pronta em PT-BR.
+  if (code === "auth/reset-request-failed" && raw) return raw;
   return `Erro: ${code ?? "desconhecido"}${raw ? " — " + raw : ""}`;
 };
 
@@ -46,10 +49,21 @@ async function loginWithGoogle() {
 }
 
 async function resetPassword(email: string) {
-  const { getFirebase } = await import("@/lib/firebase");
-  const { sendPasswordResetEmail } = await import("firebase/auth");
-  const { auth } = await getFirebase();
-  return sendPasswordResetEmail(auth, email);
+  // Em vez do sendPasswordResetEmail do Firebase (sai de um domínio
+  // genérico *.firebaseapp.com e costuma cair em spam), pedimos para a
+  // nossa própria API gerar o link e enviar pelo domínio da NexusFi.
+  const res = await fetch("/api/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const err: any = new Error(data.error ?? "Falha ao enviar e-mail de redefinição.");
+    err.code = res.status === 429 ? "auth/too-many-requests" : "auth/reset-request-failed";
+    err.message = data.error;
+    throw err;
+  }
 }
 
 // ── Componente ────────────────────────────────────────────────────────────────
@@ -64,6 +78,9 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+  // Credencial do Google que ficou pendente de vínculo porque já existe
+  // conta com senha para esse e-mail (evita criar um 2º usuário).
+  const [pendingGoogleLink, setPendingGoogleLink] = useState<PendingGoogleLink | null>(null);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -72,7 +89,15 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await loginWithEmail(email, password);
+      const cred = await loginWithEmail(email, password);
+
+      // Havia um login com Google pendente para este mesmo e-mail:
+      // vincula agora as duas credenciais ao mesmo usuário.
+      if (pendingGoogleLink && pendingGoogleLink.email.toLowerCase() === email.trim().toLowerCase()) {
+        await completeGoogleLink(cred.user, pendingGoogleLink.credential);
+        setPendingGoogleLink(null);
+      }
+
       router.push("/dashboard");
     } catch (err: any) {
       setError(getErrorMessage(err.code, err.message));
@@ -88,7 +113,14 @@ export default function LoginPage() {
       await loginWithGoogle();
       router.push("/dashboard");
     } catch (err: any) {
-      setError(getErrorMessage(err.code, err.message));
+      const pending = await extractPendingGoogleLink(err);
+      if (pending) {
+        setEmail(pending.email);
+        setPendingGoogleLink(pending);
+        setError(null);
+      } else {
+        setError(getErrorMessage(err.code, err.message));
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -182,6 +214,10 @@ export default function LoginPage() {
           background:#f0fdf4; border:1px solid #bbf7d0;
           border-radius:12px; animation: fadeUp 0.3s ease both;
         }
+        .link-box {
+          background:#eff6ff; border:1px solid #bfdbfe;
+          border-radius:12px; animation: fadeUp 0.3s ease both;
+        }
       `}</style>
 
       {/* ── Painel esquerdo ── */}
@@ -273,6 +309,16 @@ export default function LoginPage() {
             </div>
           )}
 
+          {pendingGoogleLink && (
+            <div className="link-box flex items-start gap-3 px-4 py-3 mb-5">
+              <Link2 size={16} className="text-blue-500 shrink-0 mt-0.5" />
+              <p className="text-blue-700 text-sm">
+                Já existe uma conta com senha para <strong>{pendingGoogleLink.email}</strong>.
+                Digite sua senha abaixo e clique em <strong>Acessar painel</strong> para entrar e vincular o Google a essa mesma conta.
+              </p>
+            </div>
+          )}
+
           {resetSent && (
             <div className="success-box flex items-start gap-3 px-4 py-3 mb-5">
               <Shield size={16} className="text-emerald-500 shrink-0 mt-0.5" />
@@ -292,7 +338,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="voce@empresa.com.br"
                   value={email}
-                  onChange={(e) => { setEmail(e.target.value); setError(null); setResetSent(false); }}
+                  onChange={(e) => { setEmail(e.target.value); setError(null); setResetSent(false); setPendingGoogleLink(null); }}
                   className={`input-field w-full rounded-xl pl-10 pr-4 py-3 text-blue-950 text-sm placeholder-slate-400 ${error ? "error" : ""}`}
                   required
                   autoComplete="email"

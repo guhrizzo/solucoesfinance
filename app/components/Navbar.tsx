@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, Calendar, Settings,
@@ -318,6 +319,7 @@ export default function Navbar({
   const [userOpen, setUserOpen] = useState(false);
   const [isServico, setIsServico] = useState(false);
 
+  const router = useRouter();
   const { dark, toggle } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
   const { toasts, show: showToast, remove: removeToast } = useToast();
@@ -564,7 +566,7 @@ export default function Navbar({
                 </div>
                 <div style={{ padding: "6px 0" }}>
                   {[
-                    { icon: UserCircle, label: "Meu perfil", action: () => showToast("Abrindo perfil...", "info") },
+                    { icon: UserCircle, label: "Meu perfil", action: () => router.push("/perfil") },
                     { icon: Zap, label: "Plano & faturamento", action: () => showToast("Abrindo plano...", "info") },
                     { icon: HelpCircle, label: "Ajuda & suporte", action: () => showToast("Redirecionando para ajuda...", "info") },
                     { icon: Settings, label: "Configurações", action: () => showToast("Abrindo configurações...", "info") },
