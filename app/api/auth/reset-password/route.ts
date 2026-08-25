@@ -57,12 +57,13 @@ export async function POST(req: NextRequest) {
   try {
     const adminAuth = await getAdminAuth();
 
-    const continueUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/login`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const continueUrl = `${appUrl}/login`;
     const resetLink = await adminAuth.generatePasswordResetLink(email, { url: continueUrl });
 
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { subject, html, text } = passwordResetEmail(resetLink);
+    const { subject, html, text } = passwordResetEmail(resetLink, `${appUrl}/nexus_fi_logo_branco.png`);
 
     const { error } = await resend.emails.send({
       from: process.env.RESET_EMAIL_FROM ?? "NexusFi <naoresponda@nexusfi.com.br>",

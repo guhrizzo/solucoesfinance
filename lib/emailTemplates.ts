@@ -3,8 +3,15 @@
 // clientes de e-mail) + versão em texto puro — ambas ajudam a entregabilidade,
 // já que provedores de spam penalizam e-mails só-HTML sem alternativa de texto.
 
-export function passwordResetEmail(resetLink: string) {
+export function passwordResetEmail(resetLink: string, logoUrl?: string) {
   const subject = "Redefinir sua senha — NexusFi";
+
+  // Cliente de e-mail precisa de uma URL pública (não dá pra embutir um
+  // arquivo local) — usamos a logo branca, feita para fundo escuro, com
+  // fallback em texto via alt caso o cliente bloqueie imagens por padrão.
+  const logoHtml = logoUrl
+    ? `<img src="${logoUrl}" width="120" height="34" alt="NexusFi" style="display:block;width:120px;height:auto;border:0;outline:none;text-decoration:none;" />`
+    : `<span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:-0.02em;">NexusFi</span>`;
 
   const html = `
 <!doctype html>
@@ -15,8 +22,8 @@ export function passwordResetEmail(resetLink: string) {
         <td align="center">
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
             <tr>
-              <td style="background:linear-gradient(135deg,#0a1628,#1565c0);padding:28px 32px;">
-                <span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:-0.02em;">NexusFi</span>
+              <td style="background:linear-gradient(135deg,#0a1628,#1565c0);padding:24px 32px;">
+                ${logoHtml}
               </td>
             </tr>
             <tr>
