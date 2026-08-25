@@ -51,7 +51,6 @@ export default function PerfilPage() {
   const [showPass, setShowPass] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-
   const [linkingGoogle, setLinkingGoogle] = useState(false);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
