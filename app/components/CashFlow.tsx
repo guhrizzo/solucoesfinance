@@ -90,6 +90,49 @@ if (typeof window !== "undefined") {
   import("firebase/firestore");
 }
 
+/**
+ * Caminho contrário da sincronização do Centro de Custo: quando uma saída é
+ * lançada direto aqui no Fluxo de Caixa (manual ou por importação, sem vir
+ * de lá), procura uma despesa pendente/agendada com a mesma descrição e
+ * valor e dá baixa nela automaticamente — espelhando o vínculo por
+ * `sourceExpenseId` que o Centro de Custo já usa na direção oposta.
+ * Só age quando encontra exatamente 1 correspondência; ambíguo ou nenhum
+ * resultado não arrisca vincular errado, o lançamento fica só no cashflow.
+ */
+async function autoSettleMatchingCostCenterExpense(
+  db: import("firebase/firestore").Firestore,
+  uid: string,
+  tx: { description: string; amount: number }
+): Promise<string | null> {
+  const desc = (tx.description || "").trim().toLowerCase();
+  if (!desc) return null;
+
+  try {
+    const { collection, query, where, getDocs, doc, updateDoc } = await import("firebase/firestore");
+    // Só filtro simples (== userId) — igual ao resto do app já faz nessa
+    // coleção. Combinar == com "in" em campos diferentes aqui exigiria um
+    // índice composto que não existe, e a busca falhava sem avisar. Status
+    // e comparação de texto ficam no cliente, sem depender de índice nenhum.
+    const snap = await getDocs(query(collection(db, "expenses"), where("userId", "==", uid)));
+
+    const matches = snap.docs.filter((d) => {
+      const data = d.data();
+      if (data.status !== "pendente" && data.status !== "agendado") return false;
+      const expDesc = (data.description || `${data.category} – ${data.center}`).trim().toLowerCase();
+      return expDesc === desc && Number(data.amount) === Number(tx.amount);
+    });
+    if (matches.length !== 1) return null;
+
+    const matched = matches[0];
+    await updateDoc(doc(db, "expenses", matched.id), { status: "pago", paidAt: TODAY });
+    return matched.id;
+  } catch (err) {
+    // Nunca deixa a baixa automática travar o salvamento da transação em si.
+    console.error("Erro ao tentar dar baixa automática no Centro de Custo:", err);
+    return null;
+  }
+}
+
 // ─── Modal de previsão ────────────────────────────────────────────────────────
 
 function PrevisaoModal({ open, value, onClose, onSave }: {
@@ -722,12 +765,26 @@ export default function CashFlowPage() {
             );
 
             // ── Listener de orçamento total (centros de custo) ──
+            // Orçamento agora é por mês (budgetsByMonth); a Previsão é uma
+            // projeção do período atual, então somamos sempre o mês corrente
+            // (centros antigos sem budgetsByMonth caem no campo legado `budget`).
             snapCenterUnsub?.();
             const centerQ = query(collection(db, "costCenters"), where("userId", "==", u.uid));
+            const nowKey = (() => {
+              const n = new Date();
+              return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+            })();
             snapCenterUnsub = onSnapshot(
               centerQ,
               (snap) => {
-                const totalBudget = snap.docs.reduce((sum, doc) => sum + (doc.data().budget || 0), 0);
+                const totalBudget = snap.docs.reduce((sum, doc) => {
+                  const data = doc.data();
+                  const budgetsByMonth = data.budgetsByMonth as Record<string, number> | undefined;
+                  const monthBudget = budgetsByMonth
+                    ? (budgetsByMonth[nowKey] ?? 0)
+                    : (typeof data.budget === "number" ? data.budget : 0);
+                  return sum + monthBudget;
+                }, 0);
                 // Calcula previsão com contas pendentes adicionadas
                 updatePrevisao(totalBudget);
               },
@@ -789,16 +846,33 @@ export default function CashFlowPage() {
     if (!uid) throw new Error("Usuário não autenticado");
     const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
-    const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
-    if (editing) await updateDoc(doc(db, "users", uid, "cashflow", editing.id), clean as any);
-    else await addDoc(collection(db, "users", uid, "cashflow"), clean);
+    const clean: Record<string, unknown> = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+    if (editing) {
+      await updateDoc(doc(db, "users", uid, "cashflow", editing.id), clean as any);
+    } else {
+      // Lançamento novo direto no Fluxo de Caixa (não veio do Centro de Custo,
+      // esse caminho é sempre addDoc a partir de lá) — tenta dar baixa
+      // automática numa despesa pendente correspondente.
+      if (data.type === "saida") {
+        const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
+        if (matchedId) clean.sourceExpenseId = matchedId;
+      }
+      await addDoc(collection(db, "users", uid, "cashflow"), clean);
+    }
   }
 
   async function handleImport(importedTxs: ImportedTx[]) {
     if (!uid) throw new Error("Usuário não autenticado");
     const [{ getFirebase }, { collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
-    await Promise.all(importedTxs.map(tx => addDoc(collection(db, "users", uid, "cashflow"), { ...tx, createdAt: Date.now() })));
+    await Promise.all(importedTxs.map(async (tx) => {
+      const entry: Record<string, unknown> = { ...tx, createdAt: Date.now() };
+      if (tx.type === "saida") {
+        const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: tx.description, amount: tx.amount });
+        if (matchedId) entry.sourceExpenseId = matchedId;
+      }
+      await addDoc(collection(db, "users", uid, "cashflow"), entry);
+    }));
   }
 
   async function handleDelete() {

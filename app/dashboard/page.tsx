@@ -10,6 +10,7 @@ import {
   RefreshCw, CheckCircle2
 } from "lucide-react";
 import OnboardingModal, { type OnboardingAnswers } from "../components/OnboardingModal";
+import CreatePasswordGate from "../components/CreatePasswordGate";
 import Navbar from "../components/Navbar";
 import { Badge } from "../components/ui";
 
@@ -63,6 +64,8 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
 
 export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // Gate bloqueante pra contas que entraram só pelo Google e nunca definiram senha.
+  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
   const [user, setUser] = useState<{ displayName: string | null; email: string | null; uid: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
@@ -113,6 +116,7 @@ export default function Dashboard() {
             return;
           }
           setUser({ displayName: u.displayName, email: u.email, uid: u.uid });
+          setNeedsPasswordSetup(!u.providerData.some((p) => p.providerId === "password"));
 
           getDoc(doc(db, "users", u.uid, "profile", "onboarding"))
             .then((snap) => {
@@ -415,8 +419,16 @@ export default function Dashboard() {
         ::-webkit-scrollbar-thumb { background: var(--db-border); border-radius: 4px; }
       `}</style>
 
+      {/* Senha primeiro, ramo do negócio depois — nunca os dois sobrepostos */}
+      <CreatePasswordGate
+        open={needsPasswordSetup}
+        email={user?.email ?? null}
+        suggestedName={user?.displayName ?? null}
+        onComplete={() => setNeedsPasswordSetup(false)}
+      />
+
       <OnboardingModal
-        open={showOnboarding}
+        open={showOnboarding && !needsPasswordSetup}
         onClose={() => setShowOnboarding(false)}
         onComplete={async (answers: OnboardingAnswers) => {
           if (!user) return;

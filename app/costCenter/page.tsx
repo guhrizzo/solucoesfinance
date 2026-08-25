@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   TrendingUp,
   CreditCard,
@@ -19,6 +19,7 @@ import {
   Loader,
   Search,
   ChevronDown,
+  CalendarDays,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useTheme } from "../hooks/useTheme";
@@ -28,13 +29,16 @@ import { useTheme } from "../hooks/useTheme";
 interface CostCenter {
   id: string;
   name: string;
-  budget: number;
-  spent: number;
-  employees: number;
+  /** @deprecated legado — usado só como fallback de leitura pro mês atual, ver getBudgetForMonth() */
+  budget?: number;
+  /** Orçamento por mês, chave "YYYY-MM". Fonte da verdade a partir desta versão. */
+  budgetsByMonth?: Record<string, number>;
+  /** @deprecated legado — gasto passou a ser sempre derivado das despesas reais, ver centerSpentForMonth() */
+  spent?: number;
   color: string;
   userId: string;
   createdAt: any;
-  categories?: Array<{ id: string; name: string; spent: number; color: string }>;
+  categories?: Array<{ id: string; name: string; color: string }>;
 }
 
 interface Expense {
@@ -47,6 +51,194 @@ interface Expense {
   description?: string;
   userId: string;
   createdAt: any;
+  paidAt?: string;
+}
+
+// ─── Período (mês/ano) ────────────────────────────────────────────────────────
+
+const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+function monthKeyOf(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthKeyToLabel(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  return `${MONTH_LABELS[(m ?? 1) - 1] ?? "—"} ${y}`;
+}
+
+function shiftMonthKey(key: string, delta: number): string {
+  const [y, m] = key.split("-").map(Number);
+  return monthKeyOf(new Date(y, (m - 1) + delta, 1));
+}
+
+
+/** Data completa por extenso curto, ex: "21 de mai de 2026" — aceita Timestamp do Firestore, Date ou string/número. */
+function formatFullDate(value: unknown): string {
+  const hasToDate = (v: unknown): v is { toDate: () => Date } =>
+    typeof v === "object" && v !== null && typeof (v as { toDate?: unknown }).toDate === "function";
+  const d = hasToDate(value) ? value.toDate() : value instanceof Date ? value : new Date(value as string | number);
+  if (isNaN(d.getTime())) return "—";
+  return `${d.getDate()} de ${MONTH_LABELS[d.getMonth()].toLowerCase()} de ${d.getFullYear()}`;
+}
+
+/** Converte Timestamp do Firestore, Date ou string/número pro formato "YYYY-MM-DD" que o <input type="date"> espera. */
+function toDateInputValue(value: unknown): string {
+  const hasToDate = (v: unknown): v is { toDate: () => Date } =>
+    typeof v === "object" && v !== null && typeof (v as { toDate?: unknown }).toDate === "function";
+  const d = hasToDate(value) ? value.toDate() : value instanceof Date ? value : new Date(value as string | number);
+  if (isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Orçamento do centro para um mês específico. Centros já migrados usam
+ * `budgetsByMonth` diretamente; centros antigos (sem `budgetsByMonth`) usam
+ * o campo legado `budget`, mas SÓ para o mês atual — nunca retroage para
+ * meses passados nem projeta pros futuros silenciosamente.
+ */
+function getBudgetForMonth(center: CostCenter, monthKey: string, currentMonthKey: string): number {
+  if (center.budgetsByMonth && monthKey in center.budgetsByMonth) return center.budgetsByMonth[monthKey];
+  if (!center.budgetsByMonth && typeof center.budget === "number" && monthKey === currentMonthKey) return center.budget;
+  return 0;
+}
+
+/** Despesas pagas de um centro, dentro de um mês específico. */
+function expensesForCenterMonth(expenses: Expense[], centerName: string, monthKey: string): Expense[] {
+  return expenses.filter(e => e.center === centerName && e.status === "pago" && e.date.startsWith(monthKey));
+}
+
+function centerSpentForMonth(expenses: Expense[], centerName: string, monthKey: string): number {
+  return expensesForCenterMonth(expenses, centerName, monthKey).reduce((s, e) => s + e.amount, 0);
+}
+
+/**
+ * Seletor de período em formato de calendário — abre um popover com
+ * navegação de ano e uma grade dos 12 meses, no lugar do antigo `< Ago 2026 >`
+ * só de texto. Mesma linguagem visual dos dropdowns do Navbar (card com
+ * borda, sombra, animação de entrada) e dos botões-gradiente da marca.
+ */
+function MonthPicker({
+  value, onChange, currentMonthKey,
+}: {
+  value: string;
+  onChange: (monthKey: string) => void;
+  currentMonthKey: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [viewMonthKey, setViewMonthKey] = useState(value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Reajusta o mês exibido no popover pro valor atual — direto no handler
+  // do clique que abre (não via effect observando `open`, que dispararia
+  // um setState síncrono em cascata).
+  const toggleOpen = () => {
+    setOpen(o => {
+      const next = !o;
+      if (next) setViewMonthKey(value);
+      return next;
+    });
+  };
+
+  const [viewY, viewM] = viewMonthKey.split("-").map(Number);
+  const firstWeekday = new Date(viewY, viewM - 1, 1).getDay();
+  const daysInMonth = new Date(viewY, viewM, 0).getDate();
+  const today = new Date();
+  const isTodayCell = (day: number) =>
+    viewMonthKey === currentMonthKey && day === today.getDate();
+  const cells: (number | null)[] = [
+    ...Array(firstWeekday).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={toggleOpen}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-semibold"
+        style={{ borderColor: "var(--db-border)", background: "var(--db-card)", color: "var(--db-text)" }}
+      >
+        <CalendarDays size={13} style={{ color: "var(--primary)" }} />
+        {monthKeyToLabel(value)}
+        <ChevronDown size={12} style={{ color: "var(--db-text2)", transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 mt-2 rounded-2xl border z-50 p-3"
+          style={{
+            background: "var(--db-card)", borderColor: "var(--db-border)", width: 236,
+            boxShadow: "0 20px 50px rgba(13,34,71,0.18), 0 4px 14px rgba(13,34,71,0.1)",
+            animation: "cpDropIn 0.15s cubic-bezier(.22,.68,0,1.1) both",
+          }}
+        >
+          {/* Navegação de mês */}
+          <div className="flex items-center justify-between mb-2.5 px-1">
+            <button onClick={() => setViewMonthKey(k => shiftMonthKey(k, -1))}
+              className="p-1 rounded-lg cursor-pointer hover:opacity-70 transition-opacity" aria-label="Mês anterior">
+              <ChevronDown size={14} style={{ color: "var(--db-text2)", transform: "rotate(90deg)" }} />
+            </button>
+            <span className="text-sm font-bold" style={{ color: "var(--db-text)" }}>{monthKeyToLabel(viewMonthKey)}</span>
+            <button onClick={() => setViewMonthKey(k => shiftMonthKey(k, 1))}
+              className="p-1 rounded-lg cursor-pointer hover:opacity-70 transition-opacity" aria-label="Próximo mês">
+              <ChevronDown size={14} style={{ color: "var(--db-text2)", transform: "rotate(-90deg)" }} />
+            </button>
+          </div>
+
+          {/* Cabeçalho dos dias da semana */}
+          <div className="grid grid-cols-7 gap-0.5 mb-1">
+            {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
+              <div key={i} className="text-center text-[10px] font-semibold" style={{ color: "var(--db-text3)" }}>{d}</div>
+            ))}
+          </div>
+
+          {/* Grade de dias — clicar em qualquer dia seleciona o mês dele pro orçamento */}
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((day, idx) => {
+              if (day === null) return <div key={`pad-${idx}`} />;
+              const monthSelected = viewMonthKey === value;
+              const isToday = isTodayCell(day);
+              return (
+                <button
+                  key={day}
+                  onClick={() => { onChange(viewMonthKey); setOpen(false); }}
+                  className="aspect-square rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center justify-center"
+                  style={
+                    isToday
+                      ? { background: "linear-gradient(135deg, #1565c0, #0d47a1)", color: "#fff" }
+                      : monthSelected
+                        ? { background: "rgba(21,101,192,0.12)", color: "var(--primary)" }
+                        : { background: "transparent", color: "var(--db-text)" }
+                  }
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => { onChange(currentMonthKey); setOpen(false); }}
+            className="w-full mt-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+            style={{ color: "var(--primary)", background: "var(--db-sub)" }}
+          >
+            Mês atual
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Constantes e Helpers ─────────────────────────────────────────────────────
@@ -58,7 +250,10 @@ const COLORS = [
   "#64b5f6", "#2196f3", "#1e88e5", "#1976d2",
 ];
 
-const EXPENSE_CATEGORIES = [
+// Lista genérica — usada só como fallback pra quem ainda não respondeu o
+// "ramo de atuação" no onboarding (ou cujo ramo não bate com nenhum dos
+// 4 segmentos abaixo).
+const DEFAULT_CATEGORIES = [
   "Alimentação",
   "Transporte",
   "Hospedagem",
@@ -72,7 +267,36 @@ const EXPENSE_CATEGORIES = [
   "Outros",
 ];
 
+// Nomenclatura de categorias por segmento — mesmo "ramo" já coletado no
+// onboarding (answers.ramo, cacheado em onboarding_ramo_${uid}) e usado
+// hoje pelo Navbar pra esconder "Estoque" de quem é Serviço.
+const CATEGORY_SETS: Record<string, string[]> = {
+  "Comércio": [
+    "Fornecedores", "Frete e logística", "Aluguel do ponto", "Folha de pagamento",
+    "Marketing", "Embalagens", "Manutenção", "Impostos", "TI / Software", "Outros",
+  ],
+  "E-commerce": [
+    "Fornecedores", "Frete e logística", "Plataforma / Marketplace", "Marketing digital",
+    "Embalagens", "Folha de pagamento", "TI / Software", "Impostos", "Devoluções", "Outros",
+  ],
+  "Indústria": [
+    "Matéria-prima", "Mão de obra", "Manutenção de máquinas", "Energia", "Logística",
+    "Folha de pagamento", "Segurança do trabalho", "Impostos", "TI / Software", "Outros",
+  ],
+  "Serviço": [
+    "Mão de obra", "Ferramentas e equipamentos", "Deslocamento", "Marketing", "Consultoria",
+    "Folha de pagamento", "TI / Software", "Impostos", "Treinamento", "Outros",
+  ],
+};
+
+/** Categorias do segmento do usuário (1º ramo respondido no onboarding), com fallback pra lista genérica. */
+function categoriesForSegment(ramo: string | null): string[] {
+  if (ramo && CATEGORY_SETS[ramo]) return CATEGORY_SETS[ramo];
+  return DEFAULT_CATEGORIES;
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
+  // Genéricas
   "Alimentação": "#f97316",
   "Transporte": "#06b6d4",
   "Hospedagem": "#ec4899",
@@ -84,6 +308,27 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Utilities": "#6366f1",
   "Manutenção": "#14b8a6",
   "Outros": "#6b7280",
+  // Comércio / E-commerce
+  "Fornecedores": "#0ea5e9",
+  "Frete e logística": "#0284c7",
+  "Aluguel do ponto": "#a855f7",
+  "Folha de pagamento": "#22c55e",
+  "Embalagens": "#f472b6",
+  "Impostos": "#dc2626",
+  "TI / Software": "#6366f1",
+  "Plataforma / Marketplace": "#8b5cf6",
+  "Marketing digital": "#ef4444",
+  "Devoluções": "#fb923c",
+  // Indústria
+  "Matéria-prima": "#92400e",
+  "Mão de obra": "#0891b2",
+  "Manutenção de máquinas": "#14b8a6",
+  "Energia": "#eab308",
+  "Logística": "#38bdf8",
+  "Segurança do trabalho": "#f43f5e",
+  // Serviço
+  "Ferramentas e equipamentos": "#10b981",
+  "Deslocamento": "#0284c7",
 };
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
@@ -96,20 +341,60 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
 function mapCategoryToCashflow(cat: string): string {
   const l = cat.toLowerCase();
   if (l.includes("almoço") || l.includes("almoco") || l.includes("alimento") || l.includes("refeição") || l.includes("refeicao") || l.includes("restaurante")) return "Outros gastos";
-  if (l.includes("uber") || l.includes("táxi") || l.includes("taxi") || l.includes("combustível") || l.includes("combustivel") || l.includes("passagem")) return "Outros gastos";
+  if (l.includes("uber") || l.includes("táxi") || l.includes("taxi") || l.includes("combustível") || l.includes("combustivel") || l.includes("passagem") || l.includes("frete") || l.includes("logística") || l.includes("logistica") || l.includes("deslocamento")) return "Outros gastos";
   if (l.includes("hotel") || l.includes("hospedagem") || l.includes("hostel") || l.includes("airbnb")) return "Outros gastos";
-  if (l.includes("salário") || l.includes("salario") || l.includes("folha")) return "Folha de pagamento";
+  if (l.includes("salário") || l.includes("salario") || l.includes("folha") || l.includes("mão de obra") || l.includes("mao de obra")) return "Folha de pagamento";
   if (l.includes("aluguel")) return "Aluguel";
-  if (l.includes("fornec") || l.includes("compra") || l.includes("mercadoria")) return "Fornecedores";
+  if (l.includes("fornec") || l.includes("compra") || l.includes("mercadoria") || l.includes("matéria-prima") || l.includes("materia-prima") || l.includes("embalagens")) return "Fornecedores";
   if (l.includes("imposto") || l.includes("tributo")) return "Impostos";
   if (l.includes("marketing") || l.includes("anúncio") || l.includes("publicidade")) return "Marketing";
-  if (l.includes("ti") || l.includes("softw") || l.includes("assinatura")) return "TI / Software";
+  if (l.includes("ti") || l.includes("softw") || l.includes("assinatura") || l.includes("plataforma") || l.includes("marketplace")) return "TI / Software";
   return "Outros gastos";
+}
+
+/**
+ * Cria/atualiza/remove o lançamento espelho em users/{uid}/cashflow de uma
+ * despesa do Centro de Custo, mantendo o vínculo por `sourceExpenseId`.
+ * Compartilhada entre o modal de despesa (criar/editar) e o botão rápido
+ * "Marcar como pago" — evita duplicar a lógica de sincronização.
+ */
+async function syncExpenseCashflow(
+  db: import("firebase/firestore").Firestore,
+  uid: string,
+  expenseId: string,
+  data: { description?: string; category: string; center: string; amount: number; date: string; status: "pago" | "pendente" | "agendado" }
+) {
+  const { collection, addDoc, updateDoc, doc, query, where, getDocs, deleteDoc } = await import("firebase/firestore");
+  const cfSnap = await getDocs(
+    query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", expenseId))
+  );
+
+  if (data.status === "pago") {
+    const cfData = {
+      type: "saida",
+      description: data.description || `${data.category} – ${data.center}`,
+      category: mapCategoryToCashflow(data.category),
+      amount: data.amount,
+      date: data.date,
+      note: `Centro: ${data.center} | ${data.category}`,
+      sourceExpenseId: expenseId,
+      createdAt: Date.now(),
+    };
+    if (!cfSnap.empty) {
+      await updateDoc(doc(db, "users", uid, "cashflow", cfSnap.docs[0].id), cfData);
+    } else {
+      await addDoc(collection(db, "users", uid, "cashflow"), cfData);
+    }
+  } else {
+    await Promise.all(cfSnap.docs.map((d) => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
+  }
 }
 
 // ─── SVG Bar Chart ─────────────────────────────────────────────────────────────
 
-function BarChart({ centers }: { centers: CostCenter[] }) {
+interface ChartCenter { id: string; name: string; budget: number; spent: number }
+
+function BarChart({ centers }: { centers: ChartCenter[] }) {
   if (centers.length === 0) return null;
   const maxVal = Math.max(...centers.map(c => Math.max(c.budget, c.spent, 1)));
   const W = Math.max(centers.length * 90 + 60, 320);
@@ -245,12 +530,13 @@ interface ExpenseModalProps {
   open: boolean;
   editing: Expense | null;
   centers: CostCenter[];
+  categories: string[];
   uid: string;
   onClose: () => void;
   onSaved: (msg: string) => void;
 }
 
-function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: ExpenseModalProps) {
+function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSaved }: ExpenseModalProps) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [center, setCenter] = useState("");
@@ -287,159 +573,23 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
     try {
       const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
-      const {
-        collection, addDoc, updateDoc, doc,
-        query, where, getDocs, deleteDoc,
-      } = await import("firebase/firestore");
+      const { collection, addDoc, updateDoc, doc } = await import("firebase/firestore");
 
+      // Gasto por período agora é sempre derivado das despesas reais (ver
+      // centerSpentForMonth) — não há mais acumulador em costCenters pra
+      // manter aqui. Só o documento da despesa + o espelho no cashflow.
       if (editing) {
-        // ── EDITAR DESPESA ──────────────────────────────────────────────
-
-        // 1. Atualizar documento de despesa
         await updateDoc(doc(db, "expenses", editing.id), {
           description, category, center, amount: parsedAmount, date, status,
         });
-
-        // 2. Remover gasto anterior do centro/categoria (se mudou)
-        if (editing.category !== category || editing.center !== center) {
-          const oldCenterSnap = await getDocs(
-            query(
-              collection(db, "costCenters"),
-              where("name", "==", editing.center),
-              where("userId", "==", uid),
-            )
-          );
-          if (!oldCenterSnap.empty) {
-            const centerData = oldCenterSnap.docs[0].data();
-            const categories = centerData.categories || [];
-            const updatedCategories = categories.map((cat: any) =>
-              cat.name === editing.category
-                ? { ...cat, spent: Math.max(0, cat.spent - editing.amount) }
-                : cat
-            );
-            const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
-            await updateDoc(doc(db, "costCenters", oldCenterSnap.docs[0].id), {
-              spent: newSpent,
-              categories: updatedCategories,
-            });
-          }
-        }
-
-        // 3. Adicionar novo gasto no centro/categoria
-        const newCenterSnap = await getDocs(
-          query(
-            collection(db, "costCenters"),
-            where("name", "==", center),
-            where("userId", "==", uid),
-          )
-        );
-        if (!newCenterSnap.empty) {
-          const centerData = newCenterSnap.docs[0].data();
-          const categories = centerData.categories || [];
-          const existingCat = categories.find((cat: any) => cat.name === category);
-          let updatedCategories;
-          if (existingCat) {
-            updatedCategories = categories.map((cat: any) =>
-              cat.name === category ? { ...cat, spent: cat.spent + parsedAmount } : cat
-            );
-          } else {
-            updatedCategories = [
-              ...categories,
-              { id: `cat_${Date.now()}`, name: category, spent: parsedAmount, color: CATEGORY_COLORS[category] || "#6b7280" },
-            ];
-          }
-          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
-          await updateDoc(doc(db, "costCenters", newCenterSnap.docs[0].id), {
-            spent: newSpent,
-            categories: updatedCategories,
-          });
-        }
-
-        // 4. Sincronizar com cashflow
-        const cfSnap = await getDocs(
-          query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", editing.id))
-        );
-        if (status === "pago") {
-          const cfData = {
-            type: "saida",
-            description: description || `${category} – ${center}`,
-            category: mapCategoryToCashflow(category),
-            amount: parsedAmount,
-            date,
-            note: `Centro: ${center} | ${category}`,
-            sourceExpenseId: editing.id,
-            createdAt: Date.now(),
-          };
-          if (!cfSnap.empty) {
-            await updateDoc(doc(db, "users", uid, "cashflow", cfSnap.docs[0].id), cfData);
-          } else {
-            await addDoc(collection(db, "users", uid, "cashflow"), cfData);
-          }
-        } else {
-          await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
-        }
-
+        await syncExpenseCashflow(db, uid, editing.id, { description, category, center, amount: parsedAmount, date, status });
         onSaved("Despesa atualizada!");
-
       } else {
-        // ── CRIAR NOVA DESPESA ──────────────────────────────────────────
-
-        // 1. Criar documento de despesa
         const expRef = await addDoc(collection(db, "expenses"), {
-          description,
-          category,
-          center,
-          amount: parsedAmount,
-          date,
-          status,
-          userId: uid,
-          createdAt: new Date(),
+          description, category, center, amount: parsedAmount, date, status,
+          userId: uid, createdAt: new Date(),
         });
-
-        // 2. Atualizar centro de custo com a categoria
-        const centerSnap = await getDocs(
-          query(
-            collection(db, "costCenters"),
-            where("name", "==", center),
-            where("userId", "==", uid),
-          )
-        );
-        if (!centerSnap.empty) {
-          const centerData = centerSnap.docs[0].data();
-          const categories = centerData.categories || [];
-          const existingCat = categories.find((cat: any) => cat.name === category);
-          let updatedCategories;
-          if (existingCat) {
-            updatedCategories = categories.map((cat: any) =>
-              cat.name === category ? { ...cat, spent: cat.spent + parsedAmount } : cat
-            );
-          } else {
-            updatedCategories = [
-              ...categories,
-              { id: `cat_${Date.now()}`, name: category, spent: parsedAmount, color: CATEGORY_COLORS[category] || "#6b7280" },
-            ];
-          }
-          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
-          await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
-            spent: newSpent,
-            categories: updatedCategories,
-          });
-        }
-
-        // 3. Sincronizar com cashflow quando "pago"
-        if (status === "pago") {
-          await addDoc(collection(db, "users", uid, "cashflow"), {
-            type: "saida",
-            description: description || `${category} – ${center}`,
-            category: mapCategoryToCashflow(category),
-            amount: parsedAmount,
-            date,
-            note: `Centro: ${center} | ${category}`,
-            sourceExpenseId: expRef.id,
-            createdAt: Date.now(),
-          });
-        }
-
+        await syncExpenseCashflow(db, uid, expRef.id, { description, category, center, amount: parsedAmount, date, status });
         onSaved(status === "pago" ? "Despesa criada e lançada no fluxo de caixa!" : "Despesa criada!");
       }
 
@@ -502,7 +652,7 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
               <option value="">— Selecione uma categoria —</option>
-              {EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
             {category && (
               <div className="mt-2 flex items-center gap-2">
@@ -601,101 +751,35 @@ function ExpenseModal({ open, editing, centers, uid, onClose, onSaved }: Expense
   );
 }
 
-// ─── Accordion de Categorias ───────────────────────────────────────────────────
-
-interface CategoryAccordionProps {
-  center: CostCenter;
-  expanded: boolean;
-  onToggle: () => void;
-  expenses: Expense[];
-}
-
-function CategoryAccordion({ center, expanded, onToggle, expenses }: CategoryAccordionProps) {
-  const categories = center.categories || [];
-  const centerExpenses = expenses.filter(e => e.center === center.name);
-
-  return (
-    <div className="space-y-2">
-      {categories.map(cat => {
-        const catCount = centerExpenses.filter(e => e.category === cat.name).length;
-        return (
-          <div
-            key={cat.id}
-            className="rounded-xl border overflow-hidden transition-all"
-            style={{ borderColor: "var(--db-border)" }}
-          >
-            <button
-              onClick={onToggle}
-              className="w-full px-4 py-3 flex items-center justify-between hover:opacity-80 transition-opacity cursor-pointer"
-              style={{ background: "var(--db-sub)" }}
-            >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: cat.color }} />
-                <div className="text-left min-w-0 flex-1">
-                  <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{cat.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--db-text3)" }}>{catCount} lançamento{catCount !== 1 ? "s" : ""}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(cat.spent)}</span>
-                <span className="text-xs font-semibold px-1.5" style={{ color: "var(--db-text2)" }}>
-                  {((cat.spent / center.budget) * 100).toFixed(1)}%
-                </span>
-                <ChevronDown
-                  size={14}
-                  style={{
-                    color: "var(--db-text2)",
-                    transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform .2s",
-                  }}
-                />
-              </div>
-            </button>
-
-            {expanded && (
-              <div
-                className="border-t px-4 py-3 space-y-2 max-h-[300px] overflow-y-auto"
-                style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}
-              >
-                {centerExpenses.filter(e => e.category === cat.name).length > 0 ? (
-                  centerExpenses.filter(e => e.category === cat.name).map(exp => (
-                    <div key={exp.id} className="flex items-center justify-between py-2 border-b last:border-b-0"
-                      style={{ borderColor: "var(--db-border)" }}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate" style={{ color: "var(--db-text)" }}>
-                          {exp.description || "—"}
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>{exp.date}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
-                          {exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-center py-4" style={{ color: "var(--db-text3)" }}>Nenhum lançamento</p>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── Main Page ─────────────────────────────────────────────────────────────────
+// (O antigo componente CategoryAccordion, nunca usado em nenhuma tela, foi
+// removido aqui — a listagem por categoria expandida que a página realmente
+// usa vive inline mais abaixo, e agora computa o gasto por categoria a
+// partir das despesas reais do mês, não de um acumulador armazenado.)
 
 export default function CostCenterPage() {
-  const [period] = useState("Abr 2025");
+  // Período (mês/ano) navegável — sempre abre no mês atual, não persiste.
+  const currentMonthKey = monthKeyOf(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
+  const period = monthKeyToLabel(selectedMonth);
+  // Data completa (dia 1 do mês selecionado) — usada no modal de criar/editar
+  // centro, que antes só mostrava "Ago 2026" sem dia.
+  const selectedMonthFullDate = (() => {
+    const [y, m] = selectedMonth.split("-").map(Number);
+    return formatFullDate(new Date(y, m - 1, 1));
+  })();
+  const [payingExpenseId, setPayingExpenseId] = useState<string | null>(null);
+
   const [uid, setUid] = useState<string>("");
   const [user, setUser] = useState<{ displayName: string | null; email: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  // Ramo de atuação (Comércio/E-commerce/Indústria/Serviço) respondido no
+  // onboarding — mesmo dado que o Navbar já usa pra esconder "Estoque" de
+  // Serviço. Aqui define quais nomes de categoria a conta enxerga.
+  const [ramo, setRamo] = useState<string | null>(null);
+  const activeCategories = categoriesForSegment(ramo);
 
   const [showCenterModal, setShowCenterModal] = useState(false);
   const [editingCenter, setEditingCenter] = useState<CostCenter | null>(null);
@@ -746,12 +830,26 @@ export default function CostCenterPage() {
         const { getFirebase } = await import("@/lib/firebase");
         const { auth, db } = await getFirebase();
         const { onAuthStateChanged } = await import("firebase/auth");
-        const { collection, query, where, onSnapshot } = await import("firebase/firestore");
+        const { collection, query, where, onSnapshot, doc, getDoc } = await import("firebase/firestore");
 
         unsubAuth = onAuthStateChanged(auth, u => {
           if (!u) { window.location.href = "/login"; return; }
           setUid(u.uid);
           setUser({ displayName: u.displayName, email: u.email });
+
+          // Ramo do onboarding: cache local primeiro (evita flash), Firestore confirma.
+          const cachedRamo = localStorage.getItem(`onboarding_ramo_${u.uid}`);
+          if (cachedRamo) {
+            try { setRamo((JSON.parse(cachedRamo) as string[])[0] ?? null); } catch { /* ignora cache inválido */ }
+          }
+          getDoc(doc(db, "users", u.uid, "profile", "onboarding"))
+            .then(snap => {
+              if (!snap.exists()) return;
+              const ramoAnswers: string[] = snap.data()?.answers?.ramo || [];
+              setRamo(ramoAnswers[0] ?? null);
+              localStorage.setItem(`onboarding_ramo_${u.uid}`, JSON.stringify(ramoAnswers));
+            })
+            .catch(err => console.error("Erro ao carregar ramo do onboarding:", err));
 
           unsubCenters?.();
           unsubCenters = onSnapshot(
@@ -784,13 +882,21 @@ export default function CostCenterPage() {
       const fd = new FormData(e.currentTarget);
       const name = (fd.get("name") as string).trim();
       const budgetStr = (fd.get("budget") as string).trim();
-      const employeesStr = (fd.get("employees") as string).trim();
-      
-      const budget = budgetStr ? parseFloat(budgetStr.replace(",", ".")) : NaN;
-      const employees = employeesStr ? parseInt(employeesStr) : NaN;
+      const createdAtStr = (fd.get("createdAt") as string).trim();
 
-      if (!name || !budgetStr || !employeesStr || isNaN(budget) || budget <= 0 || isNaN(employees) || employees <= 0) {
+      const budget = budgetStr ? parseFloat(budgetStr.replace(",", ".")) : NaN;
+
+      if (!name || !budgetStr || isNaN(budget) || budget <= 0 || !createdAtStr) {
         showToast("Preencha todos os campos corretamente", "err"); return;
+      }
+
+      // Data escolhida no calendário do modal — construída a partir das
+      // partes (ano/mês/dia) em vez de `new Date(createdAtStr)` pra não
+      // sofrer o shift de fuso horário do parser ISO (que assume UTC).
+      const [cy, cm, cd] = createdAtStr.split("-").map(Number);
+      const createdAt = new Date(cy, cm - 1, cd);
+      if (isNaN(createdAt.getTime())) {
+        showToast("Data de cadastro inválida", "err"); return;
       }
 
       const { getFirebase } = await import("@/lib/firebase");
@@ -798,19 +904,21 @@ export default function CostCenterPage() {
       const { collection, addDoc, updateDoc, doc } = await import("firebase/firestore");
 
       if (editingCenter) {
-        await updateDoc(doc(db, "costCenters", editingCenter.id), { name, budget, employees });
+        // Orçamento é sempre editado para o mês selecionado na página —
+        // mescla com os outros meses já definidos, nunca sobrescreve todos.
+        const budgetsByMonth = { ...(editingCenter.budgetsByMonth ?? {}), [selectedMonth]: budget };
+        await updateDoc(doc(db, "costCenters", editingCenter.id), { name, budgetsByMonth, createdAt });
         showToast("Centro atualizado!");
       } else {
-        const initialCategories = EXPENSE_CATEGORIES.map((cat, idx) => ({
+        const initialCategories = activeCategories.map((cat, idx) => ({
           id: `cat_${Date.now()}_${idx}`,
           name: cat,
-          spent: 0,
           color: CATEGORY_COLORS[cat],
         }));
         await addDoc(collection(db, "costCenters"), {
-          name, budget, spent: 0, employees,
+          name, budgetsByMonth: { [selectedMonth]: budget },
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
-          userId: uid, createdAt: new Date(),
+          userId: uid, createdAt,
           categories: initialCategories,
         });
         showToast("Centro criado!");
@@ -856,39 +964,14 @@ export default function CostCenterPage() {
     try {
       const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
-      const { deleteDoc, doc, collection, query, where, getDocs, updateDoc } = await import("firebase/firestore");
+      const { deleteDoc, doc, collection, query, where, getDocs } = await import("firebase/firestore");
 
-      const exp = expenses.find(e => e.id === confirmModal.id);
-      if (exp) {
-        const centerSnap = await getDocs(
-          query(
-            collection(db, "costCenters"),
-            where("name", "==", exp.center),
-            where("userId", "==", uid),
-          )
-        );
-
-        if (!centerSnap.empty) {
-          const centerData = centerSnap.docs[0].data();
-          const categories = centerData.categories || [];
-          const updatedCategories = categories.map((cat: any) =>
-            cat.name === exp.category
-              ? { ...cat, spent: Math.max(0, cat.spent - exp.amount) }
-              : cat
-          );
-          const newSpent = updatedCategories.reduce((sum: number, cat: any) => sum + cat.spent, 0);
-          await updateDoc(doc(db, "costCenters", centerSnap.docs[0].id), {
-            spent: newSpent,
-            categories: updatedCategories,
-          });
-        }
-
-        // Remove entrada no cashflow vinculada
-        const cfSnap = await getDocs(
-          query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", confirmModal.id))
-        );
-        await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
-      }
+      // Gasto é derivado das despesas reais — não há mais acumulador em
+      // costCenters pra reverter aqui, só remover a despesa e o espelho no cashflow.
+      const cfSnap = await getDocs(
+        query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", confirmModal.id))
+      );
+      await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
 
       await deleteDoc(doc(db, "expenses", confirmModal.id));
       showToast("Despesa removida!");
@@ -900,27 +983,54 @@ export default function CostCenterPage() {
     }
   };
 
+  // ── Baixa rápida (marcar despesa como paga) ─────────────────────────────────
+  const handleMarkExpensePaid = async (exp: Expense) => {
+    if (!uid || exp.status === "pago") return;
+    setPayingExpenseId(exp.id);
+    try {
+      const { getFirebase } = await import("@/lib/firebase");
+      const { db } = await getFirebase();
+      const { doc, updateDoc } = await import("firebase/firestore");
+      const paidAt = new Date().toISOString().split("T")[0];
+
+      await updateDoc(doc(db, "expenses", exp.id), { status: "pago", paidAt });
+      await syncExpenseCashflow(db, uid, exp.id, {
+        description: exp.description, category: exp.category, center: exp.center,
+        amount: exp.amount, date: exp.date, status: "pago",
+      });
+      showToast("Despesa paga! Lançada no fluxo de caixa ✓");
+    } catch (err: any) {
+      showToast(err.message || "Erro ao marcar como paga", "err");
+    } finally {
+      setPayingExpenseId(null);
+    }
+  };
+
   // ── Computed ───────────────────────────────────────────────────────────────
+  // Todas as figuras abaixo (KPIs, gráfico, listas) são relativas ao
+  // `selectedMonth` navegável — não mais totais vitalícios.
   const filteredExpenses = expenses.filter(exp => {
     const q = searchTerm.toLowerCase();
     const matchSearch = !q ||
       exp.category.toLowerCase().includes(q) ||
       exp.center.toLowerCase().includes(q) ||
       (exp.description || "").toLowerCase().includes(q);
-    return matchSearch && (filterStatus === "todos" || exp.status === filterStatus);
+    const matchMonth = exp.date.startsWith(selectedMonth);
+    return matchSearch && matchMonth && (filterStatus === "todos" || exp.status === filterStatus);
   });
 
-  const totalBudget = costCenters.reduce((s, c) => s + c.budget, 0);
-  const totalSpent = costCenters.reduce((s, c) => s + c.spent, 0);
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalBudget = costCenters.reduce((s, c) => s + getBudgetForMonth(c, selectedMonth, currentMonthKey), 0);
+  const totalSpent = costCenters.reduce((s, c) => s + centerSpentForMonth(expenses, c.name, selectedMonth), 0);
   const utilizationPct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-
-  const today = new Date();
-  const monthProgress = Math.max(today.getDate() / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(), 0.01);
+  const centersForChart = costCenters.map(c => ({
+    ...c,
+    budget: getBudgetForMonth(c, selectedMonth, currentMonthKey),
+    spent: centerSpentForMonth(expenses, c.name, selectedMonth),
+  }));
 
   const kpis = [
     { label: "Orçamento total", value: fmt(totalBudget), change: `${costCenters.length}`, up: true, sub: `${costCenters.length} centros`, icon: Wallet, color: "blue" },
-    { label: "Custo real", value: fmt(totalExpenses), change: "+3.1%", up: false, sub: "vs. mês anterior", icon: CreditCard, color: "rose" },
+    { label: "Custo real", value: fmt(totalSpent), change: "+3.1%", up: false, sub: "vs. mês anterior", icon: CreditCard, color: "rose" },
     { label: "Disponível", value: fmt(Math.max(totalBudget - totalSpent, 0)), change: `${100 - utilizationPct}%`, up: true, sub: "de margem", icon: TrendingUp, color: "emerald" },
     { label: "Centros ativos", value: String(costCenters.length), change: "+0", up: true, sub: "ativos agora", icon: BarChart2, color: "amber" },
   ];
@@ -945,6 +1055,7 @@ export default function CostCenterPage() {
         .kpi-card { background:var(--db-card); border:1px solid var(--db-border); box-shadow:0 1px 3px rgba(13,34,71,0.06),0 4px 16px rgba(13,34,71,0.04); animation:slideUp 0.5s ease both; }
         .chart-card { background:var(--db-card); border:1px solid var(--db-border); box-shadow:0 1px 3px rgba(13,34,71,0.06),0 4px 16px rgba(13,34,71,0.04); border-radius:1rem; animation:slideUp 0.5s 0.2s ease both; }
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes cpDropIn { from{opacity:0;transform:translateY(-6px) scale(0.97)} to{opacity:1;transform:none} }
         .expense-row { transition:background 0.15s; border-bottom:1px solid var(--db-border); }
         .expense-row:last-child { border-bottom:none; }
         .expense-row:hover { background:var(--db-hover); }
@@ -1000,6 +1111,7 @@ export default function CostCenterPage() {
         open={showExpenseModal}
         editing={editingExpense}
         centers={costCenters}
+        categories={activeCategories}
         uid={uid}
         onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }}
         onSaved={msg => showToast(msg)}
@@ -1035,16 +1147,20 @@ export default function CostCenterPage() {
 
         {/* Cost Centers */}
         <div className="chart-card p-4 md:p-6">
-          <div className="flex items-start md:items-center justify-between mb-5 gap-2">
+          <div className="flex items-start md:items-center justify-between mb-3 gap-2 flex-wrap">
             <div>
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centros de custo</h2>
               <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Com detalhamento por categoria</p>
             </div>
-            <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
-              className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-              style={{ background: "var(--primary)" }}>
-              <Plus size={14} /> Novo
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Seletor de período em formato de calendário — não persiste, sempre abre no mês atual */}
+              <MonthPicker value={selectedMonth} onChange={setSelectedMonth} currentMonthKey={currentMonthKey} />
+              <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
+                className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                style={{ background: "var(--primary)" }}>
+                <Plus size={14} /> Novo
+              </button>
+            </div>
           </div>
 
           {costCenters.length === 0 ? (
@@ -1059,14 +1175,17 @@ export default function CostCenterPage() {
           ) : (
             <>
               <div className="mb-5 p-3 rounded-xl" style={{ background: "var(--db-sub)" }}>
-                <BarChart centers={costCenters} />
+                <BarChart centers={centersForChart} />
               </div>
 
               {/* Centers com categorias */}
               <div className="space-y-4">
                 {costCenters.map(center => {
-                  const pct = center.budget > 0 ? Math.round((center.spent / center.budget) * 100) : 0;
-                  const remaining = Math.max(center.budget - center.spent, 0);
+                  const budgetThisMonth = getBudgetForMonth(center, selectedMonth, currentMonthKey);
+                  const spentThisMonth = centerSpentForMonth(expenses, center.name, selectedMonth);
+                  const budgetDefined = budgetThisMonth > 0;
+                  const pct = budgetThisMonth > 0 ? Math.round((spentThisMonth / budgetThisMonth) * 100) : 0;
+                  const remaining = Math.max(budgetThisMonth - spentThisMonth, 0);
                   const over = pct > 100;
                   const warn = pct >= 80 && !over;
                   const isExpanded = expandedCategories.has(center.id);
@@ -1092,27 +1211,47 @@ export default function CostCenterPage() {
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ background: center.color }} />
                           <div className="text-left min-w-0 flex-1">
                             <p className="text-xs font-bold" style={{ color: "var(--db-text)" }}>{center.name}</p>
-                            <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>{center.employees} colab. • {(center.categories || []).length} categorias</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>Criado em {formatFullDate(center.createdAt)} • {(center.categories || []).length} categorias</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-4 shrink-0">
-                          <div className="flex flex-col items-end gap-1">
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
-                                <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "var(--danger)" : warn ? "var(--warning)" : "var(--success)" }} />
+                          {budgetDefined ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-2">
+                                <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
+                                  <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "var(--danger)" : warn ? "var(--warning)" : "var(--success)" }} />
+                                </div>
+                                <span className="mono text-xs font-bold px-2 py-0.5 rounded-full"
+                                  style={{ background: over ? "var(--saida-bg)" : warn ? "#fef9c3" : "var(--entrada-bg)", color: over ? "var(--saida-text)" : warn ? "#b45309" : "var(--entrada-text)" }}>
+                                  {pct}%
+                                </span>
                               </div>
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="mono font-semibold" style={{ color: "var(--db-text)" }}>{fmt(spentThisMonth)}</span>
+                                <span style={{ color: "var(--db-text3)" }}>de</span>
+                                <span className="mono font-semibold" style={{ color: "var(--db-text2)" }}>{fmt(budgetThisMonth)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-end gap-1">
                               <span className="mono text-xs font-bold px-2 py-0.5 rounded-full"
-                                style={{ background: over ? "var(--saida-bg)" : warn ? "#fef9c3" : "var(--entrada-bg)", color: over ? "var(--saida-text)" : warn ? "#b45309" : "var(--entrada-text)" }}>
-                                {pct}%
+                                style={{ background: "var(--db-sub)", color: "var(--db-text3)" }}>
+                                {fmt(0)}
+                              </span>
+                              {/* span, não button — já está dentro do botão de expandir/recolher o centro */}
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); setEditingCenter(center); setShowCenterModal(true); }}
+                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); setEditingCenter(center); setShowCenterModal(true); } }}
+                                className="text-xs font-semibold cursor-pointer hover:underline"
+                                style={{ color: "var(--primary)" }}
+                              >
+                                Orçamento não definido · Definir
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="mono font-semibold" style={{ color: "var(--db-text)" }}>{fmt(center.spent)}</span>
-                              <span style={{ color: "var(--db-text3)" }}>de</span>
-                              <span className="mono font-semibold" style={{ color: "var(--db-text2)" }}>{fmt(center.budget)}</span>
-                            </div>
-                          </div>
+                          )}
                           <ChevronDown
                             size={16}
                             style={{
@@ -1131,7 +1270,11 @@ export default function CostCenterPage() {
                             <p className="text-xs text-center py-4" style={{ color: "var(--db-text3)" }}>Nenhuma categoria com lançamentos</p>
                           ) : (
                             (center.categories || []).map(cat => {
-                              const catCount = expenses.filter(e => e.center === center.name && e.category === cat.name).length;
+                              // Gasto por categoria também é derivado das despesas pagas do mês selecionado.
+                              const catExpensesThisMonth = expensesForCenterMonth(expenses, center.name, selectedMonth)
+                                .filter(e => e.category === cat.name);
+                              const catSpent = catExpensesThisMonth.reduce((s, e) => s + e.amount, 0);
+                              const catCount = catExpensesThisMonth.length;
                               return (
                                 <div key={cat.id} className="rounded-lg border overflow-hidden transition-all"
                                   style={{ borderColor: "var(--db-border)" }}>
@@ -1144,9 +1287,9 @@ export default function CostCenterPage() {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0">
-                                      <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(cat.spent)}</span>
+                                      <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(catSpent)}</span>
                                       <span className="text-xs font-semibold px-1.5" style={{ color: "var(--db-text2)" }}>
-                                        {((cat.spent / center.budget) * 100).toFixed(1)}%
+                                        {budgetThisMonth > 0 ? ((catSpent / budgetThisMonth) * 100).toFixed(1) : "0.0"}%
                                       </span>
                                     </div>
                                   </div>
@@ -1180,9 +1323,9 @@ export default function CostCenterPage() {
         <div className="chart-card p-4 md:p-6">
           <div className="flex items-start md:items-center justify-between mb-4 gap-2 flex-wrap">
             <div>
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Despesas</h2>
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Despesas de {period}</h2>
               <p className="text-xs mt-0.5 flex items-center gap-2" style={{ color: "var(--db-text2)" }}>
-                Total: {fmt(totalExpenses)}
+                Total: {fmt(filteredExpenses.reduce((s, e) => s + e.amount, 0))}
                 <span className="cf-badge">✓ Sincroniza com fluxo de caixa</span>
               </p>
             </div>
@@ -1238,6 +1381,14 @@ export default function CostCenterPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 shrink-0">
+                      {exp.status !== "pago" && (
+                        <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
+                          title="Marcar como pago" className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors disabled:opacity-50">
+                          {payingExpenseId === exp.id
+                            ? <Loader size={12} className="animate-spin" style={{ color: "var(--success)" }} />
+                            : <Check size={12} style={{ color: "var(--success)" }} />}
+                        </button>
+                      )}
                       <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors">
                         <Edit2 size={12} style={{ color: "var(--primary)" }} />
                       </button>
@@ -1280,6 +1431,14 @@ export default function CostCenterPage() {
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-1.5">
+                            {exp.status !== "pago" && (
+                              <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
+                                title="Marcar como pago" className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors disabled:opacity-50">
+                                {payingExpenseId === exp.id
+                                  ? <Loader size={12} className="animate-spin" style={{ color: "var(--success)" }} />
+                                  : <Check size={12} style={{ color: "var(--success)" }} />}
+                              </button>
+                            )}
                             <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
                               className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors">
                               <Edit2 size={12} style={{ color: "var(--primary)" }} />
@@ -1317,8 +1476,8 @@ export default function CostCenterPage() {
             <form onSubmit={handleSaveCenter} className="p-5 space-y-4">
               {[
                 { name: "name", label: "Nome", placeholder: "Ex: Operações", type: "text", defaultValue: editingCenter?.name, min: undefined, step: undefined },
-                { name: "budget", label: "Orçamento (R$)", placeholder: "10000", type: "number", defaultValue: editingCenter?.budget, min: "1", step: "0.01" },
-                { name: "employees", label: "Colaboradores", placeholder: "5", type: "number", defaultValue: editingCenter?.employees, min: "1", step: undefined },
+                { name: "budget", label: `Orçamento de ${selectedMonthFullDate} (R$)`, placeholder: "10000", type: "number", defaultValue: editingCenter ? (getBudgetForMonth(editingCenter, selectedMonth, currentMonthKey) || undefined) : undefined, min: "1", step: "0.01" },
+                { name: "createdAt", label: "Data de cadastro", placeholder: undefined, type: "date", defaultValue: editingCenter ? toDateInputValue(editingCenter.createdAt) : toDateInputValue(new Date()), min: undefined, step: undefined },
               ].map(f => (
                 <div key={f.name}>
                   <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>{f.label}</label>
