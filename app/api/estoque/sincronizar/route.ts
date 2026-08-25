@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+
+// Cada chamada aqui pode disparar várias requisições à API do Mercado Livre
+// (e grava no Firestore) sem exigir autenticação — sem limite, dava pra
+// martelar a API do ML repetidamente (risco de a integração real do
+// vendedor ser limitada/bloqueada pela própria plataforma).
+const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: 5 }; // 5 sincronizações / 5 min por IP+userId
 
 export async function POST(request: Request) {
   try {
@@ -6,6 +13,17 @@ export async function POST(request: Request) {
 
     if (!userId) {
       return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
+    }
+
+    const { limited, retryAfterSec } = checkRateLimit(
+      `estoque-sync:${getClientIp(request)}:${userId}`,
+      RATE_LIMIT
+    );
+    if (limited) {
+      return NextResponse.json(
+        { error: "Muitas sincronizações em pouco tempo. Aguarde alguns minutos e tente novamente." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+      );
     }
 
     const { getFirebase } = await import("@/lib/firebase");

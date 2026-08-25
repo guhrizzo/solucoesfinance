@@ -16,10 +16,12 @@ import {
   linkPasswordToCurrentUser,
   unlinkProvider,
 } from "@/lib/authLink";
+import { passwordRules } from "@/lib/passwordRules";
 
 // ── Erros Firebase → PT-BR ────────────────────────────────────────────────────
 const firebaseErrorMap: Record<string, string> = {
-  "auth/weak-password": "Senha fraca. Use ao menos 6 caracteres.",
+  "auth/weak-password": "Senha fraca. Siga os requisitos indicados abaixo do campo de senha.",
+  "auth/password-does-not-meet-requirements": "Senha não atende aos requisitos mínimos de segurança.",
   "auth/requires-recent-login": "Por segurança, saia e entre novamente antes de alterar seus métodos de login.",
   "auth/credential-already-in-use": "Essa conta do Google já está vinculada a outro usuário.",
   "auth/popup-closed-by-user": "Janela fechada antes de concluir. Tente novamente.",
@@ -28,12 +30,6 @@ const firebaseErrorMap: Record<string, string> = {
 };
 const getErrorMessage = (code: string) =>
   firebaseErrorMap[code] ?? "Ocorreu um erro inesperado. Tente novamente.";
-
-const passwordRules = [
-  { label: "Mínimo 8 caracteres", test: (p: string) => p.length >= 8 },
-  { label: "Letra maiúscula", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "Número", test: (p: string) => /\d/.test(p) },
-];
 
 interface AppUser {
   uid: string;

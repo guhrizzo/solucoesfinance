@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { extractPendingGoogleLink } from "@/lib/authLink";
+import { passwordRules } from "@/lib/passwordRules";
 
 // ── Erros Firebase → PT-BR ────────────────────────────────────────────────────
 const firebaseErrorMap: Record<string, string> = {
   "auth/email-already-in-use": "Este e-mail já está cadastrado. Tente fazer login.",
   "auth/invalid-email": "E-mail inválido. Verifique e tente novamente.",
-  "auth/weak-password": "Senha fraca. Use ao menos 6 caracteres.",
+  "auth/weak-password": "Senha fraca. Siga os requisitos indicados abaixo do campo de senha.",
+  "auth/password-does-not-meet-requirements": "Senha não atende aos requisitos mínimos de segurança.",
   "auth/network-request-failed": "Falha de rede. Verifique sua conexão.",
   "auth/popup-closed-by-user": "Login cancelado. Tente novamente.",
   "auth/cancelled-popup-request": "Login cancelado. Tente novamente.",
@@ -47,13 +49,6 @@ async function registerWithGoogle() {
   const { auth, googleProvider } = await getFirebase();
   return signInWithPopup(auth, googleProvider);
 }
-
-// ── Validações de senha ───────────────────────────────────────────────────────
-const passwordRules = [
-  { label: "Mínimo 8 caracteres", test: (p: string) => p.length >= 8 },
-  { label: "Letra maiúscula", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "Número", test: (p: string) => /\d/.test(p) },
-];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function RegisterPage() {
@@ -481,7 +476,7 @@ export default function RegisterPage() {
                 <input
                   type={showPass ? "text" : "password"}
                   className={`reg-input pr-10 ${password && !passOk ? "has-error" : passOk ? "has-ok" : ""}`}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Mínimo 12 caracteres"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(null); }}
                   onFocus={() => setPasswordFocused(true)}

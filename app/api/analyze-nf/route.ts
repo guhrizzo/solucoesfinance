@@ -1,8 +1,21 @@
 // app/api/analyze-nf/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+
+// Assim como analyze-extract: chama a API paga da Anthropic sem exigir
+// autenticação — precisa de um teto por IP para não virar custo em aberto.
+const RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 10 }; // 10 análises / 10 min por IP
 
 export async function POST(req: NextRequest) {
+  const { limited, retryAfterSec } = checkRateLimit(`analyze-nf:${getClientIp(req)}`, RATE_LIMIT);
+  if (limited) {
+    return NextResponse.json(
+      { error: "Muitas análises em pouco tempo. Aguarde alguns minutos e tente novamente." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+    );
+  }
+
   try {
     const body = await req.json();
     const { type, content, base64, mediaType } = body;

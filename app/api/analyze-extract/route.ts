@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+
+// Cada chamada aqui dispara N requisições pagas à API da Anthropic (uma por
+// chunk de ~8000 chars) e a rota não exige autenticação — sem limite,
+// qualquer um que descobrisse a URL podia gerar custo ilimitado na conta.
+const RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 5 }; // 5 análises / 10 min por IP
+const MAX_CHUNKS = 30; // ~240k chars — teto de custo por requisição, mesmo dentro do limite de taxa
 
 const SYSTEM_PROMPT = `Você é um analisador de extratos bancários brasileiros.
 Extraia TODAS as transações do texto fornecido.
@@ -61,6 +68,14 @@ function splitIntoChunks(text: string, maxChars = 8000): string[] {
 }
 
 export async function POST(req: NextRequest) {
+  const { limited, retryAfterSec } = checkRateLimit(`analyze-extract:${getClientIp(req)}`, RATE_LIMIT);
+  if (limited) {
+    return NextResponse.json(
+      { error: "Muitas análises em pouco tempo. Aguarde alguns minutos e tente novamente." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+    );
+  }
+
   try {
     const { text } = await req.json();
 
@@ -69,6 +84,12 @@ export async function POST(req: NextRequest) {
     }
 
     const chunks = splitIntoChunks(text, 8000);
+    if (chunks.length > MAX_CHUNKS) {
+      return NextResponse.json(
+        { error: `Extrato muito grande (${chunks.length} blocos). Envie em partes menores.` },
+        { status: 413 }
+      );
+    }
 
     // Processa chunks em paralelo (máx 3 simultâneos para não sobrecarregar)
     const allTransactions: any[] = [];

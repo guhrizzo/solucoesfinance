@@ -78,6 +78,7 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   // Credencial do Google que ficou pendente de vínculo porque já existe
   // conta com senha para esse e-mail (evita criar um 2º usuário).
   const [pendingGoogleLink, setPendingGoogleLink] = useState<PendingGoogleLink | null>(null);
@@ -127,16 +128,20 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = async () => {
+    if (resetLoading) return; // evita disparos duplicados em cliques sequenciais
     if (!email) {
       setError("Digite seu e-mail acima para receber o link de recuperação.");
       return;
     }
     setError(null);
+    setResetLoading(true);
     try {
       await resetPassword(email);
       setResetSent(true);
     } catch (err: any) {
       setError(getErrorMessage(err.code, err.message));
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -350,9 +355,9 @@ export default function LoginPage() {
             <div className="fade-in-2">
               <div className="flex justify-between items-center mb-1.5">
                 <label className="block text-blue-950 text-sm font-semibold">Senha</label>
-                <button type="button" onClick={handleForgotPassword}
-                  className="text-blue-500 text-xs font-medium hover:text-blue-700 transition-colors">
-                  Esqueci a senha
+                <button type="button" onClick={handleForgotPassword} disabled={resetLoading}
+                  className="text-blue-500 text-xs font-medium hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {resetLoading ? "Enviando..." : "Esqueci a senha"}
                 </button>
               </div>
               <div className="relative">

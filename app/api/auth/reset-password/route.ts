@@ -10,24 +10,10 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { passwordResetEmail } from "@/lib/emailTemplates";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Limite simples em memória: N pedidos por e-mail por janela de tempo.
-// Aviso: em ambientes serverless com múltiplas instâncias isso NÃO é um
-// limite global confiável (cada instância tem seu próprio Map). Serve como
-// primeira barreira; para algo robusto entre instâncias, use Upstash/Vercel KV.
-const WINDOW_MS = 15 * 60 * 1000;
-const MAX_PER_WINDOW = 3;
-const attempts = new Map<string, number[]>();
-
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const timestamps = (attempts.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  timestamps.push(now);
-  attempts.set(key, timestamps);
-  return timestamps.length > MAX_PER_WINDOW;
-}
+const RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 3 }; // 3 pedidos / 15 min por e-mail
 
 export async function POST(req: NextRequest) {
   let email: string | undefined;
@@ -42,10 +28,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
   }
 
-  if (isRateLimited(email)) {
+  const { limited, retryAfterSec } = checkRateLimit(`reset-password:${email}`, RATE_LIMIT);
+  if (limited) {
     return NextResponse.json(
       { error: "Muitos pedidos para este e-mail. Aguarde alguns minutos e tente novamente." },
-      { status: 429 }
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
     );
   }
 
@@ -80,7 +67,15 @@ export async function POST(req: NextRequest) {
 
     return genericOk();
   } catch (err: any) {
-    if (err?.code === "auth/user-not-found") {
+    // O Admin SDK deveria lançar "auth/user-not-found" para e-mail inexistente,
+    // mas em muitos casos lança um "auth/internal-error" genérico nesse mesmo
+    // cenário ("Unable to create the email action link") — sem tratar os dois,
+    // a resposta (200 vs 500) vazava quais e-mails têm conta (enumeração).
+    const looksLikeUserNotFound =
+      err?.code === "auth/user-not-found" ||
+      (err?.code === "auth/internal-error" && /unable to create the email action link/i.test(err?.message ?? ""));
+
+    if (looksLikeUserNotFound) {
       return genericOk();
     }
     console.error("Erro ao gerar/enviar link de redefinição de senha:", err);
