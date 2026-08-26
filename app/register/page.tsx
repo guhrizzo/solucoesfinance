@@ -300,7 +300,7 @@ export default function RegisterPage() {
         <div className="relative">
           <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-8">
             <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot" />
-            <span className="text-blue-300 text-xs font-medium mono">3 dias grátis · sem cartão</span>
+            <span className="text-blue-300 text-xs font-medium mono">7 dias grátis · sem cartão</span>
           </div>
 
           <h2 className="text-4xl font-extrabold text-white leading-[1.15] mb-5">
@@ -376,7 +376,7 @@ export default function RegisterPage() {
           <div className="fade-up mb-7">
             <div className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-full px-3 py-1 mb-4">
               <Sparkles size={11} className="text-blue-500" />
-              <span className="text-blue-600 text-xs font-semibold">3 dias grátis, sem cartão</span>
+              <span className="text-blue-600 text-xs font-semibold">7 dias grátis, sem cartão</span>
             </div>
             <h1 className="text-[28px] font-extrabold text-blue-950 leading-tight mb-1.5">
               Criar conta gratuita

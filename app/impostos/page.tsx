@@ -10,9 +10,14 @@ import {
     FileText, Clock, Building2, BarChart3, Download,
     ChevronLeft, ChevronRight, type LucideIcon,
     AlertCircle, Info, Eye, EyeOff, Zap, Target,
-    Home, Car, Shield, Briefcase, Package, HelpCircle, Globe,
+    Home, Car, Shield, Briefcase, Package, HelpCircle, Globe, ShieldCheck,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import AccessDenied from "../components/AccessDenied";
+import PinModal from "../components/PinModal";
+import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
+import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
+import type { PaymentMethod } from "../types/payment";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +43,8 @@ interface Tax {
     attachments: string[]; // URLs de Storage
     paidAt?: string;
     estimatedAmount?: number; // Para previsões
+    paymentMethod?: string;
+    paidPaymentMethod?: string;
     createdAt: number;
     userId: string;
     description?: string;
@@ -319,11 +326,12 @@ function useToast() {
 interface TaxModalProps {
     open: boolean;
     editing: Tax | null;
+    uid: string | null;
     onClose: () => void;
     onSave: (data: Omit<Tax, "id" | "userId" | "createdAt">) => Promise<void>;
 }
 
-function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
+function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
     const [name, setName] = useState("");
     const [type, setType] = useState<TaxType>("simples_nacional");
     const [activeSphere, setActiveSphere] = useState<TaxSphere>("federal");
@@ -334,6 +342,8 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
     const [notes, setNotes] = useState("");
     const [status, setStatus] = useState<TaxStatus>("nao_pago");
     const [attachments, setAttachments] = useState<string[]>([]);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+    const [pinOpen, setPinOpen] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -352,15 +362,51 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
         setNotes(editing?.notes ?? "");
         setStatus(editing?.status ?? "nao_pago");
         setAttachments(editing?.attachments ?? []);
+        setPaymentMethod((editing?.paymentMethod as PaymentMethod) ?? null);
+        setPinOpen(false);
         setSaving(false);
         setErr("");
-    }, [open]);
+    }, [open, editing]);
 
     if (!open) return null;
 
     const amount = parseAmount(rawAmt);
     const estimatedAmount = parseAmount(estimatedRawAmt);
-    const canSave = name.trim().length >= 2 && amount > 0 && dueDate !== "";
+    const canSave = name.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null;
+
+    async function handleOpenPin() {
+        if (!canSave || saving || !uid) return;
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            return;
+        }
+        setErr("");
+        setPinOpen(true);
+    }
+
+    async function handlePinSuccess(pin: string) {
+        if (!uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setPinOpen(false);
+            submit();
+        } else if (result === "locked") {
+            setPinOpen(false);
+            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setPinOpen(false);
+                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setPinOpen(false);
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+        }
+    }
 
     async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -394,7 +440,6 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
     }
 
     async function submit() {
-        if (!canSave || saving) return;
         setSaving(true); setErr("");
         try {
             await onSave({
@@ -407,7 +452,9 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
                 notes: notes.trim(),
                 status,
                 attachments,
+                paymentMethod: paymentMethod ?? undefined,
                 paidAt: editing?.paidAt,
+                paidPaymentMethod: editing?.paidPaymentMethod,
             });
             onClose();
         } catch (e: any) {
@@ -569,6 +616,14 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
                         </div>
                     </div>
 
+                    {/* Forma de Pagamento */}
+                    <PaymentMethodSelector
+                        value={paymentMethod}
+                        onChange={setPaymentMethod}
+                        label="Forma de pagamento prevista"
+                        required
+                    />
+
                     {/* Documentos */}
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
@@ -621,7 +676,7 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
 
-                    <button onClick={submit} disabled={!canSave || saving}
+                    <button onClick={handleOpenPin} disabled={!canSave || saving}
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canSave && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canSave && !saving
                             ? { background: `linear-gradient(135deg, ${typeMeta.color}, ${typeMeta.color}cc)`, color: "white" }
@@ -632,20 +687,162 @@ function TaxModal({ open, editing, onClose, onSave }: TaxModalProps) {
                     </button>
                 </div>
             </div>
+            
+            <PinModal
+                open={pinOpen}
+                title={editing ? "Salvar alterações" : "Criar imposto"}
+                subtitle="Digite seu PIN de 4 dígitos para confirmar"
+                onClose={() => setPinOpen(false)}
+                onSuccess={handlePinSuccess}
+            />
         </div>
+    );
+}
+
+// ─── Modal de Baixa de Imposto ────────────────────────────────────────────────
+function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
+    open: boolean;
+    tax: Tax | null;
+    uid: string | null;
+    onClose: () => void;
+    onConfirm: (paidAt: string, method: PaymentMethod) => Promise<void>;
+}) {
+    const [paidAt, setPaidAt] = useState(TODAY);
+    const [method, setMethod] = useState<PaymentMethod | null>(null);
+    const [pinOpen, setPinOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState("");
+
+    useEffect(() => {
+        if (!open || !tax) return;
+        setPaidAt(TODAY);
+        setMethod((tax.paymentMethod as PaymentMethod) ?? null);
+        setPinOpen(false);
+        setSaving(false);
+        setErr("");
+    }, [open, tax]);
+
+    if (!open || !tax) return null;
+
+    const canConfirm = method !== null && paidAt !== "";
+
+    async function handleOpenPin() {
+        if (!canConfirm || !uid) return;
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            setErr("Configure seu PIN de 4 dígitos na página de Usuários antes de continuar.");
+            return;
+        }
+        setErr("");
+        setPinOpen(true);
+    }
+
+    async function handlePinSuccess(pin: string) {
+        if (!uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setPinOpen(false);
+            setSaving(true);
+            try {
+                await onConfirm(paidAt, method!);
+                onClose();
+            } catch (e: any) {
+                setErr(e?.message ?? "Erro ao registrar pagamento");
+                setSaving(false);
+            }
+        } else if (result === "locked") {
+            setPinOpen(false);
+            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setPinOpen(false);
+                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setPinOpen(false);
+            setErr("Configure seu PIN de 4 dígitos na página de Usuários antes de continuar.");
+        }
+    }
+
+    return (
+        <>
+        <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
+            style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
+            <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
+                style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
+
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--cf-border)" }} />
+                </div>
+
+                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                    <div>
+                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Confirmar pagamento</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text2)" }}>{tax.name} · {toBRL(tax.amount)}</p>
+                    </div>
+                    <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "80vh" }}>
+                    {err && (
+                        <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
+                            style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                            <AlertTriangle size={13} />{err}
+                        </div>
+                    )}
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Data de pagamento</label>
+                        <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
+                            className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
+                            style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                    </div>
+
+                    <PaymentMethodSelector
+                        value={method}
+                        onChange={setMethod}
+                        label="Forma de pagamento utilizada"
+                        required
+                    />
+
+                    <button onClick={handleOpenPin} disabled={!canConfirm || saving}
+                        className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canConfirm && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                        style={canConfirm && !saving
+                            ? { background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }
+                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        {saving
+                            ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
+                            : <><ShieldCheck size={15} /> Confirmar pagamento</>}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <PinModal
+            open={pinOpen}
+            title="Confirmar pagamento"
+            subtitle="Digite seu PIN de 4 dígitos para confirmar a baixa"
+            onClose={() => setPinOpen(false)}
+            onSuccess={handlePinSuccess}
+        />
+        </>
     );
 }
 
 // ─── Tax Card ──────────────────────────────────────────────────────────────────
 
-function TaxCard({ tax, alertDays, onEdit, onDelete, onPay }: {
+function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
     tax: Tax & { _status: TaxStatus };
     alertDays: number;
     onEdit: () => void;
     onDelete: () => void;
-    onPay: () => Promise<void>;
+    onOpenPayModal: () => void;
 }) {
-    const [paying, setPaying] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const days = daysUntil(tax.dueDate);
     const status: TaxStatus = tax._status;
@@ -654,11 +851,6 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onPay }: {
     const TaxIcon = taxMeta.icon;
     const isUrgent = status !== "pago" && days >= 0 && days <= alertDays;
     const isOverdue = status === "atraso";
-
-    const handlePay = async () => {
-        setPaying(true);
-        try { await onPay(); } finally { setPaying(false); }
-    };
 
     return (
         <div className="cf-card overflow-hidden transition-all hover:shadow-md"
@@ -691,7 +883,7 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onPay }: {
                             </span>
                         </div>
 
-                        {/* Badge status + frequência */}
+                        {/* Badge status + frequência + forma de pagamento */}
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                             <span className="text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1"
                                 style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
@@ -705,6 +897,16 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onPay }: {
                                 <span className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1"
                                     style={{ background: "#dbeafe", color: "#1d4ed8" }}>
                                     <FileText size={10} /> {tax.attachments.length}
+                                </span>
+                            )}
+                            {(tax.paymentMethod || tax.paidPaymentMethod) && (
+                                <span className="flex items-center gap-1 flex-wrap">
+                                    {tax.paidPaymentMethod && (
+                                        <PaymentMethodBadge method={tax.paidPaymentMethod as PaymentMethod} prefix="Pago:" small />
+                                    )}
+                                    {tax.paymentMethod && tax.paymentMethod !== tax.paidPaymentMethod && (
+                                        <PaymentMethodBadge method={tax.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                    )}
                                 </span>
                             )}
                         </div>
@@ -745,12 +947,10 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onPay }: {
                 {/* Ações */}
                 <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: "1px solid var(--cf-border)" }}>
                     {status !== "pago" ? (
-                        <button onClick={handlePay} disabled={paying}
+                        <button onClick={onOpenPayModal}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
                             style={{ background: `linear-gradient(135deg, ${taxMeta.color}, ${taxMeta.color}cc)`, color: "white" }}>
-                            {paying
-                                ? <Loader2 size={13} className="animate-spin" />
-                                : <CheckCircle2 size={13} />}
+                            <CheckCircle2 size={13} />
                             Marcar como pago
                         </button>
                     ) : (
@@ -804,13 +1004,16 @@ export default function ImpostosPage() {
     const [userName, setUserName] = useState("");
     const [userEmail, setUserEmail] = useState("");
     const [taxes, setTaxes] = useState<Tax[]>([]);
-    const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
+    const [pageState, setPageState] = useState<"loading" | "ready" | "error" | "blocked">("loading");
     const [errMsg, setErrMsg] = useState("");
 
     const [modal, setModal] = useState(false);
     const [editing, setEditing] = useState<Tax | null>(null);
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [taxPayModal, setTaxPayModal] = useState<Tax | null>(null);
+    const [deletePinOpen, setDeletePinOpen] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
     const [alertDays, setAlertDays] = useState(7);
     const [search, setSearch] = useState("");
@@ -844,14 +1047,25 @@ export default function ImpostosPage() {
                         import("firebase/firestore"),
                     ]);
                 const { auth, db } = await getFirebase();
-                authUnsub = onAuthStateChanged(auth, u => {
+                authUnsub = onAuthStateChanged(auth, async u => {
                     if (!u) { window.location.href = "/login"; return; }
-                    setUid(u.uid);
+
+                    // Resolve de quem são os dados que este login deve ver:
+                    // o próprio uid (dono) ou o do dono da conta (membro
+                    // convidado) — ver lib/accountScope.ts. Membro sem
+                    // "impostos" liberado nem chega a assinar a coleção
+                    // abaixo.
+                    const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+                    const scope = await resolveAccountScope(db, u.uid);
+                    if (!hasPermission(scope, "impostos")) { setPageState("blocked"); return; }
+                    const ownerUid = scope.ownerUid;
+
+                    setUid(ownerUid);
                     setUserName(u.displayName ?? u.email ?? "Usuário");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
                     snapUnsub = onSnapshot(
-                        query(collection(db, "users", u.uid, "taxes"), orderBy("createdAt", "desc")),
+                        query(collection(db, "users", ownerUid, "taxes"), orderBy("createdAt", "desc")),
                         snap => { setTaxes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Tax))); setPageState("ready"); },
                         err => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
                     );
@@ -921,16 +1135,32 @@ export default function ImpostosPage() {
         }
     }
 
-    async function handlePay(tax: Tax) {
+    async function handlePay(tax: Tax, paidAt: string, method: PaymentMethod) {
         if (!uid) return;
-        const [{ getFirebase }, { doc, updateDoc }] = await Promise.all([
+        const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
         const { db } = await getFirebase();
-        const paidAt = TODAY;
 
-        await updateDoc(doc(db, "users", uid, "taxes", tax.id), { status: "pago", paidAt });
+        await updateDoc(doc(db, "users", uid, "taxes", tax.id), {
+            status: "pago",
+            paidAt,
+            paidPaymentMethod: method,
+        });
+
+        // Registrar no fluxo de caixa
+        await addDoc(collection(db, "users", uid, "cashflow"), {
+            type: "saida",
+            title: `Imposto: ${tax.name}`,
+            amount: tax.amount,
+            date: paidAt,
+            paymentMethod: method,
+            category: "impostos",
+            ref: tax.id,
+            createdAt: Date.now(),
+        });
+
         showToast("Imposto marcado como pago ✓");
     }
 
@@ -950,6 +1180,43 @@ export default function ImpostosPage() {
             showToast(e.message, "err");
         } finally {
             setDeleting(false);
+        }
+    }
+
+    async function handleDeleteWithPin(taxId: string) {
+        if (!uid) return;
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            showToast("Configure seu PIN antes de excluir.", "err");
+            return;
+        }
+        setPendingDeleteId(taxId);
+        setDeletePinOpen(true);
+    }
+
+    async function handleDeletePinSuccess(pin: string) {
+        if (!uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setDeletePinOpen(false);
+            if (pendingDeleteId) {
+                setConfirmId(pendingDeleteId);
+                setPendingDeleteId(null);
+            }
+        } else if (result === "locked") {
+            setDeletePinOpen(false);
+            showToast("PIN bloqueado por excesso de tentativas.", "err");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setDeletePinOpen(false);
+                showToast("PIN bloqueado por excesso de tentativas.", "err");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setDeletePinOpen(false);
+            showToast("Configure seu PIN antes de excluir.", "err");
         }
     }
 
@@ -998,6 +1265,8 @@ export default function ImpostosPage() {
         };
     }, [enriched, alertDays]);
 
+    if (pageState === "blocked") return <AccessDenied category="Impostos" />;
+
     if (pageState === "loading") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
             <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
@@ -1041,9 +1310,29 @@ export default function ImpostosPage() {
             <Navbar user={{ displayName: userName, email: userEmail }} activePath="/impostos" onLogout={handleLogout} />
 
             <TaxModal
-                open={modal} editing={editing}
+                open={modal} editing={editing} uid={uid}
                 onClose={() => { setModal(false); setEditing(null); }}
                 onSave={handleSave}
+            />
+
+            <TaxPayModal
+                open={taxPayModal !== null}
+                tax={taxPayModal}
+                uid={uid}
+                onClose={() => setTaxPayModal(null)}
+                onConfirm={async (paidAt, method) => {
+                    if (!taxPayModal) return;
+                    await handlePay(taxPayModal, paidAt, method);
+                    setTaxPayModal(null);
+                }}
+            />
+
+            <PinModal
+                open={deletePinOpen}
+                title="Excluir imposto"
+                subtitle="Digite seu PIN de 4 dígitos para confirmar a exclusão"
+                onClose={() => { setDeletePinOpen(false); setPendingDeleteId(null); }}
+                onSuccess={handleDeletePinSuccess}
             />
 
             {confirmId && (
@@ -1262,8 +1551,8 @@ export default function ImpostosPage() {
                                             tax={tax}
                                             alertDays={alertDays}
                                             onEdit={() => { setEditing(tax); setModal(true); }}
-                                            onDelete={() => setConfirmId(tax.id)}
-                                            onPay={() => handlePay(tax)}
+                                            onDelete={() => handleDeleteWithPin(tax.id)}
+                                            onOpenPayModal={() => setTaxPayModal(tax)}
                                         />
                                     ))}
                                 </div>

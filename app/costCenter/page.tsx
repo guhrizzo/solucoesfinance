@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useTheme } from "../hooks/useTheme";
+import { syncExpenseCashflow } from "@/lib/costCenterSync";
+import { resolveAccountScope, hasPermission } from "@/lib/accountScope";
+import AccessDenied from "../components/AccessDenied";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -115,21 +118,31 @@ function centerSpentForMonth(expenses: Expense[], centerName: string, monthKey: 
   return expensesForCenterMonth(expenses, centerName, monthKey).reduce((s, e) => s + e.amount, 0);
 }
 
+/** Monta uma chave "YYYY-MM-DD" a partir das partes, sem passar por Date/ISO (evita shift de fuso). */
+function dateKeyOf(y: number, m: number, d: number): string {
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
 /**
  * Seletor de período em formato de calendário — abre um popover com
- * navegação de ano e uma grade dos 12 meses, no lugar do antigo `< Ago 2026 >`
- * só de texto. Mesma linguagem visual dos dropdowns do Navbar (card com
- * borda, sombra, animação de entrada) e dos botões-gradiente da marca.
+ * navegação de mês e uma grade de dias, no lugar do antigo `< Ago 2026 >`
+ * só de texto. Editável no nível do dia: clicar num dia específico
+ * seleciona exatamente aquele dia (não só o mês) — é esse dia que vira,
+ * por exemplo, a data padrão de cadastro de um novo centro de custo.
+ * Mesma linguagem visual dos dropdowns do Navbar (card com borda, sombra,
+ * animação de entrada) e dos botões-gradiente da marca.
  */
 function MonthPicker({
-  value, onChange, currentMonthKey,
+  value, onChange, currentDateKey,
 }: {
+  /** Data selecionada, "YYYY-MM-DD". */
   value: string;
-  onChange: (monthKey: string) => void;
-  currentMonthKey: string;
+  onChange: (dateKey: string) => void;
+  /** Data de hoje, "YYYY-MM-DD" — usada só pra destacar o dia atual e o atalho "Hoje". */
+  currentDateKey: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [viewMonthKey, setViewMonthKey] = useState(value);
+  const [viewMonthKey, setViewMonthKey] = useState(value.slice(0, 7));
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,7 +159,7 @@ function MonthPicker({
   const toggleOpen = () => {
     setOpen(o => {
       const next = !o;
-      if (next) setViewMonthKey(value);
+      if (next) setViewMonthKey(value.slice(0, 7));
       return next;
     });
   };
@@ -154,13 +167,15 @@ function MonthPicker({
   const [viewY, viewM] = viewMonthKey.split("-").map(Number);
   const firstWeekday = new Date(viewY, viewM - 1, 1).getDay();
   const daysInMonth = new Date(viewY, viewM, 0).getDate();
-  const today = new Date();
-  const isTodayCell = (day: number) =>
-    viewMonthKey === currentMonthKey && day === today.getDate();
+  const isTodayCell = (day: number) => dateKeyOf(viewY, viewM, day) === currentDateKey;
+  const isSelectedCell = (day: number) => dateKeyOf(viewY, viewM, day) === value;
   const cells: (number | null)[] = [
     ...Array(firstWeekday).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
+
+  const [vy, vm, vd] = value.split("-").map(Number);
+  const buttonLabel = `${vd} ${MONTH_LABELS[(vm ?? 1) - 1] ?? "—"} ${vy}`;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -170,7 +185,7 @@ function MonthPicker({
         style={{ borderColor: "var(--db-border)", background: "var(--db-card)", color: "var(--db-text)" }}
       >
         <CalendarDays size={13} style={{ color: "var(--primary)" }} />
-        {monthKeyToLabel(value)}
+        {buttonLabel}
         <ChevronDown size={12} style={{ color: "var(--db-text2)", transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
       </button>
 
@@ -203,21 +218,21 @@ function MonthPicker({
             ))}
           </div>
 
-          {/* Grade de dias — clicar em qualquer dia seleciona o mês dele pro orçamento */}
+          {/* Grade de dias — clicar num dia seleciona exatamente aquele dia */}
           <div className="grid grid-cols-7 gap-0.5">
             {cells.map((day, idx) => {
               if (day === null) return <div key={`pad-${idx}`} />;
-              const monthSelected = viewMonthKey === value;
+              const selected = isSelectedCell(day);
               const isToday = isTodayCell(day);
               return (
                 <button
                   key={day}
-                  onClick={() => { onChange(viewMonthKey); setOpen(false); }}
+                  onClick={() => { onChange(dateKeyOf(viewY, viewM, day)); setOpen(false); }}
                   className="aspect-square rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center justify-center"
                   style={
-                    isToday
+                    selected
                       ? { background: "linear-gradient(135deg, #1565c0, #0d47a1)", color: "#fff" }
-                      : monthSelected
+                      : isToday
                         ? { background: "rgba(21,101,192,0.12)", color: "var(--primary)" }
                         : { background: "transparent", color: "var(--db-text)" }
                   }
@@ -229,11 +244,11 @@ function MonthPicker({
           </div>
 
           <button
-            onClick={() => { onChange(currentMonthKey); setOpen(false); }}
+            onClick={() => { onChange(currentDateKey); setOpen(false); }}
             className="w-full mt-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
             style={{ color: "var(--primary)", background: "var(--db-sub)" }}
           >
-            Mês atual
+            Hoje
           </button>
         </div>
       )}
@@ -338,57 +353,8 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   amber: { bg: "rgba(245, 158, 11, 0.08)", text: "#fbbf24", icon: "rgba(245, 158, 11, 0.12)" },
 };
 
-function mapCategoryToCashflow(cat: string): string {
-  const l = cat.toLowerCase();
-  if (l.includes("almoço") || l.includes("almoco") || l.includes("alimento") || l.includes("refeição") || l.includes("refeicao") || l.includes("restaurante")) return "Outros gastos";
-  if (l.includes("uber") || l.includes("táxi") || l.includes("taxi") || l.includes("combustível") || l.includes("combustivel") || l.includes("passagem") || l.includes("frete") || l.includes("logística") || l.includes("logistica") || l.includes("deslocamento")) return "Outros gastos";
-  if (l.includes("hotel") || l.includes("hospedagem") || l.includes("hostel") || l.includes("airbnb")) return "Outros gastos";
-  if (l.includes("salário") || l.includes("salario") || l.includes("folha") || l.includes("mão de obra") || l.includes("mao de obra")) return "Folha de pagamento";
-  if (l.includes("aluguel")) return "Aluguel";
-  if (l.includes("fornec") || l.includes("compra") || l.includes("mercadoria") || l.includes("matéria-prima") || l.includes("materia-prima") || l.includes("embalagens")) return "Fornecedores";
-  if (l.includes("imposto") || l.includes("tributo")) return "Impostos";
-  if (l.includes("marketing") || l.includes("anúncio") || l.includes("publicidade")) return "Marketing";
-  if (l.includes("ti") || l.includes("softw") || l.includes("assinatura") || l.includes("plataforma") || l.includes("marketplace")) return "TI / Software";
-  return "Outros gastos";
-}
-
-/**
- * Cria/atualiza/remove o lançamento espelho em users/{uid}/cashflow de uma
- * despesa do Centro de Custo, mantendo o vínculo por `sourceExpenseId`.
- * Compartilhada entre o modal de despesa (criar/editar) e o botão rápido
- * "Marcar como pago" — evita duplicar a lógica de sincronização.
- */
-async function syncExpenseCashflow(
-  db: import("firebase/firestore").Firestore,
-  uid: string,
-  expenseId: string,
-  data: { description?: string; category: string; center: string; amount: number; date: string; status: "pago" | "pendente" | "agendado" }
-) {
-  const { collection, addDoc, updateDoc, doc, query, where, getDocs, deleteDoc } = await import("firebase/firestore");
-  const cfSnap = await getDocs(
-    query(collection(db, "users", uid, "cashflow"), where("sourceExpenseId", "==", expenseId))
-  );
-
-  if (data.status === "pago") {
-    const cfData = {
-      type: "saida",
-      description: data.description || `${data.category} – ${data.center}`,
-      category: mapCategoryToCashflow(data.category),
-      amount: data.amount,
-      date: data.date,
-      note: `Centro: ${data.center} | ${data.category}`,
-      sourceExpenseId: expenseId,
-      createdAt: Date.now(),
-    };
-    if (!cfSnap.empty) {
-      await updateDoc(doc(db, "users", uid, "cashflow", cfSnap.docs[0].id), cfData);
-    } else {
-      await addDoc(collection(db, "users", uid, "cashflow"), cfData);
-    }
-  } else {
-    await Promise.all(cfSnap.docs.map((d) => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
-  }
-}
+// (mapCategoryToCashflow e syncExpenseCashflow viraram lib/costCenterSync.ts
+// — compartilhadas com a direção inversa da sincronização em CashFlow.tsx.)
 
 // ─── SVG Bar Chart ─────────────────────────────────────────────────────────────
 
@@ -758,21 +724,22 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 // partir das despesas reais do mês, não de um acumulador armazenado.)
 
 export default function CostCenterPage() {
-  // Período (mês/ano) navegável — sempre abre no mês atual, não persiste.
+  // Período navegável, editável no nível do dia via MonthPicker — sempre
+  // abre no dia atual, não persiste. `selectedMonth` (usado pra filtrar
+  // orçamento/despesas, que continuam mensais) é derivado do dia escolhido.
   const currentMonthKey = monthKeyOf(new Date());
-  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
+  const currentDateKey = toDateInputValue(new Date());
+  const [selectedDate, setSelectedDate] = useState(currentDateKey);
+  const selectedMonth = selectedDate.slice(0, 7);
   const period = monthKeyToLabel(selectedMonth);
-  // Data completa (dia 1 do mês selecionado) — usada no modal de criar/editar
-  // centro, que antes só mostrava "Ago 2026" sem dia.
-  const selectedMonthFullDate = (() => {
-    const [y, m] = selectedMonth.split("-").map(Number);
-    return formatFullDate(new Date(y, m - 1, 1));
-  })();
   const [payingExpenseId, setPayingExpenseId] = useState<string | null>(null);
 
   const [uid, setUid] = useState<string>("");
   const [user, setUser] = useState<{ displayName: string | null; email: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
+  // true quando o usuário logado é um membro de equipe sem a categoria
+  // "Centro de Custos" liberada — ver lib/accountScope.ts.
+  const [blocked, setBlocked] = useState(false);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   // Ramo de atuação (Comércio/E-commerce/Indústria/Serviço) respondido no
@@ -832,34 +799,47 @@ export default function CostCenterPage() {
         const { onAuthStateChanged } = await import("firebase/auth");
         const { collection, query, where, onSnapshot, doc, getDoc } = await import("firebase/firestore");
 
-        unsubAuth = onAuthStateChanged(auth, u => {
+        unsubAuth = onAuthStateChanged(auth, async u => {
           if (!u) { window.location.href = "/login"; return; }
-          setUid(u.uid);
+
+          // Resolve de quem são os dados que este login deve ver: o próprio
+          // uid (dono) ou o do dono da conta (membro convidado) — ver
+          // lib/accountScope.ts. Membro sem "centroCustos" liberado nem
+          // chega a assinar as coleções abaixo.
+          const scope = await resolveAccountScope(db, u.uid);
+          if (!hasPermission(scope, "centroCustos")) {
+            setBlocked(true);
+            setLoading(false);
+            return;
+          }
+          const ownerUid = scope.ownerUid;
+
+          setUid(ownerUid);
           setUser({ displayName: u.displayName, email: u.email });
 
           // Ramo do onboarding: cache local primeiro (evita flash), Firestore confirma.
-          const cachedRamo = localStorage.getItem(`onboarding_ramo_${u.uid}`);
+          const cachedRamo = localStorage.getItem(`onboarding_ramo_${ownerUid}`);
           if (cachedRamo) {
             try { setRamo((JSON.parse(cachedRamo) as string[])[0] ?? null); } catch { /* ignora cache inválido */ }
           }
-          getDoc(doc(db, "users", u.uid, "profile", "onboarding"))
+          getDoc(doc(db, "users", ownerUid, "profile", "onboarding"))
             .then(snap => {
               if (!snap.exists()) return;
               const ramoAnswers: string[] = snap.data()?.answers?.ramo || [];
               setRamo(ramoAnswers[0] ?? null);
-              localStorage.setItem(`onboarding_ramo_${u.uid}`, JSON.stringify(ramoAnswers));
+              localStorage.setItem(`onboarding_ramo_${ownerUid}`, JSON.stringify(ramoAnswers));
             })
             .catch(err => console.error("Erro ao carregar ramo do onboarding:", err));
 
           unsubCenters?.();
           unsubCenters = onSnapshot(
-            query(collection(db, "costCenters"), where("userId", "==", u.uid)),
+            query(collection(db, "costCenters"), where("userId", "==", ownerUid)),
             snap => setCostCenters(snap.docs.map(d => ({ id: d.id, ...d.data() } as CostCenter)))
           );
 
           unsubExpenses?.();
           unsubExpenses = onSnapshot(
-            query(collection(db, "expenses"), where("userId", "==", u.uid)),
+            query(collection(db, "expenses"), where("userId", "==", ownerUid)),
             snap => setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))
           );
 
@@ -1035,6 +1015,8 @@ export default function CostCenterPage() {
     { label: "Centros ativos", value: String(costCenters.length), change: "+0", up: true, sub: "ativos agora", icon: BarChart2, color: "amber" },
   ];
 
+  if (blocked) return <AccessDenied category="Centro de Custos" />;
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)" }}>
       <div className="flex flex-col items-center gap-3">
@@ -1153,8 +1135,8 @@ export default function CostCenterPage() {
               <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Com detalhamento por categoria</p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Seletor de período em formato de calendário — não persiste, sempre abre no mês atual */}
-              <MonthPicker value={selectedMonth} onChange={setSelectedMonth} currentMonthKey={currentMonthKey} />
+              {/* Seletor de período em formato de calendário — editável por dia, não persiste, sempre abre no dia atual */}
+              <MonthPicker value={selectedDate} onChange={setSelectedDate} currentDateKey={currentDateKey} />
               <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
                 className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                 style={{ background: "var(--primary)" }}>
@@ -1476,8 +1458,8 @@ export default function CostCenterPage() {
             <form onSubmit={handleSaveCenter} className="p-5 space-y-4">
               {[
                 { name: "name", label: "Nome", placeholder: "Ex: Operações", type: "text", defaultValue: editingCenter?.name, min: undefined, step: undefined },
-                { name: "budget", label: `Orçamento de ${selectedMonthFullDate} (R$)`, placeholder: "10000", type: "number", defaultValue: editingCenter ? (getBudgetForMonth(editingCenter, selectedMonth, currentMonthKey) || undefined) : undefined, min: "1", step: "0.01" },
-                { name: "createdAt", label: "Data de cadastro", placeholder: undefined, type: "date", defaultValue: editingCenter ? toDateInputValue(editingCenter.createdAt) : toDateInputValue(new Date()), min: undefined, step: undefined },
+                { name: "budget", label: `Orçamento de ${period} (R$)`, placeholder: "10000", type: "number", defaultValue: editingCenter ? (getBudgetForMonth(editingCenter, selectedMonth, currentMonthKey) || undefined) : undefined, min: "1", step: "0.01" },
+                { name: "createdAt", label: "Data de cadastro", placeholder: undefined, type: "date", defaultValue: editingCenter ? toDateInputValue(editingCenter.createdAt) : selectedDate, min: undefined, step: undefined },
               ].map(f => (
                 <div key={f.name}>
                   <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>{f.label}</label>

@@ -13,6 +13,7 @@ import OnboardingModal, { type OnboardingAnswers } from "../components/Onboardin
 import CreatePasswordGate from "../components/CreatePasswordGate";
 import Navbar from "../components/Navbar";
 import { Badge } from "../components/ui";
+import AccessDenied from "../components/AccessDenied";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -68,6 +69,9 @@ export default function Dashboard() {
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
   const [user, setUser] = useState<{ displayName: string | null; email: string | null; uid: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  // true quando o usuário logado é um membro de equipe sem "Dashboard"
+  // liberado — ver lib/accountScope.ts.
+  const [blocked, setBlocked] = useState(false);
   const [hideValues, setHideValues] = useState(false);
 
   // Firestore Data States
@@ -110,26 +114,42 @@ export default function Dashboard() {
         ]);
         const { auth, db } = await getFirebase();
 
-        unsubAuth = onAuthStateChanged(auth, (u) => {
+        unsubAuth = onAuthStateChanged(auth, async (u) => {
           if (!u) {
             window.location.href = "/login";
             return;
           }
+
+          // Resolve de quem são os dados que este login deve ver: o próprio
+          // uid (dono) ou o do dono da conta (membro convidado) — ver
+          // lib/accountScope.ts. Membro sem "dashboard" liberado nem chega
+          // a assinar as coleções abaixo. `user.uid` continua sendo a
+          // identidade real de quem logou (Navbar, PIN, etc.) — só os dados
+          // do negócio (fluxo de caixa, contas, onboarding) usam `ownerUid`.
+          const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+          const scope = await resolveAccountScope(db, u.uid);
+          if (!hasPermission(scope, "dashboard")) {
+            setBlocked(true);
+            setLoading(false);
+            return;
+          }
+          const ownerUid = scope.ownerUid;
+
           setUser({ displayName: u.displayName, email: u.email, uid: u.uid });
           setNeedsPasswordSetup(!u.providerData.some((p) => p.providerId === "password"));
 
-          getDoc(doc(db, "users", u.uid, "profile", "onboarding"))
+          getDoc(doc(db, "users", ownerUid, "profile", "onboarding"))
             .then((snap) => {
               const completed = snap.exists() && snap.data()?.completed;
-              setShowOnboarding(!completed);
+              setShowOnboarding(!completed && scope.isOwner); // só o dono conclui o onboarding do negócio
               if (completed && typeof window !== "undefined") {
-                localStorage.setItem(`onboarding_ramo_${u.uid}`, JSON.stringify(snap.data()?.answers?.ramo || []));
+                localStorage.setItem(`onboarding_ramo_${ownerUid}`, JSON.stringify(snap.data()?.answers?.ramo || []));
               }
             })
             .catch((err) => console.error("Erro ao carregar onboarding:", err));
 
           // Listener de Lançamentos de Fluxo de Caixa
-          const txsRef = collection(db, "users", u.uid, "cashflow");
+          const txsRef = collection(db, "users", ownerUid, "cashflow");
           const qTxs = query(txsRef, orderBy("date", "desc"));
           unsubTxs = onSnapshot(qTxs, (snap) => {
             setTxs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tx)));
@@ -137,13 +157,13 @@ export default function Dashboard() {
           }, (err) => console.error("Erro Txs:", err));
 
           // Listener de Contas a Pagar
-          const billsRef = collection(db, "users", u.uid, "bills");
+          const billsRef = collection(db, "users", ownerUid, "bills");
           unsubBills = onSnapshot(billsRef, (snap) => {
             setBills(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bill)));
           }, (err) => console.error("Erro Contas a Pagar:", err));
 
           // Listener de Contas a Receber
-          const receivablesRef = collection(db, "users", u.uid, "receivables");
+          const receivablesRef = collection(db, "users", ownerUid, "receivables");
           unsubReceivables = onSnapshot(receivablesRef, (snap) => {
             setReceivables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Receivable)));
           }, (err) => console.error("Erro Receivables:", err));
@@ -353,6 +373,8 @@ export default function Dashboard() {
       variacaoPct
     };
   }, [txs, bills, receivables]);
+
+  if (blocked) return <AccessDenied category="Dashboard" />;
 
   if (loading) {
     return (

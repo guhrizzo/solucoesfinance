@@ -9,8 +9,14 @@ import {
     CheckCircle2, CircleDollarSign, Repeat, Settings2,
     ArrowUpRight, Tag, Building2, Zap, Receipt,
     Bell, Image as ImageIcon, Trash, ChevronLeft, ChevronRight, type LucideIcon,
+    ShieldCheck,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import AccessDenied from "../components/AccessDenied";
+import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
+import PinModal from "../components/PinModal";
+import type { PaymentMethod } from "../types/payment";
+import { verifyPin, loadPinHash, getPinLockStatus } from "../hooks/usePin";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +37,8 @@ interface Receivable {
     createdAt: number;
     userId: string;
     cashflowId?: string;
+    paymentMethod?: PaymentMethod;
+    paidPaymentMethod?: PaymentMethod;
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -152,11 +160,12 @@ function useToast() {
 interface ReceivableModalProps {
     open: boolean;
     editing: Receivable | null;
+    uid: string | null;
     onClose: () => void;
     onSave: (data: Omit<Receivable, "id" | "userId" | "createdAt">) => Promise<void>;
 }
 
-function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProps) {
+function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModalProps) {
     const [title, setTitle] = useState("");
     const [rawAmt, setRawAmt] = useState("");
     const [dueDate, setDueDate] = useState(TODAY);
@@ -165,9 +174,12 @@ function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProp
     const [notes, setNotes] = useState("");
     const [status, setStatus] = useState<ReceivableStatus>("pendente");
     const [photos, setPhotos] = useState<string[]>([]);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+    const [pinOpen, setPinOpen] = useState(false);
+    const [pinErr, setPinErr] = useState("");
 
     useEffect(() => {
         if (!open) return;
@@ -179,14 +191,17 @@ function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProp
         setNotes(editing?.notes ?? "");
         setStatus(editing?.status ?? "pendente");
         setPhotos(editing?.photos ?? []);
+        setPaymentMethod((editing?.paymentMethod as PaymentMethod) ?? null);
         setSaving(false);
         setErr("");
+        setPinOpen(false);
+        setPinErr("");
     }, [open]);
 
     if (!open) return null;
 
     const amount = parseAmount(rawAmt);
-    const canSave = title.trim().length >= 2 && amount > 0 && dueDate !== "";
+    const canSave = title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null;
 
     async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -221,18 +236,50 @@ function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProp
 
     async function submit() {
         if (!canSave || saving) return;
-        setSaving(true); setErr("");
-        try {
-            await onSave({
-                title: title.trim(), amount, dueDate, category,
-                recurrence, notes: notes.trim(), status,
-                photos,
-                receivedAt: editing?.receivedAt,
-            });
-            onClose();
-        } catch (e: any) {
-            setErr(e?.message ?? "Erro ao salvar");
-            setSaving(false);
+        if (!uid) { setErr("Não autenticado"); return; }
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            return;
+        }
+        setPinErr("");
+        setPinOpen(true);
+    }
+
+    async function handlePinSuccess(pin: string) {
+        if (!uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setPinOpen(false);
+            setSaving(true); setErr("");
+            try {
+                await onSave({
+                    title: title.trim(), amount, dueDate, category,
+                    recurrence, notes: notes.trim(), status,
+                    photos,
+                    receivedAt: editing?.receivedAt,
+                    paymentMethod: paymentMethod ?? undefined,
+                    paidPaymentMethod: editing?.paidPaymentMethod,
+                });
+                onClose();
+            } catch (e: any) {
+                setErr(e?.message ?? "Erro ao salvar");
+                setSaving(false);
+            }
+        } else if (result === "locked") {
+            setPinOpen(false);
+            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setPinOpen(false);
+                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setPinOpen(false);
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
         }
     }
 
@@ -392,6 +439,14 @@ function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProp
                         </label>
                     </div>
 
+                    {/* Forma de recebimento prevista */}
+                    <PaymentMethodSelector
+                        value={paymentMethod}
+                        onChange={setPaymentMethod}
+                        label="Forma de recebimento prevista"
+                        required
+                    />
+
                     {/* Observação */}
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Observação (opcional)</label>
@@ -408,10 +463,19 @@ function ReceivableModal({ open, editing, onClose, onSave }: ReceivableModalProp
                             : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
-                            : <><Check size={15} /> {editing ? "Salvar alterações" : "Criar cobrança"}</>}
+                            : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar cobrança"}</>}
                     </button>
                 </div>
             </div>
+
+            {/* Modal de PIN para confirmar criação/edição */}
+            <PinModal
+                open={pinOpen}
+                title={editing ? "Confirmar edição" : "Confirmar criação"}
+                subtitle="Digite seu PIN de 4 dígitos para salvar"
+                onClose={() => setPinOpen(false)}
+                onSuccess={handlePinSuccess}
+            />
         </div>
     );
 }
@@ -557,16 +621,153 @@ function PhotoGalleryModal({ open, photos, onClose }: {
     );
 }
 
+// ─── Modal de Baixa (Recebimento) ────────────────────────────────────────────
+
+function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
+    open: boolean;
+    receivable: Receivable | null;
+    uid: string | null;
+    onClose: () => void;
+    onConfirm: (receivedAt: string, method: PaymentMethod) => Promise<void>;
+}) {
+    const [receivedAt, setReceivedAt] = useState(TODAY);
+    const [method, setMethod] = useState<PaymentMethod | null>(null);
+    const [pinOpen, setPinOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState("");
+
+    useEffect(() => {
+        if (!open || !receivable) return;
+        setReceivedAt(TODAY);
+        setMethod((receivable.paymentMethod as PaymentMethod) ?? null);
+        setPinOpen(false);
+        setSaving(false);
+        setErr("");
+    }, [open, receivable]);
+
+    if (!open || !receivable) return null;
+
+    const canConfirm = method !== null && receivedAt !== "";
+
+    async function handleOpenPin() {
+        if (!canConfirm || !uid) return;
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            return;
+        }
+        setErr("");
+        setPinOpen(true);
+    }
+
+    async function handlePinSuccess(pin: string) {
+        if (!uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setPinOpen(false);
+            setSaving(true);
+            try {
+                await onConfirm(receivedAt, method!);
+                onClose();
+            } catch (e: any) {
+                setErr(e?.message ?? "Erro ao registrar recebimento");
+                setSaving(false);
+            }
+        } else if (result === "locked") {
+            setPinOpen(false);
+            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setPinOpen(false);
+                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setPinOpen(false);
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+        }
+    }
+
+    return (
+        <>
+        <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
+            style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
+            <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
+                style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
+
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--cf-border)" }} />
+                </div>
+
+                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                    <div>
+                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Registrar recebimento</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text2)" }}>{receivable.title} · {toBRL(receivable.amount)}</p>
+                    </div>
+                    <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "80vh" }}>
+                    {err && (
+                        <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
+                            style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                            <AlertTriangle size={13} />{err}
+                        </div>
+                    )}
+
+                    {/* Data do recebimento */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Data do recebimento</label>
+                        <input type="date" value={receivedAt} onChange={e => setReceivedAt(e.target.value)}
+                            className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
+                            style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                    </div>
+
+                    {/* Forma de recebimento */}
+                    <PaymentMethodSelector
+                        value={method}
+                        onChange={setMethod}
+                        label="Forma de recebimento utilizada"
+                        required
+                    />
+
+                    <button onClick={handleOpenPin} disabled={!canConfirm || saving}
+                        className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canConfirm && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                        style={canConfirm && !saving
+                            ? { background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }
+                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        {saving
+                            ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
+                            : <><ShieldCheck size={15} /> Confirmar recebimento</>}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <PinModal
+            open={pinOpen}
+            title="Confirmar recebimento"
+            subtitle="Digite seu PIN de 4 dígitos para confirmar a baixa"
+            onClose={() => setPinOpen(false)}
+            onSuccess={handlePinSuccess}
+        />
+        </>
+    );
+}
+
 // ─── Receivable Card ──────────────────────────────────────────────────────────
 
-function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onReceive }: {
+function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceiveModal }: {
     receivable: Receivable & { _status: ReceivableStatus };
     alertDays: number;
     onEdit: () => void;
     onDelete: () => void;
-    onReceive: () => Promise<void>;
+    onOpenReceiveModal: () => void;
 }) {
-    const [receiving, setReceiving] = useState(false);
     const [showPhotos, setShowPhotos] = useState(false);
     const days = daysUntil(receivable.dueDate);
     const status: ReceivableStatus = receivable._status;
@@ -575,11 +776,6 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onReceive }: 
     const CatIcon = catMeta.icon;
     const isUrgent = status !== ("recebido" as const) && days >= 0 && days <= alertDays;
     const isOverdue = status === ("atrasado" as const);
-
-    const handleReceive = async () => {
-        setReceiving(true);
-        try { await onReceive(); } finally { setReceiving(false); }
-    };
 
     return (
         <div className="cf-card overflow-hidden transition-all hover:shadow-md"
@@ -647,6 +843,22 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onReceive }: 
                             )}
                         </div>
 
+                        {/* Badges de origem de pagamento */}
+                        {(receivable.paymentMethod || receivable.paidPaymentMethod) && (
+                            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                {receivable.paidPaymentMethod ? (
+                                    <>
+                                        {receivable.paymentMethod && receivable.paymentMethod !== receivable.paidPaymentMethod && (
+                                            <PaymentMethodBadge method={receivable.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                        )}
+                                        <PaymentMethodBadge method={receivable.paidPaymentMethod as PaymentMethod} prefix="Rec:" small />
+                                    </>
+                                ) : receivable.paymentMethod && (
+                                    <PaymentMethodBadge method={receivable.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                )}
+                            </div>
+                        )}
+
                         {receivable.notes && (
                             <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text3)" }}>📝 {receivable.notes}</p>
                         )}
@@ -656,12 +868,10 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onReceive }: 
                 {/* Ações */}
                 <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: "1px solid var(--cf-border)" }}>
                     {status !== ("recebido" as const) ? (
-                        <button onClick={handleReceive} disabled={receiving}
+                        <button onClick={onOpenReceiveModal}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
                             style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
-                            {receiving
-                                ? <Loader2 size={13} className="animate-spin" />
-                                : <CheckCircle2 size={13} />}
+                            <CheckCircle2 size={13} />
                             Marcar como recebido
                         </button>
                     ) : (
@@ -716,14 +926,21 @@ export default function ContasReceberPage() {
     const [userName, setUserName] = useState("");
     const [userEmail, setUserEmail] = useState("");
     const [receivables, setReceivables] = useState<Receivable[]>([]);
-    const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
+    const [pageState, setPageState] = useState<"loading" | "ready" | "error" | "blocked">("loading");
     const [errMsg, setErrMsg] = useState("");
 
     const [modal, setModal] = useState(false);
     const [editing, setEditing] = useState<Receivable | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    
+    // Deletion states
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [pinOpenDelete, setPinOpenDelete] = useState(false);
+
+    // Receive states
+    const [receiveModalOpen, setReceiveModalOpen] = useState(false);
+    const [receiveTarget, setReceiveTarget] = useState<Receivable | null>(null);
 
     const [alertDays, setAlertDays] = useState(5);
     const [search, setSearch] = useState("");
@@ -758,14 +975,25 @@ export default function ContasReceberPage() {
                         import("firebase/firestore"),
                     ]);
                 const { auth, db } = await getFirebase();
-                authUnsub = onAuthStateChanged(auth, u => {
+                authUnsub = onAuthStateChanged(auth, async u => {
                     if (!u) { window.location.href = "/login"; return; }
-                    setUid(u.uid);
+
+                    // Resolve de quem são os dados que este login deve ver:
+                    // o próprio uid (dono) ou o do dono da conta (membro
+                    // convidado) — ver lib/accountScope.ts. Membro sem
+                    // "contasReceber" liberado nem chega a assinar a
+                    // coleção abaixo.
+                    const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+                    const scope = await resolveAccountScope(db, u.uid);
+                    if (!hasPermission(scope, "contasReceber")) { setPageState("blocked"); return; }
+                    const ownerUid = scope.ownerUid;
+
+                    setUid(ownerUid);
                     setUserName(u.displayName ?? u.email ?? "Usuário");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
                     snapUnsub = onSnapshot(
-                        query(collection(db, "users", u.uid, "receivables"), orderBy("createdAt", "desc")),
+                        query(collection(db, "users", ownerUid, "receivables"), orderBy("createdAt", "desc")),
                         snap => { setReceivables(snap.docs.map(d => ({ id: d.id, ...d.data() } as Receivable))); setPageState("ready"); },
                         err => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
                     );
@@ -839,48 +1067,83 @@ export default function ContasReceberPage() {
     }
 
     // ── Marcar como recebido + lançar no cashflow ──────────────────────────────
-    async function handleReceive(receivable: Receivable) {
-        if (!uid) return;
+    async function handleReceive(receivedAt: string, method: PaymentMethod) {
+        if (!uid || !receiveTarget) return;
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
         const { db } = await getFirebase();
-        const receivedAt = TODAY;
 
-        await updateDoc(doc(db, "users", uid, "receivables", receivable.id), { status: "recebido", receivedAt });
+        await updateDoc(doc(db, "users", uid, "receivables", receiveTarget.id), { 
+            status: "recebido", 
+            receivedAt,
+            paidPaymentMethod: method,
+        });
 
         await addDoc(collection(db, "users", uid, "cashflow"), {
             type: "entrada",
-            description: receivable.title,
-            category: CAT_TO_CASHFLOW[receivable.category] ?? "Outros ganhos",
-            amount: receivable.amount,
+            description: receiveTarget.title,
+            category: CAT_TO_CASHFLOW[receiveTarget.category] ?? "Outros ganhos",
+            amount: receiveTarget.amount,
             date: receivedAt,
-            note: `Cobrança · ${RECURRENCE_LABEL[receivable.recurrence]}`,
-            sourceReceivableId: receivable.id,
+            note: `Cobrança · ${RECURRENCE_LABEL[receiveTarget.recurrence]}`,
+            sourceReceivableId: receiveTarget.id,
+            paymentMethod: method,
             createdAt: Date.now(),
         });
 
         showToast("Recebido! Lançado no Fluxo de Caixa ✓");
+        setReceiveModalOpen(false);
+        setReceiveTarget(null);
     }
 
     // ── Excluir cobrança ───────────────────────────────────────────────────────
-    async function handleDelete() {
-        if (!confirmId || !uid || deleting) return;
-        setDeleting(true);
-        try {
-            const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
-                import("@/lib/firebase"),
-                import("firebase/firestore"),
-            ]);
-            const { db } = await getFirebase();
-            await deleteDoc(doc(db, "users", uid, "receivables", confirmId));
-            setConfirmId(null);
-            showToast("Cobrança removida.");
-        } catch (e: any) {
-            showToast(e.message, "err");
-        } finally {
-            setDeleting(false);
+    async function handleDeleteClick(id: string) {
+        if (!uid) return;
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            showToast("Configure seu PIN na página de Perfil antes de excluir.", "err");
+            return;
+        }
+        setConfirmId(id);
+        setPinOpenDelete(true);
+    }
+
+    async function handlePinDeleteSuccess(pin: string) {
+        if (!uid || !confirmId) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setPinOpenDelete(false);
+            setDeleting(true);
+            try {
+                const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
+                    import("@/lib/firebase"),
+                    import("firebase/firestore"),
+                ]);
+                const { db } = await getFirebase();
+                await deleteDoc(doc(db, "users", uid, "receivables", confirmId));
+                setConfirmId(null);
+                showToast("Cobrança removida.");
+            } catch (e: any) {
+                showToast(e.message, "err");
+            } finally {
+                setDeleting(false);
+            }
+        } else if (result === "locked") {
+            setPinOpenDelete(false);
+            showToast("PIN bloqueado por excesso de tentativas.", "err");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setPinOpenDelete(false);
+                showToast("PIN bloqueado por excesso de tentativas.", "err");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setPinOpenDelete(false);
+            showToast("Configure seu PIN de 4 dígitos na página de Perfil.", "err");
         }
     }
 
@@ -928,6 +1191,8 @@ export default function ContasReceberPage() {
 
     // ── Loading / Error ────────────────────────────────────────────────────────
 
+    if (pageState === "blocked") return <AccessDenied category="Contas a Receber" />;
+
     if (pageState === "loading") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
             <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
@@ -972,47 +1237,32 @@ export default function ContasReceberPage() {
 
             {/* Modais */}
             <ReceivableModal
-                open={modal} editing={editing}
+                open={modal} editing={editing} uid={uid}
                 onClose={() => { setModal(false); setEditing(null); }}
                 onSave={handleSave}
+            />
+            <ReceiveModal
+                open={receiveModalOpen}
+                receivable={receiveTarget}
+                uid={uid}
+                onClose={() => { setReceiveModalOpen(false); setReceiveTarget(null); }}
+                onConfirm={handleReceive}
             />
             <AlertSettingsModal
                 open={settingsOpen} alertDays={alertDays}
                 onClose={() => setSettingsOpen(false)}
                 onSave={saveAlertDays}
             />
+            <PinModal
+                open={pinOpenDelete}
+                title="Confirmar Exclusão"
+                subtitle="Digite seu PIN de 4 dígitos para excluir esta cobrança."
+                onClose={() => setPinOpenDelete(false)}
+                onSuccess={handlePinDeleteSuccess}
+            />
 
-            {/* Confirm delete */}
-            {confirmId && (
-                <div className="fixed inset-0 z-[990] flex items-center justify-center p-4"
-                    style={{ background: "rgba(13,17,23,0.5)", backdropFilter: "blur(8px)" }}>
-                    <div className="cf-card p-6 w-full max-w-xs text-center"
-                        style={{ animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-                            style={{ background: "#fee2e2" }}>
-                            <Trash2 size={20} style={{ color: "#dc2626" }} />
-                        </div>
-                        <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>
-                            Excluir cobrança?
-                        </p>
-                        <p className="text-xs mb-5" style={{ color: "var(--cf-text2)" }}>
-                            Esta ação não pode ser desfeita.
-                        </p>
-                        <div className="flex gap-2">
-                            <button onClick={() => setConfirmId(null)}
-                                className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>
-                                Cancelar
-                            </button>
-                            <button onClick={handleDelete} disabled={deleting}
-                                className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
-                                style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "white" }}>
-                                {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Excluir</>}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* (O modal de confirmação visual antigo foi removido, agora apenas usamos PinModal para confirmar deleção, 
+                mas vamos manter o estado deleting para os botões). */}
 
             {/* Toast stack */}
             <ToastStack toasts={toasts} />
@@ -1168,8 +1418,11 @@ export default function ContasReceberPage() {
                                             receivable={receivable}
                                             alertDays={alertDays}
                                             onEdit={() => { setEditing(receivable); setModal(true); }}
-                                            onDelete={() => setConfirmId(receivable.id)}
-                                            onReceive={() => handleReceive(receivable)}
+                                            onDelete={() => handleDeleteClick(receivable.id)}
+                                            onOpenReceiveModal={() => {
+                                                setReceiveTarget(receivable);
+                                                setReceiveModalOpen(true);
+                                            }}
                                         />
                                     ))}
                                 </div>

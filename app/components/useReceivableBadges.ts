@@ -27,7 +27,7 @@ export function useReceivableBadges() {
 
                 const { auth, db } = await getFirebase();
 
-                onAuthStateChanged(auth, (user) => {
+                onAuthStateChanged(auth, async (user) => {
                     if (!user) {
                         setReceivableSummary({
                             totalPending: 0,
@@ -37,9 +37,14 @@ export function useReceivableBadges() {
                         return;
                     }
 
+                    // Membro de equipe vê as cobranças do dono da conta, não as
+                    // próprias (que nem existem) — ver lib/accountScope.ts.
+                    const { resolveAccountScope } = await import("@/lib/accountScope");
+                    const { ownerUid } = await resolveAccountScope(db, user.uid);
+
                     unsub?.();
                     unsub = onSnapshot(
-                        collection(db, "users", user.uid, "receivables"),
+                        collection(db, "users", ownerUid, "receivables"),
                         (snapshot) => {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);

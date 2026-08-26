@@ -315,7 +315,7 @@ export default function FinanceHome() {
               <div className="flex flex-wrap gap-4 fade-in-delay-3">
                 <Link href="/register">
                   <button className="btn-primary text-white font-semibold px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
-                    Testar 3 dias grátis <ArrowRight size={16} />
+                    Testar 7 dias grátis <ArrowRight size={16} />
                   </button>
                 </Link>
                 <button className="btn-outline text-white font-medium px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
@@ -516,7 +516,7 @@ export default function FinanceHome() {
               Escolha o plano ideal para sua empresa
             </h2>
             <p className="text-slate-500 mt-4 leading-relaxed">
-              Teste grátis por <span className="text-blue-600 font-semibold">3 dias (72h)</span> em qualquer plano. Sem cartão de crédito, sem compromisso.
+              Teste grátis por <span className="text-blue-600 font-semibold">7 dias</span> em qualquer plano. Sem cartão de crédito, sem compromisso.
             </p>
           </div>
 
@@ -534,7 +534,7 @@ export default function FinanceHome() {
               </div>
               <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
-                3 dias grátis (72h) para testar
+                7 dias grátis para testar
               </p>
               <ul className="space-y-3 mb-8 flex-1">
                 {[
@@ -551,7 +551,7 @@ export default function FinanceHome() {
                 ))}
               </ul>
               <button className="w-full py-3 rounded-xl border border-blue-200 text-blue-600 font-semibold text-sm hover:bg-blue-50 transition-colors cursor-pointer">
-                Testar grátis por 72h
+                Testar grátis por 7 dias
               </button>
             </div>
 
@@ -573,7 +573,7 @@ export default function FinanceHome() {
               </div>
               <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
-                3 dias grátis (72h) para testar
+                7 dias grátis para testar
               </p>
               <ul className="space-y-3 mb-8 flex-1">
                 {[
@@ -592,7 +592,7 @@ export default function FinanceHome() {
                 ))}
               </ul>
               <button className="w-full py-3 rounded-xl bg-linear-to-r from-blue-600 to-blue-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all cursor-pointer">
-                Testar grátis por 72h
+                Testar grátis por 7 dias
               </button>
             </div>
           </div>
@@ -609,7 +609,7 @@ export default function FinanceHome() {
             da sua empresa hoje.
           </h2>
           <p className="text-blue-200/70 text-lg mb-10 max-w-xl mx-auto">
-            3 dias grátis, configuração em menos de 5 minutos, suporte humano incluído.
+            7 dias grátis, configuração em menos de 5 minutos, suporte humano incluído.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/register">

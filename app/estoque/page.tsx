@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import Navbar from "../components/Navbar";
+import AccessDenied from "../components/AccessDenied";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
@@ -41,6 +42,30 @@ interface Vinculo {
 
 export default function EstoquePage() {
   const { user, loading: authLoading } = useAuth();
+
+  // Resolve de quem são os dados que este login deve ver: o próprio uid
+  // (dono) ou o do dono da conta (membro convidado) — ver
+  // lib/accountScope.ts. Todo o resto do arquivo já usa `ownerUid` (não
+  // `user.uid` diretamente) pra ler/escrever estoque, integrações e
+  // vínculos. Membro sem "estoque" liberado nem chega a assinar as
+  // coleções abaixo (os efeitos de carga ficam parados até `ownerUid`
+  // resolver, ver os `if (!user || !ownerUid) return;` logo adiante).
+  const [ownerUid, setOwnerUid] = useState("");
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { getFirebase } = await import("@/lib/firebase");
+      const { db } = await getFirebase();
+      const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+      const scope = await resolveAccountScope(db, user.uid);
+      if (cancelled) return;
+      if (!hasPermission(scope, "estoque")) { setBlocked(true); return; }
+      setOwnerUid(scope.ownerUid);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   // ── Logout ─────────────────────────────────────────────────────────────────
   async function handleLogout() {
@@ -100,9 +125,9 @@ export default function EstoquePage() {
 
   // Redireciona usuários do ramo de Serviço para o dashboard (bloqueio de rota)
   useEffect(() => {
-    if (!user) return;
+    if (!user || !ownerUid) return;
 
-    const cached = localStorage.getItem(`onboarding_ramo_${user.uid}`);
+    const cached = localStorage.getItem(`onboarding_ramo_${ownerUid}`);
     if (cached) {
       try {
         const ramo = JSON.parse(cached);
@@ -118,7 +143,7 @@ export default function EstoquePage() {
         const { getFirebase } = await import("@/lib/firebase");
         const { db } = await getFirebase();
         const { doc, getDoc } = await import("firebase/firestore");
-        const snap = await getDoc(doc(db, "users", user.uid, "profile", "onboarding"));
+        const snap = await getDoc(doc(db, "users", ownerUid, "profile", "onboarding"));
         if (snap.exists()) {
           const answers = snap.data()?.answers;
           if (answers?.ramo?.includes("Serviço")) {
@@ -129,11 +154,11 @@ export default function EstoquePage() {
         console.error("Erro ao verificar ramo em estoque:", err);
       }
     })();
-  }, [user]);
+  }, [user, ownerUid]);
 
   // Carregar dados em tempo real do Firestore
   useEffect(() => {
-    if (!user) return;
+    if (!user || !ownerUid) return;
 
     let unsubEstoque: () => void;
     let unsubIntegracoes: () => void;
@@ -146,7 +171,7 @@ export default function EstoquePage() {
         const { collection, onSnapshot, query, where } = await import("firebase/firestore");
 
         // 1. Ouvir estoque central
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", user.uid));
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", ownerUid));
         unsubEstoque = onSnapshot(qEstoque, (snap) => {
           const list: ProdutoEstoque[] = [];
           snap.forEach((doc) => {
@@ -160,7 +185,7 @@ export default function EstoquePage() {
         });
 
         // 2. Ouvir integrações de contas
-        const qIntegracoes = query(collection(db, "integracoes"), where("userId", "==", user.uid));
+        const qIntegracoes = query(collection(db, "integracoes"), where("userId", "==", ownerUid));
         unsubIntegracoes = onSnapshot(qIntegracoes, (snap) => {
           const list: Integracao[] = [];
           snap.forEach((doc) => {
@@ -170,7 +195,7 @@ export default function EstoquePage() {
         });
 
         // 3. Ouvir vínculos de anúncios
-        const qVinculos = query(collection(db, "vinculos"), where("userId", "==", user.uid));
+        const qVinculos = query(collection(db, "vinculos"), where("userId", "==", ownerUid));
         unsubVinculos = onSnapshot(qVinculos, (snap) => {
           const list: Vinculo[] = [];
           snap.forEach((doc) => {
@@ -190,7 +215,7 @@ export default function EstoquePage() {
       unsubIntegracoes?.();
       unsubVinculos?.();
     };
-  }, [user]);
+  }, [user, ownerUid]);
 
   // Capturar retornos de OAuth (parâmetros da URL)
   useEffect(() => {
@@ -238,7 +263,7 @@ export default function EstoquePage() {
       const res = await fetch("/api/estoque/sincronizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid, platform: platformFilter }),
+        body: JSON.stringify({ userId: ownerUid, platform: platformFilter }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -283,7 +308,7 @@ export default function EstoquePage() {
         await updateDoc(doc(db, "estoque", editingProduto.id), produtoData);
 
         // Também atualizar o estoque registrado em todos os vínculos desse SKU
-        const snapVinculos = await getDocs(query(collection(db, "vinculos"), where("userId", "==", user.uid), where("sku", "==", editingProduto.sku)));
+        const snapVinculos = await getDocs(query(collection(db, "vinculos"), where("userId", "==", ownerUid), where("sku", "==", editingProduto.sku)));
         for (const d of snapVinculos.docs) {
           await updateDoc(doc(db, "vinculos", d.id), {
             quantity: parsedQuantity,
@@ -295,7 +320,7 @@ export default function EstoquePage() {
       } else {
         // Criando novo produto
         // Verificar SKU duplicado
-        const qSku = query(collection(db, "estoque"), where("userId", "==", user.uid), where("sku", "==", formSku.trim().toUpperCase()));
+        const qSku = query(collection(db, "estoque"), where("userId", "==", ownerUid), where("sku", "==", formSku.trim().toUpperCase()));
         const snapSku = await getDocs(qSku);
         if (!snapSku.empty) {
           showToast("Este SKU já está sendo utilizado em outro produto!", "error");
@@ -305,7 +330,7 @@ export default function EstoquePage() {
 
         await addDoc(collection(db, "estoque"), {
           ...produtoData,
-          userId: user.uid,
+          userId: ownerUid,
           createdAt: Date.now(),
         });
         showToast("Produto cadastrado com sucesso!");
@@ -396,7 +421,7 @@ export default function EstoquePage() {
       // Verificar se já existe vínculo para este anúncio específico
       const qExistente = query(
         collection(db, "vinculos"),
-        where("userId", "==", user.uid),
+        where("userId", "==", ownerUid),
         where("platform", "==", formVinculoPlatform),
         where("adId", "==", formVinculoAdId.trim())
       );
@@ -408,13 +433,13 @@ export default function EstoquePage() {
       }
 
       // Achar a conexão ID correspondente à plataforma
-      const qConexao = query(collection(db, "integracoes"), where("userId", "==", user.uid), where("platform", "==", formVinculoPlatform));
+      const qConexao = query(collection(db, "integracoes"), where("userId", "==", ownerUid), where("platform", "==", formVinculoPlatform));
       const snapConexao = await getDocs(qConexao);
 
       const connectionId = !snapConexao.empty ? snapConexao.docs[0].id : "mock_manual_connection";
 
       await addDoc(collection(db, "vinculos"), {
-        userId: user.uid,
+        userId: ownerUid,
         sku: selectedProdutoSku,
         platform: formVinculoPlatform,
         adId: formVinculoAdId.trim(),
@@ -484,7 +509,7 @@ export default function EstoquePage() {
           mock: true,
           adId: vinculo.adId,
           quantitySold: parseInt(simQuantity),
-          userId: user.uid
+          userId: ownerUid
         })
       });
 
@@ -557,12 +582,14 @@ export default function EstoquePage() {
   // Redirecionamento OAuth das Plataformas
   const handleConnectAccount = (platform: "mercadolivre" | "shopee") => {
     if (!user) return;
-    const url = `/api/auth/${platform}/redirect?userId=${user.uid}`;
+    const url = `/api/auth/${platform}/redirect?userId=${ownerUid}`;
     window.location.href = url;
   };
 
+  if (blocked) return <AccessDenied category="Estoque" />;
+
   // Se estiver carregando sessão
-  if (authLoading || (user && dbLoading)) {
+  if (authLoading || (user && !blocked && dbLoading)) {
     return (
       <div className="min-h-screen flex flex-col justify-center items-center" style={{ background: "var(--db-bg)" }}>
         <Loader2 className="animate-spin text-primary mb-4" size={40} />

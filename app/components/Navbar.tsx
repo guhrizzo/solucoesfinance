@@ -15,8 +15,10 @@ import { useToast } from "./useToast";
 import { ToastContainer } from "./ToastContainer";
 import { useBillBadges } from "./Usebillbadges";
 import { useReceivableBadges } from "./useReceivableBadges";
+import { useAccountScope, hasPermission } from "../hooks/useAccountScope";
+import type { PermissionKey } from "@/lib/accountScope";
 
-interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; }
+interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; permKey?: PermissionKey; }
 interface NavbarProps {
   user?: { displayName: string | null; email: string | null; uid?: string | null } | null;
   period?: string;
@@ -24,17 +26,20 @@ interface NavbarProps {
   onLogout?: () => void;
 }
 
+// `permKey` liga cada item à categoria de app/lib/accountScope.ts — item sem
+// `permKey` (só "Usuários", a própria conta) fica sempre visível pra
+// qualquer um, dono ou membro.
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: TrendingUp, label: "Fluxo de caixa", href: "/fluxo-caixa" },
-  { icon: FileText, label: "Relatórios", href: "/relatorios" },
-  { icon: CreditCard, label: "Contas a pagar", href: "/contasPagar" },
-  { icon: Landmark, label: "Impostos", href:"/impostos" },
-  { icon: DollarSign, label: "Contas a receber", href: "/contasReceber" },
-  { icon: BarChart2, label: "Centro de custos", href: "/costCenter" },
-  { icon: Boxes, label: "Estoque", href: "/estoque" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", permKey: "dashboard" },
+  { icon: TrendingUp, label: "Fluxo de caixa", href: "/fluxo-caixa", permKey: "fluxoCaixa" },
+  { icon: FileText, label: "Relatórios", href: "/relatorios", permKey: "relatorios" },
+  { icon: CreditCard, label: "Contas a pagar", href: "/contasPagar", permKey: "contasPagar" },
+  { icon: Landmark, label: "Impostos", href:"/impostos", permKey: "impostos" },
+  { icon: DollarSign, label: "Contas a receber", href: "/contasReceber", permKey: "contasReceber" },
+  { icon: BarChart2, label: "Centro de custos", href: "/costCenter", permKey: "centroCustos" },
+  { icon: Boxes, label: "Estoque", href: "/estoque", permKey: "estoque" },
   { icon: Users, label: "Usuários", href: "/users" },
-  
+
 ];
 
 const notifications = [
@@ -325,6 +330,7 @@ export default function Navbar({
   const { toasts, show: showToast, remove: removeToast } = useToast();
   const { billSummary } = useBillBadges();
   const { receivableSummary } = useReceivableBadges();
+  const scope = useAccountScope();
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
@@ -385,11 +391,13 @@ export default function Navbar({
   const firstName = user?.displayName?.split(" ")[0] ?? "Usuário";
   const unreadCount = notifications.length;
 
-  // Filtra itens com base no ramo (oculta estoque para serviços)
+  // Filtra itens com base no ramo (oculta estoque para serviços) e, pra
+  // membros de equipe convidados (não o dono da conta), com base na
+  // permissão por categoria — "Usuários" (permKey ausente) fica sempre
+  // visível, é a própria conta de quem está logado.
   const filteredNavItems = navItems.filter(item => {
-    if (item.label === "Estoque" && isServico) {
-      return false;
-    }
+    if (item.label === "Estoque" && isServico) return false;
+    if (item.permKey && !scope.loading && !hasPermission(scope, item.permKey)) return false;
     return true;
   });
 
@@ -554,7 +562,7 @@ export default function Navbar({
               <div className="nxfi-avatar">{initial}</div>
               <div className="nxfi-avatar-info">
                 <div className="nxfi-avatar-name">{firstName}</div>
-                <div className="nxfi-avatar-role">Administrador</div>
+                <div className="nxfi-avatar-role">{scope.isOwner ? "Administrador" : "Membro de equipe"}</div>
               </div>
               <ChevronDown size={13} style={{ color: "var(--nav-text-3)", marginLeft: 2 }} />
             </button>
@@ -566,7 +574,7 @@ export default function Navbar({
                 </div>
                 <div style={{ padding: "6px 0" }}>
                   {[
-                    { icon: UserCircle, label: "Meu perfil", action: () => router.push("/perfil") },
+                    { icon: UserCircle, label: "Meu perfil", action: () => router.push("/users") },
                     { icon: Zap, label: "Plano & faturamento", action: () => showToast("Abrindo plano...", "info") },
                     { icon: HelpCircle, label: "Ajuda & suporte", action: () => showToast("Redirecionando para ajuda...", "info") },
                     { icon: Settings, label: "Configurações", action: () => showToast("Abrindo configurações...", "info") },

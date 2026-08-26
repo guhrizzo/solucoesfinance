@@ -8,6 +8,7 @@ import {
   ChevronRight, ArrowRight, X, AlertTriangle, Eye, EyeOff, Calculator, BarChart3, PieChart, Activity
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import AccessDenied from "../components/AccessDenied";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -36,9 +37,14 @@ interface BankStatementItem {
 const toBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 export default function RelatoriosPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  // true quando o usuário logado é um membro de equipe sem "Relatórios"
+  // liberado — ver lib/accountScope.ts.
+  const [blocked, setBlocked] = useState(false);
 
   // ── Logout ─────────────────────────────────────────────────────────────────
   async function handleLogout() {
@@ -50,7 +56,10 @@ export default function RelatoriosPage() {
   }
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterPeriod, setFilterPeriod] = useState<"7d" | "30d" | "mes" | "ano">("30d");
+  // Período gerencial/contábil, uniforme em todas as abas — só Mensal ou
+  // Anual (recortes operacionais como 7D/30D saíram junto com o antigo
+  // seletor; ver histórico de commits pra essa transição).
+  const [filterPeriod, setFilterPeriod] = useState<"mes" | "ano">("mes");
   const [searchQuery, setSearchQuery] = useState("");
   const [hideValues, setHideValues] = useState(false);
 
@@ -80,16 +89,30 @@ export default function RelatoriosPage() {
         ]);
 
         const { auth, db } = await getFirebase();
-        authUnsub = onAuthStateChanged(auth, (u) => {
+        authUnsub = onAuthStateChanged(auth, async (u) => {
           if (!u) {
             window.location.href = "/login";
             return;
           }
-          setUid(u.uid);
+
+          // Resolve de quem são os dados que este login deve ver: o próprio
+          // uid (dono) ou o do dono da conta (membro convidado) — ver
+          // lib/accountScope.ts. Membro sem "relatorios" liberado nem chega
+          // a assinar as transações abaixo.
+          const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+          const scope = await resolveAccountScope(db, u.uid);
+          if (!hasPermission(scope, "relatorios")) {
+            setBlocked(true);
+            setLoading(false);
+            return;
+          }
+          const ownerUid = scope.ownerUid;
+
+          setUid(ownerUid);
           setUser(u);
 
           // Buscar transações de fluxo de caixa
-          const q = query(collection(db, "users", u.uid, "cashflow"), orderBy("date", "desc"));
+          const q = query(collection(db, "users", ownerUid, "cashflow"), orderBy("date", "desc"));
           snapUnsub = onSnapshot(q, (snap) => {
             setTxs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tx)));
             setLoading(false);
@@ -121,21 +144,10 @@ export default function RelatoriosPage() {
 
       // Filtro de Data
       const txDate = new Date(tx.date + "T12:00:00");
-      if (filterPeriod === "7d") {
-        const diff = (now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24);
-        return diff <= 7;
-      }
-      if (filterPeriod === "30d") {
-        const diff = (now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24);
-        return diff <= 30;
-      }
       if (filterPeriod === "mes") {
         return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
       }
-      if (filterPeriod === "ano") {
-        return txDate.getFullYear() === now.getFullYear();
-      }
-      return true;
+      return txDate.getFullYear() === now.getFullYear(); // "ano"
     });
   }, [txs, filterPeriod, searchQuery]);
 
@@ -214,6 +226,67 @@ export default function RelatoriosPage() {
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.total - a.total);
   }, [filteredTxs]);
+
+  // Demonstrativo de Faturamento (aba Faturamento) — formato gerencial e
+  // contábil no estilo de uma Declaração de Faturamento: agrupa as entradas
+  // do fluxo de caixa por mês (visão "Anual", ano corrente) ou por dia
+  // (visão "Mensal", mês corrente), com total e média do período.
+  const faturamentoLedger = useMemo(() => {
+    const now = new Date();
+
+    if (filterPeriod === "ano") {
+      const byMonth = MONTH_LABELS.map((label, i) => ({ label, total: 0, key: i }));
+      filteredTxs.forEach(tx => {
+        if (tx.type !== "entrada") return;
+        const m = Number(tx.date.split("-")[1]) - 1;
+        if (byMonth[m]) byMonth[m].total += tx.amount;
+      });
+      const elapsedMonths = now.getMonth() + 1; // meses decorridos no ano corrente até hoje
+      const total = byMonth.reduce((s, m) => s + m.total, 0);
+      const average = total / elapsedMonths;
+      const remainingUnits = 12 - elapsedMonths;
+      return {
+        granularity: "mes" as const,
+        periodLabel: `Ano de ${now.getFullYear()}`,
+        rows: byMonth.map(m => ({ label: `${m.label}/${now.getFullYear()}`, total: m.total })),
+        total,
+        countLabel: `${elapsedMonths} ${elapsedMonths === 1 ? "mês" : "meses"} decorridos`,
+        average,
+        projection: {
+          remainingUnits,
+          remainingLabel: `${remainingUnits} ${remainingUnits === 1 ? "mês restante" : "meses restantes"} do ano`,
+          projectedRemaining: average * remainingUnits,
+          projectedTotal: total + average * remainingUnits,
+        },
+      };
+    }
+
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const byDay = Array.from({ length: daysInMonth }, (_, i) => ({ day: i + 1, total: 0 }));
+    filteredTxs.forEach(tx => {
+      if (tx.type !== "entrada") return;
+      const d = Number(tx.date.split("-")[2]);
+      if (byDay[d - 1]) byDay[d - 1].total += tx.amount;
+    });
+    const elapsedDays = now.getDate(); // dias decorridos no mês corrente até hoje
+    const total = byDay.reduce((s, d) => s + d.total, 0);
+    const average = total / elapsedDays;
+    const remainingUnits = daysInMonth - elapsedDays;
+    return {
+      granularity: "dia" as const,
+      periodLabel: `${MONTH_LABELS[now.getMonth()]} de ${now.getFullYear()}`,
+      rows: byDay.filter(d => d.total > 0).map(d => ({ label: `${String(d.day).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}`, total: d.total })),
+      total,
+      countLabel: `${elapsedDays} ${elapsedDays === 1 ? "dia decorrido" : "dias decorridos"}`,
+      average,
+      projection: {
+        remainingUnits,
+        remainingLabel: `${remainingUnits} ${remainingUnits === 1 ? "dia restante" : "dias restantes"} no mês`,
+        projectedRemaining: average * remainingUnits,
+        projectedTotal: total + average * remainingUnits,
+      },
+    };
+  }, [filteredTxs, filterPeriod]);
 
   // Simulação de Extrato Bancário
   const generateMockStatement = () => {
@@ -361,6 +434,8 @@ export default function RelatoriosPage() {
     }));
   }, [filteredTxs]);
 
+  if (blocked) return <AccessDenied category="Relatórios" />;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)" }}>
@@ -390,12 +465,7 @@ export default function RelatoriosPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
-              {[
-                { id: "7d", label: "7D" },
-                { id: "30d", label: "30D" },
-                { id: "mes", label: "Mês" },
-                { id: "ano", label: "Ano" }
-              ].map(p => (
+              {[{ id: "mes", label: "Mensal" }, { id: "ano", label: "Anual" }].map(p => (
                 <button
                   key={p.id}
                   onClick={() => setFilterPeriod(p.id as any)}
@@ -774,10 +844,13 @@ export default function RelatoriosPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="cf-card p-6 flex flex-col items-center justify-center text-center space-y-2">
                 <BarChart3 className="text-primary mb-2" size={32} />
-                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Receita Bruta</p>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
+                  Receita Bruta {filterPeriod === "ano" ? "Anual" : "do Mês"}
+                </p>
                 <p className="text-4xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
                   {hideValues ? "••••••" : toBRL(dreData.receita)}
                 </p>
+                <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{faturamentoLedger.periodLabel}</p>
               </div>
               <div className="cf-card p-6 flex flex-col items-center justify-center text-center space-y-2">
                 <Activity className="text-primary mb-2" size={32} />
@@ -787,6 +860,110 @@ export default function RelatoriosPage() {
                 </p>
               </div>
             </div>
+
+            {/* Demonstrativo de Faturamento — formato gerencial/contábil,
+                agrupado por mês (visão Anual) ou por dia (visão Mensal),
+                sempre a partir das entradas do Fluxo de Caixa. */}
+            <div className="cf-card p-6 sm:p-8">
+              <div className="mb-6 flex items-center gap-3">
+                <FileText className="text-primary" size={24} />
+                <div>
+                  <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>
+                    Demonstrativo de Faturamento {filterPeriod === "ano" ? "— Mensal" : "— Diário"}
+                  </h2>
+                  <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.periodLabel} · Vinculado às entradas do Fluxo de Caixa</p>
+                </div>
+              </div>
+
+              {faturamentoLedger.rows.length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: "var(--db-text-3)" }}>Nenhum faturamento registrado no período.</p>
+              ) : (
+                <>
+                  <div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--db-border)" }}>
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-800/50">
+                          <th className="p-3 font-bold" style={{ color: "var(--db-text)" }}>
+                            {faturamentoLedger.granularity === "mes" ? "Mês" : "Dia"}
+                          </th>
+                          <th className="p-3 font-bold text-right" style={{ color: "var(--db-text)" }}>Faturamento</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {faturamentoLedger.rows.map((row, i) => (
+                          <tr key={i} className="border-t" style={{ borderColor: "var(--db-border)" }}>
+                            <td className="p-3" style={{ color: "var(--db-text-2)" }}>{row.label}</td>
+                            <td className="p-3 text-right font-mono font-semibold" style={{ color: "var(--db-text)" }}>
+                              {hideValues ? "••••••" : toBRL(row.total)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 bg-slate-100 dark:bg-slate-900" style={{ borderColor: "var(--db-border)" }}>
+                          <td className="p-3 font-extrabold uppercase tracking-wider text-xs" style={{ color: "var(--db-text)" }}>Total</td>
+                          <td className="p-3 text-right font-mono font-extrabold" style={{ color: "var(--success)" }}>
+                            {hideValues ? "••••••" : toBRL(faturamentoLedger.total)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-4 px-1">
+                    <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.countLabel}</p>
+                    <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>
+                      Média de Faturamento: <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(faturamentoLedger.average)}</span>
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Projeção de Faturamento — estimativa linear a partir da média
+                já observada no período, extrapolada pro que falta (resto do
+                mês ou resto do ano). Borda tracejada marca visualmente que é
+                estimativa, não fato realizado. */}
+            {faturamentoLedger.rows.length > 0 && faturamentoLedger.projection.remainingUnits > 0 && (
+              <div className="cf-card p-6 sm:p-8" style={{ border: "1px dashed var(--db-border)" }}>
+                <div className="mb-5 flex items-center gap-3">
+                  <TrendingUp className="text-primary" size={24} />
+                  <div>
+                    <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>Projeção de Faturamento</h2>
+                    <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
+                      Estimativa pela média {faturamentoLedger.granularity === "mes" ? "mensal" : "diária"} observada · {faturamentoLedger.projection.remainingLabel}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Realizado até hoje</p>
+                    <p className="text-xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
+                      {hideValues ? "••••••" : toBRL(faturamentoLedger.total)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Projeção do restante</p>
+                    <p className="text-xl font-extrabold mono" style={{ color: "var(--primary)" }}>
+                      +{hideValues ? "••••••" : toBRL(faturamentoLedger.projection.projectedRemaining)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
+                      {faturamentoLedger.granularity === "mes" ? "Projeção do ano" : "Projeção do mês"}
+                    </p>
+                    <p className="text-xl font-extrabold mono" style={{ color: "var(--success)" }}>
+                      {hideValues ? "••••••" : toBRL(faturamentoLedger.projection.projectedTotal)}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[10px] mt-5" style={{ color: "var(--db-text-3)" }}>
+                  Estimativa linear a partir do ritmo de faturamento já registrado no período — não considera sazonalidade nem contratos futuros.
+                </p>
+              </div>
+            )}
 
             <div className="cf-card p-6">
               <h3 className="font-heading text-lg font-bold mb-4" style={{ color: "var(--db-text)" }}>Maiores Fontes de Faturamento</h3>

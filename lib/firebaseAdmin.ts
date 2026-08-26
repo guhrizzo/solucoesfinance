@@ -41,3 +41,9 @@ export async function getAdminAuth() {
   const { getAuth } = await import("firebase-admin/auth");
   return getAuth(app);
 }
+
+export async function getAdminDb() {
+  const { app } = await getFirebaseAdmin();
+  const { getFirestore } = await import("firebase-admin/firestore");
+  return getFirestore(app);
+}

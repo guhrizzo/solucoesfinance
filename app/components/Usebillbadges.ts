@@ -43,8 +43,13 @@ export function useBillBadges() {
           return;
         }
 
+        // Membro de equipe vê as contas do dono da conta, não as próprias
+        // (que nem existem) — ver lib/accountScope.ts.
+        const { resolveAccountScope } = await import("@/lib/accountScope");
+        const { ownerUid } = await resolveAccountScope(db, user.uid);
+
         // Busca as contas
-        const billsRef = collection(db, "users", user.uid, "bills");
+        const billsRef = collection(db, "users", ownerUid, "bills");
         const billsSnap = await getDocs(query(billsRef));
 
         const bills = billsSnap.docs.map(d => ({

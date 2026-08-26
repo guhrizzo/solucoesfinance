@@ -9,8 +9,14 @@ import {
     CheckCircle2, CircleDollarSign, Repeat, Settings2,
     ArrowDownRight, Tag, Building2, Zap, Receipt,
     Bell, Image as ImageIcon, Trash, ChevronLeft, ChevronRight, type LucideIcon,
+    ShieldCheck,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import AccessDenied from "../components/AccessDenied";
+import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
+import PinModal from "../components/PinModal";
+import type { PaymentMethod } from "../types/payment";
+import { verifyPin, loadPinHash, getPinLockStatus } from "../hooks/usePin";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +37,8 @@ interface Bill {
     createdAt: number;
     userId: string;
     cashflowId?: string;
+    paymentMethod?: PaymentMethod;      // origem prevista no lançamento
+    paidPaymentMethod?: PaymentMethod;  // origem confirmada na baixa
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -152,11 +160,12 @@ function useToast() {
 interface BillModalProps {
     open: boolean;
     editing: Bill | null;
+    uid: string | null;
     onClose: () => void;
     onSave: (data: Omit<Bill, "id" | "userId" | "createdAt">) => Promise<void>;
 }
 
-function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
+function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const [title, setTitle] = useState("");
     const [rawAmt, setRawAmt] = useState("");
     const [dueDate, setDueDate] = useState(TODAY);
@@ -165,9 +174,12 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
     const [notes, setNotes] = useState("");
     const [status, setStatus] = useState<BillStatus>("pendente");
     const [photos, setPhotos] = useState<string[]>([]);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+    const [pinOpen, setPinOpen] = useState(false);
+    const [pinErr, setPinErr] = useState("");
 
     useEffect(() => {
         if (!open) return;
@@ -179,14 +191,17 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
         setNotes(editing?.notes ?? "");
         setStatus(editing?.status ?? "pendente");
         setPhotos(editing?.photos ?? []);
+        setPaymentMethod((editing?.paymentMethod as PaymentMethod) ?? null);
         setSaving(false);
         setErr("");
+        setPinOpen(false);
+        setPinErr("");
     }, [open]);
 
     if (!open) return null;
 
     const amount = parseAmount(rawAmt);
-    const canSave = title.trim().length >= 2 && amount > 0 && dueDate !== "";
+    const canSave = title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null;
 
     async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -221,18 +236,52 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
 
     async function submit() {
         if (!canSave || saving) return;
-        setSaving(true); setErr("");
-        try {
-            await onSave({
-                title: title.trim(), amount, dueDate, category,
-                recurrence, notes: notes.trim(), status,
-                photos,
-                paidAt: editing?.paidAt,
-            });
-            onClose();
-        } catch (e: any) {
-            setErr(e?.message ?? "Erro ao salvar");
-            setSaving(false);
+        if (!uid) { setErr("Não autenticado"); return; }
+        // Verifica se PIN está configurado
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            return;
+        }
+        // Abre modal de PIN
+        setPinErr("");
+        setPinOpen(true);
+    }
+
+    async function handlePinSuccess(pin: string) {
+        if (!uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setPinOpen(false);
+            setSaving(true); setErr("");
+            try {
+                await onSave({
+                    title: title.trim(), amount, dueDate, category,
+                    recurrence, notes: notes.trim(), status,
+                    photos,
+                    paidAt: editing?.paidAt,
+                    paymentMethod: paymentMethod ?? undefined,
+                    paidPaymentMethod: editing?.paidPaymentMethod,
+                });
+                onClose();
+            } catch (e: any) {
+                setErr(e?.message ?? "Erro ao salvar");
+                setSaving(false);
+            }
+        } else if (result === "locked") {
+            setPinOpen(false);
+            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setPinOpen(false);
+                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setPinOpen(false);
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
         }
     }
 
@@ -392,6 +441,14 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
                         </label>
                     </div>
 
+                    {/* Forma de pagamento prevista */}
+                    <PaymentMethodSelector
+                        value={paymentMethod}
+                        onChange={setPaymentMethod}
+                        label="Forma de pagamento prevista"
+                        required
+                    />
+
                     {/* Observação */}
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Observação (opcional)</label>
@@ -408,10 +465,19 @@ function BillModal({ open, editing, onClose, onSave }: BillModalProps) {
                             : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
-                            : <><Check size={15} /> {editing ? "Salvar alterações" : "Criar conta"}</>}
+                            : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar conta"}</>}
                     </button>
                 </div>
             </div>
+
+            {/* Modal de PIN para confirmar criação/edição */}
+            <PinModal
+                open={pinOpen}
+                title={editing ? "Confirmar edição" : "Confirmar criação"}
+                subtitle="Digite seu PIN de 4 dígitos para salvar"
+                onClose={() => setPinOpen(false)}
+                onSuccess={handlePinSuccess}
+            />
         </div>
     );
 }
@@ -557,16 +623,153 @@ function PhotoGalleryModal({ open, photos, onClose }: {
     );
 }
 
+// ─── Modal de Baixa (Pagamento) ──────────────────────────────────────────────
+
+function PayModal({ open, bill, uid, onClose, onConfirm }: {
+    open: boolean;
+    bill: Bill | null;
+    uid: string | null;
+    onClose: () => void;
+    onConfirm: (paidAt: string, method: PaymentMethod) => Promise<void>;
+}) {
+    const [paidAt, setPaidAt] = useState(TODAY);
+    const [method, setMethod] = useState<PaymentMethod | null>(null);
+    const [pinOpen, setPinOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState("");
+
+    useEffect(() => {
+        if (!open || !bill) return;
+        setPaidAt(TODAY);
+        setMethod((bill.paymentMethod as PaymentMethod) ?? null);
+        setPinOpen(false);
+        setSaving(false);
+        setErr("");
+    }, [open, bill]);
+
+    if (!open || !bill) return null;
+
+    const canConfirm = method !== null && paidAt !== "";
+
+    async function handleOpenPin() {
+        if (!canConfirm || !uid) return;
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            return;
+        }
+        setErr("");
+        setPinOpen(true);
+    }
+
+    async function handlePinSuccess(pin: string) {
+        if (!uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setPinOpen(false);
+            setSaving(true);
+            try {
+                await onConfirm(paidAt, method!);
+                onClose();
+            } catch (e: any) {
+                setErr(e?.message ?? "Erro ao registrar pagamento");
+                setSaving(false);
+            }
+        } else if (result === "locked") {
+            setPinOpen(false);
+            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setPinOpen(false);
+                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setPinOpen(false);
+            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+        }
+    }
+
+    return (
+        <>
+        <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
+            style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
+            <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
+                style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
+
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--cf-border)" }} />
+                </div>
+
+                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                    <div>
+                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Registrar pagamento</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text2)" }}>{bill.title} · {toBRL(bill.amount)}</p>
+                    </div>
+                    <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "80vh" }}>
+                    {err && (
+                        <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
+                            style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                            <AlertTriangle size={13} />{err}
+                        </div>
+                    )}
+
+                    {/* Data do pagamento */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Data do pagamento</label>
+                        <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
+                            className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
+                            style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                    </div>
+
+                    {/* Forma de pagamento */}
+                    <PaymentMethodSelector
+                        value={method}
+                        onChange={setMethod}
+                        label="Forma de pagamento utilizada"
+                        required
+                    />
+
+                    <button onClick={handleOpenPin} disabled={!canConfirm || saving}
+                        className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canConfirm && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                        style={canConfirm && !saving
+                            ? { background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }
+                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        {saving
+                            ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
+                            : <><ShieldCheck size={15} /> Confirmar pagamento</>}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <PinModal
+            open={pinOpen}
+            title="Confirmar pagamento"
+            subtitle="Digite seu PIN de 4 dígitos para confirmar a baixa"
+            onClose={() => setPinOpen(false)}
+            onSuccess={handlePinSuccess}
+        />
+        </>
+    );
+}
+
 // ─── Bill Card ────────────────────────────────────────────────────────────────
 
-function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
+function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
     bill: Bill & { _status: BillStatus };
     alertDays: number;
     onEdit: () => void;
     onDelete: () => void;
-    onPay: () => Promise<void>;
+    onOpenPayModal: () => void;
 }) {
-    const [paying, setPaying] = useState(false);
     const [showPhotos, setShowPhotos] = useState(false);
     const days = daysUntil(bill.dueDate);
     const status: BillStatus = bill._status;
@@ -575,11 +778,6 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
     const CatIcon = catMeta.icon;
     const isUrgent = status !== ("pago" as const) && days >= 0 && days <= alertDays;
     const isOverdue = status === ("vencido" as const);
-
-    const handlePay = async () => {
-        setPaying(true);
-        try { await onPay(); } finally { setPaying(false); }
-    };
 
     return (
         <div className="cf-card overflow-hidden transition-all hover:shadow-md"
@@ -647,6 +845,22 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
                             )}
                         </div>
 
+                        {/* Badges de origem de pagamento */}
+                        {(bill.paymentMethod || bill.paidPaymentMethod) && (
+                            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                {bill.paidPaymentMethod ? (
+                                    <>
+                                        {bill.paymentMethod && bill.paymentMethod !== bill.paidPaymentMethod && (
+                                            <PaymentMethodBadge method={bill.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                        )}
+                                        <PaymentMethodBadge method={bill.paidPaymentMethod as PaymentMethod} prefix="Pago:" small />
+                                    </>
+                                ) : bill.paymentMethod && (
+                                    <PaymentMethodBadge method={bill.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                )}
+                            </div>
+                        )}
+
                         {bill.notes && (
                             <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text3)" }}>📝 {bill.notes}</p>
                         )}
@@ -656,12 +870,10 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onPay }: {
                 {/* Ações */}
                 <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: "1px solid var(--cf-border)" }}>
                     {status !== ("pago" as const) ? (
-                        <button onClick={handlePay} disabled={paying}
+                        <button onClick={onOpenPayModal}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
                             style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
-                            {paying
-                                ? <Loader2 size={13} className="animate-spin" />
-                                : <CheckCircle2 size={13} />}
+                            <CheckCircle2 size={13} />
                             Marcar como pago
                         </button>
                     ) : (
@@ -716,7 +928,7 @@ export default function ContasPagarPage() {
     const [userName, setUserName] = useState("");
     const [userEmail, setUserEmail] = useState("");
     const [bills, setBills] = useState<Bill[]>([]);
-    const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
+    const [pageState, setPageState] = useState<"loading" | "ready" | "error" | "blocked">("loading");
     const [errMsg, setErrMsg] = useState("");
 
     const [modal, setModal] = useState(false);
@@ -724,6 +936,8 @@ export default function ContasPagarPage() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [deletePinOpen, setDeletePinOpen] = useState(false);
+    const [payBill, setPayBill] = useState<Bill | null>(null);
 
     const [alertDays, setAlertDays] = useState(5);
     const [search, setSearch] = useState("");
@@ -758,14 +972,25 @@ export default function ContasPagarPage() {
                         import("firebase/firestore"),
                     ]);
                 const { auth, db } = await getFirebase();
-                authUnsub = onAuthStateChanged(auth, u => {
+                authUnsub = onAuthStateChanged(auth, async u => {
                     if (!u) { window.location.href = "/login"; return; }
-                    setUid(u.uid);
+
+                    // Resolve de quem são os dados que este login deve ver:
+                    // o próprio uid (dono) ou o do dono da conta (membro
+                    // convidado) — ver lib/accountScope.ts. Membro sem
+                    // "contasPagar" liberado nem chega a assinar a coleção
+                    // abaixo.
+                    const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+                    const scope = await resolveAccountScope(db, u.uid);
+                    if (!hasPermission(scope, "contasPagar")) { setPageState("blocked"); return; }
+                    const ownerUid = scope.ownerUid;
+
+                    setUid(ownerUid);
                     setUserName(u.displayName ?? u.email ?? "Usuário");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
                     snapUnsub = onSnapshot(
-                        query(collection(db, "users", u.uid, "bills"), orderBy("createdAt", "desc")),
+                        query(collection(db, "users", ownerUid, "bills"), orderBy("createdAt", "desc")),
                         snap => { setBills(snap.docs.map(d => ({ id: d.id, ...d.data() } as Bill))); setPageState("ready"); },
                         err => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
                     );
@@ -839,16 +1064,15 @@ export default function ContasPagarPage() {
     }
 
     // ── Marcar como pago + lançar no cashflow ──────────────────────────────────
-    async function handlePay(bill: Bill) {
+    async function handlePay(bill: Bill, paidAt: string, method: PaymentMethod) {
         if (!uid) return;
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
         const { db } = await getFirebase();
-        const paidAt = TODAY;
 
-        await updateDoc(doc(db, "users", uid, "bills", bill.id), { status: "pago", paidAt });
+        await updateDoc(doc(db, "users", uid, "bills", bill.id), { status: "pago", paidAt, paidPaymentMethod: method });
 
         await addDoc(collection(db, "users", uid, "cashflow"), {
             type: "saida",
@@ -856,6 +1080,7 @@ export default function ContasPagarPage() {
             category: CAT_TO_CASHFLOW[bill.category] ?? "Outros gastos",
             amount: bill.amount,
             date: paidAt,
+            paymentMethod: method,
             note: `Conta a pagar · ${RECURRENCE_LABEL[bill.recurrence]}`,
             sourceBillId: bill.id,
             createdAt: Date.now(),
@@ -889,22 +1114,50 @@ export default function ContasPagarPage() {
     }
 
     // ── Excluir conta ──────────────────────────────────────────────────────────
-    async function handleDelete() {
+    async function handleDeleteClick() {
         if (!confirmId || !uid || deleting) return;
-        setDeleting(true);
-        try {
-            const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
-                import("@/lib/firebase"),
-                import("firebase/firestore"),
-            ]);
-            const { db } = await getFirebase();
-            await deleteDoc(doc(db, "users", uid, "bills", confirmId));
-            setConfirmId(null);
-            showToast("Conta removida.");
-        } catch (e: any) {
-            showToast(e.message, "err");
-        } finally {
-            setDeleting(false);
+        const pinHash = await loadPinHash(uid);
+        if (!pinHash) {
+            showToast("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.", "err");
+            return;
+        }
+        setDeletePinOpen(true);
+    }
+
+    async function handleDeleteConfirm(pin: string) {
+        if (!confirmId || !uid) return;
+        const result = await verifyPin(uid, pin);
+        if (result === "ok") {
+            setDeletePinOpen(false);
+            setDeleting(true);
+            try {
+                const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
+                    import("@/lib/firebase"),
+                    import("firebase/firestore"),
+                ]);
+                const { db } = await getFirebase();
+                await deleteDoc(doc(db, "users", uid, "bills", confirmId));
+                setConfirmId(null);
+                showToast("Conta removida.");
+            } catch (e: any) {
+                showToast(e.message, "err");
+            } finally {
+                setDeleting(false);
+            }
+        } else if (result === "locked") {
+            setDeletePinOpen(false);
+            showToast("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.", "err");
+        } else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) {
+                setDeletePinOpen(false);
+                showToast("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.", "err");
+            } else {
+                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+            }
+        } else if (result === "no_pin") {
+            setDeletePinOpen(false);
+            showToast("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.", "err");
         }
     }
 
@@ -952,6 +1205,8 @@ export default function ContasPagarPage() {
 
     // ── Loading / Error ────────────────────────────────────────────────────────
 
+    if (pageState === "blocked") return <AccessDenied category="Contas a Pagar" />;
+
     if (pageState === "loading") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
             <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
@@ -996,7 +1251,7 @@ export default function ContasPagarPage() {
 
             {/* Modais */}
             <BillModal
-                open={modal} editing={editing}
+                open={modal} editing={editing} uid={uid}
                 onClose={() => { setModal(false); setEditing(null); }}
                 onSave={handleSave}
             />
@@ -1004,6 +1259,11 @@ export default function ContasPagarPage() {
                 open={settingsOpen} alertDays={alertDays}
                 onClose={() => setSettingsOpen(false)}
                 onSave={saveAlertDays}
+            />
+            <PayModal
+                open={!!payBill} bill={payBill} uid={uid}
+                onClose={() => setPayBill(null)}
+                onConfirm={(paidAt, method) => handlePay(payBill!, paidAt, method)}
             />
 
             {/* Confirm delete */}
@@ -1020,7 +1280,7 @@ export default function ContasPagarPage() {
                             Excluir conta?
                         </p>
                         <p className="text-xs mb-5" style={{ color: "var(--cf-text2)" }}>
-                            Esta ação não pode ser desfeita.
+                            Esta ação não pode ser desfeita. Será solicitado o seu PIN.
                         </p>
                         <div className="flex gap-2">
                             <button onClick={() => setConfirmId(null)}
@@ -1028,7 +1288,7 @@ export default function ContasPagarPage() {
                                 style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>
                                 Cancelar
                             </button>
-                            <button onClick={handleDelete} disabled={deleting}
+                            <button onClick={handleDeleteClick} disabled={deleting}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
                                 style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "white" }}>
                                 {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Excluir</>}
@@ -1037,6 +1297,14 @@ export default function ContasPagarPage() {
                     </div>
                 </div>
             )}
+            
+            <PinModal
+                open={deletePinOpen}
+                title="Confirmar exclusão"
+                subtitle="Digite seu PIN de 4 dígitos para excluir"
+                onClose={() => setDeletePinOpen(false)}
+                onSuccess={handleDeleteConfirm}
+            />
 
             {/* Toast stack */}
             <ToastStack toasts={toasts} />
@@ -1193,7 +1461,7 @@ export default function ContasPagarPage() {
                                             alertDays={alertDays}
                                             onEdit={() => { setEditing(bill); setModal(true); }}
                                             onDelete={() => setConfirmId(bill.id)}
-                                            onPay={() => handlePay(bill)}
+                                            onOpenPayModal={() => setPayBill(bill)}
                                         />
                                     ))}
                                 </div>

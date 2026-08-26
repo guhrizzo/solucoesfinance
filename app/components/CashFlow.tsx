@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import Navbar from "./Navbar";
 import { Modal, Button, MoneyInput, parseAmount } from "./ui";
+import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
+import AccessDenied from "./AccessDenied";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +34,20 @@ interface Tx {
   createdAt: number;
   nfUrl?: string;
   nfName?: string;
+  /** Id da despesa vinculada no Centro de Custo (nas duas direções da sincronização, ver lib/costCenterSync). */
+  sourceExpenseId?: string;
+  /** Centro de Custo ao qual esta saída se refere — opcional, só faz sentido pra type "saida". */
+  costCenterId?: string;
+  costCenterName?: string;
+  /** true quando a despesa em `sourceExpenseId` foi criada A PARTIR desta saída (não apenas casada com uma despesa pré-existente) — define se ela deve ser removida junto ao deletar este lançamento. */
+  expenseAutoCreated?: boolean;
+}
+
+interface CostCenterOption {
+  id: string;
+  name: string;
+  budget?: number;
+  budgetsByMonth?: Record<string, number>;
 }
 
 interface ImportedTx {
@@ -160,8 +176,8 @@ function PrevisaoModal({ open, value, onClose, onSave }: {
 
 // ─── Modal de transação ───────────────────────────────────────────────────────
 
-function TransactionModal({ open, editing, uid, onClose, onSave }: {
-  open: boolean; editing: Tx | null; uid: string | null;
+function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: {
+  open: boolean; editing: Tx | null; uid: string | null; costCenters: CostCenterOption[];
   onClose: () => void; onSave: (data: Omit<Tx, "id">) => Promise<void>;
 }) {
   const [type, setType] = useState<TxType>("entrada");
@@ -170,6 +186,7 @@ function TransactionModal({ open, editing, uid, onClose, onSave }: {
   const [rawAmt, setRawAmt] = useState("");
   const [date, setDate] = useState(TODAY);
   const [note, setNote] = useState("");
+  const [costCenterId, setCostCenterId] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [nfFile, setNfFile] = useState<File | null>(null);
@@ -187,6 +204,7 @@ function TransactionModal({ open, editing, uid, onClose, onSave }: {
     setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
     setDate(editing?.date ?? TODAY);
     setNote(editing?.note ?? "");
+    setCostCenterId(editing?.costCenterId ?? "");
     setNfFile(null); setNfPreview(""); setNfUrl(editing?.nfUrl ?? ""); setNfName(editing?.nfName ?? "");
     setSaving(false); setErr("");
   }, [open]);
@@ -268,6 +286,14 @@ function TransactionModal({ open, editing, uid, onClose, onSave }: {
       const saveData: any = { type, description: desc.trim(), category: cat, amount, date, note: note.trim(), createdAt: editing?.createdAt ?? Date.now() };
       if (nfData.url) saveData.nfUrl = nfData.url;
       if (nfData.name) saveData.nfName = nfData.name;
+      if (type === "saida") {
+        const center = costCenters.find(c => c.id === costCenterId);
+        saveData.costCenterId = center ? center.id : "";
+        saveData.costCenterName = center ? center.name : "";
+      } else {
+        saveData.costCenterId = "";
+        saveData.costCenterName = "";
+      }
       await onSave(saveData);
       onClose();
     } catch (e: any) { setErr(e?.message ?? "Erro ao salvar"); setSaving(false); }
@@ -380,6 +406,30 @@ function TransactionModal({ open, editing, uid, onClose, onSave }: {
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-2)" }} />
             </div>
           </div>
+          {/* Centro de custo — só faz sentido pra saída; vincula o pagamento a um
+              centro pra lançar a despesa automaticamente lá e acompanhar o
+              orçamento (ver lib/costCenterSync). */}
+          {type === "saida" && costCenters.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
+                Centro de custo <span className="normal-case font-normal">(opcional)</span>
+              </label>
+              <div className="relative">
+                <select value={costCenterId} onChange={(e) => setCostCenterId(e.target.value)}
+                  className="w-full appearance-none rounded-xl px-4 py-3 pr-9 text-sm outline-none cursor-pointer transition-colors"
+                  style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
+                  <option value="">— Nenhum —</option>
+                  {costCenters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-2)" }} />
+              </div>
+              {costCenterId && (
+                <p className="text-xs flex items-center gap-1" style={{ color: "var(--success)" }}>
+                  <Check size={11} /> Lança a despesa automaticamente nesse centro
+                </p>
+              )}
+            </div>
+          )}
           {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -675,7 +725,8 @@ export default function CashFlowPage() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [txs, setTxs] = useState<Tx[]>([]);
-  const [pageState, setPageState] = useState<"loading" | "ready" | "error">("loading");
+  const [costCenters, setCostCenters] = useState<CostCenterOption[]>([]);
+  const [pageState, setPageState] = useState<"loading" | "ready" | "error" | "blocked">("loading");
   const [errMsg, setErrMsg] = useState("");
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<Tx | null>(null);
@@ -750,15 +801,28 @@ export default function CashFlowPage() {
             import("firebase/firestore"),
           ]);
           const { auth, db } = await getFirebase();
-          authUnsub = onAuthStateChanged(auth, (u) => {
+          authUnsub = onAuthStateChanged(auth, async (u) => {
             if (!u) { window.location.href = "/login"; return; }
-            setUid(u.uid);
+
+            // Resolve de quem são os dados que este login deve ver: o
+            // próprio uid (dono) ou o do dono da conta (membro convidado)
+            // — ver lib/accountScope.ts. Membro sem "fluxoCaixa" liberado
+            // nem chega a assinar as coleções abaixo.
+            const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+            const scope = await resolveAccountScope(db, u.uid);
+            if (!hasPermission(scope, "fluxoCaixa")) {
+              setPageState("blocked");
+              return;
+            }
+            const ownerUid = scope.ownerUid;
+
+            setUid(ownerUid);
             setUserName(u.displayName ?? u.email ?? "Usuário");
             setUserEmail(u.email ?? "");
 
             // ── Listener de transações ──
             snapUnsub?.();
-            const q = query(collection(db, "users", u.uid, "cashflow"), orderBy("createdAt", "desc"));
+            const q = query(collection(db, "users", ownerUid, "cashflow"), orderBy("createdAt", "desc"));
             snapUnsub = onSnapshot(q,
               (snap) => { setTxs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Tx))); setPageState("ready"); },
               (err) => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
@@ -769,7 +833,7 @@ export default function CashFlowPage() {
             // projeção do período atual, então somamos sempre o mês corrente
             // (centros antigos sem budgetsByMonth caem no campo legado `budget`).
             snapCenterUnsub?.();
-            const centerQ = query(collection(db, "costCenters"), where("userId", "==", u.uid));
+            const centerQ = query(collection(db, "costCenters"), where("userId", "==", ownerUid));
             const nowKey = (() => {
               const n = new Date();
               return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
@@ -787,6 +851,12 @@ export default function CashFlowPage() {
                 }, 0);
                 // Calcula previsão com contas pendentes adicionadas
                 updatePrevisao(totalBudget);
+                // Mesmo snapshot alimenta o seletor "Centro de custo" do modal de
+                // saída — evita um segundo listener na mesma coleção.
+                setCostCenters(snap.docs.map((d) => {
+                  const data = d.data();
+                  return { id: d.id, name: data.name, budget: data.budget, budgetsByMonth: data.budgetsByMonth };
+                }));
               },
               (err) => {
                 console.debug("Aviso ao sincronizar orçamento:", err.code);
@@ -796,7 +866,7 @@ export default function CashFlowPage() {
             // ── Listener de contas pendentes (contas a pagar) ──
             snapBillsUnsub?.();
             const billsQ = query(
-              collection(db, "users", u.uid, "bills"),
+              collection(db, "users", ownerUid, "bills"),
               where("status", "in", ["pendente", "vencido", "agendado"])
             );
             snapBillsUnsub = onSnapshot(
@@ -814,7 +884,7 @@ export default function CashFlowPage() {
             // ── Listener de impostos pendentes ──
             snapTaxesUnsub?.();
             const taxesQ = query(
-              collection(db, "users", u.uid, "taxes"),
+              collection(db, "users", ownerUid, "taxes"),
               where("status", "in", ["nao_pago", "atraso", "agendado"])
             );
             snapTaxesUnsub = onSnapshot(
@@ -847,12 +917,61 @@ export default function CashFlowPage() {
     const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
     const clean: Record<string, unknown> = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+
+    const hasCenter = data.type === "saida" && !!data.costCenterId && !!data.costCenterName;
+
+    // Depois de salvar uma saída vinculada a um centro, confere se o total
+    // pago do centro no mês bateu o orçamento — se sim, quita o resto das
+    // despesas pendentes/agendadas daquele centro automaticamente.
+    const checkCenterBudget = async () => {
+      if (!hasCenter) return;
+      const center = costCenters.find(c => c.id === data.costCenterId);
+      if (!center) return;
+      const monthKey = data.date.slice(0, 7);
+      const currentMonthKey = new Date().toISOString().slice(0, 7);
+      const budget = budgetForCenterMonth(center, monthKey, currentMonthKey);
+      await settleCenterIfBudgetReached(db, uid, data.costCenterName!, monthKey, budget);
+    };
+
     if (editing) {
+      if (data.type === "saida") {
+        if (hasCenter) {
+          // Lança/atualiza a despesa espelho no centro selecionado (qualquer
+          // que seja o valor pago — pagamento parcial inclusive).
+          const linkedExpenseId = await syncCashflowExpense(db, uid, editing.sourceExpenseId, {
+            description: data.description, category: data.category,
+            costCenterId: data.costCenterId!, costCenterName: data.costCenterName!,
+            amount: data.amount, date: data.date,
+          });
+          clean.sourceExpenseId = linkedExpenseId ?? "";
+          clean.expenseAutoCreated = true;
+        } else if (editing.expenseAutoCreated && editing.sourceExpenseId) {
+          // Centro foi desvinculado nesta edição — remove a despesa que essa
+          // saída tinha criado automaticamente.
+          await syncCashflowExpense(db, uid, editing.sourceExpenseId, {
+            description: data.description, category: data.category,
+            costCenterId: "", costCenterName: "", amount: data.amount, date: data.date,
+          });
+          clean.sourceExpenseId = "";
+          clean.expenseAutoCreated = false;
+        }
+      }
       await updateDoc(doc(db, "users", uid, "cashflow", editing.id), clean as any);
+      await checkCenterBudget();
+    } else if (data.type === "saida" && hasCenter) {
+      // Saída nova já vinculada a um centro: lança a despesa automaticamente lá.
+      const expenseId = await syncCashflowExpense(db, uid, undefined, {
+        description: data.description, category: data.category,
+        costCenterId: data.costCenterId!, costCenterName: data.costCenterName!,
+        amount: data.amount, date: data.date,
+      });
+      if (expenseId) { clean.sourceExpenseId = expenseId; clean.expenseAutoCreated = true; }
+      await addDoc(collection(db, "users", uid, "cashflow"), clean);
+      await checkCenterBudget();
     } else {
-      // Lançamento novo direto no Fluxo de Caixa (não veio do Centro de Custo,
-      // esse caminho é sempre addDoc a partir de lá) — tenta dar baixa
-      // automática numa despesa pendente correspondente.
+      // Lançamento novo sem centro selecionado — tenta dar baixa automática
+      // numa despesa pendente correspondente por descrição+valor (comportamento
+      // anterior, mantido como fallback pra quem não usa o seletor de centro).
       if (data.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
         if (matchedId) clean.sourceExpenseId = matchedId;
@@ -881,6 +1000,12 @@ export default function CashFlowPage() {
     try {
       const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
       const { db } = await getFirebase();
+      // Se essa saída tinha lançado uma despesa automaticamente num centro de
+      // custo, remove a despesa junto — ela não existia antes desse pagamento.
+      const tx = txs.find(t => t.id === confirmId);
+      if (tx?.expenseAutoCreated && tx.sourceExpenseId) {
+        await deleteDoc(doc(db, "expenses", tx.sourceExpenseId)).catch(() => {});
+      }
       await deleteDoc(doc(db, "users", uid, "cashflow", confirmId));
       setConfirmId(null);
     } catch (e: any) { alert("Erro ao deletar: " + e.message); }
@@ -936,6 +1061,8 @@ export default function CashFlowPage() {
     { label: "Saldo", val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },
     { label: "Resultado", val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "#dcfce7" : "#fee2e2", color: superavitDeficit >= 0 ? "#059669" : "#dc2626", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
   ];
+
+  if (pageState === "blocked") return <AccessDenied category="Fluxo de Caixa" />;
 
   if (pageState === "loading") return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
@@ -1022,7 +1149,7 @@ export default function CashFlowPage() {
 
       <Navbar user={{ displayName: userName, email: userEmail }} activePath="/fluxo-caixa" onLogout={handleLogout} />
 
-      <TransactionModal open={modal} editing={editing} uid={uid} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
+      <TransactionModal open={modal} editing={editing} uid={uid} costCenters={costCenters} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
       <PrevisaoModal open={previsaoOpen} value={previsao} onClose={() => setPrevisaoOpen(false)} onSave={setPrevisao} />
 
@@ -1304,6 +1431,11 @@ export default function CashFlowPage() {
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-2 flex-wrap">
+                                        {tx.costCenterName && (
+                                          <span className="text-xs font-medium truncate" style={{ color: "var(--cf-text-2)" }} title="Centro de custo vinculado">
+                                            🏷 {tx.costCenterName}
+                                          </span>
+                                        )}
                                         {tx.note && <p className="text-xs truncate" style={{ color: "var(--cf-text-2)" }}>📝 {tx.note}</p>}
                                         {tx.nfUrl && (
                                           <a href={tx.nfUrl} target="_blank" rel="noreferrer"
