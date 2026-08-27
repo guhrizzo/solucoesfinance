@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, CreditCard,
   AlertCircle, Clock, Wallet, ChevronRight, ArrowUpRight,
   ArrowDownRight, MoreHorizontal, Filter, Download,
-  RefreshCw, CheckCircle2
+  RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart
 } from "lucide-react";
 import OnboardingModal, { type OnboardingAnswers } from "../components/OnboardingModal";
 import CreatePasswordGate from "../components/CreatePasswordGate";
@@ -73,6 +73,20 @@ export default function Dashboard() {
   // liberado — ver lib/accountScope.ts.
   const [blocked, setBlocked] = useState(false);
   const [hideValues, setHideValues] = useState(false);
+  // Estilo do gráfico "Receita vs. Despesas" escolhido pelo usuário — persistido no localStorage.
+  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("dashboard_chart_type");
+      if (saved === "bar" || saved === "line" || saved === "pie") setChartType(saved);
+    } catch { /* ignora ambientes sem localStorage */ }
+  }, []);
+
+  const changeChartType = (t: "bar" | "line" | "pie") => {
+    setChartType(t);
+    try { localStorage.setItem("dashboard_chart_type", t); } catch { /* noop */ }
+  };
 
   // Firestore Data States
   const [txs, setTxs] = useState<Tx[]>([]);
@@ -416,9 +430,9 @@ export default function Dashboard() {
         }
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 
-        .bar-rev { fill: #1565c0; transition: opacity 0.15s; }
+        .bar-rev { fill: var(--success); transition: opacity 0.15s; }
         .bar-rev:hover { opacity: 0.8; }
-        .bar-exp { fill: var(--db-border); transition: opacity 0.15s; }
+        .bar-exp { fill: var(--danger); transition: opacity 0.15s; }
         .bar-exp:hover { opacity: 0.7; }
         .bar-rev-anim { animation: growBar 0.8s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
         .bar-exp-anim { animation: growBar 0.8s 0.1s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
@@ -512,14 +526,36 @@ export default function Dashboard() {
                 <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Receita vs. Despesas</h2>
                 <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Acumulado ano corrente — mensal</p>
               </div>
-              <div className="flex items-center gap-2 md:gap-4 shrink-0">
-                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 inline-block" /> Receita
+              <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                <div className="flex items-center rounded-lg border overflow-hidden" style={{ borderColor: "var(--db-border)" }}>
+                  {([
+                    { t: "bar" as const,  icon: BarChart3, label: "Barra" },
+                    { t: "line" as const, icon: LineChart, label: "Linha" },
+                    { t: "pie" as const,  icon: PieChart,  label: "Pizza" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.t}
+                      onClick={() => changeChartType(opt.t)}
+                      title={opt.label}
+                      aria-pressed={chartType === opt.t}
+                      className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                      style={{
+                        background: chartType === opt.t ? "var(--db-hover)" : "transparent",
+                        color: chartType === opt.t ? "#42a5f5" : "var(--db-text-2)",
+                      }}
+                    >
+                      <opt.icon size={13} />
+                      <span className="hidden lg:inline">{opt.label}</span>
+                    </button>
+                  ))}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--db-border)" }} /> Despesa
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--success)" }} /> Receita
                 </div>
-                <button 
+                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--danger)" }} /> Despesa
+                </div>
+                <button
                   onClick={() => setHideValues(!hideValues)}
                   className="flex items-center gap-1 text-xs text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                 >
@@ -527,32 +563,90 @@ export default function Dashboard() {
                 </button>
               </div>
             </div>
-            <svg viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}>
-              {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
-                <g key={i}>
-                  <line x1="40" y1={10 + (1 - t) * 160} x2="590" y2={10 + (1 - t) * 160} stroke="var(--db-border)" strokeWidth="1" />
-                  <text x="32" y={10 + (1 - t) * 160 + 4} fontSize="9" fill="var(--db-text-3)" textAnchor="end" fontFamily="JetBrains Mono, monospace">
-                    {Math.round(t * chartData.maxVal / 100) * 100 === 0 ? "0" : `${Math.round(t * chartData.maxVal / 1000)}k`}
-                  </text>
-                </g>
-              ))}
-              {months.map((m, i) => {
-                const rev = chartData.revenues[i];
-                const exp = chartData.expenses[i];
-                const bw = 22, gap = 44, x = 48 + i * gap;
-                return (
-                  <g key={m}>
-                    <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60}ms` }} />
-                    <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60 + 30}ms` }} />
-                    <text x={x + bw} y={190} fontSize="9" fill="var(--db-text-3)" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+            {chartType === "pie" ? (
+              <div className="flex justify-center items-center" style={{ height: 160 }}>
+                {(() => {
+                  const totRev = chartData.revenues.reduce((a, b) => a + b, 0);
+                  const totExp = chartData.expenses.reduce((a, b) => a + b, 0);
+                  const total = totRev + totExp;
+                  if (total === 0) {
+                    return <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Sem dados no período.</p>;
+                  }
+                  const cx = 90, cy = 90, r = 78;
+                  const revFrac = totRev / total;
+                  const slice = (from: number, to: number, color: string, key: string) => {
+                    const a0 = from * 2 * Math.PI - Math.PI / 2;
+                    const a1 = to * 2 * Math.PI - Math.PI / 2;
+                    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+                    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+                    const large = to - from > 0.5 ? 1 : 0;
+                    const mid = (a0 + a1) / 2;
+                    const lx = cx + r * 0.6 * Math.cos(mid), ly = cy + r * 0.6 * Math.sin(mid);
+                    const pct = Math.round((to - from) * 100);
+                    return (
+                      <g key={key}>
+                        <path d={`M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`} fill={color} />
+                        {pct >= 6 && (
+                          <text x={lx} y={ly + 3} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" fontFamily="Sora, sans-serif">{pct}%</text>
+                        )}
+                      </g>
+                    );
+                  };
+                  return (
+                    <svg width="180" height="180" viewBox="0 0 180 180">
+                      {slice(0, revFrac, "var(--success)", "rev")}
+                      {slice(revFrac, 1, "var(--danger)", "exp")}
+                    </svg>
+                  );
+                })()}
+              </div>
+            ) : (
+              <svg viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}>
+                {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
+                  <g key={i}>
+                    <line x1="40" y1={10 + (1 - t) * 160} x2="590" y2={10 + (1 - t) * 160} stroke="var(--db-border)" strokeWidth="1" />
+                    <text x="32" y={10 + (1 - t) * 160 + 4} fontSize="9" fill="var(--db-text-3)" textAnchor="end" fontFamily="JetBrains Mono, monospace">
+                      {Math.round(t * chartData.maxVal / 100) * 100 === 0 ? "0" : `${Math.round(t * chartData.maxVal / 1000)}k`}
+                    </text>
                   </g>
-                );
-              })}
-            </svg>
+                ))}
+                {chartType === "line" ? (
+                  (() => {
+                    const px = (i: number) => 48 + i * 44 + 11;
+                    const py = (v: number) => 170 - (v / chartData.maxVal) * 160;
+                    const pts = (arr: number[]) => arr.map((v, i) => `${px(i)},${py(v)}`).join(" ");
+                    return (
+                      <>
+                        <polyline className="bar-rev-anim" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
+                        <polyline className="bar-exp-anim" fill="none" stroke="var(--danger)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
+                        {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r="2.5" fill="var(--success)" />)}
+                        {chartData.expenses.map((v, i) => <circle key={`e${i}`} cx={px(i)} cy={py(v)} r="2.5" fill="var(--danger)" />)}
+                        {months.map((m, i) => (
+                          <text key={m} x={px(i)} y={190} fontSize="9" fill="var(--db-text-3)" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                        ))}
+                      </>
+                    );
+                  })()
+                ) : (
+                  months.map((m, i) => {
+                    const rev = chartData.revenues[i];
+                    const exp = chartData.expenses[i];
+                    const bw = 22, gap = 44, x = 48 + i * gap;
+                    return (
+                      <g key={m}>
+                        <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60}ms` }} />
+                        <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60 + 30}ms` }} />
+                        <text x={x + bw} y={190} fontSize="9" fill="var(--db-text-3)" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                      </g>
+                    );
+                  })
+                )}
+              </svg>
+            )}
             <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
               {[
-                { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color:"#42a5f5" },
-                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--db-text-2)" },
+                { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color:"var(--success)" },
+                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--danger)" },
                 { label:"Saldo acumulado", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)), color:"#34d399" },
               ].map((s) => (
                 <div key={s.label}>

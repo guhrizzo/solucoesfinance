@@ -1,19 +1,22 @@
 "use client";
 
 import {
-    Banknote, Building2, FileText, Zap,
+    Banknote, Building2, FileText,
     CreditCard, Wallet, ArrowLeftRight, FileBarChart2
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import type { ComponentType } from "react";
 import type { PaymentMethod } from "../types/payment";
 import { PAYMENT_METHODS, PAYMENT_METHOD_META } from "../types/payment";
+import PixIcon from "./PixIcon";
 
-// Mapa de ícones Lucide para cada método
-const METHOD_ICONS: Record<PaymentMethod, LucideIcon> = {
+type MethodIcon = ComponentType<{ size?: number | string }>;
+
+// Mapa de ícones para cada método
+const METHOD_ICONS: Record<PaymentMethod, MethodIcon> = {
     dinheiro:       Banknote,
     conta_corrente: Building2,
     cheque:         FileText,
-    pix:            Zap,
+    pix:            PixIcon,
     cartao_credito: CreditCard,
     cartao_debito:  Wallet,
     transferencia:  ArrowLeftRight,

@@ -18,6 +18,7 @@ import PinModal from "../components/PinModal";
 import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
 import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
 import type { PaymentMethod } from "../types/payment";
+import { syncTaxCashflow } from "@/lib/billTaxSync";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -1126,18 +1127,34 @@ export default function ImpostosPage() {
         const clean = Object.fromEntries(
             Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
         );
+        let taxId: string;
         if (editing) {
             await updateDoc(doc(db, "users", uid, "taxes", editing.id), clean as any);
+            taxId = editing.id;
             showToast("Imposto atualizado!");
         } else {
-            await addDoc(collection(db, "users", uid, "taxes"), { ...clean, createdAt: Date.now() });
+            const ref = await addDoc(collection(db, "users", uid, "taxes"), { ...clean, createdAt: Date.now() });
+            taxId = ref.id;
             showToast("Imposto criado!");
         }
+
+        // Reflete no Fluxo de Caixa: com status "pago" cria/atualiza a saída
+        // espelho; com qualquer outro status, remove se existir.
+        await syncTaxCashflow(db, uid, {
+            id: taxId,
+            name: data.name,
+            amount: data.amount,
+            dueDate: data.dueDate,
+            status: data.status,
+            frequency: data.frequency,
+            paidAt: data.paidAt,
+            paidPaymentMethod: data.paidPaymentMethod as string | undefined,
+        });
     }
 
     async function handlePay(tax: Tax, paidAt: string, method: PaymentMethod) {
         if (!uid) return;
-        const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
+        const [{ getFirebase }, { doc, updateDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
@@ -1149,16 +1166,12 @@ export default function ImpostosPage() {
             paidPaymentMethod: method,
         });
 
-        // Registrar no fluxo de caixa
-        await addDoc(collection(db, "users", uid, "cashflow"), {
-            type: "saida",
-            title: `Imposto: ${tax.name}`,
-            amount: tax.amount,
-            date: paidAt,
-            paymentMethod: method,
-            category: "impostos",
-            ref: tax.id,
-            createdAt: Date.now(),
+        // Registrar no Fluxo de Caixa (saída espelho linkada por sourceTaxId).
+        await syncTaxCashflow(db, uid, {
+            ...tax,
+            status: "pago",
+            paidAt,
+            paidPaymentMethod: method,
         });
 
         showToast("Imposto marcado como pago ✓");
@@ -1173,6 +1186,8 @@ export default function ImpostosPage() {
                 import("firebase/firestore"),
             ]);
             const { db } = await getFirebase();
+            // Remove a saída espelho no Fluxo de Caixa (se o imposto estava pago).
+            await syncTaxCashflow(db, uid, { id: confirmId, name: "", amount: 0, dueDate: "", status: "removido" });
             await deleteDoc(doc(db, "users", uid, "taxes", confirmId));
             setConfirmId(null);
             showToast("Imposto removido.");

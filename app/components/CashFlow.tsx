@@ -160,7 +160,7 @@ function PrevisaoModal({ open, value, onClose, onSave }: {
   return (
     <Modal open={open} onClose={onClose} title="Orçamento" size="sm">
       <div className="p-6">
-        <p className="text-xs -mt-2 mb-5" style={{ color: "var(--cf-text-2)" }}>Orçamento + Contas a pagar - Contas a receber (pendentes)</p>
+        <p className="text-xs -mt-2 mb-5" style={{ color: "var(--cf-text-2)" }}>Orçamento dos centros de custo + todas as contas a pagar + todos os impostos</p>
         <div className="space-y-3 mb-6">
           <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--cf-text-2)" }}>Valor orçado (R$)</label>
           <MoneyInput value={raw} onValueChange={setRaw} autoFocus />
@@ -739,8 +739,8 @@ export default function CashFlowPage() {
   const [previsaoOpen, setPrevisaoOpen] = useState(false);
   const [hideValues, setHideValues] = useState(false);
   const [costCenterBudget, setCostCenterBudget] = useState(0);
-  const [pendingBillsTotal, setPendingBillsTotal] = useState(0);
-  const [pendingTaxesTotal, setPendingTaxesTotal] = useState(0);
+  const [billsTotal, setBillsTotal] = useState(0);
+  const [taxesTotal, setTaxesTotal] = useState(0);
 
   // ─── Accordion state ──────────────────────────────────────────────────────
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -762,18 +762,20 @@ export default function CashFlowPage() {
     });
   }, []);
 
-  // ── Função para atualizar previsão com base em orçamentos, contas a pagar e impostos ──
-  const updatePrevisao = useCallback((newCostCenterBudget?: number, newPendingBillsTotal?: number, newPendingTaxesTotal?: number) => {
+  // ── Orçamento = soma FIXA de: orçamento mensal dos centros de custo +
+  //    TODAS as contas a pagar + TODOS os impostos (pagos ou não). Pagar
+  //    algo não reduz o Orçamento — ele é o teto planejado usado pra medir
+  //    o Resultado (superávit/déficit) contra o Saldo real. ──
+  const updatePrevisao = useCallback((newCostCenterBudget?: number, newBillsTotal?: number, newTaxesTotal?: number) => {
     if (newCostCenterBudget !== undefined) setCostCenterBudget(newCostCenterBudget);
-    if (newPendingBillsTotal !== undefined) setPendingBillsTotal(newPendingBillsTotal);
-    if (newPendingTaxesTotal !== undefined) setPendingTaxesTotal(newPendingTaxesTotal);
+    if (newBillsTotal !== undefined) setBillsTotal(newBillsTotal);
+    if (newTaxesTotal !== undefined) setTaxesTotal(newTaxesTotal);
   }, []);
 
-  // ── Effect para recalcular previsão quando qualquer valor muda ──
+  // ── Recalcula o Orçamento quando qualquer parcela muda ──
   useEffect(() => {
-    const newPrevisao = costCenterBudget + pendingBillsTotal + pendingTaxesTotal;
-    setPrevisao(newPrevisao);
-  }, [costCenterBudget, pendingBillsTotal, pendingTaxesTotal]);
+    setPrevisao(costCenterBudget + billsTotal + taxesTotal);
+  }, [costCenterBudget, billsTotal, taxesTotal]);
 
   useEffect(() => {
     if (txs.length > 0) {
@@ -863,36 +865,27 @@ export default function CashFlowPage() {
               }
             );
 
-            // ── Listener de contas pendentes (contas a pagar) ──
+            // ── Listener de contas a pagar (TODAS, pagas ou não) ──
+            // O Orçamento é fixo: pagar uma conta não a remove desta soma.
             snapBillsUnsub?.();
-            const billsQ = query(
-              collection(db, "users", ownerUid, "bills"),
-              where("status", "in", ["pendente", "vencido", "agendado"])
-            );
             snapBillsUnsub = onSnapshot(
-              billsQ,
+              collection(db, "users", ownerUid, "bills"),
               (snap) => {
-                const billsTotal = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-                // Atualiza previsão incluindo contas pendentes
-                updatePrevisao(undefined, billsTotal);
+                const total = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+                updatePrevisao(undefined, total);
               },
               (err) => {
-                console.debug("Aviso ao sincronizar contas pendentes:", err.code);
+                console.debug("Aviso ao sincronizar contas a pagar:", err.code);
               }
             );
 
-            // ── Listener de impostos pendentes ──
+            // ── Listener de impostos (TODOS, pagos ou não) ──
             snapTaxesUnsub?.();
-            const taxesQ = query(
-              collection(db, "users", ownerUid, "taxes"),
-              where("status", "in", ["nao_pago", "atraso", "agendado"])
-            );
             snapTaxesUnsub = onSnapshot(
-              taxesQ,
+              collection(db, "users", ownerUid, "taxes"),
               (snap) => {
-                const taxesTotal = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-                // Atualiza previsão incluindo impostos pendentes
-                updatePrevisao(undefined, undefined, taxesTotal);
+                const total = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+                updatePrevisao(undefined, undefined, total);
               },
               (err) => {
                 console.debug("Aviso ao sincronizar impostos:", err.code);
