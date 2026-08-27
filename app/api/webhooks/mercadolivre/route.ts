@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
   isMockToken,
   getValidAccessToken,
@@ -20,17 +21,17 @@ async function propagarEstoque(
   novaQuantidade: number,
   origem: { platform: string; adId: string }
 ) {
-  const { collection, getDocs, query, where, doc, updateDoc, getDoc } = await import("firebase/firestore");
-
-  const snapVinculos = await getDocs(
-    query(collection(db, "vinculos"), where("userId", "==", userId), where("sku", "==", sku))
-  );
+  const snapVinculos = await db
+    .collection("vinculos")
+    .where("userId", "==", userId)
+    .where("sku", "==", sku)
+    .get();
 
   for (const dv of snapVinculos.docs) {
     const vinculo = dv.data();
 
     // Espelha a quantidade em todo vínculo do SKU (inclusive o de origem).
-    await updateDoc(doc(db, "vinculos", dv.id), { quantity: novaQuantidade, updatedAt: Date.now() });
+    await db.collection("vinculos").doc(dv.id).update({ quantity: novaQuantidade, updatedAt: Date.now() });
 
     // Não precisa empurrar de volta para o anúncio que originou a venda.
     if (vinculo.platform === origem.platform && vinculo.adId === origem.adId) continue;
@@ -38,8 +39,8 @@ async function propagarEstoque(
     if (vinculo.platform !== "mercadolivre" || !vinculo.connectionId) continue;
 
     try {
-      const intSnap = await getDoc(doc(db, "integracoes", vinculo.connectionId));
-      if (!intSnap.exists()) continue;
+      const intSnap = await db.collection("integracoes").doc(vinculo.connectionId).get();
+      if (!intSnap.exists) continue;
       const integracao = { id: intSnap.id, ...intSnap.data() } as MlIntegracao;
       if (isMockToken(integracao.accessToken)) continue;
 
@@ -60,18 +61,18 @@ async function baixarEstoque(
   quantitySold: number,
   origem: { platform: string; adId: string }
 ): Promise<number | null> {
-  const { collection, getDocs, query, where, doc, updateDoc } = await import("firebase/firestore");
-
-  const snapEstoque = await getDocs(
-    query(collection(db, "estoque"), where("userId", "==", userId), where("sku", "==", sku))
-  );
+  const snapEstoque = await db
+    .collection("estoque")
+    .where("userId", "==", userId)
+    .where("sku", "==", sku)
+    .get();
   if (snapEstoque.empty) return null;
 
   const estoqueDoc = snapEstoque.docs[0];
   const atual = estoqueDoc.data().quantity || 0;
   const nova = Math.max(0, atual - quantitySold);
 
-  await updateDoc(doc(db, "estoque", estoqueDoc.id), { quantity: nova, updatedAt: Date.now() });
+  await db.collection("estoque").doc(estoqueDoc.id).update({ quantity: nova, updatedAt: Date.now() });
   await propagarEstoque(db, userId, sku, nova, origem);
   return nova;
 }
@@ -85,22 +86,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { getFirebase } = await import("@/lib/firebase");
-    const { db } = await getFirebase();
-    const { collection, getDocs, query, where } = await import("firebase/firestore");
+    const db = await getAdminDb();
 
     // ── Simulação disparada pelo painel de teste ────────────────────────────
     if (body.mock === true) {
       const { adId, quantitySold, userId } = body;
 
-      const snapVinculo = await getDocs(
-        query(
-          collection(db, "vinculos"),
-          where("userId", "==", userId),
-          where("platform", "==", "mercadolivre"),
-          where("adId", "==", adId)
-        )
-      );
+      const snapVinculo = await db
+        .collection("vinculos")
+        .where("userId", "==", userId)
+        .where("platform", "==", "mercadolivre")
+        .where("adId", "==", adId)
+        .get();
       if (snapVinculo.empty) {
         return NextResponse.json({ error: "Vínculo não encontrado" }, { status: 404 });
       }
@@ -143,13 +140,11 @@ export async function POST(request: Request) {
     }
 
     // Acha a integração pela conta ML que recebeu a venda.
-    const snapIntegracao = await getDocs(
-      query(
-        collection(db, "integracoes"),
-        where("platform", "==", "mercadolivre"),
-        where("accountId", "==", mlUserId)
-      )
-    );
+    const snapIntegracao = await db
+      .collection("integracoes")
+      .where("platform", "==", "mercadolivre")
+      .where("accountId", "==", mlUserId)
+      .get();
     if (snapIntegracao.empty) {
       // 200: não é erro do ML, só não temos essa conta conectada aqui.
       return NextResponse.json({ received: true, note: "conta não conectada" });
@@ -176,14 +171,12 @@ export async function POST(request: Request) {
       // Prefere o seller_sku do próprio pedido; senão, resolve pelo vínculo.
       let sku: string = (oi.item?.seller_sku || "").trim().toUpperCase();
       if (!sku) {
-        const snapVinculo = await getDocs(
-          query(
-            collection(db, "vinculos"),
-            where("userId", "==", integracao.userId),
-            where("platform", "==", "mercadolivre"),
-            where("adId", "==", adId)
-          )
-        );
+        const snapVinculo = await db
+          .collection("vinculos")
+          .where("userId", "==", integracao.userId)
+          .where("platform", "==", "mercadolivre")
+          .where("adId", "==", adId)
+          .get();
         if (snapVinculo.empty) continue;
         sku = snapVinculo.docs[0].data().sku;
       }
