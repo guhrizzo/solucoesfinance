@@ -12,7 +12,7 @@ import {
 import OnboardingModal, { type OnboardingAnswers } from "../components/OnboardingModal";
 import CreatePasswordGate from "../components/CreatePasswordGate";
 import Navbar from "../components/Navbar";
-import { Badge } from "../components/ui";
+import { Badge, PageLoader } from "../components/ui";
 import AccessDenied from "../components/AccessDenied";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -390,16 +390,7 @@ export default function Dashboard() {
 
   if (blocked) return <AccessDenied category="Dashboard" />;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)" }}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>Sincronizando painel...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>

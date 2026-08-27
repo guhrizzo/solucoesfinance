@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
+import { PageLoader } from "../components/ui";
 import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
 import PinModal from "../components/PinModal";
 import type { PaymentMethod } from "../types/payment";
@@ -1211,12 +1212,7 @@ export default function ContasPagarPage() {
 
     if (pageState === "blocked") return <AccessDenied category="Contas a Pagar" />;
 
-    if (pageState === "loading") return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
-            <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-            <p className="text-sm" style={{ color: "var(--cf-text2)" }}>Carregando…</p>
-        </div>
-    );
+    if (pageState === "loading") return <PageLoader background="var(--cf-bg)" />;
 
     if (pageState === "error") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>

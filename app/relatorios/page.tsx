@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
+import { PageLoader } from "../components/ui";
 import type { ReportData } from "@/lib/reportPdf";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -441,16 +442,7 @@ export default function RelatoriosPage() {
 
   if (blocked) return <AccessDenied category="Relatórios" />;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)" }}>
-        <div className="text-center space-y-4">
-          <RefreshCw className="animate-spin h-10 w-10 text-primary mx-auto" />
-          <p className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>Carregando Relatórios e Métricas...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
 
   return (
     <>

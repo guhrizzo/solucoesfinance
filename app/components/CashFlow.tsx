@@ -18,6 +18,7 @@ import Navbar from "./Navbar";
 import { Modal, Button, MoneyInput, parseAmount } from "./ui";
 import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
 import AccessDenied from "./AccessDenied";
+import { PageLoader } from "./ui";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -1057,12 +1058,7 @@ export default function CashFlowPage() {
 
   if (pageState === "blocked") return <AccessDenied category="Fluxo de Caixa" />;
 
-  if (pageState === "loading") return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
-      <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-      <p className="text-sm" style={{ color: "var(--cf-text-2)" }}>Carregando…</p>
-    </div>
-  );
+  if (pageState === "loading") return <PageLoader background="var(--cf-bg)" />;
 
   if (pageState === "error") return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
