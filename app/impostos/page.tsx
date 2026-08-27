@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
+import { PageLoader } from "../components/ui";
 import PinModal from "../components/PinModal";
 import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
 import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
@@ -1282,12 +1283,7 @@ export default function ImpostosPage() {
 
     if (pageState === "blocked") return <AccessDenied category="Impostos" />;
 
-    if (pageState === "loading") return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--cf-bg)" }}>
-            <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
-            <p className="text-sm" style={{ color: "var(--cf-text2)" }}>Carregando…</p>
-        </div>
-    );
+    if (pageState === "loading") return <PageLoader background="var(--cf-bg)" />;
 
     if (pageState === "error") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>

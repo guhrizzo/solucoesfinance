@@ -26,6 +26,7 @@ import { useTheme } from "../hooks/useTheme";
 import { syncExpenseCashflow } from "@/lib/costCenterSync";
 import { resolveAccountScope, hasPermission } from "@/lib/accountScope";
 import AccessDenied from "../components/AccessDenied";
+import { PageLoader } from "../components/ui";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1017,14 +1018,7 @@ export default function CostCenterPage() {
 
   if (blocked) return <AccessDenied category="Centro de Custos" />;
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--db-bg)" }}>
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-        <p className="text-sm" style={{ color: "var(--db-text2)" }}>Carregando...</p>
-      </div>
-    </div>
-  );
+  if (loading) return <PageLoader />;
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>

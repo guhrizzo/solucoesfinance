@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
+import { PageLoader } from "../components/ui";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
@@ -601,12 +602,7 @@ export default function EstoquePage() {
 
   // Se estiver carregando sessão
   if (authLoading || (user && !blocked && dbLoading)) {
-    return (
-      <div className="min-h-screen flex flex-col justify-center items-center" style={{ background: "var(--db-bg)" }}>
-        <Loader2 className="animate-spin text-primary mb-4" size={40} />
-        <p className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>Carregando seu painel de estoque...</p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Se não estiver logado, o useAuth já fará o redirecionamento, mas mostramos uma proteção

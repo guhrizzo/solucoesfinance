@@ -9,7 +9,7 @@ import {
   UsersRound, UserPlus, Edit2, RotateCw, ShieldOff, ShieldCheck,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { Card, Button, Input, Modal } from "../components/ui";
+import { Card, Button, Input, Modal, PageLoader } from "../components/ui";
 import { useToast } from "../components/useToast";
 import { ToastContainer } from "../components/ToastContainer";
 import {
@@ -443,13 +443,7 @@ export default function PerfilPage() {
     }
   };
 
-  if (loading || !user) {
-    return (
-      <div className="flex flex-col min-h-screen items-center justify-center" style={{ background: "var(--db-bg)" }}>
-        <div className="w-8 h-8 rounded-full border-2 animate-spin" style={{ borderColor: "var(--cf-border)", borderTopColor: "var(--brand-500)" }} />
-      </div>
-    );
-  }
+  if (loading || !user) return <PageLoader label={null} />;
 
   const initial = user.displayName?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? "U";
 
