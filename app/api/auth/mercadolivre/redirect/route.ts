@@ -19,9 +19,24 @@ export async function GET(request: Request) {
 
   const { clientId, redirectUri, configured } = mlCredentials();
 
-  // Sem credenciais reais → modo simulado (mock), como antes.
-  if (!configured) {
-    console.log("📱 Mercado Livre em modo simulado — credenciais não configuradas");
+  // Em localhost o OAuth real não fecha: o Mercado Livre SEMPRE redireciona
+  // pro MERCADOLIVRE_REDIRECT_URI, então se ele aponta pra produção o callback
+  // roda em OUTRO domínio e o cookie `ml_oauth` do PKCE fica preso no
+  // localhost → "Sessão de autorização expirada". Nesse caso cai no mock pra
+  // dar pra testar a UI. (Túnel https tipo ngrok/cloudflared não é localhost,
+  // então o fluxo real continua valendo por lá.)
+  const hostname = new URL(request.url).hostname;
+  const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)$/.test(hostname);
+  const redirectUriIsLocal = !!redirectUri && /localhost|127\.0\.0\.1/.test(redirectUri);
+  const forceMock = isLocalHost && !redirectUriIsLocal;
+
+  // Sem credenciais reais, ou localhost com redirect_uri de produção → mock.
+  if (!configured || forceMock) {
+    console.log(
+      !configured
+        ? "📱 Mercado Livre em modo simulado — credenciais não configuradas"
+        : `📱 Mercado Livre em modo simulado — rodando em ${hostname} mas MERCADOLIVRE_REDIRECT_URI aponta pra ${redirectUri}. O OAuth real precisa terminar no mesmo domínio; use um túnel https (ngrok/cloudflared) + ajuste a env, ou teste em produção.`
+    );
     const callbackUrl = new URL("/api/auth/mercadolivre/callback", request.url);
     callbackUrl.searchParams.set("code", "mock_code_ml_123456");
     callbackUrl.searchParams.set("state", userId);

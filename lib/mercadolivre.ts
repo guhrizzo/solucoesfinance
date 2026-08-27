@@ -138,7 +138,8 @@ export async function refreshAccessToken(refreshToken: string): Promise<MlTokenR
  * no Firestore se estiver perto de expirar. Também muta o objeto `integracao`
  * em memória pro chamador reaproveitar os campos novos.
  *
- * `db` é o Firestore do SDK client (mesmo padrão das outras rotas).
+ * `db` é o Firestore do Admin SDK (getAdminDb()) — as rotas de servidor
+ * gravam sem passar pelas Firestore rules.
  * Lança se a integração for mock ou não tiver como renovar (pede reconexão).
  */
 export async function getValidAccessToken(db: any, integracao: MlIntegracao): Promise<string> {
@@ -157,8 +158,7 @@ export async function getValidAccessToken(db: any, integracao: MlIntegracao): Pr
   const expiresAt = Date.now() + t.expires_in * 1000;
   const novoRefresh = t.refresh_token || integracao.refreshToken;
 
-  const { doc, updateDoc } = await import("firebase/firestore");
-  await updateDoc(doc(db, "integracoes", integracao.id), {
+  await db.collection("integracoes").doc(integracao.id).update({
     accessToken: t.access_token,
     refreshToken: novoRefresh,
     expiresAt,

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
   mlCredentials,
   exchangeCodeForToken,
@@ -70,9 +71,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { getFirebase } = await import("@/lib/firebase");
-    const { db } = await getFirebase();
-    const { collection, addDoc, getDocs, query, where, doc, setDoc } = await import("firebase/firestore");
+    // Admin SDK: as rotas de servidor gravam nas coleções integracoes/estoque/
+    // vinculos sem passar pelas Firestore rules (o SDK client no servidor não
+    // carrega auth → "Missing or insufficient permissions").
+    const db = await getAdminDb();
 
     let accountId = "mock_ml_user_999";
     let accountName = "Loja Simulação Mercado Livre";
@@ -92,15 +94,12 @@ export async function GET(request: Request) {
     }
 
     // ── Salvar/atualizar a integração ───────────────────────────────────────
-    const integracoesRef = collection(db, "integracoes");
-    const snapIntegracao = await getDocs(
-      query(
-        integracoesRef,
-        where("userId", "==", userId),
-        where("platform", "==", "mercadolivre"),
-        where("accountId", "==", accountId)
-      )
-    );
+    const integracoesRef = db.collection("integracoes");
+    const snapIntegracao = await integracoesRef
+      .where("userId", "==", userId)
+      .where("platform", "==", "mercadolivre")
+      .where("accountId", "==", accountId)
+      .get();
 
     const integracaoData = {
       userId,
@@ -116,9 +115,9 @@ export async function GET(request: Request) {
     let integrationId: string;
     if (!snapIntegracao.empty) {
       integrationId = snapIntegracao.docs[0].id;
-      await setDoc(doc(db, "integracoes", integrationId), integracaoData, { merge: true });
+      await integracoesRef.doc(integrationId).set(integracaoData, { merge: true });
     } else {
-      const docRef = await addDoc(integracoesRef, { ...integracaoData, createdAt: Date.now() });
+      const docRef = await integracoesRef.add({ ...integracaoData, createdAt: Date.now() });
       integrationId = docRef.id;
     }
 
@@ -141,13 +140,14 @@ export async function GET(request: Request) {
 
     let importados = 0;
     for (const ad of listings) {
-      const estoqueRef = collection(db, "estoque");
-      const snapEstoque = await getDocs(
-        query(estoqueRef, where("userId", "==", userId), where("sku", "==", ad.sku))
-      );
+      const estoqueRef = db.collection("estoque");
+      const snapEstoque = await estoqueRef
+        .where("userId", "==", userId)
+        .where("sku", "==", ad.sku)
+        .get();
 
       if (snapEstoque.empty) {
-        await addDoc(estoqueRef, {
+        await estoqueRef.add({
           userId,
           sku: ad.sku,
           name: ad.title,
@@ -159,15 +159,12 @@ export async function GET(request: Request) {
         });
       }
 
-      const vinculosRef = collection(db, "vinculos");
-      const snapVinculo = await getDocs(
-        query(
-          vinculosRef,
-          where("userId", "==", userId),
-          where("platform", "==", "mercadolivre"),
-          where("adId", "==", ad.adId)
-        )
-      );
+      const vinculosRef = db.collection("vinculos");
+      const snapVinculo = await vinculosRef
+        .where("userId", "==", userId)
+        .where("platform", "==", "mercadolivre")
+        .where("adId", "==", ad.adId)
+        .get();
 
       const vinculoData = {
         userId,
@@ -182,9 +179,9 @@ export async function GET(request: Request) {
       };
 
       if (!snapVinculo.empty) {
-        await setDoc(doc(db, "vinculos", snapVinculo.docs[0].id), vinculoData, { merge: true });
+        await vinculosRef.doc(snapVinculo.docs[0].id).set(vinculoData, { merge: true });
       } else {
-        await addDoc(vinculosRef, { ...vinculoData, createdAt: Date.now() });
+        await vinculosRef.add({ ...vinculoData, createdAt: Date.now() });
       }
       importados++;
     }

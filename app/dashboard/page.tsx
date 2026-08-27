@@ -88,6 +88,46 @@ export default function Dashboard() {
     try { localStorage.setItem("dashboard_chart_type", t); } catch { /* noop */ }
   };
 
+  // Cores predominantes da NexusFi que o usuário pode escolher para os gráficos.
+  const NEXUS_COLORS: { value: string; name: string }[] = [
+    { value: "#0d47a1", name: "Azul escuro" },
+    { value: "#1565c0", name: "Azul" },
+    { value: "#42a5f5", name: "Azul claro" },
+    { value: "#06b6d4", name: "Ciano" },
+    { value: "#10b981", name: "Verde" },
+    { value: "#34d399", name: "Verde claro" },
+    { value: "#f59e0b", name: "Âmbar" },
+    { value: "#ef4444", name: "Vermelho" },
+  ];
+
+  // Cor de cada série do gráfico "Receita vs. Despesas" — persistida no localStorage.
+  // Regra: receita e despesa nunca podem ter a mesma cor.
+  const [chartColors, setChartColors] = useState<{ receita: string; despesa: string }>({
+    receita: "#10b981",
+    despesa: "#ef4444",
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("dashboard_chart_colors");
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as { receita?: string; despesa?: string };
+      if (parsed?.receita && parsed?.despesa && parsed.receita !== parsed.despesa) {
+        setChartColors({ receita: parsed.receita, despesa: parsed.despesa });
+      }
+    } catch { /* ignora localStorage indisponível ou JSON inválido */ }
+  }, []);
+
+  const changeChartColor = (serie: "receita" | "despesa", value: string) => {
+    setChartColors((prev) => {
+      const other = serie === "receita" ? prev.despesa : prev.receita;
+      if (value === other) return prev; // bloqueia cor duplicada entre as séries
+      const next = { ...prev, [serie]: value };
+      try { localStorage.setItem("dashboard_chart_colors", JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
+
   // Firestore Data States
   const [txs, setTxs] = useState<Tx[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
@@ -550,10 +590,10 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--success)" }} /> Receita
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: chartColors.receita }} /> Receita
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--danger)" }} /> Despesa
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: chartColors.despesa }} /> Despesa
                 </div>
                 <button
                   onClick={() => setHideValues(!hideValues)}
@@ -563,6 +603,47 @@ export default function Dashboard() {
                 </button>
               </div>
             </div>
+
+            {/* Seletores de cor das séries — cores da NexusFi, sem permitir cor repetida */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-6 mb-4">
+              {([
+                { serie: "receita" as const, label: "Cor receita" },
+                { serie: "despesa" as const, label: "Cor despesa" },
+              ]).map(({ serie, label }) => {
+                const selected = chartColors[serie];
+                const taken = serie === "receita" ? chartColors.despesa : chartColors.receita;
+                return (
+                  <div key={serie} className="flex items-center gap-2">
+                    <span className="text-xs font-medium shrink-0" style={{ color: "var(--db-text-2)" }}>{label}</span>
+                    <div className="flex items-center gap-1.5">
+                      {NEXUS_COLORS.map((c) => {
+                        const isSelected = selected === c.value;
+                        const isTaken = taken === c.value;
+                        return (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => changeChartColor(serie, c.value)}
+                            disabled={isTaken}
+                            title={isTaken ? `${c.name} — já usada na outra série` : c.name}
+                            aria-label={`${label}: ${c.name}`}
+                            aria-pressed={isSelected}
+                            className="w-5 h-5 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-20"
+                            style={{
+                              background: c.value,
+                              outline: isSelected ? "2px solid var(--db-text)" : "1px solid var(--db-border)",
+                              outlineOffset: "1px",
+                              transform: isSelected ? "scale(1.15)" : "scale(1)",
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             {chartType === "pie" ? (
               <div className="flex justify-center items-center" style={{ height: 160 }}>
                 {(() => {
@@ -594,8 +675,8 @@ export default function Dashboard() {
                   };
                   return (
                     <svg width="180" height="180" viewBox="0 0 180 180">
-                      {slice(0, revFrac, "var(--success)", "rev")}
-                      {slice(revFrac, 1, "var(--danger)", "exp")}
+                      {slice(0, revFrac, chartColors.receita, "rev")}
+                      {slice(revFrac, 1, chartColors.despesa, "exp")}
                     </svg>
                   );
                 })()}
@@ -617,10 +698,10 @@ export default function Dashboard() {
                     const pts = (arr: number[]) => arr.map((v, i) => `${px(i)},${py(v)}`).join(" ");
                     return (
                       <>
-                        <polyline className="bar-rev-anim" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
-                        <polyline className="bar-exp-anim" fill="none" stroke="var(--danger)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
-                        {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r="2.5" fill="var(--success)" />)}
-                        {chartData.expenses.map((v, i) => <circle key={`e${i}`} cx={px(i)} cy={py(v)} r="2.5" fill="var(--danger)" />)}
+                        <polyline className="bar-rev-anim" fill="none" stroke={chartColors.receita} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
+                        <polyline className="bar-exp-anim" fill="none" stroke={chartColors.despesa} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
+                        {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r="2.5" fill={chartColors.receita} />)}
+                        {chartData.expenses.map((v, i) => <circle key={`e${i}`} cx={px(i)} cy={py(v)} r="2.5" fill={chartColors.despesa} />)}
                         {months.map((m, i) => (
                           <text key={m} x={px(i)} y={190} fontSize="9" fill="var(--db-text-3)" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
                         ))}
@@ -634,8 +715,8 @@ export default function Dashboard() {
                     const bw = 22, gap = 44, x = 48 + i * gap;
                     return (
                       <g key={m}>
-                        <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60}ms` }} />
-                        <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60 + 30}ms` }} />
+                        <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60}ms`, fill: chartColors.receita }} />
+                        <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60 + 30}ms`, fill: chartColors.despesa }} />
                         <text x={x + bw} y={190} fontSize="9" fill="var(--db-text-3)" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
                       </g>
                     );
@@ -645,8 +726,8 @@ export default function Dashboard() {
             )}
             <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
               {[
-                { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color:"var(--success)" },
-                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--danger)" },
+                { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color: chartColors.receita },
+                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color: chartColors.despesa },
                 { label:"Saldo acumulado", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)), color:"#34d399" },
               ].map((s) => (
                 <div key={s.label}>

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
   isMockToken,
   getValidAccessToken,
@@ -36,15 +37,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { getFirebase } = await import("@/lib/firebase");
-    const { db } = await getFirebase();
-    const { collection, getDocs, query, where, doc, updateDoc, addDoc, setDoc } = await import("firebase/firestore");
+    const db = await getAdminDb();
 
-    const integracoesRef = collection(db, "integracoes");
-    const qIntegracoes = platform
-      ? query(integracoesRef, where("userId", "==", userId), where("platform", "==", platform))
-      : query(integracoesRef, where("userId", "==", userId));
-    const snapIntegracoes = await getDocs(qIntegracoes);
+    const integracoesRef = db.collection("integracoes");
+    const snapIntegracoes = platform
+      ? await integracoesRef.where("userId", "==", userId).where("platform", "==", platform).get()
+      : await integracoesRef.where("userId", "==", userId).get();
 
     if (snapIntegracoes.empty) {
       return NextResponse.json({ success: true, message: "Nenhuma integração encontrada para sincronizar." });
@@ -58,21 +56,21 @@ export async function POST(request: Request) {
 
       // ── Modo simulado: só espelha o estoque central nos vínculos ──────────
       if (isMockToken(integracao.accessToken)) {
-        const snapVinculos = await getDocs(
-          query(
-            collection(db, "vinculos"),
-            where("userId", "==", userId),
-            where("platform", "==", integracao.platform)
-          )
-        );
+        const snapVinculos = await db
+          .collection("vinculos")
+          .where("userId", "==", userId)
+          .where("platform", "==", integracao.platform)
+          .get();
         for (const dv of snapVinculos.docs) {
           const vinculo = dv.data();
-          const snapEstoque = await getDocs(
-            query(collection(db, "estoque"), where("userId", "==", userId), where("sku", "==", vinculo.sku))
-          );
+          const snapEstoque = await db
+            .collection("estoque")
+            .where("userId", "==", userId)
+            .where("sku", "==", vinculo.sku)
+            .get();
           if (!snapEstoque.empty) {
             const e = snapEstoque.docs[0].data();
-            await updateDoc(doc(db, "vinculos", dv.id), {
+            await db.collection("vinculos").doc(dv.id).update({
               quantity: e.quantity,
               price: e.price,
               updatedAt: Date.now(),
@@ -90,16 +88,18 @@ export async function POST(request: Request) {
           const listings = await fetchActiveListings(token, integracao.accountId || "");
 
           for (const ad of listings) {
-            const snapEstoque = await getDocs(
-              query(collection(db, "estoque"), where("userId", "==", userId), where("sku", "==", ad.sku))
-            );
+            const snapEstoque = await db
+              .collection("estoque")
+              .where("userId", "==", userId)
+              .where("sku", "==", ad.sku)
+              .get();
 
             // Fonte da verdade = estoque central (quando o produto já existe aqui).
             let quantidadeFinal = ad.quantity;
             let precoFinal = ad.price;
 
             if (snapEstoque.empty) {
-              await addDoc(collection(db, "estoque"), {
+              await db.collection("estoque").add({
                 userId,
                 sku: ad.sku,
                 name: ad.title,
@@ -124,14 +124,12 @@ export async function POST(request: Request) {
               }
             }
 
-            const snapVinculo = await getDocs(
-              query(
-                collection(db, "vinculos"),
-                where("userId", "==", userId),
-                where("platform", "==", "mercadolivre"),
-                where("adId", "==", ad.adId)
-              )
-            );
+            const snapVinculo = await db
+              .collection("vinculos")
+              .where("userId", "==", userId)
+              .where("platform", "==", "mercadolivre")
+              .where("adId", "==", ad.adId)
+              .get();
 
             const vinculoData = {
               userId,
@@ -146,9 +144,9 @@ export async function POST(request: Request) {
             };
 
             if (!snapVinculo.empty) {
-              await setDoc(doc(db, "vinculos", snapVinculo.docs[0].id), vinculoData, { merge: true });
+              await db.collection("vinculos").doc(snapVinculo.docs[0].id).set(vinculoData, { merge: true });
             } else {
-              await addDoc(collection(db, "vinculos"), { ...vinculoData, createdAt: Date.now() });
+              await db.collection("vinculos").add({ ...vinculoData, createdAt: Date.now() });
             }
             totalSincronizados++;
           }
