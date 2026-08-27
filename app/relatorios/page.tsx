@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  TrendingUp, TrendingDown, DollarSign, CheckCircle, AlertCircle,
-  Calendar, ArrowUpRight, ArrowDownRight, Sparkles, Landmark,
-  FileText, Check, Plus, Search, RefreshCw, Upload, ShieldCheck,
-  ChevronRight, ArrowRight, X, AlertTriangle, Eye, EyeOff, Calculator, BarChart3, PieChart, Activity
+  TrendingUp, DollarSign, Landmark,
+  FileText, Search, RefreshCw, ShieldCheck, Download,
+  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, Calculator, BarChart3, Activity
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
+import type { ReportData } from "@/lib/reportPdf";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -23,14 +23,6 @@ interface Tx {
   note: string;
   createdAt: number;
   reconciled?: boolean;
-}
-
-interface BankStatementItem {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  type: TxType;
 }
 
 // Helper para formatação
@@ -71,9 +63,9 @@ export default function RelatoriosPage() {
   const [precImposto, setPrecImposto] = useState<number | "">("");
   const [precMargem, setPrecMargem] = useState<number | "">("");
 
-  // Estados de conciliação bancária
-  const [statement, setStatement] = useState<BankStatementItem[]>([]);
-  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+  // Fechamento de caixa: qual período está sendo conferido/reaberto agora
+  const [closingBusy, setClosingBusy] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   // Inicialização e Auth
   useEffect(() => {
@@ -288,126 +280,139 @@ export default function RelatoriosPage() {
     };
   }, [filteredTxs, filterPeriod]);
 
-  // Simulação de Extrato Bancário
-  const generateMockStatement = () => {
-    // Cria itens que combinam e outros que não combinam para simular o banco real
-    const mockItems: BankStatementItem[] = [];
+  // Rótulo do período gerencial selecionado (para cabeçalhos e PDF).
+  const periodLabel = useMemo(() => {
+    const now = new Date();
+    const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    return filterPeriod === "ano"
+      ? `Ano de ${now.getFullYear()}`
+      : `${meses[now.getMonth()]} de ${now.getFullYear()}`;
+  }, [filterPeriod]);
 
-    // 1. Matches Perfeitos baseados nas transações não conciliadas existentes
-    const pendingTxs = txs.filter(t => !t.reconciled).slice(0, 3);
-    pendingTxs.forEach((tx, idx) => {
-      mockItems.push({
-        id: `ext-${idx}`,
-        date: tx.date,
-        description: `DEB/CRED AUTO - ${tx.description.toUpperCase()}`,
-        amount: tx.amount,
-        type: tx.type
-      });
+  // ── Fechamento de Caixa por Período ──────────────────────────────────────────
+  // Modelo financeiro de conferência: os lançamentos do período são agrupados
+  // por dia (visão Mensal) ou por mês (visão Anual). O usuário fecha cada
+  // período um a um — "Marcar como conferido" grava reconciled=true em todos os
+  // lançamentos daquele dia/mês; "Reabrir" desfaz. Um período conta como
+  // conferido quando todos os seus lançamentos estão conciliados.
+  const periodClosings = useMemo(() => {
+    const map = new Map<string, { label: string; ids: string[]; count: number; entradas: number; saidas: number; reconciledCount: number }>();
+
+    filteredTxs.forEach(tx => {
+      const key = filterPeriod === "ano" ? tx.date.slice(0, 7) : tx.date;
+      const label = filterPeriod === "ano"
+        ? `${MONTH_LABELS[Number(tx.date.slice(5, 7)) - 1]}/${tx.date.slice(0, 4)}`
+        : `${tx.date.slice(8, 10)}/${tx.date.slice(5, 7)}`;
+      const g = map.get(key) ?? { label, ids: [], count: 0, entradas: 0, saidas: 0, reconciledCount: 0 };
+      g.ids.push(tx.id);
+      g.count++;
+      if (tx.type === "entrada") g.entradas += tx.amount;
+      else g.saidas += tx.amount;
+      if (tx.reconciled) g.reconciledCount++;
+      map.set(key, g);
     });
 
-    // 2. Transação com valor certo mas descrição/data ligeiramente diferente
-    const matchDiferente = txs.find(t => !t.reconciled && !pendingTxs.includes(t));
-    if (matchDiferente) {
-      const d = new Date(matchDiferente.date + "T12:00:00");
-      d.setDate(d.getDate() - 1); // Dia anterior
-      mockItems.push({
-        id: "ext-diff",
-        date: d.toISOString().split("T")[0],
-        description: `TRANSF BANC - ${matchDiferente.category.toUpperCase()}`,
-        amount: matchDiferente.amount,
-        type: matchDiferente.type
-      });
-    }
+    const rows = [...map.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, g]) => ({
+        key,
+        label: g.label,
+        ids: g.ids,
+        count: g.count,
+        entradas: g.entradas,
+        saidas: g.saidas,
+        saldo: g.entradas - g.saidas,
+        done: g.count > 0 && g.reconciledCount === g.count,
+      }));
 
-    // 3. Transação que está no extrato bancário, mas NÃO está no fluxo de caixa (Novo Pix)
-    mockItems.push({
-      id: "ext-new-1",
-      date: new Date().toISOString().split("T")[0],
-      description: "RECEBIMENTO PIX - MARCOS DE SOUZA",
-      amount: 1500.00,
-      type: "entrada"
-    });
+    const doneCount = rows.filter(r => r.done).length;
+    return { rows, doneCount, total: rows.length };
+  }, [filteredTxs, filterPeriod]);
 
-    mockItems.push({
-      id: "ext-new-2",
-      date: new Date().toISOString().split("T")[0],
-      description: "TARIFA BANCARIA CESTA FACIL",
-      amount: 49.90,
-      type: "saida"
-    });
-
-    setStatement(mockItems);
-  };
-
-  // Conciliar transação
-  const handleReconcile = async (statementItem: BankStatementItem, matchedTxId: string) => {
-    if (!uid) return;
-    setReconcilingId(matchedTxId);
-
+  // Fecha ou reabre um período — grava em lote em todos os lançamentos dele.
+  const handleToggleClosing = async (row: { key: string; ids: string[]; done: boolean }) => {
+    if (!uid || closingBusy) return;
+    setClosingBusy(row.key);
     try {
       const { getFirebase } = await import("@/lib/firebase");
-      const { doc, updateDoc } = await import("firebase/firestore");
+      const { doc, writeBatch } = await import("firebase/firestore");
       const { db } = await getFirebase();
-
-      await updateDoc(doc(db, "users", uid, "cashflow", matchedTxId), {
-        reconciled: true,
-        reconciledAt: Date.now(),
-        bankTransactionDesc: statementItem.description
+      const batch = writeBatch(db);
+      const next = !row.done;
+      row.ids.forEach(id => {
+        batch.update(doc(db, "users", uid, "cashflow", id), {
+          reconciled: next,
+          reconciledAt: next ? Date.now() : null,
+        });
       });
-
-      // Remover o item conciliado da lista visual de extrato
-      setStatement(prev => prev.filter(item => item.id !== statementItem.id));
+      await batch.commit();
     } catch (err) {
-      console.error("Erro ao conciliar transação:", err);
+      console.error("Erro ao fechar período:", err);
     } finally {
-      setReconcilingId(null);
+      setClosingBusy(null);
     }
   };
 
-  // Registrar nova transação vinda do extrato bancário
-  const handleRegisterFromStatement = async (item: BankStatementItem) => {
-    if (!uid) return;
+  // Exporta a aba ativa em PDF.
+  const handleExportPdf = async () => {
+    if (exporting) return;
+    setExporting(true);
     try {
-      const { getFirebase } = await import("@/lib/firebase");
-      const { collection, addDoc } = await import("firebase/firestore");
-      const { db } = await getFirebase();
-
-      const defaultCategory = item.type === "entrada" ? "Vendas" : "Outros gastos";
-
-      await addDoc(collection(db, "users", uid, "cashflow"), {
-        type: item.type,
-        description: item.description,
-        category: defaultCategory,
-        amount: item.amount,
-        date: item.date,
-        note: "Registrado via Conciliação Bancária",
-        createdAt: Date.now(),
-        reconciled: true
-      });
-
-      // Remove do extrato pendente
-      setStatement(prev => prev.filter(i => i.id !== item.id));
+      const { exportReportPdf } = await import("@/lib/reportPdf");
+      const base = {
+        tab: activeTab,
+        periodLabel,
+        generatedAt: new Date(),
+        userLabel: user?.email ?? undefined,
+      };
+      let payload: ReportData;
+      if (activeTab === "fluxo") {
+        payload = {
+          ...base,
+          metrics,
+          closings: periodClosings.rows.map(r => ({
+            label: r.label, count: r.count, entradas: r.entradas, saidas: r.saidas, saldo: r.saldo, done: r.done,
+          })),
+          txs: filteredTxs.map(t => ({
+            date: t.date, description: t.description, category: t.category, type: t.type, amount: t.amount, reconciled: t.reconciled,
+          })),
+        };
+      } else if (activeTab === "faturamento") {
+        payload = {
+          ...base,
+          faturamento: {
+            granularity: faturamentoLedger.granularity,
+            rows: faturamentoLedger.rows,
+            total: faturamentoLedger.total,
+            average: faturamentoLedger.average,
+            countLabel: faturamentoLedger.countLabel,
+            ticketMedio: dreData.receita / (filteredTxs.filter(t => t.type === "entrada").length || 1),
+            projection: faturamentoLedger.projection.remainingUnits > 0 ? {
+              remainingLabel: faturamentoLedger.projection.remainingLabel,
+              projectedRemaining: faturamentoLedger.projection.projectedRemaining,
+              projectedTotal: faturamentoLedger.projection.projectedTotal,
+            } : undefined,
+          },
+        };
+      } else if (activeTab === "dre") {
+        payload = { ...base, dre: dreData };
+      } else {
+        payload = {
+          ...base,
+          prec: {
+            custo: Number(precCusto) || 0,
+            imposto: Number(precImposto) || 0,
+            margem: Number(precMargem) || 0,
+            sugestao: precSugestao,
+          },
+        };
+      }
+      await exportReportPdf(payload);
     } catch (err) {
-      console.error("Erro ao criar transação a partir do extrato:", err);
+      console.error("Erro ao exportar PDF:", err);
+    } finally {
+      setExporting(false);
     }
-  };
-
-  // Algoritmo de correspondência para sugestão inteligente
-  const getMatchSuggestions = (item: BankStatementItem) => {
-    return txs.filter(tx => {
-      if (tx.reconciled) return false;
-      if (tx.type !== item.type) return false;
-
-      // Correspondência perfeita de valor
-      const valueMatch = Math.abs(tx.amount - item.amount) < 0.01;
-      
-      // Proximidade de datas (máximo 4 dias de diferença)
-      const t1 = new Date(tx.date + "T12:00:00").getTime();
-      const t2 = new Date(item.date + "T12:00:00").getTime();
-      const dateDiffDays = Math.abs(t1 - t2) / (1000 * 60 * 60 * 24);
-
-      return valueMatch && dateDiffDays <= 4;
-    });
   };
 
   // Renderização do gráfico SVG de colunas
@@ -459,7 +464,7 @@ export default function RelatoriosPage() {
               Relatórios & Conciliação
             </h1>
             <p className="text-xs mt-1" style={{ color: "var(--db-text-2)" }}>
-              Monitore a saúde do seu fluxo de caixa e verifique a conformidade com seus extratos.
+              Monitore a saúde do seu fluxo de caixa e feche cada período conferindo os lançamentos.
             </p>
           </div>
 
@@ -479,13 +484,24 @@ export default function RelatoriosPage() {
               ))}
             </div>
 
-            <button 
+            <button
               onClick={() => setHideValues(!hideValues)}
               className="p-2.5 rounded-lg border cursor-pointer hover:bg-opacity-80 transition-colors"
               style={{ borderColor: "var(--db-border)", background: "var(--db-card)", color: "var(--db-text-2)" }}
               title={hideValues ? "Mostrar valores" : "Ocultar valores"}
             >
               {hideValues ? <Eye size={15} /> : <EyeOff size={15} />}
+            </button>
+
+            <button
+              onClick={handleExportPdf}
+              disabled={exporting}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors disabled:opacity-60"
+              style={{ background: "var(--primary)", color: "#fff" }}
+              title="Exportar a aba ativa em PDF"
+            >
+              {exporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+              Exportar PDF
             </button>
           </div>
         </div>
@@ -564,7 +580,7 @@ export default function RelatoriosPage() {
           {/* Card Conciliação */}
           <div className="cf-card p-5 space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Conciliação Bancária</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Caixa Conferido</span>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
                 <ShieldCheck size={16} />
               </div>
@@ -659,113 +675,103 @@ export default function RelatoriosPage() {
           </div>
         </div>
 
-        {/* Seção de Conciliação Bancária */}
-        <div className="cf-card p-6 space-y-6">
+        {/* Fechamento de Caixa por Período */}
+        <div className="cf-card p-6 space-y-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <Landmark className="text-primary" size={20} />
                 <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>
-                  Conciliação Bancária Ativa
+                  Fechamento de Caixa por {filterPeriod === "ano" ? "Mês" : "Dia"}
                 </h2>
               </div>
               <p className="text-xs mt-1" style={{ color: "var(--db-text-2)" }}>
-                Compare extratos OFX/CSV/Simulados com o seu fluxo de caixa interno.
+                Confira os lançamentos do fluxo de caixa {filterPeriod === "ano" ? "mês a mês" : "dia a dia"} e feche cada período — {periodLabel}.
               </p>
             </div>
-            
-            <button
-              onClick={generateMockStatement}
-              className="btn-primary px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer"
-            >
-              <Upload size={14} /> Importar / Simular Extrato Bancário
-            </button>
+
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
+                {periodClosings.doneCount}/{periodClosings.total}
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
+                Períodos conferidos
+              </p>
+            </div>
           </div>
 
-          {statement.length === 0 ? (
+          {periodClosings.total > 0 && (
+            <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-emerald-600 h-full transition-all duration-500"
+                style={{ width: `${(periodClosings.doneCount / periodClosings.total) * 100}%` }} />
+            </div>
+          )}
+
+          {periodClosings.rows.length === 0 ? (
             <div className="border border-dashed rounded-2xl p-10 text-center space-y-3" style={{ borderColor: "var(--db-border)" }}>
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
                 <Landmark size={22} />
               </div>
-              <h4 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Sem extrato importado</h4>
+              <h4 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum lançamento no período</h4>
               <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
-                Importe ou simule um extrato bancário para iniciar a correspondência automática de seus lançamentos.
+                Assim que houver lançamentos no fluxo de caixa em {periodLabel}, eles aparecem aqui agrupados para conferência.
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-xs uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Transações do Extrato a Conciliar</h3>
-              
-              <div className="space-y-3">
-                {statement.map((item) => {
-                  const suggestions = getMatchSuggestions(item);
-                  return (
-                    <div key={item.id} className="border rounded-xl p-4 transition-all hover:shadow-sm" style={{ borderColor: "var(--db-border)", background: "var(--db-card-alt)" }}>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                        
-                        {/* Detalhes do extrato bancário */}
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            Extrato Bancário
-                          </span>
-                          <p className="text-xs font-extrabold truncate" style={{ color: "var(--db-text)" }}>{item.description}</p>
-                          <p className="text-[10px]" style={{ color: "var(--db-text-2)" }}>Data do extrato: {item.date}</p>
-                          <p className="text-xs font-mono font-bold" style={{ color: item.type === "entrada" ? "var(--success)" : "var(--danger)" }}>
-                            {item.type === "entrada" ? "+" : "-"}{toBRL(item.amount)}
-                          </p>
-                        </div>
-
-                        {/* Status de Correspondência */}
-                        <div className="md:col-span-2 space-y-3">
-                          {suggestions.length > 0 ? (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
-                                <AlertCircle size={14} />
-                                <span>{suggestions.length} correspondência(s) encontrada(s):</span>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                {suggestions.map((matchedTx) => (
-                                  <div key={matchedTx.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 rounded-lg border gap-3" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
-                                    <div className="text-xs">
-                                      <p className="font-semibold" style={{ color: "var(--db-text)" }}>{matchedTx.description}</p>
-                                      <p className="text-[10px]" style={{ color: "var(--db-text-2)" }}>Categoria: {matchedTx.category} · Data Interna: {matchedTx.date}</p>
-                                    </div>
-                                    <button
-                                      onClick={() => handleReconcile(item, matchedTx.id)}
-                                      disabled={reconcilingId === matchedTx.id}
-                                      className="btn-success px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer shrink-0"
-                                    >
-                                      {reconcilingId === matchedTx.id ? "Aguarde..." : <><Check size={11} /> Confirmar Conciliação</>}
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl">
-                              <div className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
-                                <AlertTriangle size={15} className="shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="font-semibold">Nenhuma transação interna correspondente</p>
-                                  <p className="text-[10px] opacity-80">Este valor não foi cadastrado no fluxo de caixa.</p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleRegisterFromStatement(item)}
-                                className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shrink-0 transition-colors"
-                              >
-                                <Plus size={11} /> Adicionar ao Fluxo de Caixa
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
+                    <th className="py-2.5 font-bold">{filterPeriod === "ano" ? "Mês" : "Dia"}</th>
+                    <th className="py-2.5 font-bold text-center">Lançtos</th>
+                    <th className="py-2.5 font-bold text-right">Entradas</th>
+                    <th className="py-2.5 font-bold text-right">Saídas</th>
+                    <th className="py-2.5 font-bold text-right">Saldo</th>
+                    <th className="py-2.5 font-bold text-center">Status</th>
+                    <th className="py-2.5 font-bold text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: "var(--db-text)" }}>
+                  {periodClosings.rows.map((row) => (
+                    <tr key={row.key} className="border-b" style={{ borderColor: "var(--db-border)" }}>
+                      <td className="py-3 font-semibold">{row.label}</td>
+                      <td className="py-3 text-center">{row.count}</td>
+                      <td className="py-3 text-right font-mono text-emerald-500">
+                        {hideValues ? "•••" : toBRL(row.entradas)}
+                      </td>
+                      <td className="py-3 text-right font-mono text-rose-500">
+                        {hideValues ? "•••" : toBRL(row.saidas)}
+                      </td>
+                      <td className="py-3 text-right font-mono font-bold" style={{ color: row.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
+                        {hideValues ? "•••" : toBRL(row.saldo)}
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          row.done
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                        }`}>
+                          {row.done ? "Conferido" : "Pendente"}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={() => handleToggleClosing(row)}
+                          disabled={closingBusy === row.key}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-60"
+                          style={row.done
+                            ? { background: "var(--cf-input)", color: "var(--db-text-2)" }
+                            : { background: "var(--success)", color: "#fff" }}
+                        >
+                          {closingBusy === row.key
+                            ? <RefreshCw size={11} className="animate-spin" />
+                            : row.done ? <><Unlock size={11} /> Reabrir</> : <><Lock size={11} /> Conferir</>}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

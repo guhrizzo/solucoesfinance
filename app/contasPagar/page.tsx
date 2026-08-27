@@ -17,6 +17,7 @@ import PaymentMethodSelector, { PaymentMethodBadge } from "../components/Payment
 import PinModal from "../components/PinModal";
 import type { PaymentMethod } from "../types/payment";
 import { verifyPin, loadPinHash, getPinLockStatus } from "../hooks/usePin";
+import { syncBillCashflow } from "@/lib/billTaxSync";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -68,15 +69,8 @@ const STATUS_META: Record<BillStatus, { label: string; bg: string; color: string
     agendado: { label: "Agendado", bg: "#dbeafe", color: "#1d4ed8", border: "#bfdbfe" },
 };
 
-// Mapeamento de categoria → cashflow
-const CAT_TO_CASHFLOW: Record<string, string> = {
-    "Aluguel": "Aluguel",
-    "Fornecedores": "Fornecedores",
-    "Folha": "Folha de pagamento",
-    "Impostos": "Impostos",
-    "Serviços": "TI / Software",
-    "Outros": "Outros gastos",
-};
+// Mapeamento de categoria → cashflow vive em lib/billTaxSync.ts (CAT_TO_CASHFLOW),
+// compartilhado com a sincronização do Fluxo de Caixa.
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1054,19 +1048,36 @@ export default function ContasPagarPage() {
         const clean = Object.fromEntries(
             Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
         );
+        let billId: string;
         if (editing) {
             await updateDoc(doc(db, "users", uid, "bills", editing.id), clean as any);
+            billId = editing.id;
             showToast("Conta atualizada!");
         } else {
-            await addDoc(collection(db, "users", uid, "bills"), { ...clean, createdAt: Date.now() });
+            const ref = await addDoc(collection(db, "users", uid, "bills"), { ...clean, createdAt: Date.now() });
+            billId = ref.id;
             showToast("Conta criada!");
         }
+
+        // Reflete no Fluxo de Caixa: com status "pago" cria/atualiza a saída
+        // espelho; com qualquer outro status, remove se existir.
+        await syncBillCashflow(db, uid, {
+            id: billId,
+            title: data.title,
+            amount: data.amount,
+            dueDate: data.dueDate,
+            category: data.category,
+            status: data.status,
+            recurrence: data.recurrence,
+            paidAt: data.paidAt,
+            paidPaymentMethod: data.paidPaymentMethod as string | undefined,
+        });
     }
 
     // ── Marcar como pago + lançar no cashflow ──────────────────────────────────
     async function handlePay(bill: Bill, paidAt: string, method: PaymentMethod) {
         if (!uid) return;
-        const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
+        const [{ getFirebase }, { doc, updateDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
@@ -1074,16 +1085,11 @@ export default function ContasPagarPage() {
 
         await updateDoc(doc(db, "users", uid, "bills", bill.id), { status: "pago", paidAt, paidPaymentMethod: method });
 
-        await addDoc(collection(db, "users", uid, "cashflow"), {
-            type: "saida",
-            description: bill.title,
-            category: CAT_TO_CASHFLOW[bill.category] ?? "Outros gastos",
-            amount: bill.amount,
-            date: paidAt,
-            paymentMethod: method,
-            note: `Conta a pagar · ${RECURRENCE_LABEL[bill.recurrence]}`,
-            sourceBillId: bill.id,
-            createdAt: Date.now(),
+        await syncBillCashflow(db, uid, {
+            ...bill,
+            status: "pago",
+            paidAt,
+            paidPaymentMethod: method,
         });
 
         showToast("Pago! Lançado no Fluxo de Caixa ✓");
@@ -1093,7 +1099,7 @@ export default function ContasPagarPage() {
     async function handleUpdateCategory(billId: string, oldCategory: string, newCategory: string, bill: Bill) {
         if (!uid || oldCategory === newCategory) return;
         
-        const [{ getFirebase }, { doc, updateDoc, collection, query, where, getDocs }] = await Promise.all([
+        const [{ getFirebase }, { doc, updateDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
@@ -1102,15 +1108,11 @@ export default function ContasPagarPage() {
         // Atualiza a categoria na conta
         await updateDoc(doc(db, "users", uid, "bills", billId), { category: newCategory });
 
-        // Se a conta já tem um registro no cashflow (status pago), atualiza lá também
-        if (bill.status === "pago" && bill.cashflowId) {
-            await updateDoc(doc(db, "users", uid, "cashflow", bill.cashflowId), {
-                category: CAT_TO_CASHFLOW[newCategory] ?? "Outros gastos",
-            });
-            showToast("Categoria atualizada em contas e fluxo de caixa");
-        } else {
-            showToast("Categoria atualizada!");
-        }
+        // Reflete a nova categoria no Fluxo de Caixa (só age se a conta está paga).
+        await syncBillCashflow(db, uid, { ...bill, category: newCategory });
+        showToast(bill.status === "pago"
+            ? "Categoria atualizada em contas e fluxo de caixa"
+            : "Categoria atualizada!");
     }
 
     // ── Excluir conta ──────────────────────────────────────────────────────────
@@ -1136,6 +1138,8 @@ export default function ContasPagarPage() {
                     import("firebase/firestore"),
                 ]);
                 const { db } = await getFirebase();
+                // Remove a saída espelho no Fluxo de Caixa (se a conta estava paga).
+                await syncBillCashflow(db, uid, { id: confirmId, title: "", amount: 0, dueDate: "", category: "", status: "removido" });
                 await deleteDoc(doc(db, "users", uid, "bills", confirmId));
                 setConfirmId(null);
                 showToast("Conta removida.");

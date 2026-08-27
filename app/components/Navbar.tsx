@@ -234,7 +234,20 @@ const css = `
     box-shadow: var(--nav-shadow);
     display: flex; justify-content: space-around; align-items: center;
     padding: 6px 8px 10px;
+    overflow-x: auto;
   }
+
+  /* Barra superior mobile — usada no layout vertical (sidebar), onde não
+     existe a .nxfi-nav pra abrigar o botão de menu. Some no desktop. */
+  .nxfi-mobile-topbar {
+    display: none;
+    position: sticky; top: 0; z-index: 45;
+    align-items: center; gap: 12px;
+    height: 56px; padding: 0 16px; flex-shrink: 0;
+    background: var(--nav-bg); border-bottom: 1px solid var(--nav-border);
+    box-shadow: var(--nav-shadow);
+  }
+  .nxfi-mobile-topbar .nxfi-icon-btn { flex-shrink: 0; }
   .nxfi-mobile-link { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 12px; border-radius: 12px; text-decoration: none; transition: all 0.15s; color: var(--nav-text-3); font-size: 0.65rem; font-weight: 500; position: relative; }
   .nxfi-mobile-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
   .nxfi-mobile-link.active { color: var(--brand-500); }
@@ -306,10 +319,12 @@ const css = `
     .nxfi-avatar-info { display: none; }
     .nxfi-period-label { display: none; }
     .nxfi-sidebar-vertical { display: none; }
+    .nxfi-mobile-topbar { display: flex; }
   }
   @media (min-width: 1025px) {
     .nxfi-hamburger { display: none; }
     .nxfi-mobile-nav { display: none; }
+    .nxfi-mobile-topbar { display: none; }
   }
 `;
 
@@ -472,10 +487,99 @@ export default function Navbar({
     </>
   );
 
+  // ── Navegação mobile/tablet compartilhada (drawer + barra inferior) ──
+  // Usada tanto no layout horizontal quanto no vertical: em ≤1024px a
+  // sidebar (horizontal ou vertical) some e essa navegação assume.
+  const mobileDrawerJSX = mobileOpen && (
+    <>
+      <div className="nxfi-sidebar-overlay" onClick={() => setMobileOpen(false)} />
+      <aside className="nxfi-sidebar">
+        <div className="nxfi-sidebar-logo">
+          <div className="nxfi-sidebar-logo-inner">
+            <img src="/nexus_fi_logo_branco.png" alt="NexusFi" style={{ height: 30, width: "auto" }} />
+          </div>
+          <button className="nxfi-sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Fechar menu">
+            <X size={15} />
+          </button>
+        </div>
+        <nav className="nxfi-sidebar-nav">
+          <div className="nxfi-sidebar-section">Menu principal</div>
+          {navItemsWithBadges.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className={`nxfi-sidebar-link ${activePath === item.href ? "active" : ""}`}
+              onClick={() => setMobileOpen(false)}
+            >
+              <item.icon size={16} />
+              {item.label}
+              {activePath === item.href && <span className="dot" />}
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+              )}
+            </a>
+          ))}
+        </nav>
+        <div className="nxfi-sidebar-footer">
+          <button onClick={toggleLayout} className="nxfi-sidebar-footer-btn">
+            <PanelLeft size={16} />
+            <span>{layout === "vertical" ? "Layout Horizontal" : "Layout Vertical"}</span>
+          </button>
+          <button className="nxfi-sidebar-footer-btn" onClick={toggle}>
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+            <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
+          </button>
+          <button className="nxfi-sidebar-footer-btn">
+            <Settings size={16} />
+            Configurações
+          </button>
+          <button className="nxfi-sidebar-footer-btn danger" onClick={handleLogout}>
+            <LogOut size={16} />
+            Sair da conta
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+
+  const mobileBottomNavJSX = (
+    <nav className="nxfi-mobile-nav">
+      {navItemsWithBadges.map((item) => (
+        <a key={item.label} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
+          <div style={{ position: "relative" }}>
+            <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />
+            {item.badge !== undefined && item.badge > 0 && (
+              <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+            )}
+          </div>
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  );
+
   if (layout === "vertical") {
     return (
       <>
         {createPortal(sidebarJSX, document.body)}
+
+        {/* ≤1024px: a sidebar vertical fica oculta, então mostra a barra
+            superior com o botão de menu + o drawer + a barra inferior. */}
+        <div className="nxfi-mobile-topbar">
+          <button className="nxfi-icon-btn" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
+            <Menu size={18} />
+          </button>
+          <a href="/dashboard" className="nxfi-logo">
+            <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 26, width: "auto" }} />
+          </a>
+          <button onClick={toggle} className="nxfi-icon-btn" style={{ marginLeft: "auto" }} aria-label="Alternar tema">
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        </div>
+
+        {mobileDrawerJSX}
+        {mobileBottomNavJSX}
+
         <ToastContainer toasts={toasts} onRemove={removeToast} />
       </>
     );
@@ -596,67 +700,8 @@ export default function Navbar({
         </div>
       </nav>
 
-      {mobileOpen && (
-        <>
-          <div className="nxfi-sidebar-overlay" onClick={() => setMobileOpen(false)} />
-          <aside className="nxfi-sidebar">
-            <div className="nxfi-sidebar-logo">
-              <div className="nxfi-sidebar-logo-inner">
-                <img src="/nexus_fi_logo_branco.png" alt="NexusFi" style={{ height: 30, width: "auto" }} />
-              </div>
-              <button className="nxfi-sidebar-close" onClick={() => setMobileOpen(false)}>
-                <X size={15} />
-              </button>
-            </div>
-            <nav className="nxfi-sidebar-nav">
-              <div className="nxfi-sidebar-section">Menu principal</div>
-              {navItemsWithBadges.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className={`nxfi-sidebar-link ${activePath === item.href ? "active" : ""}`}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <item.icon size={16} />
-                  {item.label}
-                  {activePath === item.href && <span className="dot" />}
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
-                  )}
-                </a>
-              ))}
-            </nav>
-            <div className="nxfi-sidebar-footer">
-              <button className="nxfi-sidebar-footer-btn" onClick={toggle}>
-                {dark ? <Sun size={16} /> : <Moon size={16} />}
-                <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
-              </button>
-              <button className="nxfi-sidebar-footer-btn">
-                <Settings size={16} />
-                Configurações
-              </button>
-              <button className="nxfi-sidebar-footer-btn danger" onClick={handleLogout}>
-                <LogOut size={16} />
-                Sair da conta
-              </button>
-            </div>
-          </aside>
-        </>
-      )}
-
-      <nav className="nxfi-mobile-nav">
-        {navItemsWithBadges.map((item) => (
-          <a key={item.label} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
-            <div style={{ position: "relative" }}>
-              <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />
-              {item.badge !== undefined && item.badge > 0 && (
-                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
-              )}
-            </div>
-            {item.label}
-          </a>
-        ))}
-      </nav>
+      {mobileDrawerJSX}
+      {mobileBottomNavJSX}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>

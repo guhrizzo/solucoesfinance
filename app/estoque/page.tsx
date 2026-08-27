@@ -222,9 +222,20 @@ export default function EstoquePage() {
     const url = new URL(window.location.href);
     const integration = url.searchParams.get("integration");
     const message = url.searchParams.get("message");
+    const imported = url.searchParams.get("imported");
+    const warning = url.searchParams.get("warning");
 
     if (integration === "ml_success") {
-      showToast("Conta do Mercado Livre integrada e anúncios importados!", "success");
+      if (warning === "limited_permissions") {
+        showToast("Conta do Mercado Livre conectada, mas sem permissão para importar anúncios automaticamente. Vincule manualmente ou revise os escopos da aplicação.", "info");
+      } else {
+        showToast(
+          imported && imported !== "0"
+            ? `Mercado Livre integrado! ${imported} anúncio(s) importado(s).`
+            : "Conta do Mercado Livre integrada com sucesso!",
+          "success"
+        );
+      }
       cleanUrlParams();
     } else if (integration === "shopee_success") {
       showToast("Conta da Shopee integrada e anúncios importados!", "success");

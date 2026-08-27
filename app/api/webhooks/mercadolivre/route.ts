@@ -1,197 +1,200 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
+import {
+  isMockToken,
+  getValidAccessToken,
+  fetchOrder,
+  updateListingQuantity,
+  verifyWebhookSignature,
+  type MlIntegracao,
+} from "@/lib/mercadolivre";
 
-// Função para atualizar estoque nas plataformas vinculadas
-async function sincronizarEstoquePlataformas(db: any, userId: string, sku: string, novaQuantidade: number, platformOrigin: string, adIdOrigin: string) {
-  const { collection, getDocs, query, where, doc, updateDoc } = await import("firebase/firestore");
-  
-  const vinculosRef = collection(db, "vinculos");
-  const qVinculos = query(vinculosRef, where("userId", "==", userId), where("sku", "==", sku));
-  const snapVinculos = await getDocs(qVinculos);
+// Propaga a nova quantidade do SKU para todos os outros canais vinculados
+// (atualiza o registro no Firestore e, se for integração real, chama a API).
+async function propagarEstoque(
+  db: any,
+  userId: string,
+  sku: string,
+  novaQuantidade: number,
+  origem: { platform: string; adId: string }
+) {
+  const { collection, getDocs, query, where, doc, updateDoc, getDoc } = await import("firebase/firestore");
 
-  for (const docVinculo of snapVinculos.docs) {
-    const vinculo = docVinculo.data();
-    
-    // Não precisa atualizar a própria plataforma/anúncio de onde veio a venda
-    if (vinculo.platform === platformOrigin && vinculo.adId === adIdOrigin) {
-      // Mas atualizamos a quantidade localmente registrada no vínculo para manter coerência
-      await updateDoc(doc(db, "vinculos", docVinculo.id), {
-        quantity: novaQuantidade,
-        updatedAt: Date.now()
-      });
-      continue;
-    }
+  const snapVinculos = await getDocs(
+    query(collection(db, "vinculos"), where("userId", "==", userId), where("sku", "==", sku))
+  );
 
-    console.log(`[Sincronização] SKU ${sku}: Sincronizando novo estoque (${novaQuantidade}) na plataforma ${vinculo.platform} para o anúncio ${vinculo.adId}`);
+  for (const dv of snapVinculos.docs) {
+    const vinculo = dv.data();
 
-    // Atualiza a quantidade registrada no vínculo
-    await updateDoc(doc(db, "vinculos", docVinculo.id), {
-      quantity: novaQuantidade,
-      updatedAt: Date.now()
-    });
+    // Espelha a quantidade em todo vínculo do SKU (inclusive o de origem).
+    await updateDoc(doc(db, "vinculos", dv.id), { quantity: novaQuantidade, updatedAt: Date.now() });
 
-    // Se for modo real, faria a chamada de API correspondente para a plataforma
-    const integracoesRef = collection(db, "integracoes");
-    const qIntegracao = query(
-      integracoesRef,
-      where("userId", "==", userId),
-      where("platform", "==", vinculo.platform),
-      where("id", "==", vinculo.connectionId || "")
-    );
-    const snapIntegracao = await getDocs(qIntegracao);
+    // Não precisa empurrar de volta para o anúncio que originou a venda.
+    if (vinculo.platform === origem.platform && vinculo.adId === origem.adId) continue;
 
-    if (!snapIntegracao.empty) {
-      const integracao = snapIntegracao.docs[0].data();
-      const accessToken = integracao.accessToken;
+    if (vinculo.platform !== "mercadolivre" || !vinculo.connectionId) continue;
 
-      if (vinculo.platform === "mercadolivre" && !accessToken.startsWith("mock_")) {
-        // Chamada real Mercado Livre para atualizar estoque
-        try {
-          await fetch(`https://api.mercadolibre.com/items/${vinculo.adId}`, {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              available_quantity: novaQuantidade
-            })
-          });
-        } catch (err) {
-          console.error(`Erro ao atualizar estoque real ML do anúncio ${vinculo.adId}:`, err);
-        }
-      } else if (vinculo.platform === "shopee" && !accessToken.startsWith("mock_")) {
-        // Chamada real Shopee para atualizar estoque (API v2 /api/v2/product/update_stock)
-        // Requer assinaturas, etc. Implementação real seria aqui.
-      }
+    try {
+      const intSnap = await getDoc(doc(db, "integracoes", vinculo.connectionId));
+      if (!intSnap.exists()) continue;
+      const integracao = { id: intSnap.id, ...intSnap.data() } as MlIntegracao;
+      if (isMockToken(integracao.accessToken)) continue;
+
+      const token = await getValidAccessToken(db, integracao);
+      await updateListingQuantity(token, vinculo.adId, novaQuantidade);
+      console.log(`[ML] estoque do anúncio ${vinculo.adId} atualizado para ${novaQuantidade}`);
+    } catch (err) {
+      console.error(`[ML] falha ao propagar estoque para ${vinculo.adId}:`, err);
     }
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    console.log("[Webhook Mercado Livre] Recebido evento:", body);
+// Baixa `quantitySold` do estoque central do SKU e propaga. Retorna a nova qtd.
+async function baixarEstoque(
+  db: any,
+  userId: string,
+  sku: string,
+  quantitySold: number,
+  origem: { platform: string; adId: string }
+): Promise<number | null> {
+  const { collection, getDocs, query, where, doc, updateDoc } = await import("firebase/firestore");
 
+  const snapEstoque = await getDocs(
+    query(collection(db, "estoque"), where("userId", "==", userId), where("sku", "==", sku))
+  );
+  if (snapEstoque.empty) return null;
+
+  const estoqueDoc = snapEstoque.docs[0];
+  const atual = estoqueDoc.data().quantity || 0;
+  const nova = Math.max(0, atual - quantitySold);
+
+  await updateDoc(doc(db, "estoque", estoqueDoc.id), { quantity: nova, updatedAt: Date.now() });
+  await propagarEstoque(db, userId, sku, nova, origem);
+  return nova;
+}
+
+export async function POST(request: Request) {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
+  }
+
+  try {
     const { getFirebase } = await import("@/lib/firebase");
     const { db } = await getFirebase();
-    const { collection, getDocs, query, where, doc, updateDoc, increment } = await import("firebase/firestore");
+    const { collection, getDocs, query, where } = await import("firebase/firestore");
 
-    // Caso de simulação de venda disparada localmente pelo painel de teste
+    // ── Simulação disparada pelo painel de teste ────────────────────────────
     if (body.mock === true) {
       const { adId, quantitySold, userId } = body;
-      
-      // Buscar o vínculo para descobrir o SKU
-      const vinculosRef = collection(db, "vinculos");
-      const qVinculo = query(vinculosRef, where("userId", "==", userId), where("platform", "==", "mercadolivre"), where("adId", "==", adId));
-      const snapVinculo = await getDocs(qVinculo);
 
+      const snapVinculo = await getDocs(
+        query(
+          collection(db, "vinculos"),
+          where("userId", "==", userId),
+          where("platform", "==", "mercadolivre"),
+          where("adId", "==", adId)
+        )
+      );
       if (snapVinculo.empty) {
         return NextResponse.json({ error: "Vínculo não encontrado" }, { status: 404 });
       }
 
-      const vinculo = snapVinculo.docs[0].data();
-      const sku = vinculo.sku;
-
-      // Buscar e atualizar o produto no estoque central
-      const estoqueRef = collection(db, "estoque");
-      const qEstoque = query(estoqueRef, where("userId", "==", userId), where("sku", "==", sku));
-      const snapEstoque = await getDocs(qEstoque);
-
-      if (snapEstoque.empty) {
+      const sku = snapVinculo.docs[0].data().sku;
+      const nova = await baixarEstoque(db, userId, sku, quantitySold, { platform: "mercadolivre", adId });
+      if (nova === null) {
         return NextResponse.json({ error: "Produto do estoque não encontrado" }, { status: 404 });
       }
 
-      const estoqueDoc = snapEstoque.docs[0];
-      const estoqueData = estoqueDoc.data();
-      const novaQuantidade = Math.max(0, (estoqueData.quantity || 0) - quantitySold);
-
-      // Atualiza o estoque central
-      await updateDoc(doc(db, "estoque", estoqueDoc.id), {
-        quantity: novaQuantidade,
-        updatedAt: Date.now()
-      });
-
-      // Sincroniza com outros canais vinculados ao mesmo SKU (ex: Shopee)
-      await sincronizarEstoquePlataformas(db, userId, sku, novaQuantidade, "mercadolivre", adId);
-
       return NextResponse.json({
         success: true,
-        message: `Venda simulada processada. SKU ${sku} atualizado para quantidade ${novaQuantidade}.`
+        message: `Venda simulada processada. SKU ${sku} atualizado para ${nova} un.`,
       });
     }
 
-    // Fluxo Real do Mercado Livre Webhook
-    // O Mercado Livre envia o tópico "orders" e o recurso "/orders/ID"
-    if (body.topic === "orders" && body.resource) {
-      const resourceId = body.resource.split("/").pop(); // Extrai o ID do pedido
-      const mlUserId = String(body.user_id);
+    // ── Notificação real do Mercado Livre ──────────────────────────────────
+    // Formato: { resource, user_id, topic, application_id, attempts, sent, received }
+    const topic: string = body.topic || body._type || "";
+    const resource: string = body.resource || "";
+    const mlUserId = String(body.user_id ?? "");
 
-      // 1. Achar a integração correspondente
-      const integracoesRef = collection(db, "integracoes");
-      const qIntegracao = query(integracoesRef, where("platform", "==", "mercadolivre"), where("accountId", "==", mlUserId));
-      const snapIntegracao = await getDocs(qIntegracao);
+    // Validação da assinatura (x-signature). Só bloqueia se STRICT estiver ligado.
+    const sig = verifyWebhookSignature({
+      xSignature: request.headers.get("x-signature"),
+      xRequestId: request.headers.get("x-request-id"),
+      dataId: resource ? resource.split("/").pop() || null : null,
+    });
+    if (sig === "invalid" && process.env.MERCADOLIVRE_WEBHOOK_STRICT === "true") {
+      console.warn("[ML webhook] assinatura inválida — rejeitado (STRICT)");
+      return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
+    }
+    if (sig !== "valid") {
+      console.warn(`[ML webhook] assinatura ${sig} (aceito — STRICT desligado)`);
+    }
 
-      if (snapIntegracao.empty) {
-        return NextResponse.json({ error: "Integração correspondente não encontrada no Firestore" }, { status: 200 });
+    // Só tratamos vendas. Outros tópicos: 200 pra o ML parar de reenviar.
+    if (topic !== "orders_v2" && topic !== "orders") {
+      return NextResponse.json({ received: true, ignored: topic });
+    }
+
+    // Acha a integração pela conta ML que recebeu a venda.
+    const snapIntegracao = await getDocs(
+      query(
+        collection(db, "integracoes"),
+        where("platform", "==", "mercadolivre"),
+        where("accountId", "==", mlUserId)
+      )
+    );
+    if (snapIntegracao.empty) {
+      // 200: não é erro do ML, só não temos essa conta conectada aqui.
+      return NextResponse.json({ received: true, note: "conta não conectada" });
+    }
+
+    const integracao = {
+      id: snapIntegracao.docs[0].id,
+      ...snapIntegracao.docs[0].data(),
+    } as MlIntegracao & { userId: string };
+
+    if (isMockToken(integracao.accessToken)) {
+      return NextResponse.json({ received: true, note: "integração mock" });
+    }
+
+    const token = await getValidAccessToken(db, integracao);
+    const order = await fetchOrder(token, resource);
+    const items = order.order_items || [];
+
+    for (const oi of items) {
+      const adId = String(oi.item?.id || "");
+      const quantitySold = oi.quantity || 1;
+      if (!adId) continue;
+
+      // Prefere o seller_sku do próprio pedido; senão, resolve pelo vínculo.
+      let sku: string = (oi.item?.seller_sku || "").trim().toUpperCase();
+      if (!sku) {
+        const snapVinculo = await getDocs(
+          query(
+            collection(db, "vinculos"),
+            where("userId", "==", integracao.userId),
+            where("platform", "==", "mercadolivre"),
+            where("adId", "==", adId)
+          )
+        );
+        if (snapVinculo.empty) continue;
+        sku = snapVinculo.docs[0].data().sku;
       }
 
-      const integracaoDoc = snapIntegracao.docs[0];
-      const integracao = integracaoDoc.data();
-      const userId = integracao.userId;
-      const accessToken = integracao.accessToken;
-
-      // 2. Buscar detalhes do pedido no Mercado Livre
-      const orderResponse = await fetch(`https://api.mercadolibre.com${body.resource}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-
-      if (!orderResponse.ok) {
-        console.error(`Erro ao obter pedido ${resourceId} no ML:`, await orderResponse.text());
-        return NextResponse.json({ error: "Erro ao buscar detalhes do pedido na API" }, { status: 500 });
-      }
-
-      const orderData = await orderResponse.json();
-      const items = orderData.order_items || [];
-
-      for (const orderItem of items) {
-        const adId = orderItem.item.id;
-        const quantitySold = orderItem.quantity || 1;
-
-        // 3. Buscar vínculo do anúncio
-        const vinculosRef = collection(db, "vinculos");
-        const qVinculo = query(vinculosRef, where("userId", "==", userId), where("platform", "==", "mercadolivre"), where("adId", "==", adId));
-        const snapVinculo = await getDocs(qVinculo);
-
-        if (!snapVinculo.empty) {
-          const vinculo = snapVinculo.docs[0].data();
-          const sku = vinculo.sku;
-
-          // 4. Buscar e atualizar produto no estoque central
-          const estoqueRef = collection(db, "estoque");
-          const qEstoque = query(estoqueRef, where("userId", "==", userId), where("sku", "==", sku));
-          const snapEstoque = await getDocs(qEstoque);
-
-          if (!snapEstoque.empty) {
-            const estoqueDoc = snapEstoque.docs[0];
-            const estoqueData = estoqueDoc.data();
-            const novaQuantidade = Math.max(0, (estoqueData.quantity || 0) - quantitySold);
-
-            // Atualiza estoque central
-            await updateDoc(doc(db, "estoque", estoqueDoc.id), {
-              quantity: novaQuantidade,
-              updatedAt: Date.now()
-            });
-
-            // Sincroniza com as outras plataformas
-            await sincronizarEstoquePlataformas(db, userId, sku, novaQuantidade, "mercadolivre", adId);
-          }
-        }
-      }
+      await baixarEstoque(db, integracao.userId, sku, quantitySold, { platform: "mercadolivre", adId });
     }
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    console.error("Erro no processamento do webhook do Mercado Livre:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Erro no webhook do Mercado Livre:", error);
+    // 200 mesmo em erro interno evita retry infinito do ML; o log fica pra depuração.
+    return NextResponse.json({ received: true, error: error?.message }, { status: 200 });
   }
 }

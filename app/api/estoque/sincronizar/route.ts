@@ -1,5 +1,15 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import {
+  isMockToken,
+  getValidAccessToken,
+  fetchActiveListings,
+  updateListingQuantity,
+  type MlIntegracao,
+} from "@/lib/mercadolivre";
 
 // Cada chamada aqui pode disparar várias requisições à API do Mercado Livre
 // (e grava no Firestore) sem exigir autenticação — sem limite, dava pra
@@ -30,12 +40,10 @@ export async function POST(request: Request) {
     const { db } = await getFirebase();
     const { collection, getDocs, query, where, doc, updateDoc, addDoc, setDoc } = await import("firebase/firestore");
 
-    // Buscar as conexões/integrações do usuário
     const integracoesRef = collection(db, "integracoes");
-    let qIntegracoes = query(integracoesRef, where("userId", "==", userId));
-    if (platform) {
-      qIntegracoes = query(integracoesRef, where("userId", "==", userId), where("platform", "==", platform));
-    }
+    const qIntegracoes = platform
+      ? query(integracoesRef, where("userId", "==", userId), where("platform", "==", platform))
+      : query(integracoesRef, where("userId", "==", userId));
     const snapIntegracoes = await getDocs(qIntegracoes);
 
     if (snapIntegracoes.empty) {
@@ -43,165 +51,123 @@ export async function POST(request: Request) {
     }
 
     let totalSincronizados = 0;
+    const erros: string[] = [];
 
     for (const docInt of snapIntegracoes.docs) {
-      const integracao = docInt.data();
-      const isMock = integracao.accessToken.startsWith("mock_");
+      const integracao = { id: docInt.id, ...docInt.data() } as MlIntegracao & { platform: string };
 
-      if (isMock) {
-        // Simular a sincronização de dados fictícios para fins demonstrativos
-        const vinculosRef = collection(db, "vinculos");
-        const qVinculos = query(
-          vinculosRef,
-          where("userId", "==", userId),
-          where("platform", "==", integracao.platform)
+      // ── Modo simulado: só espelha o estoque central nos vínculos ──────────
+      if (isMockToken(integracao.accessToken)) {
+        const snapVinculos = await getDocs(
+          query(
+            collection(db, "vinculos"),
+            where("userId", "==", userId),
+            where("platform", "==", integracao.platform)
+          )
         );
-        const snapVinculos = await getDocs(qVinculos);
-
-        for (const docVinculo of snapVinculos.docs) {
-          const vinculo = docVinculo.data();
-          
-          // Buscar o item no estoque central correspondente
-          const estoqueRef = collection(db, "estoque");
-          const qEstoque = query(estoqueRef, where("userId", "==", userId), where("sku", "==", vinculo.sku));
-          const snapEstoque = await getDocs(qEstoque);
-
+        for (const dv of snapVinculos.docs) {
+          const vinculo = dv.data();
+          const snapEstoque = await getDocs(
+            query(collection(db, "estoque"), where("userId", "==", userId), where("sku", "==", vinculo.sku))
+          );
           if (!snapEstoque.empty) {
-            const estoqueDoc = snapEstoque.docs[0];
-            const estoqueData = estoqueDoc.data();
-            
-            // Na simulação, sincronizamos as quantidades do vínculo com as do estoque central
-            await updateDoc(doc(db, "vinculos", docVinculo.id), {
-              quantity: estoqueData.quantity,
-              price: estoqueData.price,
+            const e = snapEstoque.docs[0].data();
+            await updateDoc(doc(db, "vinculos", dv.id), {
+              quantity: e.quantity,
+              price: e.price,
               updatedAt: Date.now(),
             });
             totalSincronizados++;
           }
         }
-      } else {
-        // Integração real
-        if (integracao.platform === "mercadolivre") {
-          // Busca anúncios ativos do ML e atualiza/vincula no Firestore
-          try {
-            const searchItemsRes = await fetch(
-              `https://api.mercadolibre.com/users/${integracao.accountId}/items/search?status=active`,
-              { headers: { Authorization: `Bearer ${integracao.accessToken}` } }
+        continue;
+      }
+
+      // ── Mercado Livre real ───────────────────────────────────────────────
+      if (integracao.platform === "mercadolivre") {
+        try {
+          const token = await getValidAccessToken(db, integracao);
+          const listings = await fetchActiveListings(token, integracao.accountId || "");
+
+          for (const ad of listings) {
+            const snapEstoque = await getDocs(
+              query(collection(db, "estoque"), where("userId", "==", userId), where("sku", "==", ad.sku))
             );
 
-            if (searchItemsRes.ok) {
-              const searchData = await searchItemsRes.json();
-              const itemIds: string[] = searchData.results || [];
+            // Fonte da verdade = estoque central (quando o produto já existe aqui).
+            let quantidadeFinal = ad.quantity;
+            let precoFinal = ad.price;
 
-              if (itemIds.length > 0) {
-                const batchIds = itemIds.slice(0, 20).join(",");
-                const detailsRes = await fetch(
-                  `https://api.mercadolibre.com/items?ids=${batchIds}`,
-                  { headers: { Authorization: `Bearer ${integracao.accessToken}` } }
-                );
+            if (snapEstoque.empty) {
+              await addDoc(collection(db, "estoque"), {
+                userId,
+                sku: ad.sku,
+                name: ad.title,
+                price: ad.price,
+                quantity: ad.quantity,
+                minQuantity: 10,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              });
+            } else {
+              const e = snapEstoque.docs[0].data();
+              quantidadeFinal = e.quantity ?? ad.quantity;
+              precoFinal = e.price ?? ad.price;
 
-                if (detailsRes.ok) {
-                  const itemsDetails = await detailsRes.json();
-
-                  for (const itemWrapper of itemsDetails) {
-                    if (itemWrapper.code === 200 && itemWrapper.body) {
-                      const item = itemWrapper.body;
-                      const adId = item.id;
-                      const title = item.title;
-                      const price = item.price;
-                      const quantity = item.available_quantity;
-                      let sku = item.seller_custom_field || "";
-
-                      if (!sku && item.attributes) {
-                        const skuAttr = item.attributes.find((attr: any) => attr.id === "SELLER_SKU");
-                        if (skuAttr) sku = skuAttr.value_name || skuAttr.value_id || "";
-                      }
-
-                      if (!sku) sku = `ML-${adId}`;
-
-                      // Sincronizar estoque central
-                      const estoqueRef = collection(db, "estoque");
-                      const qEstoque = query(estoqueRef, where("userId", "==", userId), where("sku", "==", sku));
-                      const snapEstoque = await getDocs(qEstoque);
-
-                      if (snapEstoque.empty) {
-                        await addDoc(estoqueRef, {
-                          userId,
-                          sku,
-                          name: title,
-                          price,
-                          quantity,
-                          minQuantity: 10,
-                          createdAt: Date.now(),
-                          updatedAt: Date.now(),
-                        });
-                      } else {
-                        // Sincronizar o anúncio com o estoque central do sistema
-                        const estoqueDoc = snapEstoque.docs[0];
-                        const estoqueData = estoqueDoc.data();
-                        
-                        // Atualizar a quantidade no Mercado Livre com o estoque centralizado do Firestore
-                        if (estoqueData.quantity !== quantity) {
-                          await fetch(`https://api.mercadolibre.com/items/${adId}`, {
-                            method: "PUT",
-                            headers: {
-                              Authorization: `Bearer ${integracao.accessToken}`,
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({ available_quantity: estoqueData.quantity })
-                          });
-                        }
-                      }
-
-                      // Atualizar vínculo no banco
-                      const vinculosRef = collection(db, "vinculos");
-                      const qVinculo = query(
-                        vinculosRef,
-                        where("userId", "==", userId),
-                        where("platform", "==", "mercadolivre"),
-                        where("adId", "==", adId)
-                      );
-                      const snapVinculo = await getDocs(qVinculo);
-
-                      const vinculoData = {
-                        userId,
-                        sku,
-                        platform: "mercadolivre",
-                        adId,
-                        title,
-                        price,
-                        quantity: snapEstoque.empty ? quantity : snapEstoque.docs[0].data().quantity,
-                        connectionId: docInt.id,
-                        updatedAt: Date.now(),
-                      };
-
-                      if (!snapVinculo.empty) {
-                        await setDoc(doc(db, "vinculos", snapVinculo.docs[0].id), vinculoData, { merge: true });
-                      } else {
-                        await addDoc(vinculosRef, {
-                          ...vinculoData,
-                          createdAt: Date.now(),
-                        });
-                      }
-                      totalSincronizados++;
-                    }
-                  }
+              // Empurra o estoque central de volta pro anúncio se divergir.
+              if (typeof e.quantity === "number" && e.quantity !== ad.quantity) {
+                try {
+                  await updateListingQuantity(token, ad.adId, e.quantity);
+                } catch (err: any) {
+                  erros.push(`Anúncio ${ad.adId}: ${err?.message || "erro ao atualizar"}`);
                 }
               }
             }
-          } catch (err) {
-            console.error("Erro na sincronização real do Mercado Livre:", err);
+
+            const snapVinculo = await getDocs(
+              query(
+                collection(db, "vinculos"),
+                where("userId", "==", userId),
+                where("platform", "==", "mercadolivre"),
+                where("adId", "==", ad.adId)
+              )
+            );
+
+            const vinculoData = {
+              userId,
+              sku: ad.sku,
+              platform: "mercadolivre" as const,
+              adId: ad.adId,
+              title: ad.title,
+              price: precoFinal,
+              quantity: quantidadeFinal,
+              connectionId: docInt.id,
+              updatedAt: Date.now(),
+            };
+
+            if (!snapVinculo.empty) {
+              await setDoc(doc(db, "vinculos", snapVinculo.docs[0].id), vinculoData, { merge: true });
+            } else {
+              await addDoc(collection(db, "vinculos"), { ...vinculoData, createdAt: Date.now() });
+            }
+            totalSincronizados++;
           }
-        } else if (integracao.platform === "shopee") {
-          // Implementação semelhante para Shopee real...
+        } catch (err: any) {
+          console.error("Erro na sincronização real do Mercado Livre:", err);
+          erros.push(err?.message || "Falha ao sincronizar com o Mercado Livre");
         }
       }
+      // Shopee real: implementação futura.
     }
 
     return NextResponse.json({
       success: true,
-      message: "Sincronização realizada com sucesso.",
+      message:
+        erros.length > 0
+          ? `Sincronização parcial: ${totalSincronizados} anúncio(s). ${erros.length} aviso(s).`
+          : `Sincronização concluída: ${totalSincronizados} anúncio(s).`,
       totalSincronizados,
+      erros: erros.slice(0, 10),
     });
   } catch (error: any) {
     console.error("Erro na rota de sincronização manual:", error);

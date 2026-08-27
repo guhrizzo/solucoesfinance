@@ -1,4 +1,13 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
+import { mlCredentials, generatePkce, buildAuthUrl } from "@/lib/mercadolivre";
+
+// Cookie que carrega o PKCE + state entre este redirect e o /callback.
+// httpOnly, curto (10 min) e SameSite=Lax pra sobreviver ao retorno do ML.
+const OAUTH_COOKIE = "ml_oauth";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,23 +17,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
   }
 
-  const clientId = process.env.MERCADOLIVRE_CLIENT_ID;
-  const redirectUri = process.env.MERCADOLIVRE_REDIRECT_URI;
+  const { clientId, redirectUri, configured } = mlCredentials();
 
-  // Se não estiver configurado ou for o padrão de exemplo, entra no modo simulado (mock)
-  const isMock = !clientId || clientId === "SEU_CLIENT_ID_AQUI";
-
-  console.log("🔍 Mercado Livre Redirect Debug:", {
-    userId,
-    clientId: clientId ? "✓ Configured" : "✗ Missing",
-    redirectUri,
-    isMock,
-    env: process.env.NODE_ENV,
-  });
-
-  if (isMock) {
-    console.log("📱 Usando modo simulado (mock) - credenciais não configuradas");
-    // Redireciona para o callback simulando o retorno do Mercado Livre
+  // Sem credenciais reais → modo simulado (mock), como antes.
+  if (!configured) {
+    console.log("📱 Mercado Livre em modo simulado — credenciais não configuradas");
     const callbackUrl = new URL("/api/auth/mercadolivre/callback", request.url);
     callbackUrl.searchParams.set("code", "mock_code_ml_123456");
     callbackUrl.searchParams.set("state", userId);
@@ -32,12 +29,28 @@ export async function GET(request: Request) {
     return NextResponse.redirect(callbackUrl.toString());
   }
 
-  // Modo real: redireciona para o OAuth2 do Mercado Livre
-  const mlAuthUrl = `https://auth.mercadolibre.com/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
-    redirectUri || ""
-  )}&state=${userId}`;
+  // Modo real: PKCE obrigatório no OAuth do ML.
+  const { verifier, challenge } = generatePkce();
+  const state = randomBytes(16).toString("hex");
 
-  console.log("🔗 Mercado Livre Auth URL:", mlAuthUrl);
+  const authUrl = buildAuthUrl({
+    clientId: clientId!,
+    redirectUri: redirectUri!,
+    state,
+    codeChallenge: challenge,
+  });
 
-  return NextResponse.redirect(mlAuthUrl);
+  const res = NextResponse.redirect(authUrl);
+  res.cookies.set(
+    OAUTH_COOKIE,
+    JSON.stringify({ v: verifier, s: state, u: userId }),
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 600,
+    }
+  );
+  return res;
 }
