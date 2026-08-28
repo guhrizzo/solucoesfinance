@@ -16,9 +16,12 @@ import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
 import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
 import PinModal from "../components/PinModal";
+import { CadastroManager, CadastroField, formatDoc, onlyDigits } from "../components/CadastroPanel";
 import type { PaymentMethod } from "../types/payment";
 import { verifyPin, loadPinHash, getPinLockStatus } from "../hooks/usePin";
 import { syncBillCashflow } from "@/lib/billTaxSync";
+import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
+import { AuditTrail } from "../components/AuditTrail";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +44,16 @@ interface Bill {
     cashflowId?: string;
     paymentMethod?: PaymentMethod;      // origem prevista no lançamento
     paidPaymentMethod?: PaymentMethod;  // origem confirmada na baixa
+    partyName?: string;                 // fornecedor vinculado (nome / razão social)
+    partyDoc?: string;                  // fornecedor vinculado (CNPJ/CPF, só dígitos)
+    createdBy?: string;                 // uid de quem criou (auditoria via PIN)
+    createdByName?: string;
+    updatedBy?: string;                 // uid de quem editou por último
+    updatedByName?: string;
+    updatedAt?: number;
+    settledBy?: string;                 // uid de quem deu baixa (marcou como pago)
+    settledByName?: string;
+    settledAt?: number;
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -170,6 +183,9 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const [status, setStatus] = useState<BillStatus>("pendente");
     const [photos, setPhotos] = useState<string[]>([]);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+    const [partyName, setPartyName] = useState("");
+    const [partyDoc, setPartyDoc] = useState("");
+    const [tab, setTab] = useState<"conta" | "cadastro">("conta");
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -187,6 +203,9 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
         setStatus(editing?.status ?? "pendente");
         setPhotos(editing?.photos ?? []);
         setPaymentMethod((editing?.paymentMethod as PaymentMethod) ?? null);
+        setPartyName(editing?.partyName ?? "");
+        setPartyDoc(editing?.partyDoc ?? "");
+        setTab("conta");
         setSaving(false);
         setErr("");
         setPinOpen(false);
@@ -257,6 +276,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     paidAt: editing?.paidAt,
                     paymentMethod: paymentMethod ?? undefined,
                     paidPaymentMethod: editing?.paidPaymentMethod,
+                    partyName: partyName.trim() || "",
+                    partyDoc: partyDoc ? onlyDigits(partyDoc) : "",
                 });
                 onClose();
             } catch (e: any) {
@@ -292,7 +313,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                 </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                <div className="flex items-center justify-between px-5 py-4">
                     <div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {editing ? "Editar conta" : "Nova conta a pagar"}
@@ -308,6 +329,19 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     </button>
                 </div>
 
+                {/* Abas */}
+                <div className="flex gap-1 px-5" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                    {([["conta", editing ? "Conta" : "Nova conta"], ["cadastro", "Cadastro"]] as const).map(([t, label]) => (
+                        <button key={t} onClick={() => setTab(t)} type="button"
+                            className="px-3 py-2.5 text-xs font-bold cursor-pointer -mb-px"
+                            style={tab === t
+                                ? { color: "#3b82f6", borderBottom: "2px solid #3b82f6" }
+                                : { color: "var(--cf-text2)", borderBottom: "2px solid transparent" }}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Body */}
                 <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "82vh" }}>
                     {err && (
@@ -317,14 +351,32 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         </div>
                     )}
 
-                    {/* Título */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Título</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)}
-                            placeholder="Ex: Aluguel do escritório" autoFocus
-                            className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
-                            style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
-                    </div>
+                    {tab === "cadastro" ? (
+                        <CadastroManager
+                            uid={uid}
+                            kind="fornecedor"
+                            accent="#3b82f6"
+                            onPick={c => {
+                                setTitle(c.name);
+                                setPartyName(c.name);
+                                setPartyDoc(c.doc);
+                                setTab("conta");
+                            }}
+                        />
+                    ) : (
+                    <>
+                    {/* Título / fornecedor */}
+                    <CadastroField
+                        uid={uid}
+                        kind="fornecedor"
+                        accent="#3b82f6"
+                        label="Título"
+                        placeholder="Ex: Aluguel do escritório"
+                        title={title}
+                        partyDoc={partyDoc}
+                        onChange={v => { setTitle(v.title); setPartyName(v.partyName ?? ""); setPartyDoc(v.partyDoc ?? ""); }}
+                        onNewCadastro={() => setTab("cadastro")}
+                    />
 
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
@@ -462,6 +514,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
                             : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar conta"}</>}
                     </button>
+                    </>
+                    )}
                 </div>
             </div>
 
@@ -795,6 +849,11 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                 <p className="font-heading text-sm font-bold truncate" style={{ color: "var(--cf-text)" }}>
                                     {bill.title}
                                 </p>
+                                {bill.partyDoc && (
+                                    <p className="text-xs font-mono truncate mt-0.5" style={{ color: "var(--cf-text3)" }}>
+                                        {formatDoc(bill.partyDoc)}
+                                    </p>
+                                )}
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                                         style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
@@ -886,6 +945,8 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         <Trash2 size={14} />
                     </button>
                 </div>
+
+                <AuditTrail record={bill} settleLabel="Pago" />
             </div>
             <PhotoGalleryModal open={showPhotos} photos={bill?.photos ?? []} onClose={() => setShowPhotos(false)} />
         </div>
@@ -920,6 +981,9 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
 
 export default function ContasPagarPage() {
     const [uid, setUid] = useState<string | null>(null);
+    // uid do login atual — usado para o PIN (pessoal) e para o selo de autoria,
+    // separado de `uid`, que é o dono dos dados (pode ser outra conta).
+    const [authUid, setAuthUid] = useState<string | null>(null);
     const [userName, setUserName] = useState("");
     const [userEmail, setUserEmail] = useState("");
     const [bills, setBills] = useState<Bill[]>([]);
@@ -981,6 +1045,7 @@ export default function ContasPagarPage() {
                     const ownerUid = scope.ownerUid;
 
                     setUid(ownerUid);
+                    setAuthUid(u.uid);
                     setUserName(u.displayName ?? u.email ?? "Usuário");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
@@ -1049,13 +1114,14 @@ export default function ContasPagarPage() {
         const clean = Object.fromEntries(
             Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
         );
+        const actor = { uid: authUid ?? uid, name: userName };
         let billId: string;
         if (editing) {
-            await updateDoc(doc(db, "users", uid, "bills", editing.id), clean as any);
+            await updateDoc(doc(db, "users", uid, "bills", editing.id), { ...clean, ...stampUpdate(actor) } as any);
             billId = editing.id;
             showToast("Conta atualizada!");
         } else {
-            const ref = await addDoc(collection(db, "users", uid, "bills"), { ...clean, createdAt: Date.now() });
+            const ref = await addDoc(collection(db, "users", uid, "bills"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
             billId = ref.id;
             showToast("Conta criada!");
         }
@@ -1084,7 +1150,10 @@ export default function ContasPagarPage() {
         ]);
         const { db } = await getFirebase();
 
-        await updateDoc(doc(db, "users", uid, "bills", bill.id), { status: "pago", paidAt, paidPaymentMethod: method });
+        await updateDoc(doc(db, "users", uid, "bills", bill.id), {
+            status: "pago", paidAt, paidPaymentMethod: method,
+            ...stampSettle({ uid: authUid ?? uid, name: userName }),
+        });
 
         await syncBillCashflow(db, uid, {
             ...bill,
@@ -1119,7 +1188,7 @@ export default function ContasPagarPage() {
     // ── Excluir conta ──────────────────────────────────────────────────────────
     async function handleDeleteClick() {
         if (!confirmId || !uid || deleting) return;
-        const pinHash = await loadPinHash(uid);
+        const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
             showToast("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.", "err");
             return;
@@ -1129,7 +1198,7 @@ export default function ContasPagarPage() {
 
     async function handleDeleteConfirm(pin: string) {
         if (!confirmId || !uid) return;
-        const result = await verifyPin(uid, pin);
+        const result = await verifyPin(authUid ?? uid, pin);
         if (result === "ok") {
             setDeletePinOpen(false);
             setDeleting(true);
@@ -1177,7 +1246,8 @@ export default function ContasPagarPage() {
         return enriched.filter(b => {
             if (filterStatus !== "todos" && b._status !== filterStatus) return false;
             if (filterCategory !== "todas" && b.category !== filterCategory) return false;
-            if (q && !b.title.toLowerCase().includes(q) && !b.notes.toLowerCase().includes(q)) return false;
+            if (q && !b.title.toLowerCase().includes(q) && !b.notes.toLowerCase().includes(q)
+                && !(b.partyName ?? "").toLowerCase().includes(q)) return false;
             return true;
         });
     }, [enriched, filterStatus, filterCategory, search]);
@@ -1251,7 +1321,7 @@ export default function ContasPagarPage() {
 
             {/* Modais */}
             <BillModal
-                open={modal} editing={editing} uid={uid}
+                open={modal} editing={editing} uid={authUid}
                 onClose={() => { setModal(false); setEditing(null); }}
                 onSave={handleSave}
             />
@@ -1261,7 +1331,7 @@ export default function ContasPagarPage() {
                 onSave={saveAlertDays}
             />
             <PayModal
-                open={!!payBill} bill={payBill} uid={uid}
+                open={!!payBill} bill={payBill} uid={authUid}
                 onClose={() => setPayBill(null)}
                 onConfirm={(paidAt, method) => handlePay(payBill!, paidAt, method)}
             />

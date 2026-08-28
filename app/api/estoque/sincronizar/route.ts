@@ -11,6 +11,12 @@ import {
   updateListingQuantity,
   type MlIntegracao,
 } from "@/lib/mercadolivre";
+import {
+  getValidShopeeToken,
+  fetchShopeeListings,
+  updateShopeeStock,
+  type ShopeeIntegracao,
+} from "@/lib/shopee";
 
 // Cada chamada aqui pode disparar várias requisições à API do Mercado Livre
 // (e grava no Firestore) sem exigir autenticação — sem limite, dava pra
@@ -155,7 +161,80 @@ export async function POST(request: Request) {
           erros.push(err?.message || "Falha ao sincronizar com o Mercado Livre");
         }
       }
-      // Shopee real: implementação futura.
+      // ── Shopee real ──────────────────────────────────────────────────────
+      if (integracao.platform === "shopee") {
+        try {
+          const token = await getValidShopeeToken(db, integracao as ShopeeIntegracao);
+          const listings = await fetchShopeeListings(token, integracao.accountId || "");
+
+          for (const ad of listings) {
+            const snapEstoque = await db
+              .collection("estoque")
+              .where("userId", "==", userId)
+              .where("sku", "==", ad.sku)
+              .get();
+
+            // Fonte da verdade = estoque central (quando o produto já existe aqui).
+            let quantidadeFinal = ad.quantity;
+            let precoFinal = ad.price;
+
+            if (snapEstoque.empty) {
+              await db.collection("estoque").add({
+                userId,
+                sku: ad.sku,
+                name: ad.title,
+                price: ad.price,
+                quantity: ad.quantity,
+                minQuantity: 10,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              });
+            } else {
+              const e = snapEstoque.docs[0].data();
+              quantidadeFinal = e.quantity ?? ad.quantity;
+              precoFinal = e.price ?? ad.price;
+
+              // Empurra o estoque central de volta pro item se divergir.
+              if (typeof e.quantity === "number" && e.quantity !== ad.quantity) {
+                try {
+                  await updateShopeeStock(token, integracao.accountId || "", ad.adId, e.quantity);
+                } catch (err: any) {
+                  erros.push(`Item ${ad.adId}: ${err?.message || "erro ao atualizar"}`);
+                }
+              }
+            }
+
+            const snapVinculo = await db
+              .collection("vinculos")
+              .where("userId", "==", userId)
+              .where("platform", "==", "shopee")
+              .where("adId", "==", ad.adId)
+              .get();
+
+            const vinculoData = {
+              userId,
+              sku: ad.sku,
+              platform: "shopee" as const,
+              adId: ad.adId,
+              title: ad.title,
+              price: precoFinal,
+              quantity: quantidadeFinal,
+              connectionId: docInt.id,
+              updatedAt: Date.now(),
+            };
+
+            if (!snapVinculo.empty) {
+              await db.collection("vinculos").doc(snapVinculo.docs[0].id).set(vinculoData, { merge: true });
+            } else {
+              await db.collection("vinculos").add({ ...vinculoData, createdAt: Date.now() });
+            }
+            totalSincronizados++;
+          }
+        } catch (err: any) {
+          console.error("Erro na sincronização real da Shopee:", err);
+          erros.push(err?.message || "Falha ao sincronizar com a Shopee");
+        }
+      }
     }
 
     return NextResponse.json({

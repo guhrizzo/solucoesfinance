@@ -20,6 +20,8 @@ import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
 import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
 import type { PaymentMethod } from "../types/payment";
 import { syncTaxCashflow } from "@/lib/billTaxSync";
+import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
+import { AuditTrail } from "../components/AuditTrail";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,14 @@ interface Tax {
     createdAt: number;
     userId: string;
     description?: string;
+    createdBy?: string;                 // uid de quem criou (auditoria via PIN)
+    createdByName?: string;
+    updatedBy?: string;                 // uid de quem editou por último
+    updatedByName?: string;
+    updatedAt?: number;
+    settledBy?: string;                 // uid de quem deu baixa (marcou como pago)
+    settledByName?: string;
+    settledAt?: number;
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -970,6 +980,8 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         <Trash2 size={14} />
                     </button>
                 </div>
+
+                <AuditTrail record={tax} settleLabel="Pago" />
             </div>
         </div>
     );
@@ -1003,6 +1015,9 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
 
 export default function ImpostosPage() {
     const [uid, setUid] = useState<string | null>(null);
+    // uid do login atual — usado para o PIN (pessoal) e para o selo de autoria,
+    // separado de `uid`, que é o dono dos dados (pode ser outra conta).
+    const [authUid, setAuthUid] = useState<string | null>(null);
     const [userName, setUserName] = useState("");
     const [userEmail, setUserEmail] = useState("");
     const [taxes, setTaxes] = useState<Tax[]>([]);
@@ -1063,6 +1078,7 @@ export default function ImpostosPage() {
                     const ownerUid = scope.ownerUid;
 
                     setUid(ownerUid);
+                    setAuthUid(u.uid);
                     setUserName(u.displayName ?? u.email ?? "Usuário");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
@@ -1128,13 +1144,14 @@ export default function ImpostosPage() {
         const clean = Object.fromEntries(
             Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
         );
+        const actor = { uid: authUid ?? uid, name: userName };
         let taxId: string;
         if (editing) {
-            await updateDoc(doc(db, "users", uid, "taxes", editing.id), clean as any);
+            await updateDoc(doc(db, "users", uid, "taxes", editing.id), { ...clean, ...stampUpdate(actor) } as any);
             taxId = editing.id;
             showToast("Imposto atualizado!");
         } else {
-            const ref = await addDoc(collection(db, "users", uid, "taxes"), { ...clean, createdAt: Date.now() });
+            const ref = await addDoc(collection(db, "users", uid, "taxes"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
             taxId = ref.id;
             showToast("Imposto criado!");
         }
@@ -1165,6 +1182,7 @@ export default function ImpostosPage() {
             status: "pago",
             paidAt,
             paidPaymentMethod: method,
+            ...stampSettle({ uid: authUid ?? uid, name: userName }),
         });
 
         // Registrar no Fluxo de Caixa (saída espelho linkada por sourceTaxId).
@@ -1201,7 +1219,7 @@ export default function ImpostosPage() {
 
     async function handleDeleteWithPin(taxId: string) {
         if (!uid) return;
-        const pinHash = await loadPinHash(uid);
+        const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
             showToast("Configure seu PIN antes de excluir.", "err");
             return;
@@ -1212,7 +1230,7 @@ export default function ImpostosPage() {
 
     async function handleDeletePinSuccess(pin: string) {
         if (!uid) return;
-        const result = await verifyPin(uid, pin);
+        const result = await verifyPin(authUid ?? uid, pin);
         if (result === "ok") {
             setDeletePinOpen(false);
             if (pendingDeleteId) {
@@ -1321,7 +1339,7 @@ export default function ImpostosPage() {
             <Navbar user={{ displayName: userName, email: userEmail }} activePath="/impostos" onLogout={handleLogout} />
 
             <TaxModal
-                open={modal} editing={editing} uid={uid}
+                open={modal} editing={editing} uid={authUid}
                 onClose={() => { setModal(false); setEditing(null); }}
                 onSave={handleSave}
             />
@@ -1329,7 +1347,7 @@ export default function ImpostosPage() {
             <TaxPayModal
                 open={taxPayModal !== null}
                 tax={taxPayModal}
-                uid={uid}
+                uid={authUid}
                 onClose={() => setTaxPayModal(null)}
                 onConfirm={async (paidAt, method) => {
                     if (!taxPayModal) return;

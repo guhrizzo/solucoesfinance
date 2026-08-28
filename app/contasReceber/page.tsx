@@ -16,8 +16,11 @@ import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
 import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
 import PinModal from "../components/PinModal";
+import { CadastroManager, CadastroField, formatDoc, onlyDigits } from "../components/CadastroPanel";
 import type { PaymentMethod } from "../types/payment";
 import { verifyPin, loadPinHash, getPinLockStatus } from "../hooks/usePin";
+import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
+import { AuditTrail } from "../components/AuditTrail";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +43,16 @@ interface Receivable {
     cashflowId?: string;
     paymentMethod?: PaymentMethod;
     paidPaymentMethod?: PaymentMethod;
+    partyName?: string;                 // cliente vinculado (nome / razão social)
+    partyDoc?: string;                  // cliente vinculado (CNPJ/CPF, só dígitos)
+    createdBy?: string;                 // uid de quem criou (auditoria via PIN)
+    createdByName?: string;
+    updatedBy?: string;                 // uid de quem editou por último
+    updatedByName?: string;
+    updatedAt?: number;
+    settledBy?: string;                 // uid de quem deu baixa (marcou como recebido)
+    settledByName?: string;
+    settledAt?: number;
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -176,6 +189,9 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     const [status, setStatus] = useState<ReceivableStatus>("pendente");
     const [photos, setPhotos] = useState<string[]>([]);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+    const [partyName, setPartyName] = useState("");
+    const [partyDoc, setPartyDoc] = useState("");
+    const [tab, setTab] = useState<"conta" | "cadastro">("conta");
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -193,6 +209,9 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
         setStatus(editing?.status ?? "pendente");
         setPhotos(editing?.photos ?? []);
         setPaymentMethod((editing?.paymentMethod as PaymentMethod) ?? null);
+        setPartyName(editing?.partyName ?? "");
+        setPartyDoc(editing?.partyDoc ?? "");
+        setTab("conta");
         setSaving(false);
         setErr("");
         setPinOpen(false);
@@ -261,6 +280,8 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     receivedAt: editing?.receivedAt,
                     paymentMethod: paymentMethod ?? undefined,
                     paidPaymentMethod: editing?.paidPaymentMethod,
+                    partyName: partyName.trim() || "",
+                    partyDoc: partyDoc ? onlyDigits(partyDoc) : "",
                 });
                 onClose();
             } catch (e: any) {
@@ -296,7 +317,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                 </div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                <div className="flex items-center justify-between px-5 py-4">
                     <div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {editing ? "Editar cobrança" : "Nova cobrança"}
@@ -312,6 +333,19 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     </button>
                 </div>
 
+                {/* Abas */}
+                <div className="flex gap-1 px-5" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                    {([["conta", editing ? "Cobrança" : "Nova cobrança"], ["cadastro", "Cadastro"]] as const).map(([t, label]) => (
+                        <button key={t} onClick={() => setTab(t)} type="button"
+                            className="px-3 py-2.5 text-xs font-bold cursor-pointer -mb-px"
+                            style={tab === t
+                                ? { color: "#10b981", borderBottom: "2px solid #10b981" }
+                                : { color: "var(--cf-text2)", borderBottom: "2px solid transparent" }}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Body */}
                 <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "82vh" }}>
                     {err && (
@@ -321,14 +355,32 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         </div>
                     )}
 
-                    {/* Título */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Descrição</label>
-                        <input value={title} onChange={e => setTitle(e.target.value)}
-                            placeholder="Ex: Venda para Empresa X" autoFocus
-                            className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
-                            style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
-                    </div>
+                    {tab === "cadastro" ? (
+                        <CadastroManager
+                            uid={uid}
+                            kind="cliente"
+                            accent="#10b981"
+                            onPick={c => {
+                                setTitle(c.name);
+                                setPartyName(c.name);
+                                setPartyDoc(c.doc);
+                                setTab("conta");
+                            }}
+                        />
+                    ) : (
+                    <>
+                    {/* Descrição / cliente */}
+                    <CadastroField
+                        uid={uid}
+                        kind="cliente"
+                        accent="#10b981"
+                        label="Descrição"
+                        placeholder="Ex: Venda para Empresa X"
+                        title={title}
+                        partyDoc={partyDoc}
+                        onChange={v => { setTitle(v.title); setPartyName(v.partyName ?? ""); setPartyDoc(v.partyDoc ?? ""); }}
+                        onNewCadastro={() => setTab("cadastro")}
+                    />
 
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
@@ -466,6 +518,8 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
                             : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar cobrança"}</>}
                     </button>
+                    </>
+                    )}
                 </div>
             </div>
 
@@ -799,6 +853,11 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                 <p className="font-heading text-sm font-bold truncate" style={{ color: "var(--cf-text)" }}>
                                     {receivable.title}
                                 </p>
+                                {receivable.partyDoc && (
+                                    <p className="text-xs font-mono truncate mt-0.5" style={{ color: "var(--cf-text3)" }}>
+                                        {formatDoc(receivable.partyDoc)}
+                                    </p>
+                                )}
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                                         style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
@@ -890,6 +949,8 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                         <Trash2 size={14} />
                     </button>
                 </div>
+
+                <AuditTrail record={receivable} settleLabel="Recebido" />
             </div>
             <PhotoGalleryModal open={showPhotos} photos={receivable?.photos ?? []} onClose={() => setShowPhotos(false)} />
         </div>
@@ -924,6 +985,9 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
 
 export default function ContasReceberPage() {
     const [uid, setUid] = useState<string | null>(null);
+    // uid do login atual — usado para o PIN (pessoal) e para o selo de autoria,
+    // separado de `uid`, que é o dono dos dados (pode ser outra conta).
+    const [authUid, setAuthUid] = useState<string | null>(null);
     const [userName, setUserName] = useState("");
     const [userEmail, setUserEmail] = useState("");
     const [receivables, setReceivables] = useState<Receivable[]>([]);
@@ -990,6 +1054,7 @@ export default function ContasReceberPage() {
                     const ownerUid = scope.ownerUid;
 
                     setUid(ownerUid);
+                    setAuthUid(u.uid);
                     setUserName(u.displayName ?? u.email ?? "Usuário");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
@@ -1058,11 +1123,12 @@ export default function ContasReceberPage() {
         const clean = Object.fromEntries(
             Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
         );
+        const actor = { uid: authUid ?? uid, name: userName };
         if (editing) {
-            await updateDoc(doc(db, "users", uid, "receivables", editing.id), clean as any);
+            await updateDoc(doc(db, "users", uid, "receivables", editing.id), { ...clean, ...stampUpdate(actor) } as any);
             showToast("Cobrança atualizada!");
         } else {
-            await addDoc(collection(db, "users", uid, "receivables"), { ...clean, createdAt: Date.now() });
+            await addDoc(collection(db, "users", uid, "receivables"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
             showToast("Cobrança criada!");
         }
     }
@@ -1076,10 +1142,13 @@ export default function ContasReceberPage() {
         ]);
         const { db } = await getFirebase();
 
-        await updateDoc(doc(db, "users", uid, "receivables", receiveTarget.id), { 
-            status: "recebido", 
+        const actor = { uid: authUid ?? uid, name: userName };
+
+        await updateDoc(doc(db, "users", uid, "receivables", receiveTarget.id), {
+            status: "recebido",
             receivedAt,
             paidPaymentMethod: method,
+            ...stampSettle(actor),
         });
 
         await addDoc(collection(db, "users", uid, "cashflow"), {
@@ -1092,6 +1161,7 @@ export default function ContasReceberPage() {
             sourceReceivableId: receiveTarget.id,
             paymentMethod: method,
             createdAt: Date.now(),
+            ...stampCreate(actor),
         });
 
         showToast("Recebido! Lançado no Fluxo de Caixa ✓");
@@ -1102,7 +1172,7 @@ export default function ContasReceberPage() {
     // ── Excluir cobrança ───────────────────────────────────────────────────────
     async function handleDeleteClick(id: string) {
         if (!uid) return;
-        const pinHash = await loadPinHash(uid);
+        const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
             showToast("Configure seu PIN na página de Perfil antes de excluir.", "err");
             return;
@@ -1113,7 +1183,7 @@ export default function ContasReceberPage() {
 
     async function handlePinDeleteSuccess(pin: string) {
         if (!uid || !confirmId) return;
-        const result = await verifyPin(uid, pin);
+        const result = await verifyPin(authUid ?? uid, pin);
         if (result === "ok") {
             setPinOpenDelete(false);
             setDeleting(true);
@@ -1159,7 +1229,8 @@ export default function ContasReceberPage() {
         return enriched.filter(r => {
             if (filterStatus !== "todos" && r._status !== filterStatus) return false;
             if (filterCategory !== "todas" && r.category !== filterCategory) return false;
-            if (q && !r.title.toLowerCase().includes(q) && !r.notes.toLowerCase().includes(q)) return false;
+            if (q && !r.title.toLowerCase().includes(q) && !r.notes.toLowerCase().includes(q)
+                && !(r.partyName ?? "").toLowerCase().includes(q)) return false;
             return true;
         });
     }, [enriched, filterStatus, filterCategory, search]);
@@ -1233,14 +1304,14 @@ export default function ContasReceberPage() {
 
             {/* Modais */}
             <ReceivableModal
-                open={modal} editing={editing} uid={uid}
+                open={modal} editing={editing} uid={authUid}
                 onClose={() => { setModal(false); setEditing(null); }}
                 onSave={handleSave}
             />
             <ReceiveModal
                 open={receiveModalOpen}
                 receivable={receiveTarget}
-                uid={uid}
+                uid={authUid}
                 onClose={() => { setReceiveModalOpen(false); setReceiveTarget(null); }}
                 onConfirm={handleReceive}
             />

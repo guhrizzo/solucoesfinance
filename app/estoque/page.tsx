@@ -113,9 +113,12 @@ export default function EstoquePage() {
   const [formVinculoQuantity, setFormVinculoQuantity] = useState("");
   const [formVinculoSaving, setFormVinculoSaving] = useState(false);
 
-  // Formulário Simulador Vendas
-  const [simSelectedVinculoId, setSimSelectedVinculoId] = useState("");
+  // Formulário Simulador Vendas — parte de um produto do estoque central
+  // (não exige anúncio vinculado). Registra a venda no Painel de Vendas.
+  const [simSku, setSimSku] = useState("");
+  const [simChannel, setSimChannel] = useState<"mercadolivre" | "shopee">("mercadolivre");
   const [simQuantity, setSimQuantity] = useState("1");
+  const [simUnitPrice, setSimUnitPrice] = useState("");
   const [simRunning, setSimRunning] = useState(false);
 
   // Sistema de Toast
@@ -239,7 +242,16 @@ export default function EstoquePage() {
       }
       cleanUrlParams();
     } else if (integration === "shopee_success") {
-      showToast("Conta da Shopee integrada e anúncios importados!", "success");
+      if (warning === "limited_permissions") {
+        showToast("Loja da Shopee conectada, mas sem permissão para importar itens automaticamente. Vincule manualmente ou revise os escopos do app.", "info");
+      } else {
+        showToast(
+          imported && imported !== "0"
+            ? `Shopee integrada! ${imported} item(ns) importado(s).`
+            : "Loja da Shopee integrada com sucesso!",
+          "success"
+        );
+      }
       cleanUrlParams();
     } else if (integration === "ml_error" || integration === "shopee_error") {
       showToast(`Erro na integração: ${message || "Verifique suas credenciais"}`, "error");
@@ -497,44 +509,91 @@ export default function EstoquePage() {
     }
   };
 
-  // Simular Venda via Webhook
+  // "199.9" (número) → "199,90" (campo em pt-BR).
+  const toPriceField = (n: number) => (Number(n) || 0).toFixed(2).replace(".", ",");
+  // "1.234,56" ou "199.90" → 1234.56 / 199.9
+  const parsePriceField = (s: string): number => {
+    const t = s.trim();
+    if (!t) return NaN;
+    return t.includes(",")
+      ? parseFloat(t.replace(/\./g, "").replace(",", "."))
+      : parseFloat(t);
+  };
+
+  // Abre o simulador já com o 1º produto selecionado e o preço preenchido.
+  const openSimulador = () => {
+    const first = produtos[0];
+    setSimSku(first?.sku ?? "");
+    setSimChannel("mercadolivre");
+    setSimQuantity("1");
+    setSimUnitPrice(first ? toPriceField(first.price) : "");
+    setModalSimuladorOpen(true);
+  };
+
+  const onSimSkuChange = (sku: string) => {
+    setSimSku(sku);
+    const p = produtos.find((x) => x.sku === sku);
+    if (p) setSimUnitPrice(toPriceField(p.price));
+  };
+
+  // Simular Venda — baixa o estoque central do SKU (propagando aos vínculos, se
+  // houver) e lança a venda como ENTRADA no Fluxo de Caixa (lib/vendas.ts) — é
+  // isso que faz a venda aparecer no Painel de Vendas (/vendas) e no Dashboard.
   const handleSimularVenda = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !simSelectedVinculoId || !simQuantity) return;
+    if (!ownerUid || !simSku || !simQuantity) return;
+
+    const produto = produtos.find((p) => p.sku === simSku);
+    if (!produto) { showToast("Produto não encontrado no estoque", "error"); return; }
+
+    const qty = Math.max(1, parseInt(simQuantity) || 1);
+    const parsedPrice = parsePriceField(simUnitPrice);
+    const unitPrice = Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : produto.price;
+    const novaQtd = Math.max(0, (produto.quantity || 0) - qty);
 
     setSimRunning(true);
-    showToast("Disparando webhook de venda...", "info");
+    showToast("Registrando venda simulada...", "info");
 
     try {
-      // Buscar dados do vínculo selecionado
-      const vinculo = vinculos.find((v) => v.id === simSelectedVinculoId);
-      if (!vinculo) throw new Error("Vínculo não encontrado");
+      const { getFirebase } = await import("@/lib/firebase");
+      const { db } = await getFirebase();
+      const { doc, updateDoc, collection, query, where, getDocs } = await import("firebase/firestore");
+      const { registrarVendaClient } = await import("@/lib/vendas");
 
-      const webhookUrl = vinculo.platform === "mercadolivre"
-        ? "/api/webhooks/mercadolivre"
-        : "/api/webhooks/shopee";
+      // 1. Baixa o estoque central do SKU.
+      await updateDoc(doc(db, "estoque", produto.id), { quantity: novaQtd, updatedAt: Date.now() });
 
-      const res = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mock: true,
-          adId: vinculo.adId,
-          quantitySold: parseInt(simQuantity),
-          userId: ownerUid
-        })
+      // 2. Espelha a nova quantidade nos anúncios vinculados ao mesmo SKU.
+      const snapVinculos = await getDocs(
+        query(collection(db, "vinculos"), where("userId", "==", ownerUid), where("sku", "==", simSku))
+      );
+      await Promise.all(
+        snapVinculos.docs.map((dv) =>
+          updateDoc(doc(db, "vinculos", dv.id), { quantity: novaQtd, updatedAt: Date.now() })
+        )
+      );
+
+      // 3. Lança a venda como entrada no caixa → aparece no Painel de Vendas.
+      //    Sem orderId: cada clique é uma venda distinta (não precisa de dedupe,
+      //    que só existe para o reenvio de webhook de pedido real).
+      await registrarVendaClient(db, ownerUid, {
+        channel: simChannel,
+        sku: simSku,
+        productName: produto.name || simSku,
+        adId: `sim-${simSku}`,
+        quantity: qty,
+        unitPrice,
+        orderId: null,
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        showToast(data.message || "Venda simulada com sucesso! O estoque foi sincronizado.", "success");
-        setModalSimuladorOpen(false);
-      } else {
-        showToast(data.error || "Erro no processamento da simulação", "error");
-      }
+      showToast(
+        `Venda simulada: ${qty}x ${produto.name} · SKU ${simSku} agora com ${novaQtd} un. Confira no Painel de Vendas.`,
+        "success"
+      );
+      setModalSimuladorOpen(false);
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || "Falha ao disparar simulador de venda", "error");
+      showToast(err.message || "Falha ao simular venda", "error");
     } finally {
       setSimRunning(false);
     }
@@ -641,8 +700,9 @@ export default function EstoquePage() {
 
           <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={() => setModalSimuladorOpen(true)}
-              className="btn-success flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
+              onClick={openSimulador}
+              disabled={produtos.length === 0}
+              className="btn-success flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #10b981, #059669)", cursor: "pointer" }}
             >
               <Zap size={15} /> Simular Venda (Teste)
@@ -1122,12 +1182,11 @@ export default function EstoquePage() {
                     </span>
                   ) : (
                     <button
-                      disabled
-                      title="Esta integração está em construção"
-                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-not-allowed opacity-50"
+                      onClick={() => handleConnectAccount("shopee")}
+                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
                       style={{ background: "var(--primary)", color: "white" }}
                     >
-                      Em Construção
+                      Conectar Conta
                     </button>
                   )}
                 </div>
@@ -1353,41 +1412,74 @@ export default function EstoquePage() {
             <form onSubmit={handleSimularVenda} className="p-5 space-y-4">
 
               <div className="rounded-xl px-4 py-3 text-[11px] leading-relaxed space-y-1.5" style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", color: "var(--success)" }}>
-                <p className="font-bold flex items-center gap-1"><CheckCircle size={12} /> Como Testar a Sincronização:</p>
-                <p>1. Crie ou importe o mesmo SKU nas duas plataformas (ex: conecte as duas plataformas mockadas ou crie dois anúncios vinculados ao mesmo SKU).</p>
-                <p>2. Simule uma venda em uma plataforma.</p>
-                <p>3. O sistema receberá o webhook, decrementará o estoque central no Firestore e enviará a nova quantidade de volta para todas as outras plataformas vinculadas!</p>
+                <p className="font-bold flex items-center gap-1"><CheckCircle size={12} /> O que a simulação faz:</p>
+                <p>1. Baixa a quantidade vendida do estoque central do SKU (e espelha nos anúncios vinculados, se houver).</p>
+                <p>2. Lança a venda como <strong>entrada no Fluxo de Caixa</strong> na categoria Vendas.</p>
+                <p>3. A venda passa a aparecer no <strong>Painel de Vendas</strong> e no Dashboard.</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Selecione o Anúncio Vendido</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Produto vendido</label>
                 <select
-                  value={simSelectedVinculoId}
-                  onChange={(e) => setSimSelectedVinculoId(e.target.value)}
+                  value={simSku}
+                  onChange={(e) => onSimSkuChange(e.target.value)}
                   required
                   className="w-full px-3 py-2.5 rounded-xl text-xs outline-none cursor-pointer"
                   style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
                 >
-                  <option value="">-- Escolha um anúncio vinculado --</option>
-                  {vinculos.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      [{v.platform === "mercadolivre" ? "ML" : "SHP"}] {v.title} (SKU: {v.sku} | Estoque: {v.quantity})
+                  <option value="">-- Escolha um produto --</option>
+                  {produtos.map((p) => (
+                    <option key={p.id} value={p.sku}>
+                      {p.name} (SKU: {p.sku} | Estoque: {p.quantity})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade Vendida</label>
-                <input
-                  type="number"
-                  value={simQuantity}
-                  onChange={(e) => setSimQuantity(e.target.value)}
-                  min="1"
-                  required
-                  className="w-full px-3 py-2.5 rounded-xl text-xs outline-none mono"
-                  style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
-                />
+                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Canal da venda</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["mercadolivre", "shopee"] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSimChannel(c)}
+                      className="px-3 py-2.5 rounded-xl text-xs font-bold border cursor-pointer transition-all"
+                      style={simChannel === c
+                        ? { background: "rgba(16,185,129,0.12)", borderColor: "#10b981", color: "#059669" }
+                        : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}
+                    >
+                      {c === "mercadolivre" ? "Mercado Livre" : "Shopee"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade</label>
+                  <input
+                    type="number"
+                    value={simQuantity}
+                    onChange={(e) => setSimQuantity(e.target.value)}
+                    min="1"
+                    required
+                    className="w-full px-3 py-2.5 rounded-xl text-xs outline-none mono"
+                    style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço unitário (R$)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={simUnitPrice}
+                    onChange={(e) => setSimUnitPrice(e.target.value)}
+                    placeholder="0,00"
+                    className="w-full px-3 py-2.5 rounded-xl text-xs outline-none mono"
+                    style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
+                  />
+                </div>
               </div>
 
               <div className="pt-2 flex justify-end gap-3">
@@ -1401,12 +1493,12 @@ export default function EstoquePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={simRunning || !simSelectedVinculoId}
-                  className="btn-success px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer flex items-center gap-1.5"
+                  disabled={simRunning || !simSku}
+                  className="btn-success px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                   style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
                 >
                   {simRunning ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                  Simular Pedido Recebido
+                  Registrar venda simulada
                 </button>
               </div>
             </form>

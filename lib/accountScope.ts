@@ -29,6 +29,7 @@ export const PERMISSION_CATEGORIES = [
   { key: "contasReceber", label: "Contas a Receber", path: "/contasReceber" },
   { key: "centroCustos", label: "Centro de Custos", path: "/costCenter" },
   { key: "estoque", label: "Estoque", path: "/estoque" },
+  { key: "vendas", label: "Painel de Vendas", path: "/vendas" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATEGORIES)[number]["key"];

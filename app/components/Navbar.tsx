@@ -7,7 +7,7 @@ import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, Calendar, Settings,
   LogOut, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap, PanelLeft,
-  Landmark, Boxes,
+  Landmark, Boxes, ShoppingCart,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
   { icon: DollarSign, label: "Contas a receber", href: "/contasReceber", permKey: "contasReceber" },
   { icon: BarChart2, label: "Centro de custos", href: "/costCenter", permKey: "centroCustos" },
   { icon: Boxes, label: "Estoque", href: "/estoque", permKey: "estoque" },
+  { icon: ShoppingCart, label: "Painel de vendas", href: "/vendas", permKey: "vendas" },
   { icon: Users, label: "Usuários", href: "/users" },
 
 ];
@@ -411,7 +412,7 @@ export default function Navbar({
   // permissão por categoria — "Usuários" (permKey ausente) fica sempre
   // visível, é a própria conta de quem está logado.
   const filteredNavItems = navItems.filter(item => {
-    if (item.label === "Estoque" && isServico) return false;
+    if ((item.label === "Estoque" || item.label === "Painel de vendas") && isServico) return false;
     if (item.permKey && !scope.loading && !hasPermission(scope, item.permKey)) return false;
     return true;
   });

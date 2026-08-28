@@ -7,75 +7,11 @@ import {
   isMockToken,
   getValidAccessToken,
   fetchOrder,
-  updateListingQuantity,
   verifyWebhookSignature,
   type MlIntegracao,
 } from "@/lib/mercadolivre";
-
-// Propaga a nova quantidade do SKU para todos os outros canais vinculados
-// (atualiza o registro no Firestore e, se for integração real, chama a API).
-async function propagarEstoque(
-  db: any,
-  userId: string,
-  sku: string,
-  novaQuantidade: number,
-  origem: { platform: string; adId: string }
-) {
-  const snapVinculos = await db
-    .collection("vinculos")
-    .where("userId", "==", userId)
-    .where("sku", "==", sku)
-    .get();
-
-  for (const dv of snapVinculos.docs) {
-    const vinculo = dv.data();
-
-    // Espelha a quantidade em todo vínculo do SKU (inclusive o de origem).
-    await db.collection("vinculos").doc(dv.id).update({ quantity: novaQuantidade, updatedAt: Date.now() });
-
-    // Não precisa empurrar de volta para o anúncio que originou a venda.
-    if (vinculo.platform === origem.platform && vinculo.adId === origem.adId) continue;
-
-    if (vinculo.platform !== "mercadolivre" || !vinculo.connectionId) continue;
-
-    try {
-      const intSnap = await db.collection("integracoes").doc(vinculo.connectionId).get();
-      if (!intSnap.exists) continue;
-      const integracao = { id: intSnap.id, ...intSnap.data() } as MlIntegracao;
-      if (isMockToken(integracao.accessToken)) continue;
-
-      const token = await getValidAccessToken(db, integracao);
-      await updateListingQuantity(token, vinculo.adId, novaQuantidade);
-      console.log(`[ML] estoque do anúncio ${vinculo.adId} atualizado para ${novaQuantidade}`);
-    } catch (err) {
-      console.error(`[ML] falha ao propagar estoque para ${vinculo.adId}:`, err);
-    }
-  }
-}
-
-// Baixa `quantitySold` do estoque central do SKU e propaga. Retorna a nova qtd.
-async function baixarEstoque(
-  db: any,
-  userId: string,
-  sku: string,
-  quantitySold: number,
-  origem: { platform: string; adId: string }
-): Promise<number | null> {
-  const snapEstoque = await db
-    .collection("estoque")
-    .where("userId", "==", userId)
-    .where("sku", "==", sku)
-    .get();
-  if (snapEstoque.empty) return null;
-
-  const estoqueDoc = snapEstoque.docs[0];
-  const atual = estoqueDoc.data().quantity || 0;
-  const nova = Math.max(0, atual - quantitySold);
-
-  await db.collection("estoque").doc(estoqueDoc.id).update({ quantity: nova, updatedAt: Date.now() });
-  await propagarEstoque(db, userId, sku, nova, origem);
-  return nova;
-}
+import { registrarVendaAdmin } from "@/lib/vendas";
+import { baixarEstoqueEPropagar } from "@/lib/estoqueSync";
 
 export async function POST(request: Request) {
   let body: any;
@@ -102,11 +38,23 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Vínculo não encontrado" }, { status: 404 });
       }
 
-      const sku = snapVinculo.docs[0].data().sku;
-      const nova = await baixarEstoque(db, userId, sku, quantitySold, { platform: "mercadolivre", adId });
+      const vinculoMock = snapVinculo.docs[0].data();
+      const sku = vinculoMock.sku;
+      const nova = await baixarEstoqueEPropagar(db, userId, sku, quantitySold, { platform: "mercadolivre", adId });
       if (nova === null) {
         return NextResponse.json({ error: "Produto do estoque não encontrado" }, { status: 404 });
       }
+
+      // Registra a venda como entrada no Fluxo de Caixa (ver lib/vendas.ts).
+      await registrarVendaAdmin(db, userId, {
+        channel: "mercadolivre",
+        sku,
+        productName: vinculoMock.title || sku,
+        adId,
+        quantity: quantitySold || 1,
+        unitPrice: Number(vinculoMock.price) || 0,
+        orderId: `mock-ml-${Date.now()}`,
+      });
 
       return NextResponse.json({
         success: true,
@@ -162,6 +110,8 @@ export async function POST(request: Request) {
     const token = await getValidAccessToken(db, integracao);
     const order = await fetchOrder(token, resource);
     const items = order.order_items || [];
+    const orderId = String(order.id ?? resource.split("/").pop() ?? "");
+    const occurredAt = order.date_created ? Date.parse(order.date_created) || Date.now() : Date.now();
 
     for (const oi of items) {
       const adId = String(oi.item?.id || "");
@@ -170,18 +120,35 @@ export async function POST(request: Request) {
 
       // Prefere o seller_sku do próprio pedido; senão, resolve pelo vínculo.
       let sku: string = (oi.item?.seller_sku || "").trim().toUpperCase();
-      if (!sku) {
+      let titulo: string = oi.item?.title || "";
+      if (!sku || !titulo) {
         const snapVinculo = await db
           .collection("vinculos")
           .where("userId", "==", integracao.userId)
           .where("platform", "==", "mercadolivre")
           .where("adId", "==", adId)
           .get();
-        if (snapVinculo.empty) continue;
-        sku = snapVinculo.docs[0].data().sku;
+        if (!snapVinculo.empty) {
+          const v = snapVinculo.docs[0].data();
+          if (!sku) sku = v.sku;
+          if (!titulo) titulo = v.title || "";
+        }
       }
+      if (!sku) continue;
 
-      await baixarEstoque(db, integracao.userId, sku, quantitySold, { platform: "mercadolivre", adId });
+      await baixarEstoqueEPropagar(db, integracao.userId, sku, quantitySold, { platform: "mercadolivre", adId });
+
+      // Registra a venda como entrada no Fluxo de Caixa (dedupe por orderId).
+      await registrarVendaAdmin(db, integracao.userId, {
+        channel: "mercadolivre",
+        sku,
+        productName: titulo || sku,
+        adId,
+        quantity: quantitySold,
+        unitPrice: Number(oi.unit_price) || 0,
+        orderId: items.length > 1 ? `${orderId}:${adId}` : orderId,
+        occurredAt,
+      });
     }
 
     return NextResponse.json({ received: true });

@@ -1,160 +1,166 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
+import { getAdminDb } from "@/lib/firebaseAdmin";
+import { baixarEstoqueEPropagar } from "@/lib/estoqueSync";
+import { registrarVendaAdmin } from "@/lib/vendas";
+import {
+  isMockToken,
+  getValidShopeeToken,
+  fetchShopeeOrder,
+  verifyShopeePush,
+  type ShopeeIntegracao,
+} from "@/lib/shopee";
 
-// Função para atualizar estoque nas plataformas vinculadas
-async function sincronizarEstoquePlataformas(db: any, userId: string, sku: string, novaQuantidade: number, platformOrigin: string, adIdOrigin: string) {
-  const { collection, getDocs, query, where, doc, updateDoc } = await import("firebase/firestore");
-  
-  const vinculosRef = collection(db, "vinculos");
-  const qVinculos = query(vinculosRef, where("userId", "==", userId), where("sku", "==", sku));
-  const snapVinculos = await getDocs(qVinculos);
-
-  for (const docVinculo of snapVinculos.docs) {
-    const vinculo = docVinculo.data();
-    
-    // Não precisa atualizar o canal de onde veio a venda
-    if (vinculo.platform === platformOrigin && vinculo.adId === adIdOrigin) {
-      await updateDoc(doc(db, "vinculos", docVinculo.id), {
-        quantity: novaQuantidade,
-        updatedAt: Date.now()
-      });
-      continue;
-    }
-
-    console.log(`[Sincronização] SKU ${sku}: Sincronizando novo estoque (${novaQuantidade}) na plataforma ${vinculo.platform} para o anúncio ${vinculo.adId}`);
-
-    // Atualiza a quantidade no vínculo
-    await updateDoc(doc(db, "vinculos", docVinculo.id), {
-      quantity: novaQuantidade,
-      updatedAt: Date.now()
-    });
-
-    // Se for modo real, faria a chamada de API correspondente para a plataforma
-    const integracoesRef = collection(db, "integracoes");
-    const qIntegracao = query(
-      integracoesRef,
-      where("userId", "==", userId),
-      where("platform", "==", vinculo.platform),
-      where("id", "==", vinculo.connectionId || "")
-    );
-    const snapIntegracao = await getDocs(qIntegracao);
-
-    if (!snapIntegracao.empty) {
-      const integracao = snapIntegracao.docs[0].data();
-      const accessToken = integracao.accessToken;
-
-      if (vinculo.platform === "mercadolivre" && !accessToken.startsWith("mock_")) {
-        try {
-          await fetch(`https://api.mercadolibre.com/items/${vinculo.adId}`, {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              available_quantity: novaQuantidade
-            })
-          });
-        } catch (err) {
-          console.error(`Erro ao atualizar estoque real ML:`, err);
-        }
-      }
-      // Outros canais (como a Shopee real) seriam adicionados aqui
-    }
-  }
-}
+// Status de pedido em que faz sentido baixar o estoque (pago/em preparação).
+// Fora disso (UNPAID, CANCELLED, ...) ignora, senão baixaria estoque de pedido
+// que ainda pode cair.
+const STATUS_BAIXA = new Set([
+  "READY_TO_SHIP",
+  "PROCESSED",
+  "SHIPPED",
+  "TO_CONFIRM_RECEIVE",
+  "COMPLETED",
+]);
 
 export async function POST(request: Request) {
+  const raw = await request.text();
+  let body: any;
   try {
-    const body = await request.json();
-    console.log("[Webhook Shopee] Recebido evento:", body);
+    body = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
+  }
 
-    const { getFirebase } = await import("@/lib/firebase");
-    const { db } = await getFirebase();
-    const { collection, getDocs, query, where, doc, updateDoc } = await import("firebase/firestore");
+  try {
+    const db = await getAdminDb();
 
-    // Caso de simulação de venda disparada localmente
+    // ── Simulação disparada pelo painel de teste ────────────────────────────
     if (body.mock === true) {
       const { adId, quantitySold, userId } = body;
-      
-      // Buscar o vínculo para descobrir o SKU
-      const vinculosRef = collection(db, "vinculos");
-      const qVinculo = query(vinculosRef, where("userId", "==", userId), where("platform", "==", "shopee"), where("adId", "==", adId));
-      const snapVinculo = await getDocs(qVinculo);
 
+      const snapVinculo = await db
+        .collection("vinculos")
+        .where("userId", "==", userId)
+        .where("platform", "==", "shopee")
+        .where("adId", "==", adId)
+        .get();
       if (snapVinculo.empty) {
         return NextResponse.json({ error: "Vínculo não encontrado" }, { status: 404 });
       }
 
       const vinculo = snapVinculo.docs[0].data();
       const sku = vinculo.sku;
-
-      // Buscar e atualizar o produto no estoque central
-      const estoqueRef = collection(db, "estoque");
-      const qEstoque = query(estoqueRef, where("userId", "==", userId), where("sku", "==", sku));
-      const snapEstoque = await getDocs(qEstoque);
-
-      if (snapEstoque.empty) {
+      const nova = await baixarEstoqueEPropagar(db, userId, sku, quantitySold, { platform: "shopee", adId });
+      if (nova === null) {
         return NextResponse.json({ error: "Produto do estoque não encontrado" }, { status: 404 });
       }
 
-      const estoqueDoc = snapEstoque.docs[0];
-      const estoqueData = estoqueDoc.data();
-      const novaQuantidade = Math.max(0, (estoqueData.quantity || 0) - quantitySold);
-
-      // Atualiza o estoque central
-      await updateDoc(doc(db, "estoque", estoqueDoc.id), {
-        quantity: novaQuantidade,
-        updatedAt: Date.now()
+      await registrarVendaAdmin(db, userId, {
+        channel: "shopee",
+        sku,
+        productName: vinculo.title || sku,
+        adId,
+        quantity: quantitySold || 1,
+        unitPrice: Number(vinculo.price) || 0,
+        orderId: `mock-shp-${Date.now()}`,
       });
-
-      // Sincroniza com outros canais vinculados ao mesmo SKU (ex: Mercado Livre)
-      await sincronizarEstoquePlataformas(db, userId, sku, novaQuantidade, "shopee", adId);
 
       return NextResponse.json({
         success: true,
-        message: `Venda simulada processada. SKU ${sku} atualizado para quantidade ${novaQuantidade}.`
+        message: `Venda simulada processada. SKU ${sku} atualizado para ${nova} un.`,
       });
     }
 
-    // Fluxo Real da Shopee
-    // O webhook da Shopee envia notificações de pedidos com o status de alteração (ex: code 3)
-    if (body.code === 3 && body.data && body.data.ordersn) {
-      const ordersn = body.data.ordersn;
-      const shopId = String(body.shop_id);
+    // ── Push real da Shopee ────────────────────────────────────────────────
+    // Assinatura: header Authorization = HMAC-SHA256(`${url}|${body}`, partner_key).
+    const u = new URL(request.url);
+    const pushUrl = `${u.origin}${u.pathname}`;
+    const sig = verifyShopeePush({
+      authorization: request.headers.get("authorization"),
+      url: pushUrl,
+      rawBody: raw,
+    });
+    if (sig === "invalid" && process.env.SHOPEE_PUSH_STRICT === "true") {
+      console.warn("[Shopee push] assinatura inválida — rejeitado (STRICT)");
+      return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
+    }
+    if (sig !== "valid") {
+      console.warn(`[Shopee push] assinatura ${sig} (aceito — STRICT desligado)`);
+    }
 
-      // 1. Achar a integração
-      const integracoesRef = collection(db, "integracoes");
-      const qIntegracao = query(integracoesRef, where("platform", "==", "shopee"), where("accountId", "==", shopId));
-      const snapIntegracao = await getDocs(qIntegracao);
+    // code 3 = atualização de status de pedido. Outros códigos: 200 e ignora.
+    const ordersn: string = body?.data?.ordersn || body?.data?.order_sn || "";
+    if (body.code !== 3 || !ordersn) {
+      return NextResponse.json({ received: true, ignored: body.code });
+    }
 
-      if (snapIntegracao.empty) {
-        return NextResponse.json({ error: "Integração Shopee correspondente não encontrada" }, { status: 200 });
+    const shopId = String(body.shop_id ?? "");
+    const status = String(body?.data?.status || "").toUpperCase();
+    if (status && !STATUS_BAIXA.has(status)) {
+      return NextResponse.json({ received: true, note: `status ${status} ignorado` });
+    }
+
+    const snapInteg = await db
+      .collection("integracoes")
+      .where("platform", "==", "shopee")
+      .where("accountId", "==", shopId)
+      .get();
+    if (snapInteg.empty) {
+      return NextResponse.json({ received: true, note: "loja não conectada" });
+    }
+
+    const integ = {
+      id: snapInteg.docs[0].id,
+      ...snapInteg.docs[0].data(),
+    } as ShopeeIntegracao & { userId: string };
+
+    if (isMockToken(integ.accessToken)) {
+      return NextResponse.json({ received: true, note: "integração mock" });
+    }
+
+    const token = await getValidShopeeToken(db, integ);
+    const order = await fetchShopeeOrder(token, integ.accountId || "", ordersn);
+
+    for (const it of order.items) {
+      const adId = it.adId;
+      if (!adId) continue;
+
+      let sku = it.sku;
+      let titulo = it.title;
+      if (!sku || !titulo) {
+        const sv = await db
+          .collection("vinculos")
+          .where("userId", "==", integ.userId)
+          .where("platform", "==", "shopee")
+          .where("adId", "==", adId)
+          .get();
+        if (!sv.empty) {
+          const v = sv.docs[0].data();
+          if (!sku) sku = String(v.sku || "").toUpperCase();
+          if (!titulo) titulo = v.title || "";
+        }
       }
+      if (!sku) continue;
 
-      const integracao = snapIntegracao.docs[0].data();
-      const userId = integracao.userId;
-      const accessToken = integracao.accessToken;
+      await baixarEstoqueEPropagar(db, integ.userId, sku, it.quantity, { platform: "shopee", adId });
 
-      // 2. Chamar a API da Shopee para pegar os detalhes do pedido e extrair o item_id e a quantidade
-      // API v2 Shopee: /api/v2/order/get_order_detail
-      // Requer assinatura. Mockaremos o fluxo de chamada de API se for token mockado
-      if (accessToken.startsWith("mock_")) {
-        return NextResponse.json({ received: true, note: "Token simulado, ignorando chamada API real" });
-      }
-
-      // Se for real, faria a requisição HTTP assinada para a API da Shopee:
-      // (Seria semelhante ao fluxo de importação)
-      // details = await fetchShopeeOrderDetail(ordersn, accessToken, shopId)
-      // for item in details.items {
-      //    adId = item.item_id
-      //    quantitySold = item.model_quantity_purchased
-      //    ...
-      // }
+      await registrarVendaAdmin(db, integ.userId, {
+        channel: "shopee",
+        sku,
+        productName: titulo || sku,
+        adId,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        orderId: order.items.length > 1 ? `${ordersn}:${adId}` : ordersn,
+      });
     }
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    console.error("Erro no processamento do webhook da Shopee:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Erro no webhook da Shopee:", error);
+    // 200 mesmo em erro interno evita retry infinito; o log fica pra depuração.
+    return NextResponse.json({ received: true, error: error?.message }, { status: 200 });
   }
 }

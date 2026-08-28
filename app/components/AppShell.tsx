@@ -14,6 +14,7 @@ const INTERNAL_PREFIXES = [
   "/contasReceber",
   "/costCenter",
   "/estoque",
+  "/vendas",
   "/impostos",
   "/relatorios",
 ];
