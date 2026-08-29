@@ -17,6 +17,7 @@ import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
 import PinModal from "../components/PinModal";
 import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
+import { usePeriod } from "../hooks/usePeriod";
 import PaymentMethodSelector, { PaymentMethodBadge } from "../components/PaymentMethodSelector";
 import type { PaymentMethod } from "../types/payment";
 import { syncTaxCashflow } from "@/lib/billTaxSync";
@@ -1037,6 +1038,9 @@ export default function ImpostosPage() {
     const [filterStatus, setFilterStatus] = useState<"todos" | TaxStatus>("todos");
     const [filterSphere, setFilterSphere] = useState<"todos" | TaxSphere>("todos");
     const [filterType, setFilterType] = useState("todos");
+    // Mês em foco = seletor global da Navbar (usePeriod). A lista é filtrada
+    // por mês de vencimento; alertas/KPIs seguem globais.
+    const { monthKey, label: periodLabel } = usePeriod();
 
     const { toasts, show: showToast } = useToast();
 
@@ -1263,6 +1267,7 @@ export default function ImpostosPage() {
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
         return enriched.filter(t => {
+            if ((t.dueDate ?? "").slice(0, 7) !== monthKey) return false;
             if (filterStatus !== "todos" && t._status !== filterStatus) return false;
             if (filterSphere !== "todos") {
                 const meta = getTaxMeta(t.type);
@@ -1272,7 +1277,7 @@ export default function ImpostosPage() {
             if (q && !t.name.toLowerCase().includes(q) && !t.notes.toLowerCase().includes(q)) return false;
             return true;
         });
-    }, [enriched, filterStatus, filterSphere, filterType, search]);
+    }, [enriched, filterStatus, filterSphere, filterType, search, monthKey]);
 
     const sections = useMemo(() => [
         { key: "atraso", label: "Em Atraso", color: "#dc2626", taxes: filtered.filter(t => t._status === "atraso") },
@@ -1524,6 +1529,10 @@ export default function ImpostosPage() {
                                     )}
                                 </select>
                             </div>
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                                title="Vencimentos deste mês — troque o mês no seletor da Navbar">
+                                {periodLabel}
+                            </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text3)" }}>
                                 {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
                             </span>
@@ -1541,12 +1550,12 @@ export default function ImpostosPage() {
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
                                 ? "Nenhum resultado"
-                                : "Nenhum imposto cadastrado"}
+                                : `Nada em ${periodLabel}`}
                         </p>
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text2)" }}>
                             {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
                                 ? "Ajuste os filtros para ver outros impostos."
-                                : "Comece a rastrear seus impostos e receba alertas antes dos prazos."}
+                                : "Nenhum imposto vence neste mês. Troque o mês no seletor da Navbar ou adicione um imposto."}
                         </p>
                         {!search && filterStatus === "todos" && filterType === "todos" && filterSphere === "todos" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}

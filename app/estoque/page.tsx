@@ -669,7 +669,7 @@ export default function EstoquePage() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
-      <Navbar activePath="/estoque" user={user} onLogout={handleLogout} />
+      <Navbar activePath="/estoque" user={user} onLogout={handleLogout} hidePeriod />
 
       {/* Sistema de Toasts */}
       {toast && (

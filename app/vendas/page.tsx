@@ -285,7 +285,7 @@ export default function VendasPage() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
-      <Navbar activePath="/vendas" user={user} onLogout={handleLogout} />
+      <Navbar activePath="/vendas" user={user} onLogout={handleLogout} hidePeriod />
 
       <main className="px-6 py-8 max-w-7xl mx-auto w-full space-y-8 pb-24">
 

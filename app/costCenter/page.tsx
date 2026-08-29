@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   TrendingUp,
   CreditCard,
@@ -19,10 +19,10 @@ import {
   Loader,
   Search,
   ChevronDown,
-  CalendarDays,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useTheme } from "../hooks/useTheme";
+import { usePeriod } from "../hooks/usePeriod";
 import { syncExpenseCashflow } from "@/lib/costCenterSync";
 import { resolveAccountScope, hasPermission } from "@/lib/accountScope";
 import AccessDenied from "../components/AccessDenied";
@@ -66,17 +66,6 @@ function monthKeyOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function monthKeyToLabel(key: string): string {
-  const [y, m] = key.split("-").map(Number);
-  return `${MONTH_LABELS[(m ?? 1) - 1] ?? "—"} ${y}`;
-}
-
-function shiftMonthKey(key: string, delta: number): string {
-  const [y, m] = key.split("-").map(Number);
-  return monthKeyOf(new Date(y, (m - 1) + delta, 1));
-}
-
-
 /** Data completa por extenso curto, ex: "21 de mai de 2026" — aceita Timestamp do Firestore, Date ou string/número. */
 function formatFullDate(value: unknown): string {
   const hasToDate = (v: unknown): v is { toDate: () => Date } =>
@@ -117,144 +106,6 @@ function expensesForCenterMonth(expenses: Expense[], centerName: string, monthKe
 
 function centerSpentForMonth(expenses: Expense[], centerName: string, monthKey: string): number {
   return expensesForCenterMonth(expenses, centerName, monthKey).reduce((s, e) => s + e.amount, 0);
-}
-
-/** Monta uma chave "YYYY-MM-DD" a partir das partes, sem passar por Date/ISO (evita shift de fuso). */
-function dateKeyOf(y: number, m: number, d: number): string {
-  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-/**
- * Seletor de período em formato de calendário — abre um popover com
- * navegação de mês e uma grade de dias, no lugar do antigo `< Ago 2026 >`
- * só de texto. Editável no nível do dia: clicar num dia específico
- * seleciona exatamente aquele dia (não só o mês) — é esse dia que vira,
- * por exemplo, a data padrão de cadastro de um novo centro de custo.
- * Mesma linguagem visual dos dropdowns do Navbar (card com borda, sombra,
- * animação de entrada) e dos botões-gradiente da marca.
- */
-function MonthPicker({
-  value, onChange, currentDateKey,
-}: {
-  /** Data selecionada, "YYYY-MM-DD". */
-  value: string;
-  onChange: (dateKey: string) => void;
-  /** Data de hoje, "YYYY-MM-DD" — usada só pra destacar o dia atual e o atalho "Hoje". */
-  currentDateKey: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [viewMonthKey, setViewMonthKey] = useState(value.slice(0, 7));
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // Reajusta o mês exibido no popover pro valor atual — direto no handler
-  // do clique que abre (não via effect observando `open`, que dispararia
-  // um setState síncrono em cascata).
-  const toggleOpen = () => {
-    setOpen(o => {
-      const next = !o;
-      if (next) setViewMonthKey(value.slice(0, 7));
-      return next;
-    });
-  };
-
-  const [viewY, viewM] = viewMonthKey.split("-").map(Number);
-  const firstWeekday = new Date(viewY, viewM - 1, 1).getDay();
-  const daysInMonth = new Date(viewY, viewM, 0).getDate();
-  const isTodayCell = (day: number) => dateKeyOf(viewY, viewM, day) === currentDateKey;
-  const isSelectedCell = (day: number) => dateKeyOf(viewY, viewM, day) === value;
-  const cells: (number | null)[] = [
-    ...Array(firstWeekday).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-
-  const [vy, vm, vd] = value.split("-").map(Number);
-  const buttonLabel = `${vd} ${MONTH_LABELS[(vm ?? 1) - 1] ?? "—"} ${vy}`;
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={toggleOpen}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-semibold"
-        style={{ borderColor: "var(--db-border)", background: "var(--db-card)", color: "var(--db-text)" }}
-      >
-        <CalendarDays size={13} style={{ color: "var(--primary)" }} />
-        {buttonLabel}
-        <ChevronDown size={12} style={{ color: "var(--db-text2)", transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
-      </button>
-
-      {open && (
-        <div
-          className="absolute right-0 mt-2 rounded-2xl border z-50 p-3"
-          style={{
-            background: "var(--db-card)", borderColor: "var(--db-border)", width: 236,
-            boxShadow: "0 20px 50px rgba(13,34,71,0.18), 0 4px 14px rgba(13,34,71,0.1)",
-            animation: "cpDropIn 0.15s cubic-bezier(.22,.68,0,1.1) both",
-          }}
-        >
-          {/* Navegação de mês */}
-          <div className="flex items-center justify-between mb-2.5 px-1">
-            <button onClick={() => setViewMonthKey(k => shiftMonthKey(k, -1))}
-              className="p-1 rounded-lg cursor-pointer hover:opacity-70 transition-opacity" aria-label="Mês anterior">
-              <ChevronDown size={14} style={{ color: "var(--db-text2)", transform: "rotate(90deg)" }} />
-            </button>
-            <span className="text-sm font-bold" style={{ color: "var(--db-text)" }}>{monthKeyToLabel(viewMonthKey)}</span>
-            <button onClick={() => setViewMonthKey(k => shiftMonthKey(k, 1))}
-              className="p-1 rounded-lg cursor-pointer hover:opacity-70 transition-opacity" aria-label="Próximo mês">
-              <ChevronDown size={14} style={{ color: "var(--db-text2)", transform: "rotate(-90deg)" }} />
-            </button>
-          </div>
-
-          {/* Cabeçalho dos dias da semana */}
-          <div className="grid grid-cols-7 gap-0.5 mb-1">
-            {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
-              <div key={i} className="text-center text-[10px] font-semibold" style={{ color: "var(--db-text3)" }}>{d}</div>
-            ))}
-          </div>
-
-          {/* Grade de dias — clicar num dia seleciona exatamente aquele dia */}
-          <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((day, idx) => {
-              if (day === null) return <div key={`pad-${idx}`} />;
-              const selected = isSelectedCell(day);
-              const isToday = isTodayCell(day);
-              return (
-                <button
-                  key={day}
-                  onClick={() => { onChange(dateKeyOf(viewY, viewM, day)); setOpen(false); }}
-                  className="aspect-square rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center justify-center"
-                  style={
-                    selected
-                      ? { background: "linear-gradient(135deg, #1565c0, #0d47a1)", color: "#fff" }
-                      : isToday
-                        ? { background: "rgba(21,101,192,0.12)", color: "var(--primary)" }
-                        : { background: "transparent", color: "var(--db-text)" }
-                  }
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => { onChange(currentDateKey); setOpen(false); }}
-            className="w-full mt-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
-            style={{ color: "var(--primary)", background: "var(--db-sub)" }}
-          >
-            Hoje
-          </button>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ─── Constantes e Helpers ─────────────────────────────────────────────────────
@@ -725,14 +576,14 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 // partir das despesas reais do mês, não de um acumulador armazenado.)
 
 export default function CostCenterPage() {
-  // Período navegável, editável no nível do dia via MonthPicker — sempre
-  // abre no dia atual, não persiste. `selectedMonth` (usado pra filtrar
-  // orçamento/despesas, que continuam mensais) é derivado do dia escolhido.
+  // Mês em foco = mês global compartilhado (usePeriod), o mesmo do stepper
+  // na Navbar e das demais telas. `selectedDate` (usada só como data padrão
+  // ao cadastrar um novo centro) é o dia de hoje quando o mês em foco é o
+  // corrente, senão o dia 1º daquele mês.
   const currentMonthKey = monthKeyOf(new Date());
   const currentDateKey = toDateInputValue(new Date());
-  const [selectedDate, setSelectedDate] = useState(currentDateKey);
-  const selectedMonth = selectedDate.slice(0, 7);
-  const period = monthKeyToLabel(selectedMonth);
+  const { monthKey: selectedMonth, label: period, isCurrentMonth } = usePeriod();
+  const selectedDate = isCurrentMonth ? currentDateKey : `${selectedMonth}-01`;
   const [payingExpenseId, setPayingExpenseId] = useState<string | null>(null);
 
   const [uid, setUid] = useState<string>("");
@@ -1081,7 +932,7 @@ export default function CostCenterPage() {
         onCancel={() => setConfirmModal({ open: false, type: null, id: "", loading: false })}
       />
 
-      <Navbar user={user} period={period} activePath={activePath} onLogout={handleLogout} />
+      <Navbar user={user} activePath={activePath} onLogout={handleLogout} />
 
       <ExpenseModal
         open={showExpenseModal}
@@ -1129,8 +980,10 @@ export default function CostCenterPage() {
               <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Com detalhamento por categoria</p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Seletor de período em formato de calendário — editável por dia, não persiste, sempre abre no dia atual */}
-              <MonthPicker value={selectedDate} onChange={setSelectedDate} currentDateKey={currentDateKey} />
+              {/* O mês em foco vem do seletor global na Navbar (‹ {period} ›). */}
+              <span className="text-xs font-semibold px-2.5 py-1.5 rounded-lg" style={{ background: "var(--db-sub)", color: "var(--db-text2)" }}>
+                {period}
+              </span>
               <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
                 className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                 style={{ background: "var(--primary)" }}>

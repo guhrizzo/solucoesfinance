@@ -453,6 +453,7 @@ export default function PerfilPage() {
         user={{ displayName: user.displayName, email: user.email, uid: user.uid }}
         activePath={activePath}
         onLogout={handleLogout}
+        hidePeriod
       />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 lg:pb-8">

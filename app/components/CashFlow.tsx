@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Navbar from "./Navbar";
+import { usePeriod } from "../hooks/usePeriod";
 import { Modal, Button, MoneyInput, parseAmount } from "./ui";
 import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
 import AccessDenied from "./AccessDenied";
@@ -148,31 +149,6 @@ async function autoSettleMatchingCostCenterExpense(
     console.error("Erro ao tentar dar baixa automática no Centro de Custo:", err);
     return null;
   }
-}
-
-// ─── Modal de previsão ────────────────────────────────────────────────────────
-
-function PrevisaoModal({ open, value, onClose, onSave }: {
-  open: boolean; value: number; onClose: () => void; onSave: (val: number) => void;
-}) {
-  const [raw, setRaw] = useState("");
-  useEffect(() => { if (open) setRaw(value > 0 ? value.toFixed(2).replace(".", ",") : ""); }, [open, value]);
-  const parsed = parseAmount(raw);
-  return (
-    <Modal open={open} onClose={onClose} title="Orçamento" size="sm">
-      <div className="p-6">
-        <p className="text-xs -mt-2 mb-5" style={{ color: "var(--cf-text-2)" }}>Orçamento dos centros de custo + todas as contas a pagar + todos os impostos</p>
-        <div className="space-y-3 mb-6">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--cf-text-2)" }}>Valor orçado (R$)</label>
-          <MoneyInput value={raw} onValueChange={setRaw} autoFocus />
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-          <Button variant="primary" onClick={() => { onSave(parsed); onClose(); }} className="flex-1">Salvar</Button>
-        </div>
-      </div>
-    </Modal>
-  );
 }
 
 // ─── Modal de transação ───────────────────────────────────────────────────────
@@ -736,12 +712,20 @@ export default function CashFlowPage() {
   const [search, setSearch] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [previsao, setPrevisao] = useState(0);
-  const [previsaoOpen, setPrevisaoOpen] = useState(false);
   const [hideValues, setHideValues] = useState(false);
-  const [costCenterBudget, setCostCenterBudget] = useState(0);
-  const [billsTotal, setBillsTotal] = useState(0);
-  const [taxesTotal, setTaxesTotal] = useState(0);
+  // Contas a pagar / impostos do dono, só o que o Orçamento do mês precisa
+  // (valor + vencimento). Os centros de custo já vêm em `costCenters`.
+  const [bills, setBills] = useState<{ amount: number; dueDate: string }[]>([]);
+  const [taxes, setTaxes] = useState<{ amount: number; dueDate: string }[]>([]);
+
+  // Mês em foco = seletor global da Navbar (usePeriod). Tudo nesta tela —
+  // KPIs (Orçamento/Entradas/Saídas/Saldo/Resultado) e a lista — é recortado
+  // por este mês.
+  const { monthKey, label: periodLabel } = usePeriod();
+  const currentMonthKey = useMemo(() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
 
   // ─── Accordion state ──────────────────────────────────────────────────────
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -763,32 +747,11 @@ export default function CashFlowPage() {
     });
   }, []);
 
-  // ── Orçamento = soma FIXA de: orçamento mensal dos centros de custo +
-  //    TODAS as contas a pagar + TODOS os impostos (pagos ou não). Pagar
-  //    algo não reduz o Orçamento — ele é o teto planejado usado pra medir
-  //    o Resultado (superávit/déficit) contra o Saldo real. ──
-  const updatePrevisao = useCallback((newCostCenterBudget?: number, newBillsTotal?: number, newTaxesTotal?: number) => {
-    if (newCostCenterBudget !== undefined) setCostCenterBudget(newCostCenterBudget);
-    if (newBillsTotal !== undefined) setBillsTotal(newBillsTotal);
-    if (newTaxesTotal !== undefined) setTaxesTotal(newTaxesTotal);
-  }, []);
-
-  // ── Recalcula o Orçamento quando qualquer parcela muda ──
+  // Abre o card do mês em foco (a lista mostra só ele).
   useEffect(() => {
-    setPrevisao(costCenterBudget + billsTotal + taxesTotal);
-  }, [costCenterBudget, billsTotal, taxesTotal]);
-
-  useEffect(() => {
-    if (txs.length > 0) {
-      // Abre o mês mais recente automaticamente na primeira carga
-      setOpenMonths(prev => {
-        if (prev.size > 0) return prev;
-        const firstDate = txs.reduce((max, t) => t.date > max ? t.date : max, "");
-        const yearMonth = firstDate.substring(0, 7);
-        return new Set([yearMonth]);
-      });
-    }
-  }, [txs.length > 0]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reage à troca de mês no seletor global
+    setOpenMonths(new Set([monthKey]));
+  }, [monthKey]);
 
     useEffect(() => {
       let snapUnsub: (() => void) | undefined;
@@ -831,29 +794,14 @@ export default function CashFlowPage() {
               (err) => { setErrMsg(`${err.message} (${err.code})`); setPageState("error"); }
             );
 
-            // ── Listener de orçamento total (centros de custo) ──
-            // Orçamento agora é por mês (budgetsByMonth); a Previsão é uma
-            // projeção do período atual, então somamos sempre o mês corrente
-            // (centros antigos sem budgetsByMonth caem no campo legado `budget`).
+            // ── Listener de centros de custo ──
+            // Guarda os docs crus (com budgetsByMonth); o Orçamento do mês em
+            // foco é somado no useMemo `previsao`, não aqui.
             snapCenterUnsub?.();
             const centerQ = query(collection(db, "costCenters"), where("userId", "==", ownerUid));
-            const nowKey = (() => {
-              const n = new Date();
-              return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
-            })();
             snapCenterUnsub = onSnapshot(
               centerQ,
               (snap) => {
-                const totalBudget = snap.docs.reduce((sum, doc) => {
-                  const data = doc.data();
-                  const budgetsByMonth = data.budgetsByMonth as Record<string, number> | undefined;
-                  const monthBudget = budgetsByMonth
-                    ? (budgetsByMonth[nowKey] ?? 0)
-                    : (typeof data.budget === "number" ? data.budget : 0);
-                  return sum + monthBudget;
-                }, 0);
-                // Calcula previsão com contas pendentes adicionadas
-                updatePrevisao(totalBudget);
                 // Mesmo snapshot alimenta o seletor "Centro de custo" do modal de
                 // saída — evita um segundo listener na mesma coleção.
                 setCostCenters(snap.docs.map((d) => {
@@ -867,13 +815,13 @@ export default function CashFlowPage() {
             );
 
             // ── Listener de contas a pagar (TODAS, pagas ou não) ──
-            // O Orçamento é fixo: pagar uma conta não a remove desta soma.
+            // O Orçamento não desconta pagamento: guarda valor + vencimento e
+            // o useMemo filtra pelo mês em foco.
             snapBillsUnsub?.();
             snapBillsUnsub = onSnapshot(
               collection(db, "users", ownerUid, "bills"),
               (snap) => {
-                const total = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-                updatePrevisao(undefined, total);
+                setBills(snap.docs.map((d) => ({ amount: d.data().amount || 0, dueDate: (d.data().dueDate as string) || "" })));
               },
               (err) => {
                 console.debug("Aviso ao sincronizar contas a pagar:", err.code);
@@ -885,8 +833,7 @@ export default function CashFlowPage() {
             snapTaxesUnsub = onSnapshot(
               collection(db, "users", ownerUid, "taxes"),
               (snap) => {
-                const total = snap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-                updatePrevisao(undefined, undefined, total);
+                setTaxes(snap.docs.map((d) => ({ amount: d.data().amount || 0, dueDate: (d.data().dueDate as string) || "" })));
               },
               (err) => {
                 console.debug("Aviso ao sincronizar impostos:", err.code);
@@ -1008,15 +955,31 @@ export default function CashFlowPage() {
 
   // ─── Métricas ────────────────────────────────────────────────────────────────
 
-  const entradas = useMemo(() => txs.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0), [txs]);
-  const saidas = useMemo(() => txs.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0), [txs]);
+  // Transações do mês em foco — base de tudo nesta tela.
+  const monthTxs = useMemo(
+    () => txs.filter(t => (t.date ?? "").slice(0, 7) === monthKey),
+    [txs, monthKey]
+  );
+
+  const entradas = useMemo(() => monthTxs.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0), [monthTxs]);
+  const saidas = useMemo(() => monthTxs.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0), [monthTxs]);
   const saldo = entradas - saidas;
+
+  // Orçamento do mês em foco: orçamento dos centros de custo naquele mês +
+  // contas a pagar que vencem naquele mês + impostos que vencem naquele mês.
+  const previsao = useMemo(() => {
+    const centers = costCenters.reduce((s, c) => s + budgetForCenterMonth(c, monthKey, currentMonthKey), 0);
+    const billsM = bills.filter(b => (b.dueDate ?? "").slice(0, 7) === monthKey).reduce((s, b) => s + b.amount, 0);
+    const taxesM = taxes.filter(t => (t.dueDate ?? "").slice(0, 7) === monthKey).reduce((s, t) => s + t.amount, 0);
+    return centers + billsM + taxesM;
+  }, [costCenters, bills, taxes, monthKey, currentMonthKey]);
+
   const superavitDeficit = saldo - previsao;
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return txs.filter(t => filter === "all" || t.type === filter).filter(t => !q || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
-  }, [txs, filter, search]);
+    return monthTxs.filter(t => filter === "all" || t.type === filter).filter(t => !q || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q));
+  }, [monthTxs, filter, search]);
 
   // Agrupar por mês/ano, depois por dia dentro de cada mês
   const grouped = useMemo(() => {
@@ -1050,8 +1013,8 @@ export default function CashFlowPage() {
 
   const kpis = [
     { label: "Orçamento", val: previsao, Icon: ClipboardList, ibg: "#eff6ff", color: "#3b82f6" },
-    { label: "Entradas", val: entradas, Icon: ArrowUpRight, ibg: "#dcfce7", color: "#059669", sub: `${txs.filter(t => t.type === "entrada").length} lançamentos` },
-    { label: "Saídas", val: saidas, Icon: ArrowDownRight, ibg: "#fee2e2", color: "#dc2626", sub: `${txs.filter(t => t.type === "saida").length} lançamentos` },
+    { label: "Entradas", val: entradas, Icon: ArrowUpRight, ibg: "#dcfce7", color: "#059669", sub: `${monthTxs.filter(t => t.type === "entrada").length} lançamentos` },
+    { label: "Saídas", val: saidas, Icon: ArrowDownRight, ibg: "#fee2e2", color: "#dc2626", sub: `${monthTxs.filter(t => t.type === "saida").length} lançamentos` },
     { label: "Saldo", val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },
     { label: "Resultado", val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "#dcfce7" : "#fee2e2", color: superavitDeficit >= 0 ? "#059669" : "#dc2626", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
   ];
@@ -1140,7 +1103,6 @@ export default function CashFlowPage() {
 
       <TransactionModal open={modal} editing={editing} uid={uid} costCenters={costCenters} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
-      <PrevisaoModal open={previsaoOpen} value={previsao} onClose={() => setPrevisaoOpen(false)} onSave={setPrevisao} />
 
       <Modal open={!!confirmId} onClose={() => setConfirmId(null)} size="sm" closeDisabled={deleting}>
         <div className="p-6 text-center">
@@ -1160,7 +1122,9 @@ export default function CashFlowPage() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>Fluxo de caixa</h1>
-            <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>Bem-vindo de volta, {userName.split(" ")[0]}</p>
+            <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>
+              {periodLabel} · troque o mês no seletor da Navbar
+            </p>
           </div>
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={() => setHideValues(!hideValues)}
@@ -1256,10 +1220,10 @@ export default function CashFlowPage() {
               <TrendingUp size={24} style={{ color: "var(--cf-text-3)" }} />
             </div>
             <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-              {search || filter !== "all" ? "Nenhum resultado" : "Nenhuma transação"}
+              {search || filter !== "all" ? "Nenhum resultado" : `Nada em ${periodLabel}`}
             </p>
             <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
-              {search || filter !== "all" ? "Tente ajustar os filtros." : "Adicione manualmente ou importe do seu extrato bancário."}
+              {search || filter !== "all" ? "Tente ajustar os filtros." : "Nenhuma movimentação neste mês. Troque o mês no seletor da Navbar, adicione manualmente ou importe do extrato."}
             </p>
             {!search && filter === "all" && (
               <div className="flex gap-2 mt-2">

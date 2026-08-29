@@ -19,6 +19,7 @@ import PinModal from "../components/PinModal";
 import { CadastroManager, CadastroField, formatDoc, onlyDigits } from "../components/CadastroPanel";
 import type { PaymentMethod } from "../types/payment";
 import { verifyPin, loadPinHash, getPinLockStatus } from "../hooks/usePin";
+import { usePeriod } from "../hooks/usePeriod";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "../components/AuditTrail";
 
@@ -1011,6 +1012,9 @@ export default function ContasReceberPage() {
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"todos" | ReceivableStatus>("todos");
     const [filterCategory, setFilterCategory] = useState("todas");
+    // Mês em foco = seletor global da Navbar (usePeriod). A lista é filtrada
+    // por mês de vencimento; alertas/KPIs seguem globais.
+    const { monthKey, label: periodLabel } = usePeriod();
 
     // Toast com suporte a múltiplos simultâneos
     const { toasts, show: showToast } = useToast();
@@ -1227,13 +1231,14 @@ export default function ContasReceberPage() {
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
         return enriched.filter(r => {
+            if ((r.dueDate ?? "").slice(0, 7) !== monthKey) return false;
             if (filterStatus !== "todos" && r._status !== filterStatus) return false;
             if (filterCategory !== "todas" && r.category !== filterCategory) return false;
             if (q && !r.title.toLowerCase().includes(q) && !r.notes.toLowerCase().includes(q)
                 && !(r.partyName ?? "").toLowerCase().includes(q)) return false;
             return true;
         });
-    }, [enriched, filterStatus, filterCategory, search]);
+    }, [enriched, filterStatus, filterCategory, search, monthKey]);
 
     // Agrupa em seções ordenadas por prioridade
     const sections = useMemo(() => [
@@ -1428,6 +1433,10 @@ export default function ContasReceberPage() {
                                     {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
                                 </select>
                             </div>
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                                title="Vencimentos deste mês — troque o mês no seletor da Navbar">
+                                {periodLabel}
+                            </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text3)" }}>
                                 {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
                             </span>
@@ -1445,12 +1454,12 @@ export default function ContasReceberPage() {
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? "Nenhum resultado"
-                                : "Nenhuma cobrança cadastrada"}
+                                : `Nada em ${periodLabel}`}
                         </p>
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text2)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? "Ajuste os filtros para ver outras cobranças."
-                                : "Adicione suas cobranças e receba alertas antes do prazo."}
+                                : "Nenhuma cobrança vence neste mês. Troque o mês no seletor da Navbar ou adicione uma cobrança."}
                         </p>
                         {!search && filterStatus === "todos" && filterCategory === "todas" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}

@@ -4,14 +4,13 @@ rules_version = '2';
 // Regras de segurança do Firestore — NexusFi
 //
 // Modelo multi-usuário (ver lib/accountScope.ts):
-//   • Dono da conta  → uid sem doc em users/{uid}/profile/access. Enxerga os
-//     próprios dados.
+//   • Dono da conta   → uid SEM doc em users/{uid}/profile/access.
 //   • Membro convidado → users/{uid}/profile/access.ownerId aponta pro uid do
-//     dono. Deve ler/escrever os dados DO DONO (users/{ownerId}/**, além das
-//     coleções raiz com campo userId == ownerId).
+//     dono. Lê/escreve os dados DO DONO (users/{ownerId}/** e as coleções raiz
+//     com campo userId == ownerId).
 //
-// A conferência de permissão POR CATEGORIA (dashboard, contasPagar, ...)
-// continua no cliente/servidor; aqui garantimos só a fronteira entre contas.
+// A conferência de permissão POR CATEGORIA (dashboard, contasPagar, ...) segue
+// no cliente/servidor; aqui garantimos só a fronteira entre contas.
 // As rotas /api/team/* usam o Admin SDK e ignoram estas regras.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -22,8 +21,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // uid do dono da conta que ESTE login enxerga: o próprio uid, ou o ownerId
-    // gravado em users/{uid}/profile/access quando é um membro convidado.
+    // uid do dono que ESTE login enxerga: o próprio uid, ou o ownerId gravado
+    // em users/{uid}/profile/access quando é um membro convidado.
     function accountOwnerOf(uid) {
       return exists(/databases/$(database)/documents/users/$(uid)/profile/access)
         ? get(/databases/$(database)/documents/users/$(uid)/profile/access).data.ownerId
@@ -36,34 +35,75 @@ service cloud.firestore {
         && (request.auth.uid == ownerId || accountOwnerOf(request.auth.uid) == ownerId);
     }
 
-    // ── users/{uid}/** — dados do negócio, ninho do dono ────────────────────
-    // O próprio uid sempre acessa o seu ninho (inclui profile/access, /pin,
-    // /onboarding). Um membro acessa o ninho do dono da conta dele.
-    match /users/{userId}/{document=**} {
-      allow read, write: if signedIn()
-        && (request.auth.uid == userId || accountOwnerOf(request.auth.uid) == userId);
+    match /users/{userId} {
+
+      // Doc raiz do usuário — escrita só pelo próprio; impede auto-elevação
+      // de `role`.
+      allow read: if inAccount(userId);
+      allow create: if signedIn() && request.auth.uid == userId
+        && (!('role' in request.resource.data) || request.resource.data.role == 'user');
+      allow update: if signedIn() && request.auth.uid == userId
+        && (!('role' in request.resource.data) || resource.data.role == request.resource.data.role);
+      allow delete: if signedIn() && request.auth.uid == userId;
+
+      // profile/access — gravado SOMENTE pelo Admin SDK (rotas /api/team/*).
+      // O próprio uid LÊ (pra montar menu/escopo) mas NUNCA escreve pelo
+      // client, senão se auto-promove de permissão/owner ou aponta pra
+      // outra conta.
+      match /profile/access {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow write: if false;
+      }
+
+      // profile/pin, profile/onboarding — dono e membros da conta.
+      match /profile/{doc} {
+        allow read, write: if doc != 'access' && inAccount(userId);
+      }
+
+      // Espelho da equipe — só o dono lê/escreve (membros não gerenciam
+      // ninguém e não precisam da lista).
+      match /team/{memberId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+
+      // Demais dados do ninho (cashflow, bills, taxes, receivables, ...).
+      match /{collection}/{document=**} {
+        allow read, write: if collection != 'profile'
+          && collection != 'team'
+          && inAccount(userId);
+      }
     }
 
     // ── Coleções raiz com campo `userId` (dono dos dados) ───────────────────
     match /costCenters/{id} {
-      allow read, delete, update: if inAccount(resource.data.userId);
+      allow read, delete: if inAccount(resource.data.userId);
       allow create: if inAccount(request.resource.data.userId);
+      allow update: if inAccount(resource.data.userId) && inAccount(request.resource.data.userId);
     }
     match /expenses/{id} {
-      allow read, delete, update: if inAccount(resource.data.userId);
+      allow read, delete: if inAccount(resource.data.userId);
       allow create: if inAccount(request.resource.data.userId);
+      allow update: if inAccount(resource.data.userId) && inAccount(request.resource.data.userId);
     }
     match /estoque/{id} {
-      allow read, delete, update: if inAccount(resource.data.userId);
+      allow read, delete: if inAccount(resource.data.userId);
       allow create: if inAccount(request.resource.data.userId);
+      allow update: if inAccount(resource.data.userId) && inAccount(request.resource.data.userId);
     }
     match /integracoes/{id} {
-      allow read, delete, update: if inAccount(resource.data.userId);
+      allow read, delete: if inAccount(resource.data.userId);
       allow create: if inAccount(request.resource.data.userId);
+      allow update: if inAccount(resource.data.userId) && inAccount(request.resource.data.userId);
     }
     match /vinculos/{id} {
-      allow read, delete, update: if inAccount(resource.data.userId);
+      allow read, delete: if inAccount(resource.data.userId);
       allow create: if inAccount(request.resource.data.userId);
+      allow update: if inAccount(resource.data.userId) && inAccount(request.resource.data.userId);
+    }
+
+    // Fallback: nega o que não foi liberado acima.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

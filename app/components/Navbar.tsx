@@ -16,19 +16,18 @@ import { ToastContainer } from "./ToastContainer";
 import { useBillBadges } from "./Usebillbadges";
 import { useReceivableBadges } from "./useReceivableBadges";
 import { useAccountScope, hasPermission } from "../hooks/useAccountScope";
+import { usePeriod } from "../hooks/usePeriod";
 import type { PermissionKey } from "@/lib/accountScope";
 
 interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; permKey?: PermissionKey; }
 interface NavbarProps {
   user?: { displayName: string | null; email: string | null; uid?: string | null } | null;
-  period?: string;
   activePath?: string;
   onLogout?: () => void;
-  /** Setas de mês do seletor de período. Sem elas, o seletor vira só um
-   *  rótulo estático (páginas que não filtram por mês). */
-  onPeriodPrev?: () => void;
-  onPeriodNext?: () => void;
-  periodNextDisabled?: boolean;
+  /** Esconde o seletor de mês (páginas sem recorte mensal: Fluxo de caixa,
+   *  Estoque, Usuários). O mês em si vem sempre do contexto global
+   *  `usePeriod()` — ver app/hooks/usePeriod.tsx. */
+  hidePeriod?: boolean;
 }
 
 // `permKey` liga cada item à categoria de app/lib/accountScope.ts — item sem
@@ -122,15 +121,6 @@ const css = `
   }
   .nxfi-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--nav-text-3); pointer-events: none; }
   .nxfi-search::placeholder { color: var(--nav-text-3); }
-
-  .nxfi-period-btn {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--nav-period-bg); border: none; border-radius: 10px;
-    padding: 7px 12px; cursor: pointer; color: var(--brand-500);
-    font-size: 0.8rem; font-weight: 600; transition: all 0.15s;
-    font-family: 'Sora', sans-serif;
-  }
-  .nxfi-period-btn:hover { background: var(--nav-period-hover); }
 
   .nxfi-period-stepper {
     display: flex; align-items: center; gap: 2px;
@@ -344,7 +334,6 @@ const css = `
   @media (max-width: 1024px) {
     .nxfi-nav-links, .nxfi-search-wrap { display: none; }
     .nxfi-avatar-info { display: none; }
-    .nxfi-period-label { display: none; }
     .nxfi-sidebar-vertical { display: none; }
     .nxfi-mobile-topbar { display: flex; }
   }
@@ -357,12 +346,9 @@ const css = `
 
 export default function Navbar({
   user = { displayName: "Carlos Mendes", email: "carlos@nexusfi.com" },
-  period = "Out 2024",
   activePath = "/dashboard",
   onLogout,
-  onPeriodPrev,
-  onPeriodNext,
-  periodNextDisabled = false,
+  hidePeriod = false,
 }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -376,6 +362,7 @@ export default function Navbar({
   const { billSummary } = useBillBadges();
   const { receivableSummary } = useReceivableBadges();
   const scope = useAccountScope();
+  const periodCtx = usePeriod();
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
@@ -472,26 +459,20 @@ export default function Navbar({
   };
 
   // ── Seletor de período (mês) ──
-  // Com setas → stepper interativo (dashboard). Sem setas → rótulo estático.
+  // Stepper interativo ligado ao mês global (usePeriod). Páginas sem recorte
+  // mensal passam <Navbar hidePeriod /> e o controle não aparece.
   const periodControl = (block = false) => {
-    if (!onPeriodPrev) {
-      return (
-        <button className="nxfi-period-btn" type="button">
-          <Calendar size={13} />
-          <span className="nxfi-period-label">{period}</span>
-        </button>
-      );
-    }
+    if (hidePeriod) return null;
     const stepper = (
       <div className="nxfi-period-stepper">
-        <button onClick={onPeriodPrev} aria-label="Mês anterior" type="button">
+        <button onClick={periodCtx.goPrevMonth} aria-label="Mês anterior" type="button">
           <ChevronLeft size={15} />
         </button>
         <span className="nxfi-period-current">
           <Calendar size={12} />
-          {period}
+          {periodCtx.label}
         </span>
-        <button onClick={onPeriodNext} aria-label="Próximo mês" type="button" disabled={periodNextDisabled}>
+        <button onClick={periodCtx.goNextMonth} aria-label="Próximo mês" type="button">
           <ChevronRight size={15} />
         </button>
       </div>
@@ -632,7 +613,7 @@ export default function Navbar({
             <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 26, width: "auto" }} />
           </a>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-            {onPeriodPrev && periodControl()}
+            {periodControl()}
             <button onClick={toggle} className="nxfi-icon-btn" aria-label="Alternar tema">
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>

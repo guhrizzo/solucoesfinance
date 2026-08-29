@@ -446,7 +446,7 @@ export default function RelatoriosPage() {
 
   return (
     <>
-      <Navbar activePath="/relatorios" user={user} onLogout={handleLogout} />
+      <Navbar activePath="/relatorios" user={user} onLogout={handleLogout} hidePeriod />
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
         
         {/* Header */}

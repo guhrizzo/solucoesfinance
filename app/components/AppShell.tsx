@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { PeriodProvider } from "../hooks/usePeriod";
 
 // Keep in sync with the internalPrefixes list in the inline script in
 // layout.tsx (that copy provides the pre-hydration value for the first paint;
@@ -42,5 +43,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.setAttribute("data-has-nav", hasNav ? "1" : "0");
   }, [pathname]);
 
-  return <div className="app-shell">{children}</div>;
+  return (
+    <PeriodProvider>
+      <div className="app-shell">{children}</div>
+    </PeriodProvider>
+  );
 }

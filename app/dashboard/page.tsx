@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, DollarSign, CreditCard,
   AlertCircle, Clock, Wallet, ChevronRight, ChevronLeft, ArrowUpRight,
-  ArrowDownRight, MoreHorizontal, Filter, Download,
+  ArrowDownRight, MoreHorizontal, Filter, Download, Printer,
   RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart
 } from "lucide-react";
 import OnboardingModal, { type OnboardingAnswers } from "../components/OnboardingModal";
@@ -14,6 +14,7 @@ import CreatePasswordGate from "../components/CreatePasswordGate";
 import Navbar from "../components/Navbar";
 import { Badge, PageLoader } from "../components/ui";
 import AccessDenied from "../components/AccessDenied";
+import { usePeriod } from "../hooks/usePeriod";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -75,6 +76,8 @@ export default function Dashboard() {
   const [hideValues, setHideValues] = useState(false);
   // Estilo do gráfico "Receita vs. Despesas" escolhido pelo usuário — persistido no localStorage.
   const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+  // Mês sob o cursor no gráfico Receita vs. Despesas (índice 0-11) — controla o tooltip.
+  const [hoverMonth, setHoverMonth] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -104,31 +107,17 @@ export default function Dashboard() {
     window.location.href = "/login";
   }
 
-  // Mês de referência do dashboard — cada mês mostra o seu próprio resultado.
-  // Começa no mês atual; as setas do seletor de período (na Navbar) andam
-  // pra trás/frente.
-  const [refDate, setRefDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
+  // Mês de referência — agora é o mês global compartilhado (usePeriod), o
+  // mesmo que a Navbar e as demais telas usam. Ver app/hooks/usePeriod.tsx.
+  const { refDate, label: periodLabel, isCurrentMonth, goPrevMonth, goNextMonth } = usePeriod();
 
-  const periodLabel = useMemo(
-    () =>
-      refDate
-        .toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
-        .replace(/^\w/, (c) => c.toUpperCase())
-        .replace(/\./g, ""),
-    [refDate]
-  );
-
-  // Não deixa navegar pra frente além do mês corrente.
-  const isCurrentMonth = useMemo(() => {
-    const n = new Date();
-    return n.getFullYear() === refDate.getFullYear() && n.getMonth() === refDate.getMonth();
-  }, [refDate]);
-
-  const goPrevMonth = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-  const goNextMonth = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  // ── Impressão do relatório do mês ──
+  const [printedAt, setPrintedAt] = useState("");
+  const handlePrint = () => {
+    setPrintedAt(new Date().toLocaleString("pt-BR"));
+    // deixa o React pintar o cabeçalho de impressão antes de abrir o diálogo
+    setTimeout(() => window.print(), 60);
+  };
 
   // Inicialização e Listeners em tempo real do Firestore
   useEffect(() => {
@@ -447,10 +436,8 @@ export default function Dashboard() {
         }
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 
-        .bar-rev { fill: var(--success); transition: opacity 0.15s; }
-        .bar-rev:hover { opacity: 0.8; }
-        .bar-exp { fill: var(--danger); transition: opacity 0.15s; }
-        .bar-exp:hover { opacity: 0.7; }
+        .bar-rev { fill: var(--brand-500); transition: opacity 0.15s; }
+        .bar-exp { fill: var(--brand-400); transition: opacity 0.15s; }
         .bar-rev-anim { animation: growBar 0.8s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
         .bar-exp-anim { animation: growBar 0.8s 0.1s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
         @keyframes growBar { from{transform:scaleY(0)} to{transform:scaleY(1)} }
@@ -470,6 +457,48 @@ export default function Dashboard() {
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--db-border); border-radius: 4px; }
+
+        /* ── Impressão / PDF do relatório ── */
+        .print-only { display: none; }
+
+        @media print {
+          @page { size: A4; margin: 14mm; }
+
+          /* força paleta clara independentemente do tema */
+          :root {
+            --db-bg: #fff !important;
+            --db-card: #fff !important;
+            --db-border: #d1d5db !important;
+            --db-hover: transparent !important;
+            --db-text: #111827 !important;
+            --db-text-2: #4b5563 !important;
+            --db-text-3: #6b7280 !important;
+          }
+
+          /* some com toda a navegação e os controles interativos */
+          .nxfi-nav, .nxfi-sidebar-vertical, .nxfi-mobile-topbar,
+          .nxfi-mobile-nav, .nxfi-sidebar-overlay, .nxfi-sidebar,
+          .no-print { display: none !important; }
+
+          .app-shell { padding-left: 0 !important; }
+          main { padding: 0 !important; overflow: visible !important; }
+          .print-only { display: block !important; }
+
+          * {
+            animation: none !important;
+            transition: none !important;
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .kpi-card, .chart-card, .side-card {
+            background: #fff !important;
+            border: 1px solid #d1d5db !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+        }
       `}</style>
 
       {/* Senha primeiro, ramo do negócio depois — nunca os dois sobrepostos */}
@@ -505,15 +534,22 @@ export default function Dashboard() {
 
       <Navbar
         user={user}
-        period={periodLabel}
         activePath={activePath}
         onLogout={handleLogout}
-        onPeriodPrev={goPrevMonth}
-        onPeriodNext={goNextMonth}
-        periodNextDisabled={isCurrentMonth}
       />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
+
+        {/* ── Cabeçalho que só aparece na impressão / PDF ── */}
+        <div className="print-only" style={{ marginBottom: 20, borderBottom: "2px solid #111827", paddingBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+            <div>
+              <p style={{ fontSize: 20, fontWeight: 800, color: "#111827" }}>Relatório financeiro — {periodLabel}</p>
+              <p style={{ fontSize: 12, color: "#4b5563", marginTop: 2 }}>{user?.displayName || user?.email || ""}</p>
+            </div>
+            {printedAt && <p style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>Gerado em {printedAt}</p>}
+          </div>
+        </div>
 
         {/* ── Seletor de mês — cada mês mostra o seu próprio resultado ── */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -525,24 +561,35 @@ export default function Dashboard() {
               KPIs, transações e centro de custos do mês selecionado
             </p>
           </div>
-          <div className="flex items-center rounded-xl border overflow-hidden shrink-0" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
+          <div className="flex items-center gap-2 shrink-0 no-print">
+            <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
+              <button
+                onClick={goPrevMonth}
+                aria-label="Mês anterior"
+                className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                style={{ color: "#42a5f5" }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="px-3 text-xs font-bold mono select-none" style={{ color: "var(--db-text)" }}>{periodLabel}</span>
+              <button
+                onClick={goNextMonth}
+                disabled={isCurrentMonth}
+                aria-label="Próximo mês"
+                className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ color: "#42a5f5" }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
             <button
-              onClick={goPrevMonth}
-              aria-label="Mês anterior"
-              className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              style={{ color: "#42a5f5" }}
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              style={{ borderColor: "var(--db-border)", color: "#42a5f5", background: "var(--db-card)" }}
+              title="Imprimir / salvar em PDF o relatório deste mês"
             >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="px-3 text-xs font-bold mono select-none" style={{ color: "var(--db-text)" }}>{periodLabel}</span>
-            <button
-              onClick={goNextMonth}
-              disabled={isCurrentMonth}
-              aria-label="Próximo mês"
-              className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ color: "#42a5f5" }}
-            >
-              <ChevronRight size={16} />
+              <Printer size={14} />
+              <span className="hidden sm:inline">Imprimir relatório</span>
             </button>
           </div>
         </div>
@@ -584,7 +631,7 @@ export default function Dashboard() {
                 <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Ano de {refDate.getFullYear()} — mensal</p>
               </div>
               <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                <div className="flex items-center rounded-lg border overflow-hidden" style={{ borderColor: "var(--db-border)" }}>
+                <div className="flex items-center rounded-lg border overflow-hidden no-print" style={{ borderColor: "var(--db-border)" }}>
                   {([
                     { t: "bar" as const,  icon: BarChart3, label: "Barra" },
                     { t: "line" as const, icon: LineChart, label: "Linha" },
@@ -607,14 +654,14 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--success)" }} /> Receita
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-500)" }} /> Receita
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--danger)" }} /> Despesa
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-400)" }} /> Despesa
                 </div>
                 <button
                   onClick={() => setHideValues(!hideValues)}
-                  className="flex items-center gap-1 text-xs text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer no-print"
                 >
                   <Download size={12} /><span className="hidden sm:inline">{hideValues ? "Mostrar Valores" : "Ocultar Valores"}</span>
                 </button>
@@ -651,13 +698,14 @@ export default function Dashboard() {
                   };
                   return (
                     <svg width="180" height="180" viewBox="0 0 180 180">
-                      {slice(0, revFrac, "var(--success)", "rev")}
-                      {slice(revFrac, 1, "var(--danger)", "exp")}
+                      {slice(0, revFrac, "var(--brand-500)", "rev")}
+                      {slice(revFrac, 1, "var(--brand-400)", "exp")}
                     </svg>
                   );
                 })()}
               </div>
             ) : (
+              <div className="relative">
               <svg viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}>
                 {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
                   <g key={i}>
@@ -667,19 +715,23 @@ export default function Dashboard() {
                     </text>
                   </g>
                 ))}
+                {hoverMonth !== null && (
+                  <rect x={49 + hoverMonth * 44} y={10} width={44} height={160} rx={4} fill="var(--brand-500)" opacity={0.07} />
+                )}
                 {chartType === "line" ? (
                   (() => {
                     const px = (i: number) => 48 + i * 44 + 11;
                     const py = (v: number) => 170 - (v / chartData.maxVal) * 160;
                     const pts = (arr: number[]) => arr.map((v, i) => `${px(i)},${py(v)}`).join(" ");
+                    const dim = (i: number) => (hoverMonth === null || hoverMonth === i ? 1 : 0.3);
                     return (
                       <>
-                        <polyline className="bar-rev-anim" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
-                        <polyline className="bar-exp-anim" fill="none" stroke="var(--danger)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
-                        {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r="2.5" fill="var(--success)" />)}
-                        {chartData.expenses.map((v, i) => <circle key={`e${i}`} cx={px(i)} cy={py(v)} r="2.5" fill="var(--danger)" />)}
+                        <polyline className="bar-rev-anim" fill="none" stroke="var(--brand-500)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
+                        <polyline className="bar-exp-anim" fill="none" stroke="var(--brand-400)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
+                        {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r={hoverMonth === i ? 3.5 : 2.5} fill="var(--brand-500)" opacity={dim(i)} style={{ transition: "opacity .15s" }} />)}
+                        {chartData.expenses.map((v, i) => <circle key={`e${i}`} cx={px(i)} cy={py(v)} r={hoverMonth === i ? 3.5 : 2.5} fill="var(--brand-400)" opacity={dim(i)} style={{ transition: "opacity .15s" }} />)}
                         {months.map((m, i) => (
-                          <text key={m} x={px(i)} y={190} fontSize="9" fill="var(--db-text-3)" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                          <text key={m} x={px(i)} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
                         ))}
                       </>
                     );
@@ -689,22 +741,68 @@ export default function Dashboard() {
                     const rev = chartData.revenues[i];
                     const exp = chartData.expenses[i];
                     const bw = 22, gap = 44, x = 48 + i * gap;
+                    const dim = hoverMonth === null || hoverMonth === i ? 1 : 0.3;
                     return (
                       <g key={m}>
-                        <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60}ms` }} />
-                        <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" style={{ animationDelay: `${i * 60 + 30}ms` }} />
-                        <text x={x + bw} y={190} fontSize="9" fill="var(--db-text-3)" textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                        <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60}ms` }} />
+                        <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60 + 30}ms` }} />
+                        <text x={x + bw} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
                       </g>
                     );
                   })
                 )}
+                {months.map((_, i) => (
+                  <rect
+                    key={`hit${i}`}
+                    x={49 + i * 44}
+                    y={10}
+                    width={44}
+                    height={160}
+                    fill="transparent"
+                    onMouseEnter={() => setHoverMonth(i)}
+                    onMouseLeave={() => setHoverMonth(null)}
+                    onClick={() => setHoverMonth((m) => (m === i ? null : i))}
+                  />
+                ))}
               </svg>
+              {hoverMonth !== null && (
+                <div
+                  className="pointer-events-none absolute z-20 rounded-lg shadow-lg px-2.5 py-2"
+                  style={{
+                    top: 0,
+                    left: `${(((chartType === "line" ? 59 : 71) + hoverMonth * 44) / 600) * 100}%`,
+                    transform: `translateX(${hoverMonth <= 1 ? "-12%" : hoverMonth >= 10 ? "-88%" : "-50%"})`,
+                    background: "var(--db-card)",
+                    border: "1px solid var(--db-border)",
+                    minWidth: 168,
+                  }}
+                >
+                  <p className="text-xs font-bold mb-1" style={{ color: "var(--db-text)" }}>
+                    {months[hoverMonth]} / {refDate.getFullYear()}
+                  </p>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-500)" }} />
+                    <span style={{ color: "var(--db-text-2)" }}>Receita</span>
+                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
+                      {hideValues ? "••••••" : toBRL(chartData.revenues[hoverMonth])}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs mt-1">
+                    <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-400)" }} />
+                    <span style={{ color: "var(--db-text-2)" }}>Despesa</span>
+                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
+                      {hideValues ? "••••••" : toBRL(chartData.expenses[hoverMonth])}
+                    </span>
+                  </div>
+                </div>
+              )}
+              </div>
             )}
             <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
               {[
-                { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color:"var(--success)" },
-                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--danger)" },
-                { label:"Saldo acumulado", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)), color:"#34d399" },
+                { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color:"var(--brand-500)" },
+                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--brand-400)" },
+                { label:"Saldo acumulado", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)), color: (chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)) >= 0 ? "var(--success)" : "var(--danger)" },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-xs mb-0.5 leading-tight" style={{ color: "var(--db-text-2)" }}>{s.label}</p>
@@ -750,7 +848,7 @@ export default function Dashboard() {
                 ))
               )}
             </div>
-            <a href="/contasPagar" className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 text-center"
+            <a href="/contasPagar" className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 text-center no-print"
               style={{ borderColor: "var(--db-border)", color: "#60a5fa", background: "transparent" }}>
               Ver todas <ChevronRight size={13} />
             </a>
@@ -766,7 +864,7 @@ export default function Dashboard() {
                 <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Últimas transações</h2>
                 <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Movimentações de {periodLabel}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 no-print">
                 <a href="/fluxo-caixa" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
                   Ver todas
                 </a>
@@ -830,7 +928,7 @@ export default function Dashboard() {
           <div className="side-card p-4 md:p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centro de custos</h2>
-              <a href="/costCenter" style={{ color: "var(--db-text-2)" }} className="hover:text-blue-400 transition-colors"><MoreHorizontal size={16} /></a>
+              <a href="/costCenter" style={{ color: "var(--db-text-2)" }} className="hover:text-blue-400 transition-colors no-print"><MoreHorizontal size={16} /></a>
             </div>
             <div className="flex justify-center mb-4 md:mb-5">
               <svg width="130" height="130" viewBox="0 0 140 140">
