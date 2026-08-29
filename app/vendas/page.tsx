@@ -9,7 +9,8 @@ import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
 import {
   ShoppingCart, DollarSign, Receipt, Package, TrendingUp,
-  ArrowRight, AlertTriangle, Zap, Boxes, Wallet, Layers,
+  ArrowRight, AlertTriangle, Zap, Boxes, Layers,
+  LayoutGrid, Calculator,
 } from "lucide-react";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ interface Integracao {
 }
 
 type Periodo = "mes" | "30d" | "tudo";
+type Aba = "geral" | "precificacao";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -111,6 +113,10 @@ export default function VendasPage() {
   const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
   const [periodo, setPeriodo] = useState<Periodo>("mes");
+  const [aba, setAba] = useState<Aba>("geral");
+  const [shopeeRepasse, setShopeeRepasse] = useState<
+    { pendente: number; liberado: number; taxas: number; mock: boolean } | null
+  >(null);
 
   useEffect(() => {
     if (!user || !ownerUid) return;
@@ -147,6 +153,27 @@ export default function VendasPage() {
 
     return () => { unsubTx?.(); unsubEstoque?.(); unsubInteg?.(); };
   }, [user, ownerUid]);
+
+  // Valor líquido a receber da Shopee (escrow) — consulta sob demanda.
+  useEffect(() => {
+    if (!ownerUid) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/shopee/repasse?userId=${ownerUid}`);
+        const data = await res.json();
+        if (!cancelled && res.ok && (data.configured || data.mock)) {
+          setShopeeRepasse({
+            pendente: data.repasse?.pendente || 0,
+            liberado: data.repasse?.liberado || 0,
+            taxas: data.repasse?.taxas || 0,
+            mock: !!data.mock,
+          });
+        }
+      } catch { /* silencioso */ }
+    })();
+    return () => { cancelled = true; };
+  }, [ownerUid]);
 
   // ── Vendas (entradas de marketplace) ───────────────────────────────────────
   const todasVendas = useMemo(
@@ -301,35 +328,55 @@ export default function VendasPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--cf-border)" }}>
-              {periodOptions.map((opt) => (
-                <button
-                  key={opt.id}
-                  onClick={() => setPeriodo(opt.id)}
-                  className="px-3.5 py-2 text-xs font-bold cursor-pointer border-none"
-                  style={periodo === opt.id
-                    ? { background: "var(--primary)", color: "#fff" }
-                    : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          {aba === "geral" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--cf-border)" }}>
+                {periodOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setPeriodo(opt.id)}
+                    className="px-3.5 py-2 text-xs font-bold cursor-pointer border-none"
+                    style={periodo === opt.id
+                      ? { background: "var(--primary)", color: "#fff" }
+                      : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <a
+                href="/estoque"
+                className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
+              >
+                <Zap size={15} /> Simular venda
+              </a>
             </div>
-            <a
-              href="/estoque"
-              className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
-            >
-              <Zap size={15} /> Simular venda
-            </a>
-            <a
-              href="/fluxo-caixa"
-              className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
-            >
-              <Wallet size={15} /> Fluxo de caixa
-            </a>
-          </div>
+          )}
         </div>
+
+        {/* Abas */}
+        <div className="flex items-center gap-2 overflow-x-auto -mt-2" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+          {([
+            { id: "geral", label: "Visão geral", icon: LayoutGrid },
+            { id: "precificacao", label: "Precificação", icon: Calculator },
+          ] as { id: Aba; label: string; icon: typeof LayoutGrid }[]).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setAba(t.id)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold whitespace-nowrap cursor-pointer border-b-2 transition-colors"
+              style={{
+                color: aba === t.id ? "var(--primary)" : "var(--cf-text-2)",
+                borderColor: aba === t.id ? "var(--primary)" : "transparent",
+              }}
+            >
+              <t.icon size={16} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {aba === "geral" && (
+        <>
 
         {/* Status dos canais */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
@@ -408,6 +455,24 @@ export default function VendasPage() {
                 </div>
               );
             })}
+
+            {shopeeRepasse && (
+              <div className="pt-3 mt-1 space-y-1.5" style={{ borderTop: "1px solid var(--cf-border)" }}>
+                <div className="flex items-center justify-between text-xs">
+                  <span style={{ color: "var(--cf-text-2)" }}>
+                    Líquido a receber da Shopee
+                    {shopeeRepasse.mock && (
+                      <span className="ml-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--cf-input)", color: "var(--cf-text-3)" }}>SIMULADO</span>
+                    )}
+                  </span>
+                  <span className="mono font-bold" style={{ color: "var(--success)" }}>{toBRL(shopeeRepasse.pendente)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--cf-text-3)" }}>
+                  <span>Já liberado (60d): {toBRL(shopeeRepasse.liberado)}</span>
+                  <span>Taxas: {toBRL(shopeeRepasse.taxas)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Gráfico temporal */}
@@ -600,7 +665,150 @@ export default function VendasPage() {
           </div>
         </div>
 
+        </>
+        )}
+
+        {aba === "precificacao" && <PrecificacaoTab />}
+
       </main>
+    </div>
+  );
+}
+
+// ─── Aba Precificação ─────────────────────────────────────────────────────────
+//
+// Markup por dentro. O custo do produto e o custo variável (embalagem, frete
+// fixo por envio, comissão já convertida em R$…) são valores em reais e somam
+// no numerador; impostos e margem desejada são % sobre o preço de venda e
+// entram no divisor:
+//
+//   preço = (custo do produto + custo variável) ÷ (1 − (impostos% + margem%) / 100)
+//
+// Assim, no preço sugerido: impostos e lucro são exatamente os percentuais
+// informados, e o que sobra cobre o custo do produto + o custo variável.
+
+function PrecificacaoTab() {
+  const [custo, setCusto] = useState<number | "">("");
+  const [impostos, setImpostos] = useState<number | "">("");
+  const [custoVar, setCustoVar] = useState<number | "">("");
+  const [margem, setMargem] = useState<number | "">("");
+
+  const calc = useMemo(() => {
+    const c = Number(custo) || 0;
+    const v = Number(custoVar) || 0;
+    const iPct = Number(impostos) || 0;
+    const mPct = Number(margem) || 0;
+
+    const custoTotal = c + v;
+    const deducoes = (iPct + mPct) / 100;
+    const inviavel = deducoes >= 1;
+    const preco = custoTotal > 0 && !inviavel ? custoTotal / (1 - deducoes) : 0;
+
+    return {
+      c, v, iPct, mPct,
+      custoTotal,
+      inviavel,
+      preco,
+      valorImpostos: preco * (iPct / 100),
+      lucro: preco * (mPct / 100),
+      markup: custoTotal > 0 && preco > 0 ? preco / custoTotal : 0,
+    };
+  }, [custo, impostos, custoVar, margem]);
+
+  const setNum = (fn: (v: number | "") => void) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    fn(e.target.value === "" ? "" : Number(e.target.value));
+
+  const field = (
+    label: string, hint: string,
+    value: number | "", onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    suffix: string,
+  ) => (
+    <div>
+      <label className="block text-xs font-bold mb-1" style={{ color: "var(--cf-text)" }}>{label}</label>
+      <p className="text-[11px] mb-1.5" style={{ color: "var(--cf-text-3)" }}>{hint}</p>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold pointer-events-none" style={{ color: "var(--cf-text-3)" }}>
+          {suffix === "R$" ? "R$" : ""}
+        </span>
+        <input
+          type="number"
+          min="0"
+          inputMode="decimal"
+          value={value}
+          onChange={onChange}
+          placeholder="0"
+          className={`w-full py-2.5 rounded-lg border outline-none font-mono text-sm ${suffix === "R$" ? "pl-9 pr-3" : "pl-3 pr-9"}`}
+          style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}
+        />
+        {suffix === "%" && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold pointer-events-none" style={{ color: "var(--cf-text-3)" }}>%</span>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Entradas */}
+      <div className="cf-card p-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Calculator size={22} style={{ color: "var(--primary)" }} />
+          <h2 className="font-heading text-lg font-bold" style={{ color: "var(--cf-text)" }}>
+            Calculadora de Precificação
+          </h2>
+        </div>
+        <p className="text-sm mb-6" style={{ color: "var(--cf-text-2)" }}>
+          Descubra o preço de venda que garante a margem desejada depois de pagar
+          impostos e os custos variáveis por unidade (embalagem, frete, comissão).
+        </p>
+        <div className="space-y-4">
+          {field("Custo do produto", "Quanto o produto custa para você (compra ou produção).", custo, setNum(setCusto), "R$")}
+          {field("Custo variável", "Embalagem, etiqueta, frete e comissão do canal — em R$ por unidade.", custoVar, setNum(setCustoVar), "R$")}
+          {field("Impostos e taxas", "Tributos sobre a venda — Simples, ICMS, etc.", impostos, setNum(setImpostos), "%")}
+          {field("Margem de lucro desejada", "Lucro líquido que você quer sobre o preço de venda.", margem, setNum(setMargem), "%")}
+        </div>
+      </div>
+
+      {/* Resultado */}
+      <div className="cf-card p-6 flex flex-col">
+        <h3 className="font-heading text-sm font-bold mb-1" style={{ color: "var(--cf-text)" }}>Preço de venda sugerido</h3>
+
+        {calc.inviavel ? (
+          <div className="flex-1 flex items-center">
+            <div className="w-full text-sm font-semibold p-4 rounded-xl" style={{ background: "rgba(239,68,68,0.1)", color: "var(--danger)" }}>
+              Impostos + margem somam 100% ou mais do preço.
+              Não há preço possível — reduza a margem ou os impostos.
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="text-4xl md:text-5xl font-extrabold mono my-4" style={{ color: "var(--primary)" }}>
+              {toBRL(calc.preco)}
+            </div>
+            {calc.markup > 0 && (
+              <p className="text-[11px] mb-4" style={{ color: "var(--cf-text-3)" }}>
+                Markup de <span className="font-bold mono">{calc.markup.toFixed(2)}×</span> sobre o custo total (produto + variável).
+              </p>
+            )}
+
+            <div className="space-y-2.5 mt-auto pt-4 text-sm" style={{ borderTop: "1px solid var(--cf-border)" }}>
+              <Linha label="Custo do produto" value={toBRL(calc.c)} />
+              <Linha label="Custo variável" value={toBRL(calc.v)} color="var(--danger)" />
+              <Linha label={`Impostos e taxas (${calc.iPct || 0}%)`} value={toBRL(calc.valorImpostos)} color="var(--danger)" />
+              <Linha label={`Lucro líquido (${calc.mPct || 0}%)`} value={toBRL(calc.lucro)} color="var(--success)" bold />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Linha({ label, value, color, bold }: { label: string; value: string; color?: string; bold?: boolean }) {
+  return (
+    <div className={`flex justify-between ${bold ? "font-bold" : ""}`}>
+      <span style={{ color: "var(--cf-text-2)" }}>{label}</span>
+      <span className="mono font-semibold" style={{ color: color ?? "var(--cf-text)" }}>{value}</span>
     </div>
   );
 }

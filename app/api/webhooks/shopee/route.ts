@@ -9,6 +9,7 @@ import {
   isMockToken,
   getValidShopeeToken,
   fetchShopeeOrder,
+  fetchShopeeEscrowDetail,
   verifyShopeePush,
   type ShopeeIntegracao,
 } from "@/lib/shopee";
@@ -123,6 +124,17 @@ export async function POST(request: Request) {
     const token = await getValidShopeeToken(db, integ);
     const order = await fetchShopeeOrder(token, integ.accountId || "", ordersn);
 
+    // Detalhe financeiro do pedido: taxas (comissão/serviço/frete) da Shopee.
+    // Best-effort — se falhar, a venda entra sem a saída de taxas.
+    let taxasPedido = 0;
+    try {
+      const esc = await fetchShopeeEscrowDetail(token, integ.accountId || "", ordersn);
+      if (esc) taxasPedido = esc.fees;
+    } catch (e) {
+      console.warn("[Shopee push] sem detalhe de escrow:", (e as Error)?.message);
+    }
+
+    let primeiroItem = true;
     for (const it of order.items) {
       const adId = it.adId;
       if (!adId) continue;
@@ -154,7 +166,10 @@ export async function POST(request: Request) {
         quantity: it.quantity,
         unitPrice: it.unitPrice,
         orderId: order.items.length > 1 ? `${ordersn}:${adId}` : ordersn,
+        // Taxas do pedido inteiro vão no 1º item (evita rateio frágil).
+        feeAmount: primeiroItem ? taxasPedido : 0,
       });
+      primeiroItem = false;
     }
 
     return NextResponse.json({ received: true });

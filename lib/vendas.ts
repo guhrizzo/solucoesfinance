@@ -27,6 +27,13 @@ export interface VendaInput {
   orderId?: string | null;
   /** Momento da venda (ms). Default: agora. Define a `date` (YYYY-MM-DD) do lançamento. */
   occurredAt?: number;
+  /**
+   * Taxas do marketplace do pedido (comissão + serviço + frete bancado pela
+   * loja), em R$. Quando > 0, além da ENTRADA bruta, é lançada uma SAÍDA na
+   * categoria "Taxas Marketplace" — assim o saldo do caixa reflete o valor
+   * líquido a receber, mantendo receita e custo visíveis separadamente.
+   */
+  feeAmount?: number;
 }
 
 const CHANNEL_LABEL: Record<VendaInput["channel"], string> = {
@@ -62,6 +69,30 @@ function buildCashflowEntry(v: VendaInput) {
   };
 }
 
+/** Lançamento de SAÍDA das taxas do marketplace, atrelado ao mesmo pedido. */
+function buildFeeEntry(v: VendaInput) {
+  const fee = Math.round(Math.max(0, Number(v.feeAmount) || 0) * 100) / 100;
+  const when = v.occurredAt ? new Date(v.occurredAt) : new Date();
+  const date = when.toISOString().split("T")[0];
+  const orderId = (v.orderId || "").toString().trim();
+  const name = (v.productName || v.sku || "Produto").toString().trim();
+  return {
+    type: "saida" as const,
+    description: `Taxas ${CHANNEL_LABEL[v.channel]} · ${name}`.slice(0, 120),
+    category: "Taxas Marketplace",
+    amount: fee,
+    date,
+    note: orderId ? `Pedido ${orderId}` : "",
+    createdAt: Date.now(),
+    source: "marketplace",
+    saleChannel: v.channel,
+    saleSku: (v.sku || "").toString().trim().toUpperCase(),
+    saleAdId: (v.adId || "").toString(),
+    orderId: orderId ? `${orderId}:fee` : "",
+    isMarketplaceFee: true,
+  };
+}
+
 // ─── Admin SDK (rotas migradas: webhook do Mercado Livre) ────────────────────
 
 /**
@@ -88,6 +119,22 @@ export async function registrarVendaAdmin(
     }
 
     const ref = await col.add(entry);
+
+    // Lança as taxas do marketplace como SAÍDA atrelada ao pedido.
+    const fee = buildFeeEntry(venda);
+    if (fee.amount > 0) {
+      let jaLancada = false;
+      if (fee.orderId) {
+        const dup = await col
+          .where("orderId", "==", fee.orderId)
+          .where("saleChannel", "==", venda.channel)
+          .limit(1)
+          .get();
+        jaLancada = !dup.empty;
+      }
+      if (!jaLancada) await col.add(fee);
+    }
+
     return ref.id;
   } catch (err) {
     console.error("[vendas] falha ao registrar venda (admin) no caixa:", err);
@@ -124,6 +171,24 @@ export async function registrarVendaClient(
     }
 
     const ref = await addDoc(col, entry);
+
+    const fee = buildFeeEntry(venda);
+    if (fee.amount > 0) {
+      let jaLancada = false;
+      if (fee.orderId) {
+        const dup = await getDocs(
+          query(
+            col,
+            where("orderId", "==", fee.orderId),
+            where("saleChannel", "==", venda.channel),
+            limit(1)
+          )
+        );
+        jaLancada = !dup.empty;
+      }
+      if (!jaLancada) await addDoc(col, fee);
+    }
+
     return ref.id;
   } catch (err) {
     console.error("[vendas] falha ao registrar venda (client) no caixa:", err);

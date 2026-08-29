@@ -1,11 +1,10 @@
 // ─── Exportação de Relatórios em PDF ──────────────────────────────────────────
 //
-// Gera um PDF da aba ativa da página de Relatórios (Fluxo de Caixa, Faturamento,
-// DRE ou Precificação) para o período selecionado. Usado só no cliente, via
-// import() dinâmico em app/relatorios/page.tsx — jspdf não entra no bundle
-// inicial.
+// Gera um PDF da aba ativa da página de Relatórios (Fluxo de Caixa, Faturamento
+// ou DRE) para o período selecionado. Usado só no cliente, via import() dinâmico
+// em app/relatorios/page.tsx — jspdf não entra no bundle inicial.
 
-export type ReportTab = "fluxo" | "faturamento" | "dre" | "precificacao";
+export type ReportTab = "fluxo" | "faturamento" | "dre";
 
 interface ClosingRow {
   label: string;
@@ -40,8 +39,6 @@ export interface ReportData {
     receita: number; impostos: number; receitaLiquida: number; cmv: number;
     lucroBruto: number; despesas: number; lucroLiquido: number; margemLiquida: number;
   };
-
-  prec?: { custo: number; imposto: number; margem: number; sugestao: number };
 }
 
 const BRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -51,7 +48,6 @@ const TAB_LABEL: Record<ReportTab, string> = {
   fluxo: "Fluxo de Caixa",
   faturamento: "Faturamento",
   dre: "Demonstração do Resultado (DRE)",
-  precificacao: "Precificação",
 };
 
 export async function exportReportPdf(data: ReportData): Promise<void> {
@@ -120,7 +116,7 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
         margin: { left: marginX, right: marginX },
         headStyles: { fillColor: [30, 41, 59] },
         styles: { fontSize: 9 },
-        head: [["Período", "Lançtos", "Entradas", "Saídas", "Saldo", "Status"]],
+        head: [["Período", "Lançamentos", "Entradas", "Saídas", "Saldo", "Status"]],
         body: data.closings.map((c) => [
           c.label,
           String(c.count),
@@ -236,27 +232,6 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
           h.cell.styles.fillColor = [241, 245, 249];
         }
       },
-    });
-    afterTable();
-  }
-
-  if (data.tab === "precificacao" && data.prec) {
-    const p = data.prec;
-    heading("Calculadora de Precificação (Markup)");
-    autoTable(doc, {
-      startY: y,
-      margin: { left: marginX, right: marginX },
-      theme: "plain",
-      styles: { fontSize: 10 },
-      body: [
-        ["Custo do produto", BRL(p.custo)],
-        ["Impostos e taxas", `${p.imposto.toFixed(2)}%`],
-        ["Margem de lucro desejada", `${p.margem.toFixed(2)}%`],
-        ["Preço de venda sugerido", p.sugestao < 0 ? "Inviável (deduções ≥ 100%)" : BRL(p.sugestao)],
-        ["Impostos estimados sobre a venda", p.sugestao < 0 ? "—" : BRL(p.sugestao * (p.imposto / 100))],
-        ["Lucro líquido estimado", p.sugestao < 0 ? "—" : BRL(p.sugestao * (p.margem / 100))],
-      ],
-      columnStyles: { 0: { textColor: 90 }, 1: { halign: "right", fontStyle: "bold" } },
     });
     afterTable();
   }

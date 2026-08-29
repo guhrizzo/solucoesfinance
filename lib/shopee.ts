@@ -58,6 +58,34 @@ export interface ShopeeOrderItem {
   unitPrice: number;
 }
 
+/** Repasse (escrow) de um pedido: o que o comprador pagou × o que a loja recebe. */
+export interface ShopeeEscrowOrder {
+  orderSn: string;
+  status: string;
+  /** Total pago pelo comprador (itens + frete pago por ele). */
+  buyerTotalAmount: number;
+  /** Valor líquido que a Shopee repassa à loja (já descontadas as taxas). */
+  escrowAmount: number;
+  /** Comissão + taxa de serviço + taxa de transação + frete bancado pela loja. */
+  fees: number;
+  /** epoch (s) da liberação do repasse; 0 = ainda não liberado (a receber). */
+  releaseTime: number;
+}
+
+export interface ShopeePayoutSummary {
+  /** Soma do escrow de pedidos pagos que a Shopee ainda não liberou. */
+  pendente: number;
+  /** Soma do escrow de pedidos já liberados dentro da janela consultada. */
+  liberado: number;
+  /** Soma das taxas (comissão/serviço/frete) dos pedidos considerados. */
+  taxas: number;
+  /** Quantos pedidos foram lidos pra montar o resumo. */
+  pedidosLidos: number;
+  /** true se a varredura bateu no teto e pode ter ficado incompleta. */
+  truncado: boolean;
+  pedidos: ShopeeEscrowOrder[];
+}
+
 /** Um token começando com "mock_" (ou ausente) = integração em modo simulado. */
 export function isMockToken(token?: string | null): boolean {
   return !token || token.startsWith("mock_");
@@ -367,6 +395,196 @@ export async function fetchShopeeOrder(
       Number(it.model_discounted_price ?? it.model_original_price ?? it.discounted_price ?? 0) || 0,
   }));
   return { orderSn, items };
+}
+
+// ─── Repasse / valor líquido a receber (escrow) ─────────────────────────────
+
+// Status de pedido em que o dinheiro ainda não caiu, mas vai cair (a receber).
+const STATUS_A_RECEBER = new Set([
+  "READY_TO_SHIP",
+  "PROCESSED",
+  "SHIPPED",
+  "TO_CONFIRM_RECEIVE",
+]);
+
+/** Janela máxima que a Shopee aceita por chamada em get_order_list (15 dias). */
+const JANELA_MAX_S = 15 * 24 * 60 * 60;
+
+/** Lista (order_sn, status) dos pedidos criados nos últimos `dias`. Pagina e
+ *  fatia a janela em blocos de 15 dias (limite da API). */
+async function fetchShopeeOrderSns(
+  accessToken: string,
+  shopId: string | number,
+  dias: number,
+  teto: number
+): Promise<{ orderSn: string; status: string }[]> {
+  const agora = Math.floor(Date.now() / 1000);
+  const inicio = agora - dias * 24 * 60 * 60;
+  const out: { orderSn: string; status: string }[] = [];
+
+  for (let from = inicio; from < agora && out.length < teto; from += JANELA_MAX_S) {
+    const to = Math.min(from + JANELA_MAX_S - 1, agora);
+    let cursor = "";
+    let guard = 0;
+    do {
+      const res = await fetch(
+        shopSignedUrl("/api/v2/order/get_order_list", accessToken, shopId, {
+          time_range_field: "create_time",
+          time_from: from,
+          time_to: to,
+          page_size: 100,
+          response_optional_fields: "order_status",
+          ...(cursor ? { cursor } : {}),
+        })
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.error) {
+        if (out.length === 0 && guard === 0) {
+          throw new Error(data?.message || data?.error || `Falha ao listar pedidos Shopee (${res.status})`);
+        }
+        break;
+      }
+      for (const o of data.response?.order_list || []) {
+        out.push({ orderSn: String(o.order_sn), status: String(o.order_status || "").toUpperCase() });
+        if (out.length >= teto) break;
+      }
+      cursor = data.response?.more ? data.response?.next_cursor || "" : "";
+      guard++;
+    } while (cursor && guard < 50 && out.length < teto);
+  }
+
+  return out;
+}
+
+/**
+ * Lista os repasses JÁ LIBERADOS nos últimos `dias` (get_escrow_list). Uma
+ * chamada paginada barata — não precisa de get_escrow_detail por pedido.
+ * Janela também fatiada em blocos de 15 dias (release_time_from/to).
+ */
+async function fetchShopeeEscrowList(
+  accessToken: string,
+  shopId: string | number,
+  dias: number
+): Promise<{ total: number; pedidos: ShopeeEscrowOrder[] }> {
+  const agora = Math.floor(Date.now() / 1000);
+  const inicio = agora - dias * 24 * 60 * 60;
+  const pedidos: ShopeeEscrowOrder[] = [];
+  let total = 0;
+
+  for (let from = inicio; from < agora; from += JANELA_MAX_S) {
+    const to = Math.min(from + JANELA_MAX_S - 1, agora);
+    let page = 1;
+    let guard = 0;
+    do {
+      const res = await fetch(
+        shopSignedUrl("/api/v2/payment/get_escrow_list", accessToken, shopId, {
+          release_time_from: from,
+          release_time_to: to,
+          page_size: 100,
+          page_no: page,
+        })
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.error) break;
+      const lista: any[] = data.response?.escrow_list || [];
+      for (const e of lista) {
+        const payout =
+          typeof e.payout_amount === "number" ? e.payout_amount : Number(e.escrow_amount) || 0;
+        total += payout;
+        pedidos.push({
+          orderSn: String(e.order_sn || ""),
+          status: "COMPLETED",
+          buyerTotalAmount: 0,
+          escrowAmount: payout,
+          fees: 0,
+          releaseTime: Number(e.escrow_release_time) || 0,
+        });
+      }
+      const more = data.response?.more ?? lista.length === 100;
+      page = more ? page + 1 : 0;
+      guard++;
+    } while (page > 0 && guard < 50);
+  }
+
+  return { total: Math.round(total * 100) / 100, pedidos };
+}
+
+/** Detalhe financeiro de um pedido (get_escrow_detail). */
+export async function fetchShopeeEscrowDetail(
+  accessToken: string,
+  shopId: string | number,
+  orderSn: string
+): Promise<{ escrowAmount: number; buyerTotalAmount: number; fees: number } | null> {
+  const res = await fetch(
+    shopSignedUrl("/api/v2/payment/get_escrow_detail", accessToken, shopId, { order_sn: orderSn })
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.error) return null;
+
+  const inc = data.response?.order_income || data.response || {};
+  const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
+  const escrowAmount = num(inc.escrow_amount ?? inc.escrow_amount_after_adjustment);
+  const buyerTotalAmount = num(inc.buyer_total_amount ?? inc.order_original_price);
+  const fees =
+    num(inc.commission_fee) +
+    num(inc.service_fee) +
+    num(inc.seller_transaction_fee) +
+    num(inc.order_seller_shipping_fee) +
+    num(inc.shipping_fee_discount_seller) * -1;
+
+  return { escrowAmount, buyerTotalAmount, fees: Math.max(0, fees) };
+}
+
+/**
+ * Monta o resumo de repasse da loja:
+ *  - "liberado": get_escrow_list (repasses já efetuados) — barato, 1 chamada paginada.
+ *  - "pendente" (valor líquido a receber): pedidos pagos ainda não concluídos
+ *    (get_order_list) + get_escrow_detail de cada um (limitado por `teto`).
+ * `taxas` sai do conjunto pendente (o único onde temos o detalhe fino).
+ */
+export async function fetchShopeePayoutSummary(
+  accessToken: string,
+  shopId: string | number,
+  opts: { dias?: number; teto?: number } = {}
+): Promise<ShopeePayoutSummary> {
+  const dias = opts.dias ?? 60;
+  const teto = opts.teto ?? 80;
+
+  // 1. Já liberado (últimos `dias`).
+  const escrowList = await fetchShopeeEscrowList(accessToken, shopId, dias);
+
+  // 2. A receber: pedidos pagos ainda não concluídos, com detalhe de escrow.
+  const sns = await fetchShopeeOrderSns(accessToken, shopId, Math.min(dias, 30), teto + 20);
+  const aReceber = sns.filter((o) => STATUS_A_RECEBER.has(o.status)).slice(0, teto);
+
+  const pedidos: ShopeeEscrowOrder[] = [];
+  let pendente = 0;
+  let taxas = 0;
+
+  for (const o of aReceber) {
+    const det = await fetchShopeeEscrowDetail(accessToken, shopId, o.orderSn);
+    if (!det) continue;
+    pendente += det.escrowAmount;
+    taxas += det.fees;
+    pedidos.push({
+      orderSn: o.orderSn,
+      status: o.status,
+      buyerTotalAmount: det.buyerTotalAmount,
+      escrowAmount: det.escrowAmount,
+      fees: det.fees,
+      releaseTime: 0,
+    });
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  return {
+    pendente: round2(pendente),
+    liberado: escrowList.total,
+    taxas: round2(taxas),
+    pedidosLidos: aReceber.length + escrowList.pedidos.length,
+    truncado: sns.filter((o) => STATUS_A_RECEBER.has(o.status)).length > teto,
+    pedidos: [...pedidos, ...escrowList.pedidos],
+  };
 }
 
 // ─── Push (webhook): validação da assinatura ─────────────────────────────────

@@ -121,6 +121,17 @@ export default function EstoquePage() {
   const [simUnitPrice, setSimUnitPrice] = useState("");
   const [simRunning, setSimRunning] = useState(false);
 
+  // Resumo Shopee: nº de itens/unidades cadastrados + valor líquido a receber
+  // (escrow). Carregado sob demanda de /api/shopee/repasse.
+  interface ShopeeResumo {
+    mock: boolean;
+    estoque: { itens: number; unidades: number; skus: number };
+    repasse: { pendente: number; liberado: number; taxas: number; pedidosLidos: number; truncado: boolean };
+    aviso?: string;
+  }
+  const [shopeeResumo, setShopeeResumo] = useState<ShopeeResumo | null>(null);
+  const [shopeeResumoLoading, setShopeeResumoLoading] = useState(false);
+
   // Sistema de Toast
   const showToast = (msg: string, type: "success" | "error" | "info" = "success") => {
     setToast({ msg, type });
@@ -302,6 +313,36 @@ export default function EstoquePage() {
       setSyncing(false);
     }
   };
+
+  // Carrega o resumo da Shopee (itens cadastrados + valor líquido a receber).
+  const carregarShopeeResumo = async () => {
+    if (!ownerUid) return;
+    setShopeeResumoLoading(true);
+    try {
+      const res = await fetch(`/api/shopee/repasse?userId=${ownerUid}`);
+      const data = await res.json();
+      if (res.ok) setShopeeResumo(data);
+      else showToast(data.error || "Falha ao consultar repasse da Shopee", "error");
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao consultar repasse da Shopee", "error");
+    } finally {
+      setShopeeResumoLoading(false);
+    }
+  };
+
+  const temShopee = useMemo(
+    () => integracoes.some((i) => i.platform === "shopee"),
+    [integracoes]
+  );
+
+  // Puxa o resumo quando há loja Shopee conectada (na carga e ao abrir o modal).
+  useEffect(() => {
+    if (temShopee && ownerUid && !shopeeResumo && !shopeeResumoLoading) {
+      carregarShopeeResumo();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [temShopee, ownerUid]);
 
   // Salvar Produto Centralizado (Novo ou Editando)
   const handleSaveProduto = async (e: React.FormEvent) => {
@@ -793,6 +834,75 @@ export default function EstoquePage() {
             </div>
           </div>
         </div>
+
+        {/* Painel Shopee: estoque cadastrado + valor líquido a receber */}
+        {temShopee && (
+          <div className="cf-card p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <img src="/Shopee.svg" alt="Shopee" style={{ height: "22px", objectFit: "contain" }} />
+                <h3 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>
+                  Shopee — estoque e repasse
+                </h3>
+                {shopeeResumo?.mock && (
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--cf-input)", color: "var(--cf-text-3)" }}>
+                    SIMULADO
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={carregarShopeeResumo}
+                disabled={shopeeResumoLoading}
+                className="p-2 rounded-lg cursor-pointer flex items-center gap-1.5 border-none text-[11px] font-bold"
+                style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
+              >
+                <RefreshCw size={13} className={shopeeResumoLoading ? "animate-spin" : ""} />
+                Atualizar
+              </button>
+            </div>
+
+            {!shopeeResumo && shopeeResumoLoading ? (
+              <p className="text-xs py-4 text-center" style={{ color: "var(--cf-text-3)" }}>Consultando a Shopee…</p>
+            ) : !shopeeResumo ? (
+              <p className="text-xs py-4 text-center" style={{ color: "var(--cf-text-3)" }}>Clique em Atualizar para carregar os dados da Shopee.</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Itens cadastrados</p>
+                    <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--cf-text)" }}>{shopeeResumo.estoque.itens}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{shopeeResumo.estoque.skus} SKU(s)</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Unidades na Shopee</p>
+                    <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--cf-text)" }}>{shopeeResumo.estoque.unidades}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Líquido a receber</p>
+                    <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--success)" }}>
+                      {shopeeResumo.repasse.pendente.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>escrow ainda não liberado</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Já liberado (60d)</p>
+                    <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--cf-text)" }}>
+                      {shopeeResumo.repasse.liberado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>
+                      taxas: {shopeeResumo.repasse.taxas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                  </div>
+                </div>
+                {shopeeResumo.aviso && (
+                  <p className="text-[10px] mt-3 pt-3" style={{ color: "var(--cf-text-3)", borderTop: "1px solid var(--cf-border)" }}>
+                    {shopeeResumo.aviso}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {/* Tabela de Produtos, Filtros e Busca */}
         <div className="cf-card overflow-hidden">

@@ -4,11 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp, DollarSign, Landmark,
   FileText, Search, RefreshCw, ShieldCheck, Download,
-  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, Calculator, BarChart3, Activity
+  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
-import { PageLoader } from "../components/ui";
+import { PageLoader, Badge } from "../components/ui";
 import type { ReportData } from "@/lib/reportPdf";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -56,13 +56,8 @@ export default function RelatoriosPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hideValues, setHideValues] = useState(false);
 
-  type TabType = "fluxo" | "faturamento" | "dre" | "precificacao";
+  type TabType = "fluxo" | "faturamento" | "dre";
   const [activeTab, setActiveTab] = useState<TabType>("fluxo");
-
-  // Estados de Precificação
-  const [precCusto, setPrecCusto] = useState<number | "">("");
-  const [precImposto, setPrecImposto] = useState<number | "">("");
-  const [precMargem, setPrecMargem] = useState<number | "">("");
 
   // Fechamento de caixa: qual período está sendo conferido/reaberto agora
   const [closingBusy, setClosingBusy] = useState<string | null>(null);
@@ -191,19 +186,6 @@ export default function RelatoriosPage() {
 
     return { receita, impostos, receitaLiquida, cmv, lucroBruto, despesas, lucroLiquido, margemLiquida };
   }, [filteredTxs]);
-
-  // Cálculos de Precificação (Markup)
-  const precSugestao = useMemo(() => {
-    const c = Number(precCusto) || 0;
-    const i = Number(precImposto) || 0;
-    const m = Number(precMargem) || 0;
-
-    if (c === 0) return 0;
-    const deducoes = (i + m) / 100;
-    if (deducoes >= 1) return -1; // Inviável
-
-    return c / (1 - deducoes);
-  }, [precCusto, precImposto, precMargem]);
 
   // Categorias de Entrada e Saída agrupadas
   const categoryBreakdown = useMemo(() => {
@@ -395,18 +377,8 @@ export default function RelatoriosPage() {
             } : undefined,
           },
         };
-      } else if (activeTab === "dre") {
-        payload = { ...base, dre: dreData };
       } else {
-        payload = {
-          ...base,
-          prec: {
-            custo: Number(precCusto) || 0,
-            imposto: Number(precImposto) || 0,
-            margem: Number(precMargem) || 0,
-            sugestao: precSugestao,
-          },
-        };
+        payload = { ...base, dre: dreData };
       }
       await exportReportPdf(payload);
     } catch (err) {
@@ -504,7 +476,6 @@ export default function RelatoriosPage() {
             { id: "fluxo", label: "Fluxo de Caixa", icon: Activity },
             { id: "faturamento", label: "Faturamento", icon: BarChart3 },
             { id: "dre", label: "DRE", icon: FileText },
-            { id: "precificacao", label: "Precificação", icon: Calculator },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -573,15 +544,24 @@ export default function RelatoriosPage() {
           <div className="cf-card p-5 space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Caixa Conferido</span>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: "var(--status-info-bg)", color: "var(--status-info-text)" }}
+              >
                 <ShieldCheck size={16} />
               </div>
             </div>
             <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
               {metrics.taxaConciliacao.toFixed(0)}%
             </p>
-            <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-indigo-600 h-full transition-all duration-500" style={{ width: `${metrics.taxaConciliacao}%` }} />
+            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
+              <div
+                className="h-full transition-all duration-500"
+                style={{
+                  width: `${metrics.taxaConciliacao}%`,
+                  background: "linear-gradient(90deg, var(--brand-500), var(--brand-400))",
+                }}
+              />
             </div>
           </div>
         </div>
@@ -715,7 +695,7 @@ export default function RelatoriosPage() {
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
                     <th className="py-2.5 font-bold">{filterPeriod === "ano" ? "Mês" : "Dia"}</th>
-                    <th className="py-2.5 font-bold text-center">Lançtos</th>
+                    <th className="py-2.5 font-bold text-center">Lançamentos</th>
                     <th className="py-2.5 font-bold text-right">Entradas</th>
                     <th className="py-2.5 font-bold text-right">Saídas</th>
                     <th className="py-2.5 font-bold text-right">Saldo</th>
@@ -738,13 +718,9 @@ export default function RelatoriosPage() {
                         {hideValues ? "•••" : toBRL(row.saldo)}
                       </td>
                       <td className="py-3 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          row.done
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
-                        }`}>
+                        <Badge status={row.done ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">
                           {row.done ? "Conferido" : "Pendente"}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="py-3 text-right">
                         <button
@@ -809,18 +785,20 @@ export default function RelatoriosPage() {
                   </tr>
                 ) : (
                   filteredTxs.map((tx) => (
-                    <tr key={tx.id} className="border-b transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40" style={{ borderColor: "var(--db-border)" }}>
+                    <tr
+                      key={tx.id}
+                      className="border-b transition-colors"
+                      style={{ borderColor: "var(--db-border)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--db-card-hover)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                    >
                       <td className="py-3 font-semibold">{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</td>
                       <td className="py-3 font-semibold max-w-[200px] truncate">{tx.description}</td>
                       <td className="py-3">{tx.category}</td>
                       <td className="py-3">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          tx.reconciled 
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
-                        }`}>
+                        <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">
                           {tx.reconciled ? "Conciliado" : "Não Conciliado"}
-                        </span>
+                        </Badge>
                       </td>
                       <td className={`py-3 text-right font-mono font-bold ${tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"}`}>
                         {tx.type === "entrada" ? "+" : "-"}{hideValues ? "•••" : toBRL(tx.amount)}
@@ -1049,86 +1027,6 @@ export default function RelatoriosPage() {
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Aba: Precificação */}
-        {activeTab === "precificacao" && (
-          <div className="space-y-6 fade-in">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="cf-card p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <Calculator className="text-primary" size={24} />
-                  <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>
-                    Calculadora de Precificação
-                  </h2>
-                </div>
-                <p className="text-sm mb-6" style={{ color: "var(--db-text-2)" }}>
-                  Descubra o preço de venda ideal com base no método Markup, garantindo que você atinja a margem de lucro desejada após o pagamento de impostos.
-                </p>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--db-text)" }}>Custo do Produto (R$)</label>
-                    <input 
-                      type="number" 
-                      value={precCusto} 
-                      onChange={(e) => setPrecCusto(Number(e.target.value))} 
-                      className="w-full p-2.5 rounded-lg border outline-none font-mono" 
-                      style={{ background: "var(--cf-input)", borderColor: "var(--db-border)", color: "var(--db-text)" }} 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--db-text)" }}>Impostos e Taxas (%)</label>
-                    <input 
-                      type="number" 
-                      value={precImposto} 
-                      onChange={(e) => setPrecImposto(Number(e.target.value))} 
-                      className="w-full p-2.5 rounded-lg border outline-none font-mono" 
-                      style={{ background: "var(--cf-input)", borderColor: "var(--db-border)", color: "var(--db-text)" }} 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--db-text)" }}>Margem de Lucro Desejada (%)</label>
-                    <input 
-                      type="number" 
-                      value={precMargem} 
-                      onChange={(e) => setPrecMargem(Number(e.target.value))} 
-                      className="w-full p-2.5 rounded-lg border outline-none font-mono" 
-                      style={{ background: "var(--cf-input)", borderColor: "var(--db-border)", color: "var(--db-text)" }} 
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="cf-card p-6 flex flex-col justify-center text-center">
-                <h3 className="font-heading text-lg font-bold mb-2" style={{ color: "var(--db-text)" }}>Preço de Venda Sugerido</h3>
-                {precSugestao === -1 ? (
-                  <div className="text-rose-500 font-bold mt-4 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/20">
-                    Sua margem e impostos superam ou igualam 100%. É impossível precificar.
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-5xl font-extrabold mono mt-4 mb-6" style={{ color: "var(--primary)" }}>
-                      {toBRL(precSugestao)}
-                    </div>
-                    <div className="space-y-3 mt-auto border-t pt-4 text-sm" style={{ borderColor: "var(--db-border)" }}>
-                      <div className="flex justify-between">
-                        <span style={{ color: "var(--db-text-2)" }}>Custos:</span>
-                        <span className="font-mono font-semibold" style={{ color: "var(--db-text)" }}>{toBRL(Number(precCusto) || 0)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: "var(--db-text-2)" }}>Impostos Estimados:</span>
-                        <span className="font-mono font-semibold" style={{ color: "var(--danger)" }}>{toBRL(precSugestao * ((Number(precImposto) || 0)/100))}</span>
-                      </div>
-                      <div className="flex justify-between font-bold">
-                        <span style={{ color: "var(--db-text)" }}>Lucro Líquido:</span>
-                        <span className="font-mono text-emerald-500">{toBRL(precSugestao * ((Number(precMargem) || 0)/100))}</span>
-                      </div>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
           </div>

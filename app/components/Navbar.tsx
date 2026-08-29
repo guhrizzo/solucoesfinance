@@ -514,7 +514,10 @@ export default function Navbar({
             {dark ? <Sun size={16} /> : <Moon size={16} />}
             <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
           </button>
-          <button className="nxfi-vertical-footer-btn">
+          <button
+            className="nxfi-vertical-footer-btn"
+            onClick={() => router.push("/configuracoes")}
+          >
             <Settings size={16} />
             <span>Configurações</span>
           </button>
@@ -569,7 +572,10 @@ export default function Navbar({
             {dark ? <Sun size={16} /> : <Moon size={16} />}
             <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
           </button>
-          <button className="nxfi-sidebar-footer-btn">
+          <button
+            className="nxfi-sidebar-footer-btn"
+            onClick={() => { setMobileOpen(false); router.push("/configuracoes"); }}
+          >
             <Settings size={16} />
             Configurações
           </button>
@@ -720,7 +726,7 @@ export default function Navbar({
                     { icon: UserCircle, label: "Meu perfil", action: () => router.push("/users") },
                     { icon: Zap, label: "Plano & faturamento", action: () => showToast("Abrindo plano...", "info") },
                     { icon: HelpCircle, label: "Ajuda & suporte", action: () => showToast("Redirecionando para ajuda...", "info") },
-                    { icon: Settings, label: "Configurações", action: () => showToast("Abrindo configurações...", "info") },
+                    { icon: Settings, label: "Configurações", action: () => router.push("/configuracoes") },
                   ].map((item) => (
                     <button key={item.label} className="nxfi-drop-item" onClick={item.action}>
                       <item.icon size={14} />
