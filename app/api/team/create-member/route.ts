@@ -65,8 +65,10 @@ export async function POST(req: NextRequest) {
   let newUid: string;
   try {
     // Senha descartável — a pessoa nunca a usa, ela define a própria pelo
-    // link de "definir senha" enviado por e-mail logo abaixo.
-    const throwawayPassword = randomUUID() + randomUUID();
+    // link de "definir senha" enviado por e-mail logo abaixo. O sufixo
+    // garante maiúscula/minúscula/dígito/símbolo caso o projeto tenha uma
+    // política de senha forte habilitada no Firebase Auth.
+    const throwawayPassword = randomUUID() + randomUUID().toUpperCase() + "Aa1!";
     const created = await adminAuth.createUser({
       email, displayName, password: throwawayPassword, emailVerified: false,
     });

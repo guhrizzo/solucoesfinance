@@ -5,9 +5,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
-  BarChart2, Users, Bell, Search, ChevronDown, Calendar, Settings,
-  LogOut, Menu, X, HelpCircle, UserCircle, Moon, Sun, Zap, PanelLeft,
-  Landmark, Boxes, ShoppingCart,
+  BarChart2, Users, Bell, Search, ChevronDown, ChevronLeft, ChevronRight,
+  Calendar, Settings, LogOut, Menu, X, HelpCircle, UserCircle, Moon, Sun,
+  Zap, PanelLeft, Landmark, Boxes, ShoppingCart,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
@@ -24,6 +24,11 @@ interface NavbarProps {
   period?: string;
   activePath?: string;
   onLogout?: () => void;
+  /** Setas de mês do seletor de período. Sem elas, o seletor vira só um
+   *  rótulo estático (páginas que não filtram por mês). */
+  onPeriodPrev?: () => void;
+  onPeriodNext?: () => void;
+  periodNextDisabled?: boolean;
 }
 
 // `permKey` liga cada item à categoria de app/lib/accountScope.ts — item sem
@@ -126,6 +131,27 @@ const css = `
     font-family: 'Sora', sans-serif;
   }
   .nxfi-period-btn:hover { background: var(--nav-period-hover); }
+
+  .nxfi-period-stepper {
+    display: flex; align-items: center; gap: 2px;
+    background: var(--nav-period-bg); border-radius: 10px; padding: 2px;
+  }
+  .nxfi-period-stepper button {
+    border: none; background: transparent; cursor: pointer; color: var(--brand-500);
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 28px; border-radius: 8px; transition: background .15s;
+  }
+  .nxfi-period-stepper button:hover:not(:disabled) { background: var(--nav-period-hover); }
+  .nxfi-period-stepper button:disabled { opacity: .35; cursor: not-allowed; }
+  .nxfi-period-current {
+    display: flex; align-items: center; gap: 5px; justify-content: center;
+    font-size: 0.8rem; font-weight: 600; color: var(--brand-500);
+    min-width: 84px; text-align: center; font-family: 'Sora', sans-serif;
+    white-space: nowrap;
+  }
+  .nxfi-vertical-period { padding: 14px 12px 2px; flex-shrink: 0; }
+  .nxfi-vertical-period .nxfi-period-stepper { width: 100%; justify-content: space-between; padding: 3px; }
+  .nxfi-vertical-period .nxfi-period-current { flex: 1; }
 
   .nxfi-icon-btn {
     width: 36px; height: 36px; border: none; cursor: pointer;
@@ -334,6 +360,9 @@ export default function Navbar({
   period = "Out 2024",
   activePath = "/dashboard",
   onLogout,
+  onPeriodPrev,
+  onPeriodNext,
+  periodNextDisabled = false,
 }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -442,6 +471,34 @@ export default function Navbar({
     setNotifOpen(false);
   };
 
+  // ── Seletor de período (mês) ──
+  // Com setas → stepper interativo (dashboard). Sem setas → rótulo estático.
+  const periodControl = (block = false) => {
+    if (!onPeriodPrev) {
+      return (
+        <button className="nxfi-period-btn" type="button">
+          <Calendar size={13} />
+          <span className="nxfi-period-label">{period}</span>
+        </button>
+      );
+    }
+    const stepper = (
+      <div className="nxfi-period-stepper">
+        <button onClick={onPeriodPrev} aria-label="Mês anterior" type="button">
+          <ChevronLeft size={15} />
+        </button>
+        <span className="nxfi-period-current">
+          <Calendar size={12} />
+          {period}
+        </span>
+        <button onClick={onPeriodNext} aria-label="Próximo mês" type="button" disabled={periodNextDisabled}>
+          <ChevronRight size={15} />
+        </button>
+      </div>
+    );
+    return block ? <div className="nxfi-vertical-period">{stepper}</div> : stepper;
+  };
+
   // ── Sidebar vertical via Portal ──
   const sidebarJSX = (
     <>
@@ -450,6 +507,7 @@ export default function Navbar({
         <a href="/dashboard" className="nxfi-vertical-logo">
           <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 42, width: "auto" }} />
         </a>
+        {periodControl(true)}
         <nav className="nxfi-vertical-nav">
           <div className="nxfi-vertical-section">Menu Principal</div>
           {navItemsWithBadges.map((item) => (
@@ -573,9 +631,12 @@ export default function Navbar({
           <a href="/dashboard" className="nxfi-logo">
             <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 26, width: "auto" }} />
           </a>
-          <button onClick={toggle} className="nxfi-icon-btn" style={{ marginLeft: "auto" }} aria-label="Alternar tema">
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+            {onPeriodPrev && periodControl()}
+            <button onClick={toggle} className="nxfi-icon-btn" aria-label="Alternar tema">
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </div>
 
         {mobileDrawerJSX}
@@ -618,11 +679,7 @@ export default function Navbar({
             <input className="nxfi-search" placeholder="Buscar transações..." />
           </div>
 
-          <button className="nxfi-period-btn">
-            <Calendar size={13} />
-            <span className="nxfi-period-label">{period}</span>
-            <ChevronDown size={11} />
-          </button>
+          {periodControl()}
 
           <button onClick={toggleLayout} className="nxfi-icon-btn" title="Alternar layout">
             <PanelLeft size={16} />

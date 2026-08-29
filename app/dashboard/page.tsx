@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, DollarSign, CreditCard,
-  AlertCircle, Clock, Wallet, ChevronRight, ArrowUpRight,
+  AlertCircle, Clock, Wallet, ChevronRight, ChevronLeft, ArrowUpRight,
   ArrowDownRight, MoreHorizontal, Filter, Download,
   RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart
 } from "lucide-react";
@@ -104,13 +104,31 @@ export default function Dashboard() {
     window.location.href = "/login";
   }
 
-  // Obter o mês atual formatado (ex: "Out 2026")
-  const currentPeriodLabel = useMemo(() => {
-    const date = new Date();
-    return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
-      .replace(/^\w/, c => c.toUpperCase())
-      .replace(/\./g, "");
-  }, []);
+  // Mês de referência do dashboard — cada mês mostra o seu próprio resultado.
+  // Começa no mês atual; as setas do seletor de período (na Navbar) andam
+  // pra trás/frente.
+  const [refDate, setRefDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+
+  const periodLabel = useMemo(
+    () =>
+      refDate
+        .toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+        .replace(/^\w/, (c) => c.toUpperCase())
+        .replace(/\./g, ""),
+    [refDate]
+  );
+
+  // Não deixa navegar pra frente além do mês corrente.
+  const isCurrentMonth = useMemo(() => {
+    const n = new Date();
+    return n.getFullYear() === refDate.getFullYear() && n.getMonth() === refDate.getMonth();
+  }, [refDate]);
+
+  const goPrevMonth = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const goNextMonth = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   // Inicialização e Listeners em tempo real do Firestore
   useEffect(() => {
@@ -199,9 +217,8 @@ export default function Dashboard() {
 
   // 1. Cálculos de KPI com base nos dados reais do mês atual
   const kpiData = useMemo(() => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0 a 11
+    const currentYear = refDate.getFullYear();
+    const currentMonth = refDate.getMonth(); // 0 a 11
 
     // Transações do mês atual
     const currentMonthTxs = txs.filter(tx => {
@@ -265,12 +282,11 @@ export default function Dashboard() {
       { label: "Lucro líquido",   value: hideValues ? "••••••" : toBRL(lucroMes),   change: varLucro,   up: lucroMes >= 0,           sub: "vs. mês anterior", icon: Wallet,      color: "emerald" },
       { label: "Inadimplência",   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? "Atrasadas" : "Em dia",  up: taxaInadimplencia === 0,  sub: `${toBRL(overdueVal)} pendente`, icon: AlertCircle, color: "amber"   },
     ];
-  }, [txs, receivables, hideValues]);
+  }, [txs, receivables, hideValues, refDate]);
 
-  // 2. Gráfico Receita vs. Despesas agrupado por mês do ano corrente
+  // 2. Gráfico Receita vs. Despesas agrupado por mês do ano selecionado
   const chartData = useMemo(() => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
+    const currentYear = refDate.getFullYear();
 
     const revenues = new Array(12).fill(0);
     const expenses = new Array(12).fill(0);
@@ -290,7 +306,7 @@ export default function Dashboard() {
     const maxVal = Math.max(...revenues, ...expenses) || 1000;
 
     return { revenues, expenses, maxVal };
-  }, [txs]);
+  }, [txs, refDate]);
 
   // 3. Vencimentos próximos (Contas a Pagar pendentes)
   const upcomingBillsData = useMemo(() => {
@@ -313,18 +329,28 @@ export default function Dashboard() {
       .slice(0, 4);
   }, [bills]);
 
-  // 4. Últimas transações (máximo 6 reais)
+  // 4. Últimas transações do mês selecionado (máximo 6 reais)
   const recentTransactions = useMemo(() => {
-    return txs.slice(0, 6);
-  }, [txs]);
+    const y = refDate.getFullYear();
+    const m = refDate.getMonth();
+    return txs
+      .filter((tx) => {
+        const d = new Date(tx.date + "T12:00:00");
+        return d.getFullYear() === y && d.getMonth() === m;
+      })
+      .slice(0, 6);
+  }, [txs, refDate]);
 
-  // 5. Centro de Custos (Despesas por categoria para o Donut Chart)
+  // 5. Centro de Custos do mês selecionado (Despesas por categoria — Donut)
   const costCenterData = useMemo(() => {
     const categoryTotals: Record<string, number> = {};
     let totalExpenses = 0;
+    const y = refDate.getFullYear();
+    const m = refDate.getMonth();
 
     txs.forEach(tx => {
-      if (tx.type === "saida") {
+      const d = new Date(tx.date + "T12:00:00");
+      if (tx.type === "saida" && d.getFullYear() === y && d.getMonth() === m) {
         categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
         totalExpenses += tx.amount;
       }
@@ -345,7 +371,7 @@ export default function Dashboard() {
       centers: sortedCenters.slice(0, 5),
       totalExpenses
     };
-  }, [txs]);
+  }, [txs, refDate]);
 
   // 6. Projeção de fluxo de caixa a 30 dias (Saldo em conta + Recebíveis 30d - Contas a Pagar 30d)
   const projection = useMemo(() => {
@@ -477,9 +503,49 @@ export default function Dashboard() {
         }}
       />
 
-      <Navbar user={user} period={currentPeriodLabel} activePath={activePath} onLogout={handleLogout} />
+      <Navbar
+        user={user}
+        period={periodLabel}
+        activePath={activePath}
+        onLogout={handleLogout}
+        onPeriodPrev={goPrevMonth}
+        onPeriodNext={goNextMonth}
+        periodNextDisabled={isCurrentMonth}
+      />
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
+
+        {/* ── Seletor de mês — cada mês mostra o seu próprio resultado ── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-base md:text-lg font-extrabold leading-tight" style={{ color: "var(--db-text)" }}>
+              Resultado de {periodLabel}
+            </h1>
+            <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>
+              KPIs, transações e centro de custos do mês selecionado
+            </p>
+          </div>
+          <div className="flex items-center rounded-xl border overflow-hidden shrink-0" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
+            <button
+              onClick={goPrevMonth}
+              aria-label="Mês anterior"
+              className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              style={{ color: "#42a5f5" }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="px-3 text-xs font-bold mono select-none" style={{ color: "var(--db-text)" }}>{periodLabel}</span>
+            <button
+              onClick={goNextMonth}
+              disabled={isCurrentMonth}
+              aria-label="Próximo mês"
+              className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ color: "#42a5f5" }}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
 
         {/* ── KPIs ── */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
@@ -515,7 +581,7 @@ export default function Dashboard() {
             <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2">
               <div>
                 <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Receita vs. Despesas</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Acumulado ano corrente — mensal</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Ano de {refDate.getFullYear()} — mensal</p>
               </div>
               <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <div className="flex items-center rounded-lg border overflow-hidden" style={{ borderColor: "var(--db-border)" }}>
@@ -698,7 +764,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <div>
                 <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Últimas transações</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Movimentações recentes</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Movimentações de {periodLabel}</p>
               </div>
               <div className="flex items-center gap-2">
                 <a href="/fluxo-caixa" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">

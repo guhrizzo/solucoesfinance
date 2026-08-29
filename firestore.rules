@@ -1,0 +1,69 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Regras de segurança do Firestore — NexusFi
+//
+// Modelo multi-usuário (ver lib/accountScope.ts):
+//   • Dono da conta  → uid sem doc em users/{uid}/profile/access. Enxerga os
+//     próprios dados.
+//   • Membro convidado → users/{uid}/profile/access.ownerId aponta pro uid do
+//     dono. Deve ler/escrever os dados DO DONO (users/{ownerId}/**, além das
+//     coleções raiz com campo userId == ownerId).
+//
+// A conferência de permissão POR CATEGORIA (dashboard, contasPagar, ...)
+// continua no cliente/servidor; aqui garantimos só a fronteira entre contas.
+// As rotas /api/team/* usam o Admin SDK e ignoram estas regras.
+// ─────────────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // uid do dono da conta que ESTE login enxerga: o próprio uid, ou o ownerId
+    // gravado em users/{uid}/profile/access quando é um membro convidado.
+    function accountOwnerOf(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)/profile/access)
+        ? get(/databases/$(database)/documents/users/$(uid)/profile/access).data.ownerId
+        : uid;
+    }
+
+    // true se o login atual é o dono `ownerId` ou um membro da conta dele.
+    function inAccount(ownerId) {
+      return signedIn()
+        && (request.auth.uid == ownerId || accountOwnerOf(request.auth.uid) == ownerId);
+    }
+
+    // ── users/{uid}/** — dados do negócio, ninho do dono ────────────────────
+    // O próprio uid sempre acessa o seu ninho (inclui profile/access, /pin,
+    // /onboarding). Um membro acessa o ninho do dono da conta dele.
+    match /users/{userId}/{document=**} {
+      allow read, write: if signedIn()
+        && (request.auth.uid == userId || accountOwnerOf(request.auth.uid) == userId);
+    }
+
+    // ── Coleções raiz com campo `userId` (dono dos dados) ───────────────────
+    match /costCenters/{id} {
+      allow read, delete, update: if inAccount(resource.data.userId);
+      allow create: if inAccount(request.resource.data.userId);
+    }
+    match /expenses/{id} {
+      allow read, delete, update: if inAccount(resource.data.userId);
+      allow create: if inAccount(request.resource.data.userId);
+    }
+    match /estoque/{id} {
+      allow read, delete, update: if inAccount(resource.data.userId);
+      allow create: if inAccount(request.resource.data.userId);
+    }
+    match /integracoes/{id} {
+      allow read, delete, update: if inAccount(resource.data.userId);
+      allow create: if inAccount(request.resource.data.userId);
+    }
+    match /vinculos/{id} {
+      allow read, delete, update: if inAccount(resource.data.userId);
+      allow create: if inAccount(request.resource.data.userId);
+    }
+  }
+}
