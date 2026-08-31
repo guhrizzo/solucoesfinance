@@ -69,9 +69,11 @@ export async function POST(request: Request) {
     const mlUserId = String(body.user_id ?? "");
 
     // Validação da assinatura (x-signature). Só bloqueia se STRICT estiver ligado.
+    const xSignature = request.headers.get("x-signature");
+    const xRequestId = request.headers.get("x-request-id");
     const sig = verifyWebhookSignature({
-      xSignature: request.headers.get("x-signature"),
-      xRequestId: request.headers.get("x-request-id"),
+      xSignature,
+      xRequestId,
       dataId: resource ? resource.split("/").pop() || null : null,
     });
     if (sig === "invalid" && process.env.MERCADOLIVRE_WEBHOOK_STRICT === "true") {
@@ -79,7 +81,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
     }
     if (sig !== "valid") {
-      console.warn(`[ML webhook] assinatura ${sig} (aceito — STRICT desligado)`);
+      // Log de diagnóstico: com STRICT desligado ainda aceitamos, mas isso
+      // aqui dá pra descobrir QUAL secret o ML usa (rode uma venda de teste,
+      // veja se o ML manda `x-signature`, depois tente com o client_secret em
+      // MERCADOLIVRE_WEBHOOK_SECRET e confira se vira `valid`).
+      console.warn(
+        `[ML webhook] assinatura ${sig} (aceito — STRICT desligado) | ` +
+          `x-signature=${xSignature ? xSignature.slice(0, 80) : "AUSENTE"} | ` +
+          `x-request-id=${xRequestId || "-"} | ` +
+          `resource=${resource || "-"} | secretConfigurado=${!!process.env.MERCADOLIVRE_WEBHOOK_SECRET}`
+      );
     }
 
     // Só tratamos vendas. Outros tópicos: 200 pra o ML parar de reenviar.
