@@ -7,11 +7,75 @@ import {
   isMockToken,
   getValidAccessToken,
   fetchOrder,
+  fetchItem,
   verifyWebhookSignature,
   type MlIntegracao,
 } from "@/lib/mercadolivre";
 import { registrarVendaAdmin } from "@/lib/vendas";
-import { baixarEstoqueEPropagar } from "@/lib/estoqueSync";
+import { baixarEstoqueEPropagar, definirEstoqueEPropagar } from "@/lib/estoqueSync";
+
+/**
+ * Tópico `items`: o vendedor mexeu no anúncio (estoque/preço) direto no ML.
+ * Puxa o valor novo pro estoque central e propaga pros outros canais.
+ * `resource` = "/items/MLB123".
+ */
+async function tratarNotificacaoItem(
+  db: any,
+  token: string,
+  integracao: MlIntegracao & { userId: string },
+  resource: string
+) {
+  const adId = (resource.split("/").pop() || "").trim();
+  if (!adId) return NextResponse.json({ received: true, note: "resource sem id" });
+
+  const snapVinculo = await db
+    .collection("vinculos")
+    .where("userId", "==", integracao.userId)
+    .where("platform", "==", "mercadolivre")
+    .where("adId", "==", adId)
+    .get();
+  if (snapVinculo.empty) {
+    return NextResponse.json({ received: true, note: "anúncio não vinculado" });
+  }
+  const vinculoDoc = snapVinculo.docs[0];
+  const v = vinculoDoc.data();
+
+  const item = await fetchItem(token, adId);
+  if (item === null) {
+    // Anúncio apagado no ML → remove o vínculo órfão (reconcile).
+    await db.collection("vinculos").doc(vinculoDoc.id).delete();
+    console.log(`[ML webhook/items] anúncio ${adId} não existe mais — vínculo removido`);
+    return NextResponse.json({ received: true, note: "vínculo removido (anúncio inexistente)" });
+  }
+  if (item.hasVariations) {
+    console.log(`[ML webhook/items] anúncio ${adId} tem variações — push de estoque não suportado`);
+    return NextResponse.json({ received: true, note: "anúncio com variações" });
+  }
+
+  // Espelha o anúncio no vínculo mesmo se o estoque central não mexer.
+  await db.collection("vinculos").doc(vinculoDoc.id).update({
+    quantity: item.quantity,
+    price: item.price,
+    title: item.title,
+    updatedAt: Date.now(),
+  });
+
+  const r = await definirEstoqueEPropagar(
+    db,
+    v.userId,
+    v.sku,
+    item.quantity,
+    { platform: "mercadolivre", adId },
+    { price: item.price }
+  );
+  if (r === null) {
+    return NextResponse.json({ received: true, note: "SKU sem item no estoque central" });
+  }
+  if (r.mudou) {
+    console.log(`[ML webhook/items] ${adId} (SKU ${v.sku}) → estoque central ${r.quantidade} un`);
+  }
+  return NextResponse.json({ received: true, atualizado: r.mudou, quantidade: r.quantidade });
+}
 
 export async function POST(request: Request) {
   let body: any;
@@ -93,12 +157,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Só tratamos vendas. Outros tópicos: 200 pra o ML parar de reenviar.
-    if (topic !== "orders_v2" && topic !== "orders") {
+    // Tratamos vendas (`orders_v2`) e edição de anúncio (`items`).
+    // Outros tópicos: 200 pra o ML parar de reenviar.
+    if (topic !== "orders_v2" && topic !== "orders" && topic !== "items") {
       return NextResponse.json({ received: true, ignored: topic });
     }
 
-    // Acha a integração pela conta ML que recebeu a venda.
+    // Acha a integração pela conta ML que originou a notificação.
     const snapIntegracao = await db
       .collection("integracoes")
       .where("platform", "==", "mercadolivre")
@@ -119,6 +184,11 @@ export async function POST(request: Request) {
     }
 
     const token = await getValidAccessToken(db, integracao);
+
+    if (topic === "items") {
+      return await tratarNotificacaoItem(db, token, integracao, resource);
+    }
+
     const order = await fetchOrder(token, resource);
     const items = order.order_items || [];
     const orderId = String(order.id ?? resource.split("/").pop() ?? "");

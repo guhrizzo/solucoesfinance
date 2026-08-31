@@ -8,7 +8,7 @@ import { PageLoader } from "../components/ui";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
-  Zap, Loader2, ArrowRight, Package, X, CheckCircle
+  Zap, Loader2, ArrowRight, Package, X, CheckCircle, Download
 } from "lucide-react";
 
 // Interfaces de Dados
@@ -29,6 +29,8 @@ interface Integracao {
   accountName: string;
   accessToken: string;
   expiresAt: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 interface Vinculo {
@@ -288,17 +290,26 @@ export default function EstoquePage() {
     };
   }, [modalProdutoOpen, modalIntegracoesOpen, modalVinculosOpen, modalSimuladorOpen]);
 
-  // Sincronizar Estoque Manualmente
-  const handleSincronizarManual = async (platformFilter?: "mercadolivre" | "shopee") => {
+  // Sincronizar Estoque Manualmente.
+  // direction "pull" = puxa estoque/preço do canal pro central (canal manda).
+  const handleSincronizarManual = async (
+    platformFilter?: "mercadolivre" | "shopee",
+    direction?: "push" | "pull"
+  ) => {
     if (!user || syncing) return;
     setSyncing(true);
-    showToast("Sincronizando estoque com as plataformas...", "info");
+    showToast(
+      direction === "pull"
+        ? "Puxando estoque do Mercado Livre..."
+        : "Sincronizando estoque com as plataformas...",
+      "info"
+    );
 
     try {
       const res = await fetch("/api/estoque/sincronizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: ownerUid, platform: platformFilter }),
+        body: JSON.stringify({ userId: ownerUid, platform: platformFilter, direction }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -335,6 +346,34 @@ export default function EstoquePage() {
     () => integracoes.some((i) => i.platform === "shopee"),
     [integracoes]
   );
+
+  const temMercadoLivre = useMemo(
+    () => integracoes.some((i) => i.platform === "mercadolivre"),
+    [integracoes]
+  );
+
+  // Resumo de identidade da(s) conta(s) de um canal, pro badge do modal.
+  const resumoContas = (platform: "mercadolivre" | "shopee") => {
+    const contas = integracoes.filter((i) => i.platform === platform);
+    if (contas.length === 0) return null;
+    if (contas.length === 1) return `Conectado como ${contas[0].accountName}`;
+    return `${contas.length} contas conectadas`;
+  };
+
+  // Estado do token de uma integração — texto transparente, sem alarme falso
+  // (o access token renova sozinho na próxima chamada via getValidAccessToken).
+  const statusToken = (i: Integracao) => {
+    if (!i.accessToken || i.accessToken.startsWith("mock_")) return "Modo simulado";
+    if (!i.expiresAt) return "Conectada";
+    return i.expiresAt > Date.now()
+      ? `Token válido até ${new Date(i.expiresAt).toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })} · renova sozinho`
+      : "Token renova na próxima sincronização";
+  };
 
   // Puxa o resumo quando há loja Shopee conectada (na carga e ao abrir o modal).
   useEffect(() => {
@@ -952,11 +991,24 @@ export default function EstoquePage() {
                 />
               </div>
 
+              {temMercadoLivre && (
+                <button
+                  onClick={() => handleSincronizarManual("mercadolivre", "pull")}
+                  disabled={syncing}
+                  title="Puxar estoque e preço dos anúncios do Mercado Livre (o ML manda)"
+                  className="px-3 py-2.5 rounded-xl cursor-pointer flex items-center gap-1.5 border-none text-[11px] font-bold whitespace-nowrap disabled:opacity-50"
+                  style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
+                >
+                  <Download size={14} className={syncing ? "animate-pulse" : ""} />
+                  Puxar do ML
+                </button>
+              )}
+
               <button
                 onClick={() => handleSincronizarManual()}
                 disabled={syncing}
-                title="Sincronizar estoque agora"
-                className="p-2.5 rounded-xl cursor-pointer flex items-center justify-center border-none"
+                title="Sincronizar: empurra o estoque central pros canais"
+                className="p-2.5 rounded-xl cursor-pointer flex items-center justify-center border-none disabled:opacity-50"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
                 <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
@@ -964,6 +1016,25 @@ export default function EstoquePage() {
             </div>
 
           </div>
+
+          {/* Identidade da conta do canal filtrado */}
+          {(activeTab === "mercadolivre" || activeTab === "shopee") && (() => {
+            const contas = integracoes.filter((i) => i.platform === activeTab);
+            if (contas.length === 0) return null;
+            const n = vinculos.filter((v) => v.platform === activeTab).length;
+            return (
+              <div
+                className="px-5 py-2 text-[11px]"
+                style={{ borderBottom: "1px solid var(--cf-border)", color: "var(--cf-text-3)" }}
+              >
+                Conta:{" "}
+                <span style={{ color: "var(--cf-text-2)", fontWeight: 700 }}>
+                  {contas.map((c) => c.accountName).join(" · ")}
+                </span>{" "}
+                · {n} {n === 1 ? "anúncio vinculado" : "anúncios vinculados"}
+              </div>
+            );
+          })()}
 
           {/* Tabela */}
           <div className="overflow-x-auto">
@@ -1260,9 +1331,10 @@ export default function EstoquePage() {
                     </div>
                   </div>
                   
-                  {integracoes.some((i) => i.platform === "mercadolivre") ? (
-                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Conectado
+                  {resumoContas("mercadolivre") ? (
+                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      {resumoContas("mercadolivre")}
                     </span>
                   ) : (
                     <button
@@ -1286,9 +1358,10 @@ export default function EstoquePage() {
                     </div>
                   </div>
                   
-                  {integracoes.some((i) => i.platform === "shopee") ? (
-                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Conectado
+                  {resumoContas("shopee") ? (
+                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      {resumoContas("shopee")}
                     </span>
                   ) : (
                     <button
@@ -1312,25 +1385,41 @@ export default function EstoquePage() {
                     Nenhuma conta conectada no momento.
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {integracoes.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between p-3 rounded-lg text-xs" style={{ background: "var(--cf-input)" }}>
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={item.platform === "mercadolivre" ? "/Logotipo_MercadoLivre.png" : "/Shopee.svg"}
-                            alt={item.platform}
-                            style={{ height: "20px", objectFit: "contain" }}
-                          />
-                          <span className="font-semibold" style={{ color: "var(--cf-text)" }}>{item.accountName}</span>
-                          <span className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>({item.accountId})</span>
+                      <div key={item.id} className="p-3 rounded-lg text-xs" style={{ background: "var(--cf-input)" }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <img
+                              src={item.platform === "mercadolivre" ? "/Logotipo_MercadoLivre.png" : "/Shopee.svg"}
+                              alt={item.platform}
+                              style={{ height: "20px", objectFit: "contain" }}
+                            />
+                            <span className="font-semibold truncate" style={{ color: "var(--cf-text)" }}>{item.accountName}</span>
+                            <span className="text-[10px] shrink-0" style={{ color: "var(--cf-text-3)" }}>({item.accountId})</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleConnectAccount(item.platform)}
+                              className="p-1 px-2 rounded hover:bg-black/5 cursor-pointer border-none font-bold"
+                              style={{ background: "transparent", color: "var(--cf-text-2)" }}
+                              title="Refazer a autorização OAuth desta conta"
+                            >
+                              <RefreshCw size={12} className="inline mr-1" /> Reconectar
+                            </button>
+                            <button
+                              onClick={() => handleDisconnect(item.id, item.platform)}
+                              className="p-1 px-2 rounded hover:bg-red-500/10 cursor-pointer border-none text-red-500 font-bold"
+                              style={{ background: "transparent" }}
+                            >
+                              <LogOut size={12} className="inline mr-1" /> Desconectar
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleDisconnect(item.id, item.platform)}
-                          className="p-1 px-2 rounded hover:bg-red-500/10 cursor-pointer border-none text-red-500 font-bold"
-                          style={{ background: "transparent" }}
-                        >
-                          <LogOut size={12} className="inline mr-1" /> Desconectar
-                        </button>
+                        <div className="mt-1.5 pl-7 text-[10px] leading-relaxed" style={{ color: "var(--cf-text-3)" }}>
+                          {statusToken(item)}
+                          {item.createdAt ? ` · conectada em ${new Date(item.createdAt).toLocaleDateString("pt-BR")}` : ""}
+                        </div>
                       </div>
                     ))}
                   </div>

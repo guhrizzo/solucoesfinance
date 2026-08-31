@@ -17,6 +17,7 @@ import {
   updateShopeeStock,
   type ShopeeIntegracao,
 } from "@/lib/shopee";
+import { puxarCanalMercadoLivre } from "@/lib/estoqueSync";
 
 // Cada chamada aqui pode disparar várias requisições à API do Mercado Livre
 // (e grava no Firestore) sem exigir autenticação — sem limite, dava pra
@@ -26,11 +27,16 @@ const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: 5 }; // 5 sincronizações / 
 
 export async function POST(request: Request) {
   try {
-    const { userId, platform } = await request.json();
+    const { userId, platform, direction } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
     }
+
+    // direction "pull" = o canal é a fonte da verdade (edição manual no ML
+    // deve refletir aqui). Sem direction / "push" = comportamento atual
+    // (estoque central manda pros canais).
+    const pull = direction === "pull";
 
     const { limited, retryAfterSec } = checkRateLimit(
       `estoque-sync:${getClientIp(request)}:${userId}`,
@@ -56,9 +62,25 @@ export async function POST(request: Request) {
 
     let totalSincronizados = 0;
     const erros: string[] = [];
+    const vinculosRemovidos: string[] = [];
 
     for (const docInt of snapIntegracoes.docs) {
       const integracao = { id: docInt.id, ...docInt.data() } as MlIntegracao & { platform: string };
+
+      // ── "Puxar do Mercado Livre": o ML é a fonte da verdade ───────────────
+      if (pull && integracao.platform === "mercadolivre" && !isMockToken(integracao.accessToken)) {
+        try {
+          const r = await puxarCanalMercadoLivre(db, userId, integracao);
+          totalSincronizados += r.atualizados;
+          vinculosRemovidos.push(...r.vinculosRemovidos);
+          erros.push(...r.avisos);
+        } catch (err: any) {
+          console.error("Erro ao puxar do Mercado Livre:", err);
+          erros.push(err?.message || "Falha ao puxar do Mercado Livre");
+        }
+        continue;
+      }
+      if (pull) continue; // pull hoje só cobre o ML real
 
       // ── Modo simulado: só espelha o estoque central nos vínculos ──────────
       if (isMockToken(integracao.accessToken)) {
@@ -237,13 +259,18 @@ export async function POST(request: Request) {
       }
     }
 
+    const verbo = pull ? "Puxado do Mercado Livre" : "Sincronização";
+    const extra = vinculosRemovidos.length
+      ? ` ${vinculosRemovidos.length} vínculo(s) órfão(s) removido(s).`
+      : "";
     return NextResponse.json({
       success: true,
       message:
         erros.length > 0
-          ? `Sincronização parcial: ${totalSincronizados} anúncio(s). ${erros.length} aviso(s).`
-          : `Sincronização concluída: ${totalSincronizados} anúncio(s).`,
+          ? `${verbo}: ${totalSincronizados} anúncio(s). ${erros.length} aviso(s).${extra}`
+          : `${verbo}: ${totalSincronizados} anúncio(s) atualizado(s).${extra}`,
       totalSincronizados,
+      vinculosRemovidos,
       erros: erros.slice(0, 10),
     });
   } catch (error: any) {

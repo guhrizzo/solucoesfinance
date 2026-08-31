@@ -273,6 +273,32 @@ export async function updateListingQuantity(
   }
 }
 
+/**
+ * Busca 1 anúncio pelo id, já normalizado (mesmo shape de `fetchActiveListings`).
+ * Retorna `null` se o anúncio não existe mais (404) — o chamador usa isso pra
+ * remover o vínculo órfão. `status` e `hasVariations` ajudam o webhook de `items`
+ * a decidir se dá pra empurrar estoque (anúncio com variação não dá).
+ */
+export async function fetchItem(
+  accessToken: string,
+  itemId: string
+): Promise<(MlListing & { status: string; hasVariations: boolean }) | null> {
+  const res = await fetch(
+    `${ML_API_BASE}/items/${itemId}?attributes=id,title,price,available_quantity,status,seller_custom_field,attributes,variations`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`Falha ao buscar anúncio ${itemId} no ML (${res.status})`);
+  }
+  const body = await res.json().catch(() => ({}));
+  return {
+    ...normalizeListing(body),
+    status: body.status || "unknown",
+    hasVariations: Array.isArray(body.variations) && body.variations.length > 0,
+  };
+}
+
 /** Detalhes de um pedido (webhook de `orders_v2` manda só o resource). */
 export async function fetchOrder(accessToken: string, resourcePath: string): Promise<any> {
   const path = resourcePath.startsWith("http")

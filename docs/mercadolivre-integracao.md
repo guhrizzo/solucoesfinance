@@ -34,7 +34,9 @@ Uma venda em qualquer canal baixa o SKU central e empurra a nova quantidade pros
      ```
      https://nexusfi.com.br/api/webhooks/mercadolivre
      ```
-   - Tópico: **`orders_v2`** (vendas). Opcional: `items` se quiser reagir a mudança de anúncio.
+   - Tópicos: **`orders_v2`** (vendas) **e `items`** (edição manual de estoque/preço do
+     anúncio → sincroniza de volta pro estoque central). Sem o `items`, mudança feita
+     direto no ML só entra via botão "Puxar do ML" na tela de Estoque.
    - Copie a **"Assinatura secreta"** mostrada nessa tela.
 
 ## Variáveis de ambiente (`.env.local` / envs do deploy)
@@ -68,6 +70,16 @@ MERCADOLIVRE_WEBHOOK_STRICT=""          # deixe vazio até confirmar que a valid
 Deixe `MERCADOLIVRE_WEBHOOK_STRICT` vazio no começo. Nos logs vai aparecer
 `[ML webhook] assinatura valid|invalid`. Quando estiver saindo `valid` de forma
 consistente, ligue `MERCADOLIVRE_WEBHOOK_STRICT="true"` pra rejeitar chamadas forjadas.
+
+## Direção da sincronização
+
+- **Venda em qualquer canal** (`orders_v2` / webhook Shopee / "Simular Venda"): baixa o
+  SKU central e propaga pros outros canais.
+- **Edição do anúncio no ML** (`items`): `definirEstoqueEPropagar` puxa estoque+preço pro
+  central e propaga. Guarda anti-eco: se a quantidade já bate, não faz nada.
+- **Botão "Puxar do ML"** (`/api/estoque/sincronizar` com `direction:"pull"`): mesma coisa
+  em lote + reconcilia vínculos órfãos (anúncio 404 → vínculo removido).
+- **Botão de refresh** (sem `direction`): continua empurrando central → canais.
 
 ## Limitações conhecidas / próximos passos
 
