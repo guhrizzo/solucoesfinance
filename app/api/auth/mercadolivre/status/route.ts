@@ -68,31 +68,49 @@ export async function GET(request: Request) {
     checks.firebaseAdmin = { ok: false, error: err?.message || String(err) };
   }
 
-  // ── Estado das integrações do usuário (opcional) ───────────────────────────
-  if (userId) {
-    try {
-      const db = await getAdminDb();
-      const [integ, vinc] = await Promise.all([
-        db.collection("integracoes").where("userId", "==", userId).where("platform", "==", "mercadolivre").get(),
-        db.collection("vinculos").where("userId", "==", userId).where("platform", "==", "mercadolivre").get(),
-      ]);
-      checks.usuario = {
-        userId,
-        integracoes: integ.docs.map((d) => {
-          const x = d.data();
-          return {
-            accountId: x.accountId ?? null,
-            accountName: x.accountName ?? null,
-            mock: typeof x.accessToken === "string" && (x.accessToken.startsWith("mock_") || !x.accessToken),
-            tokenExpiraEm: x.expiresAt ? new Date(x.expiresAt).toISOString() : null,
-            tokenExpirado: x.expiresAt ? x.expiresAt < Date.now() : null,
-          };
-        }),
-        vinculosCount: vinc.size,
+  // ── Estado das integrações ML já salvas ────────────────────────────────────
+  // Sem `userId` = lista TODAS as integrações ML (só metadados, nunca o token) —
+  // é como conferir "conectou de verdade ou caiu no mock" sem saber o uid.
+  try {
+    const db = await getAdminDb();
+    let q = db.collection("integracoes").where("platform", "==", "mercadolivre");
+    if (userId) q = q.where("userId", "==", userId);
+    const integ = await q.get();
+
+    const integracoes = integ.docs.map((d) => {
+      const x = d.data();
+      const tok: string = typeof x.accessToken === "string" ? x.accessToken : "";
+      return {
+        userId: x.userId ?? null,
+        accountId: x.accountId ?? null,
+        accountName: x.accountName ?? null,
+        mock: !tok || tok.startsWith("mock_"),
+        tokenPrefix: tok ? tok.slice(0, 6) + "…" : null,
+        temRefreshToken: !!x.refreshToken && !String(x.refreshToken).startsWith("mock_"),
+        tokenExpiraEm: x.expiresAt ? new Date(x.expiresAt).toISOString() : null,
+        tokenExpirado: x.expiresAt ? x.expiresAt < Date.now() : null,
+        atualizadoEm: x.updatedAt ? new Date(x.updatedAt).toISOString() : null,
       };
-    } catch (err: any) {
-      checks.usuario = { userId, error: err?.message || String(err) };
+    });
+
+    let vinculosCount: number | undefined;
+    if (userId) {
+      const vinc = await db
+        .collection("vinculos")
+        .where("userId", "==", userId)
+        .where("platform", "==", "mercadolivre")
+        .get();
+      vinculosCount = vinc.size;
     }
+
+    checks.integracoesML = {
+      total: integracoes.length,
+      conectadaReal: integracoes.some((i) => !i.mock),
+      integracoes,
+      ...(vinculosCount !== undefined ? { vinculosCount } : {}),
+    };
+  } catch (err: any) {
+    checks.integracoesML = { error: err?.message || String(err) };
   }
 
   // ── Veredito ──────────────────────────────────────────────────────────────
