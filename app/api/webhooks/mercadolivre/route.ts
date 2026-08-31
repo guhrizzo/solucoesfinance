@@ -132,6 +132,12 @@ export async function POST(request: Request) {
     const resource: string = body.resource || "";
     const mlUserId = String(body.user_id ?? "");
 
+    // Log de TODA notificação que chega — pra ver no painel da Vercel se o ML
+    // está mesmo mandando `items` quando você edita o anúncio.
+    console.log(
+      `[ML webhook] recebido | topic=${topic || "?"} | resource=${resource || "-"} | user_id=${mlUserId || "-"} | attempts=${body.attempts ?? "-"}`
+    );
+
     // Validação da assinatura (x-signature). Só bloqueia se STRICT estiver ligado.
     const xSignature = request.headers.get("x-signature");
     const xRequestId = request.headers.get("x-request-id");
