@@ -12,6 +12,7 @@ Uma venda em qualquer canal baixa o SKU central e empurra a nova quantidade pros
 | `app/api/auth/mercadolivre/callback/route.ts` | Troca `code` por token, salva integração, importa anúncios |
 | `app/api/webhooks/mercadolivre/route.ts` | Recebe notificação de venda (`orders_v2`), baixa e propaga o estoque |
 | `app/api/estoque/sincronizar/route.ts` | Sincronização manual (botão de refresh na tabela) |
+| `app/api/auth/mercadolivre/status/route.ts` | Diagnóstico: `GET .../status[?userId=]` diz quais envs faltam e se o Firebase Admin sobe (sem vazar valores) |
 
 ## O que configurar no painel do Mercado Livre
 
@@ -51,6 +52,9 @@ MERCADOLIVRE_WEBHOOK_STRICT=""          # deixe vazio até confirmar que a valid
 
 ## Como testar em produção
 
+0. **Confira a config primeiro**: abra `https://nexusfi.com.br/api/auth/mercadolivre/status`.
+   `ok: true` (ou só o aviso do webhook secret) = ambiente pronto. Se listar env faltando
+   ou `firebaseAdmin.ok: false`, resolva na Vercel e faça *Redeploy* antes de continuar.
 1. Deploy com as envs acima.
 2. Estoque → **Integrações** → **Conectar Conta** no card do Mercado Livre.
 3. Autoriza no ML → volta pra `/estoque?integration=ml_success&imported=N`.
