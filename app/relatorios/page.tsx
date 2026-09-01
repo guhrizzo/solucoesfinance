@@ -86,6 +86,55 @@ function CategoryCell({ tx, busy, onSave }: { tx: Tx; busy: boolean; onSave: (va
   );
 }
 
+// Linha componente da DRE (Receita Bruta, Deduções, CMV, Despesas). Clicável
+// quando tem categorias; expande o detalhamento `categoria → valor`. Só usa
+// tokens var(--db-*) — nada de classes `dark:`, que seguem o modo do SO e não
+// o tema do app.
+function DreLine({ label, amount, cats, open, onToggle, hideValues, variant }: {
+  label: string;
+  amount: number;
+  cats: { name: string; total: number }[];
+  open: boolean;
+  onToggle: () => void;
+  hideValues: boolean;
+  variant: "receita" | "deducao";
+}) {
+  const canExpand = cats.length > 0;
+  const money = (n: number) => hideValues ? "••••••" : toBRL(n);
+  const isReceita = variant === "receita";
+  return (
+    <div style={{ borderTop: "1px solid var(--db-border)" }}>
+      <button
+        type="button"
+        onClick={canExpand ? onToggle : undefined}
+        aria-expanded={open}
+        className={`w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 text-left ${canExpand ? "cursor-pointer" : "cursor-default"}`}
+        style={{ background: open ? "var(--db-bg-alt)" : "transparent" }}
+      >
+        <span className={`flex items-center gap-2 ${isReceita ? "text-sm font-bold" : "text-sm"}`} style={{ color: isReceita ? "var(--db-text)" : "var(--db-text-2)" }}>
+          {canExpand
+            ? <ChevronDown size={14} className="transition-transform shrink-0" style={{ transform: open ? "rotate(180deg)" : "none", color: "var(--db-text-3)" }} />
+            : <span className="w-3.5 shrink-0" />}
+          {isReceita ? label : `(-) ${label}`}
+        </span>
+        <span className={`font-mono shrink-0 text-sm ${isReceita ? "font-bold" : ""}`} style={{ color: isReceita ? "var(--success)" : "var(--danger)" }}>
+          {isReceita ? "" : "−"}{money(amount)}
+        </span>
+      </button>
+      {open && canExpand && (
+        <div className="pb-2" style={{ background: "var(--db-bg-alt)" }}>
+          {cats.map((c) => (
+            <div key={c.name} className="flex items-center justify-between gap-3 pl-11 pr-4 sm:pr-5 py-1.5 text-xs">
+              <span style={{ color: "var(--db-text-3)" }}>{c.name}</span>
+              <span className="font-mono" style={{ color: "var(--db-text-2)" }}>{money(c.total)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RelatoriosPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -120,6 +169,13 @@ export default function RelatoriosPage() {
   // está gravando agora (tag `${txId}:cat` ou `${txId}:rec`).
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [lineBusy, setLineBusy] = useState<string | null>(null);
+  // DRE: quais linhas componentes estão com o detalhamento por categoria aberto.
+  const [dreOpen, setDreOpen] = useState<Set<string>>(new Set());
+  const toggleDre = (k: string) => setDreOpen(prev => {
+    const next = new Set(prev);
+    if (next.has(k)) next.delete(k); else next.add(k);
+    return next;
+  });
 
   // Inicialização e Auth
   useEffect(() => {
@@ -215,34 +271,45 @@ export default function RelatoriosPage() {
     return { entradas, saidas, saldo, taxaConciliacao, total: filteredTxs.length };
   }, [filteredTxs]);
 
-  // Cálculos do DRE
+  // Cálculos do DRE — além dos totais, guarda o detalhamento por categoria de
+  // cada linha componente pra alimentar as linhas expansíveis.
   const dreData = useMemo(() => {
-    let receita = 0;
-    let impostos = 0;
-    let cmv = 0;
-    let despesas = 0;
+    const bucket = { receita: new Map<string, number>(), impostos: new Map<string, number>(), cmv: new Map<string, number>(), despesas: new Map<string, number>() };
+    const add = (m: Map<string, number>, name: string, v: number) => m.set(name, (m.get(name) ?? 0) + v);
 
     filteredTxs.forEach(tx => {
       const catLower = tx.category.toLowerCase();
+      const name = tx.category || "Sem categoria";
       if (tx.type === "entrada") {
-        receita += tx.amount;
+        add(bucket.receita, name, tx.amount);
+      } else if (catLower.includes("imposto") || catLower.includes("taxa") || catLower.includes("tributo")) {
+        add(bucket.impostos, name, tx.amount);
+      } else if (catLower.includes("fornecedor") || catLower.includes("produto") || catLower.includes("mercadoria") || catLower.includes("compra")) {
+        add(bucket.cmv, name, tx.amount);
       } else {
-        if (catLower.includes("imposto") || catLower.includes("taxa") || catLower.includes("tributo")) {
-          impostos += tx.amount;
-        } else if (catLower.includes("fornecedor") || catLower.includes("produto") || catLower.includes("mercadoria") || catLower.includes("compra")) {
-          cmv += tx.amount;
-        } else {
-          despesas += tx.amount;
-        }
+        add(bucket.despesas, name, tx.amount);
       }
     });
 
+    const toRows = (m: Map<string, number>) => [...m.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
+    const sum = (m: Map<string, number>) => [...m.values()].reduce((s, v) => s + v, 0);
+
+    const receita = sum(bucket.receita);
+    const impostos = sum(bucket.impostos);
+    const cmv = sum(bucket.cmv);
+    const despesas = sum(bucket.despesas);
     const receitaLiquida = receita - impostos;
     const lucroBruto = receitaLiquida - cmv;
     const lucroLiquido = lucroBruto - despesas;
     const margemLiquida = receita > 0 ? (lucroLiquido / receita) * 100 : 0;
 
-    return { receita, impostos, receitaLiquida, cmv, lucroBruto, despesas, lucroLiquido, margemLiquida };
+    return {
+      receita, impostos, receitaLiquida, cmv, lucroBruto, despesas, lucroLiquido, margemLiquida,
+      receitaCats: toRows(bucket.receita),
+      impostosCats: toRows(bucket.impostos),
+      cmvCats: toRows(bucket.cmv),
+      despesasCats: toRows(bucket.despesas),
+    };
   }, [filteredTxs]);
 
   // Categorias de Entrada e Saída agrupadas
@@ -1196,50 +1263,63 @@ export default function RelatoriosPage() {
                 </div>
               </div>
 
-              <div className="space-y-0 rounded-xl overflow-hidden border" style={{ borderColor: "var(--db-border)" }}>
-                {/* Linha Receita */}
-                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50">
-                  <span className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Receita Operacional Bruta</span>
-                  <span className="font-mono font-bold" style={{ color: "var(--success)" }}>{hideValues ? "••••••" : toBRL(dreData.receita)}</span>
+              <div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--db-border)" }}>
+                {/* Receita Operacional Bruta — expansível */}
+                <DreLine
+                  label="Receita Operacional Bruta" amount={dreData.receita} cats={dreData.receitaCats}
+                  open={dreOpen.has("receita")} onToggle={() => toggleDre("receita")}
+                  hideValues={hideValues} variant="receita"
+                />
+                {/* (-) Deduções e Impostos — expansível */}
+                <DreLine
+                  label="Deduções e Impostos" amount={dreData.impostos} cats={dreData.impostosCats}
+                  open={dreOpen.has("impostos")} onToggle={() => toggleDre("impostos")}
+                  hideValues={hideValues} variant="deducao"
+                />
+                {/* = Receita Operacional Líquida — subtotal */}
+                <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
+                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>= Receita Operacional Líquida</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.receitaLiquida)}</span>
                 </div>
-                {/* Linha Impostos */}
-                <div className="flex justify-between items-center p-4 border-t" style={{ borderColor: "var(--db-border)" }}>
-                  <span className="text-sm" style={{ color: "var(--db-text-2)" }}>(-) Deduções e Impostos</span>
-                  <span className="font-mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : `-${toBRL(dreData.impostos)}`}</span>
+                {/* (-) CMV — expansível */}
+                <DreLine
+                  label="Custo da Mercadoria Vendida (CMV)" amount={dreData.cmv} cats={dreData.cmvCats}
+                  open={dreOpen.has("cmv")} onToggle={() => toggleDre("cmv")}
+                  hideValues={hideValues} variant="deducao"
+                />
+                {/* = Lucro Bruto — subtotal */}
+                <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
+                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>= Lucro Bruto</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.lucroBruto)}</span>
                 </div>
-                {/* Receita Líquida */}
-                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border-t" style={{ borderColor: "var(--db-border)" }}>
-                  <span className="font-bold text-sm" style={{ color: "var(--db-text)" }}>= Receita Operacional Líquida</span>
-                  <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.receitaLiquida)}</span>
-                </div>
-                {/* CMV */}
-                <div className="flex justify-between items-center p-4 border-t" style={{ borderColor: "var(--db-border)" }}>
-                  <span className="text-sm" style={{ color: "var(--db-text-2)" }}>(-) Custo da Mercadoria Vendida (CMV)</span>
-                  <span className="font-mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : `-${toBRL(dreData.cmv)}`}</span>
-                </div>
-                {/* Lucro Bruto */}
-                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border-t" style={{ borderColor: "var(--db-border)" }}>
-                  <span className="font-bold text-sm" style={{ color: "var(--db-text)" }}>= Lucro Bruto</span>
-                  <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.lucroBruto)}</span>
-                </div>
-                {/* Despesas */}
-                <div className="flex justify-between items-center p-4 border-t" style={{ borderColor: "var(--db-border)" }}>
-                  <span className="text-sm" style={{ color: "var(--db-text-2)" }}>(-) Despesas Operacionais</span>
-                  <span className="font-mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : `-${toBRL(dreData.despesas)}`}</span>
-                </div>
-                {/* Lucro Líquido */}
-                <div className="flex justify-between items-center p-5 bg-slate-100 dark:bg-slate-900 border-t" style={{ borderColor: "var(--db-border)" }}>
-                  <span className="font-extrabold text-base uppercase tracking-wider" style={{ color: "var(--db-text)" }}>= Lucro Líquido do Exercício</span>
-                  <div className="text-right">
+                {/* (-) Despesas Operacionais — expansível */}
+                <DreLine
+                  label="Despesas Operacionais" amount={dreData.despesas} cats={dreData.despesasCats}
+                  open={dreOpen.has("despesas")} onToggle={() => toggleDre("despesas")}
+                  hideValues={hideValues} variant="deducao"
+                />
+                {/* = Lucro Líquido do Exercício — destaque */}
+                <div
+                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 sm:px-5 py-4"
+                  style={{ borderTop: "2px solid var(--db-border)", background: "var(--db-bg-alt)" }}
+                >
+                  <span className="text-sm font-extrabold uppercase tracking-wide" style={{ color: "var(--db-text)" }}>
+                    = Lucro Líquido do Exercício
+                  </span>
+                  <div className="flex items-baseline gap-2">
                     <span className="font-mono font-extrabold text-xl" style={{ color: dreData.lucroLiquido >= 0 ? "var(--success)" : "var(--danger)" }}>
                       {hideValues ? "••••••" : toBRL(dreData.lucroLiquido)}
                     </span>
-                    <p className="text-[10px] font-bold mt-1" style={{ color: "var(--db-text-2)" }}>
-                      Margem Líquida: {dreData.margemLiquida.toFixed(1)}%
-                    </p>
+                    <span className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>
+                      margem {dreData.margemLiquida.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
               </div>
+
+              <p className="text-[11px] mt-3" style={{ color: "var(--db-text-3)" }}>
+                Clique nas linhas com seta para ver as categorias que compõem cada valor. Período: {filterPeriod === "ano" ? "Anual" : "Mensal"}.
+              </p>
             </div>
           </div>
         )}
