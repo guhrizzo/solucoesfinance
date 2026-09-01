@@ -2,13 +2,14 @@
 
 // ─── Mês global compartilhado ────────────────────────────────────────────────
 // Um único "mês selecionado" pra todo o app (Dashboard, Contas a pagar,
-// Impostos, Contas a receber, Centro de custos). O stepper na Navbar
-// (‹ Out 2024 ›) controla este estado; as páginas leem `refDate` / `monthKey`
-// pra filtrar seus dados. Persistido em localStorage, então a escolha
-// sobrevive a recarga e troca de página.
+// Impostos, Contas a receber, Centro de custos, Relatórios). O stepper na
+// Navbar (‹ Out 2024 ›, com modal de escolha de mês) controla este estado;
+// as páginas leem `refDate` / `monthKey` pra filtrar seus dados. Persistido
+// em localStorage, então a escolha sobrevive a recarga e troca de página.
 //
-// Páginas com recorte próprio (Relatórios: mês/ano; Vendas: mês/30d/tudo) NÃO
-// usam este contexto. Páginas sem conceito de mês (Fluxo de caixa, Estoque,
+// Relatórios usa `refDate` como âncora e ainda tem seu próprio toggle
+// Mensal/Anual (mês do refDate vs ano do refDate). Vendas (mês/30d/tudo) NÃO
+// usa este contexto. Páginas sem conceito de mês (Fluxo de caixa, Estoque,
 // Usuários) escondem o seletor via <Navbar hidePeriod />.
 
 import {

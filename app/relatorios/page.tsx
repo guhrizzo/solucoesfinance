@@ -9,6 +9,7 @@ import {
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
 import { PageLoader, Badge } from "../components/ui";
+import { usePeriod } from "../hooks/usePeriod";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/cashflowCategories";
 import type { ReportData } from "@/lib/reportPdf";
 
@@ -152,6 +153,9 @@ export default function RelatoriosPage() {
   }
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
+  // Mês âncora — vem do seletor global da Navbar (‹ Ago 2026 ›, com modal de
+  // escolha). "Mensal" mostra esse mês; "Anual" mostra o ano dele.
+  const { refDate } = usePeriod();
   // Período gerencial/contábil, uniforme em todas as abas — só Mensal ou
   // Anual (recortes operacionais como 7D/30D saíram junto com o antigo
   // seletor; ver histórico de commits pra essa transição).
@@ -244,21 +248,22 @@ export default function RelatoriosPage() {
 
   // Filtragem das transações por período
   const filteredTxs = useMemo(() => {
-    const now = new Date();
+    const refYear = refDate.getFullYear();
+    const refMonth = refDate.getMonth();
     return txs.filter(tx => {
       // Filtro de Busca
       if (searchQuery && !tx.description.toLowerCase().includes(searchQuery.toLowerCase()) && !tx.category.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
 
-      // Filtro de Data
+      // Filtro de Data — mês/ano âncora do seletor global
       const txDate = new Date(tx.date + "T12:00:00");
       if (filterPeriod === "mes") {
-        return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+        return txDate.getMonth() === refMonth && txDate.getFullYear() === refYear;
       }
-      return txDate.getFullYear() === now.getFullYear(); // "ano"
+      return txDate.getFullYear() === refYear; // "ano"
     });
-  }, [txs, filterPeriod, searchQuery]);
+  }, [txs, filterPeriod, searchQuery, refDate]);
 
   // Cálculos financeiros com base no filtro
   const metrics = useMemo(() => {
@@ -366,6 +371,13 @@ export default function RelatoriosPage() {
   // (visão "Mensal", mês corrente), com total e média do período.
   const faturamentoLedger = useMemo(() => {
     const now = new Date();
+    const refYear = refDate.getFullYear();
+    const refMonth = refDate.getMonth();
+    const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const isCurYear = refYear === now.getFullYear();
+    const isCurMonth = isCurYear && refMonth === now.getMonth();
+    const isPastMonth = refDate < curMonthStart;
+    const isPastYear = refYear < now.getFullYear();
 
     if (filterPeriod === "ano") {
       const byMonth = MONTH_LABELS.map((label, i) => ({ label, total: 0, key: i }));
@@ -374,16 +386,20 @@ export default function RelatoriosPage() {
         const m = Number(tx.date.split("-")[1]) - 1;
         if (byMonth[m]) byMonth[m].total += tx.amount;
       });
-      const elapsedMonths = now.getMonth() + 1; // meses decorridos no ano corrente até hoje
+      // Ano corrente: meses decorridos até hoje. Ano passado: 12 (fechado).
+      // Ano futuro: 0 (sem projeção).
+      const elapsedMonths = isCurYear ? now.getMonth() + 1 : (isPastYear ? 12 : 0);
       const total = byMonth.reduce((s, m) => s + m.total, 0);
-      const average = total / elapsedMonths;
-      const remainingUnits = 12 - elapsedMonths;
+      const average = elapsedMonths ? total / elapsedMonths : 0;
+      const remainingUnits = elapsedMonths > 0 ? 12 - elapsedMonths : 0;
       return {
         granularity: "mes" as const,
-        periodLabel: `Ano de ${now.getFullYear()}`,
-        rows: byMonth.map(m => ({ label: `${m.label}/${now.getFullYear()}`, total: m.total })),
+        periodLabel: `Ano de ${refYear}`,
+        rows: byMonth.map(m => ({ label: `${m.label}/${refYear}`, total: m.total })),
         total,
-        countLabel: `${elapsedMonths} ${elapsedMonths === 1 ? "mês" : "meses"} decorridos`,
+        countLabel: elapsedMonths
+          ? `${elapsedMonths} ${elapsedMonths === 1 ? "mês" : "meses"} ${isCurYear ? "decorridos" : "no ano"}`
+          : "ano ainda não iniciado",
         average,
         projection: {
           remainingUnits,
@@ -394,23 +410,27 @@ export default function RelatoriosPage() {
       };
     }
 
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysInMonth = new Date(refYear, refMonth + 1, 0).getDate();
     const byDay = Array.from({ length: daysInMonth }, (_, i) => ({ day: i + 1, total: 0 }));
     filteredTxs.forEach(tx => {
       if (tx.type !== "entrada") return;
       const d = Number(tx.date.split("-")[2]);
       if (byDay[d - 1]) byDay[d - 1].total += tx.amount;
     });
-    const elapsedDays = now.getDate(); // dias decorridos no mês corrente até hoje
+    // Mês corrente: dias até hoje. Mês passado: mês inteiro (fechado).
+    // Mês futuro: 0 (sem projeção).
+    const elapsedDays = isCurMonth ? now.getDate() : (isPastMonth ? daysInMonth : 0);
     const total = byDay.reduce((s, d) => s + d.total, 0);
-    const average = total / elapsedDays;
-    const remainingUnits = daysInMonth - elapsedDays;
+    const average = elapsedDays ? total / elapsedDays : 0;
+    const remainingUnits = elapsedDays > 0 ? daysInMonth - elapsedDays : 0;
     return {
       granularity: "dia" as const,
-      periodLabel: `${MONTH_LABELS[now.getMonth()]} de ${now.getFullYear()}`,
-      rows: byDay.filter(d => d.total > 0).map(d => ({ label: `${String(d.day).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}`, total: d.total })),
+      periodLabel: `${MONTH_LABELS[refMonth]} de ${refYear}`,
+      rows: byDay.filter(d => d.total > 0).map(d => ({ label: `${String(d.day).padStart(2, "0")}/${String(refMonth + 1).padStart(2, "0")}`, total: d.total })),
       total,
-      countLabel: `${elapsedDays} ${elapsedDays === 1 ? "dia decorrido" : "dias decorridos"}`,
+      countLabel: elapsedDays
+        ? `${elapsedDays} ${elapsedDays === 1 ? "dia decorrido" : `dias ${isCurMonth ? "decorridos" : "no mês"}`}`
+        : "mês ainda não iniciado",
       average,
       projection: {
         remainingUnits,
@@ -419,16 +439,15 @@ export default function RelatoriosPage() {
         projectedTotal: total + average * remainingUnits,
       },
     };
-  }, [filteredTxs, filterPeriod]);
+  }, [filteredTxs, filterPeriod, refDate]);
 
   // Rótulo do período gerencial selecionado (para cabeçalhos e PDF).
   const periodLabel = useMemo(() => {
-    const now = new Date();
     const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     return filterPeriod === "ano"
-      ? `Ano de ${now.getFullYear()}`
-      : `${meses[now.getMonth()]} de ${now.getFullYear()}`;
-  }, [filterPeriod]);
+      ? `Ano de ${refDate.getFullYear()}`
+      : `${meses[refDate.getMonth()]} de ${refDate.getFullYear()}`;
+  }, [filterPeriod, refDate]);
 
   // ── Fechamento de Caixa por Período ──────────────────────────────────────────
   // Modelo financeiro de conferência: os lançamentos do período são agrupados
@@ -597,8 +616,6 @@ export default function RelatoriosPage() {
   // na visão Mensal, uma coluna por dia do mês corrente que teve movimento;
   // na visão Anual, uma coluna por mês do ano corrente.
   const svgChartData = useMemo(() => {
-    const now = new Date();
-
     if (filterPeriod === "ano") {
       const months = MONTH_LABELS.map(label => ({ label, entrada: 0, saida: 0 }));
       filteredTxs.forEach(tx => {
@@ -611,8 +628,8 @@ export default function RelatoriosPage() {
       return months;
     }
 
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const daysInMonth = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0).getDate();
+    const mm = String(refDate.getMonth() + 1).padStart(2, "0");
     const days = Array.from({ length: daysInMonth }, (_, i) => ({
       label: `${String(i + 1).padStart(2, "0")}/${mm}`,
       entrada: 0,
@@ -626,7 +643,7 @@ export default function RelatoriosPage() {
       }
     });
     return days.filter(d => d.entrada > 0 || d.saida > 0);
-  }, [filteredTxs, filterPeriod]);
+  }, [filteredTxs, filterPeriod, refDate]);
 
   if (blocked) return <AccessDenied category="Relatórios" />;
 
@@ -634,7 +651,7 @@ export default function RelatoriosPage() {
 
   return (
     <>
-      <Navbar activePath="/relatorios" user={user} onLogout={handleLogout} hidePeriod />
+      <Navbar activePath="/relatorios" user={user} onLogout={handleLogout} />
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
         
         {/* Header */}
@@ -760,7 +777,7 @@ export default function RelatoriosPage() {
           {/* Card Conciliação */}
           <div className="cf-card p-5 space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Caixa Conferido</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Conciliação</span>
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
                 style={{ background: "var(--status-info-bg)", color: "var(--status-info-text)" }}
@@ -794,7 +811,7 @@ export default function RelatoriosPage() {
               </h3>
               <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
                 {filterPeriod === "ano"
-                  ? `Entradas vs Saídas mês a mês em ${new Date().getFullYear()}`
+                  ? `Entradas vs Saídas mês a mês em ${refDate.getFullYear()}`
                   : "Entradas vs Saídas nos dias ativos do mês"}
               </p>
             </div>

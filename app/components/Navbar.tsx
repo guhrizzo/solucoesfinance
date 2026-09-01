@@ -17,6 +17,7 @@ import { useBillBadges } from "./Usebillbadges";
 import { useReceivableBadges } from "./useReceivableBadges";
 import { useAccountScope, hasPermission } from "../hooks/useAccountScope";
 import { usePeriod } from "../hooks/usePeriod";
+import { MonthPickerModal } from "./MonthPickerModal";
 import type { PermissionKey } from "@/lib/accountScope";
 
 interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; permKey?: PermissionKey; }
@@ -139,6 +140,10 @@ const css = `
     min-width: 84px; text-align: center; font-family: 'Sora', sans-serif;
     white-space: nowrap;
   }
+  .nxfi-period-stepper button.nxfi-period-current {
+    width: auto; height: 28px; padding: 0 8px; background: transparent;
+  }
+  .nxfi-period-stepper button.nxfi-period-current:hover { background: var(--nav-period-hover); }
   .nxfi-vertical-period { padding: 14px 12px 2px; flex-shrink: 0; }
   .nxfi-vertical-period .nxfi-period-stepper { width: 100%; justify-content: space-between; padding: 3px; }
   .nxfi-vertical-period .nxfi-period-current { flex: 1; }
@@ -354,6 +359,7 @@ export default function Navbar({
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [isServico, setIsServico] = useState(false);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
 
   const router = useRouter();
   const { dark, toggle } = useTheme();
@@ -468,10 +474,15 @@ export default function Navbar({
         <button onClick={periodCtx.goPrevMonth} aria-label="Mês anterior" type="button">
           <ChevronLeft size={15} />
         </button>
-        <span className="nxfi-period-current">
+        <button
+          className="nxfi-period-current"
+          onClick={() => setMonthPickerOpen(true)}
+          type="button"
+          aria-label="Escolher mês"
+        >
           <Calendar size={12} />
           {periodCtx.label}
-        </span>
+        </button>
         <button onClick={periodCtx.goNextMonth} aria-label="Próximo mês" type="button">
           <ChevronRight size={15} />
         </button>
@@ -630,6 +641,14 @@ export default function Navbar({
         {mobileBottomNavJSX}
 
         <ToastContainer toasts={toasts} onRemove={removeToast} />
+        {!hidePeriod && (
+          <MonthPickerModal
+            open={monthPickerOpen}
+            onClose={() => setMonthPickerOpen(false)}
+            value={periodCtx.refDate}
+            onSelect={periodCtx.setMonth}
+          />
+        )}
       </>
     );
   }
