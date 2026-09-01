@@ -259,3 +259,23 @@ da lista é preservado como `<option>` extra.
   segue `prefers-color-scheme` (modo do SO), enquanto o tema real do app é o
   atributo `[data-theme]` — os dois dessincronizam.
 - Toggle Mensal/Anual inalterado (continua via `filteredTxs`).
+
+### C. Nova aba "Gastos" (Relatório de Gastos)
+
+- `TabType` e `ReportTab` ganham `"gastos"` (aba entre Faturamento e DRE).
+- `gastosReport` (useMemo, dep `filteredTxs`): só `type === "saida"`, agrupado
+  por categoria → `{ name, total, pct (% do total de gastos), txs }`, ordenado
+  por `total` desc. Também `total`, `categorias` (contagem) e `maior` (rows[0]).
+- UI: 3 cards de resumo (Total de Gastos, Categorias, Maior Categoria) +
+  tabela `Categoria | Valor | % | barra`; linha clicável expande os lançamentos
+  da categoria; `tfoot` com Total / 100%. Respeita `hideValues` e Mensal/Anual.
+  Estado `gastosOpen: Set<string>`.
+- PDF: `ReportData.gastos = { total, categorias, rows: {name,total,pct}[] }`;
+  `exportReportPdf` monta Resumo + tabela Categoria/Valor/% com foot Total.
+
+### D. PDF da DRE imprime o detalhamento por categoria
+
+`ReportData.dre` ganha `receitaCats/impostosCats/cmvCats/despesasCats`
+(opcionais). No `exportReportPdf`, cada linha componente é seguida das suas
+categorias (linhas indentadas com prefixo de 4 espaços, texto menor/cinza) —
+o mesmo detalhamento que na tela fica recolhido.
