@@ -947,7 +947,7 @@ export default function Dashboard() {
                   });
                 })()}
                 {hideValues ? (
-                  <rect x="42" y="57" width="56" height="12" rx="3" fill="var(--db-text-4)" />
+                  <rect x="42" y="57" width="56" height="12" rx="3" fill="var(--db-text-3)" />
                 ) : (
                   <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
                     {toBRL(costCenterData.totalExpenses)}
