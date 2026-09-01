@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
-import { PageLoader, Badge } from "../components/ui";
+import { PageLoader, Badge, Sensitive } from "../components/ui";
 import { usePeriod } from "../hooks/usePeriod";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/cashflowCategories";
 import type { ReportData } from "@/lib/reportPdf";
@@ -101,7 +101,7 @@ function DreLine({ label, amount, cats, open, onToggle, hideValues, variant }: {
   variant: "receita" | "deducao";
 }) {
   const canExpand = cats.length > 0;
-  const money = (n: number) => hideValues ? "••••••" : toBRL(n);
+  const money = (n: number) => <Sensitive hidden={hideValues}>{toBRL(n)}</Sensitive>;
   const isReceita = variant === "receita";
   return (
     <div style={{ borderTop: "1px solid var(--db-border)" }}>
@@ -183,6 +183,13 @@ export default function RelatoriosPage() {
   // Relatório de Gastos: quais categorias estão com os lançamentos abertos.
   const [gastosOpen, setGastosOpen] = useState<Set<string>>(new Set());
   const toggleGastos = (k: string) => setGastosOpen(prev => {
+    const next = new Set(prev);
+    if (next.has(k)) next.delete(k); else next.add(k);
+    return next;
+  });
+  // Relatório de Faturamento: quais categorias estão com os lançamentos abertos.
+  const [faturamentoOpen, setFaturamentoOpen] = useState<Set<string>>(new Set());
+  const toggleFaturamento = (k: string) => setFaturamentoOpen(prev => {
     const next = new Set(prev);
     if (next.has(k)) next.delete(k); else next.add(k);
     return next;
@@ -348,6 +355,36 @@ export default function RelatoriosPage() {
       }))
       .sort((a, b) => b.total - a.total);
     return { rows, total, categorias: rows.length, maior: rows[0] ?? null };
+  }, [filteredTxs]);
+
+  // Relatório de Faturamento (aba Faturamento) — espelha o gastosReport, mas
+  // só entradas: valor, % do total faturado, ticket médio e os lançamentos de
+  // cada categoria, do maior pro menor. Segue o período Mensal/Anual.
+  const faturamentoReport = useMemo(() => {
+    const map = new Map<string, { total: number; txs: Tx[] }>();
+    let total = 0;
+    filteredTxs.forEach(tx => {
+      if (tx.type !== "entrada") return;
+      total += tx.amount;
+      const name = tx.category || "Sem categoria";
+      const g = map.get(name) ?? { total: 0, txs: [] };
+      g.total += tx.amount;
+      g.txs.push(tx);
+      map.set(name, g);
+    });
+    const rows = [...map.entries()]
+      .map(([name, g]) => ({
+        name,
+        total: g.total,
+        pct: total > 0 ? (g.total / total) * 100 : 0,
+        txs: [...g.txs].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
+      }))
+      .sort((a, b) => b.total - a.total);
+    const lancamentos = rows.reduce((s, r) => s + r.txs.length, 0);
+    return {
+      rows, total, categorias: rows.length, maior: rows[0] ?? null,
+      ticketMedio: lancamentos > 0 ? total / lancamentos : 0,
+    };
   }, [filteredTxs]);
 
   // Categorias de Entrada e Saída agrupadas
@@ -584,7 +621,7 @@ export default function RelatoriosPage() {
             total: faturamentoLedger.total,
             average: faturamentoLedger.average,
             countLabel: faturamentoLedger.countLabel,
-            ticketMedio: dreData.receita / (filteredTxs.filter(t => t.type === "entrada").length || 1),
+            ticketMedio: faturamentoReport.ticketMedio,
             projection: faturamentoLedger.projection.remainingUnits > 0 ? {
               remainingLabel: faturamentoLedger.projection.remainingLabel,
               projectedRemaining: faturamentoLedger.projection.projectedRemaining,
@@ -741,7 +778,7 @@ export default function RelatoriosPage() {
               </div>
             </div>
             <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-              {hideValues ? "••••••" : toBRL(metrics.entradas)}
+              {<Sensitive hidden={hideValues}>{toBRL(metrics.entradas)}</Sensitive>}
             </p>
             <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Recebimentos no período</p>
           </div>
@@ -755,7 +792,7 @@ export default function RelatoriosPage() {
               </div>
             </div>
             <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-              {hideValues ? "••••••" : toBRL(metrics.saidas)}
+              {<Sensitive hidden={hideValues}>{toBRL(metrics.saidas)}</Sensitive>}
             </p>
             <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Pagamentos e despesas</p>
           </div>
@@ -769,7 +806,7 @@ export default function RelatoriosPage() {
               </div>
             </div>
             <p className="text-2xl font-extrabold mono" style={{ color: metrics.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
-              {hideValues ? "••••••" : toBRL(metrics.saldo)}
+              {<Sensitive hidden={hideValues}>{toBRL(metrics.saldo)}</Sensitive>}
             </p>
             <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Resultado operacional</p>
           </div>
@@ -873,7 +910,7 @@ export default function RelatoriosPage() {
                       <div className="flex items-center justify-between text-xs font-semibold">
                         <span style={{ color: "var(--db-text)" }}>{cat.name}</span>
                         <span style={{ color: cat.type === "entrada" ? "var(--success)" : "var(--danger)" }}>
-                          {hideValues ? "•••" : toBRL(cat.total)}
+                          {<Sensitive hidden={hideValues}>{toBRL(cat.total)}</Sensitive>}
                         </span>
                       </div>
                       <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
@@ -974,13 +1011,13 @@ export default function RelatoriosPage() {
                         </button>
                       </td>
                       <td className="py-3 text-right font-mono text-emerald-500">
-                        {hideValues ? "•••" : toBRL(row.entradas)}
+                        {<Sensitive hidden={hideValues}>{toBRL(row.entradas)}</Sensitive>}
                       </td>
                       <td className="py-3 text-right font-mono text-rose-500">
-                        {hideValues ? "•••" : toBRL(row.saidas)}
+                        {<Sensitive hidden={hideValues}>{toBRL(row.saidas)}</Sensitive>}
                       </td>
                       <td className="py-3 text-right font-mono font-bold" style={{ color: row.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
-                        {hideValues ? "•••" : toBRL(row.saldo)}
+                        {<Sensitive hidden={hideValues}>{toBRL(row.saldo)}</Sensitive>}
                       </td>
                       <td className="py-3 text-center">
                         <Badge status={row.done ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">
@@ -1038,7 +1075,7 @@ export default function RelatoriosPage() {
                                         />
                                       </td>
                                       <td className={`py-2 text-right font-mono font-bold ${tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"}`}>
-                                        {tx.type === "entrada" ? "+" : "-"}{hideValues ? "•••" : toBRL(tx.amount)}
+                                        {tx.type === "entrada" ? "+" : "-"}{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}
                                       </td>
                                       <td className="py-2 text-center">
                                         <input
@@ -1067,13 +1104,13 @@ export default function RelatoriosPage() {
                     <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total conciliado</td>
                     <td className="py-3 text-center font-mono" style={{ color: "var(--db-text-2)" }}>{conciliado.count}</td>
                     <td className="py-3 text-right font-mono font-bold text-emerald-500">
-                      {hideValues ? "•••" : toBRL(conciliado.entradas)}
+                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.entradas)}</Sensitive>}
                     </td>
                     <td className="py-3 text-right font-mono font-bold text-rose-500">
-                      {hideValues ? "•••" : toBRL(conciliado.saidas)}
+                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.saidas)}</Sensitive>}
                     </td>
                     <td className="py-3 text-right font-mono font-extrabold" style={{ color: conciliado.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
-                      {hideValues ? "•••" : toBRL(conciliado.saldo)}
+                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.saldo)}</Sensitive>}
                     </td>
                     <td colSpan={2} />
                   </tr>
@@ -1140,7 +1177,7 @@ export default function RelatoriosPage() {
                         </Badge>
                       </td>
                       <td className={`py-3 text-right font-mono font-bold ${tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"}`}>
-                        {tx.type === "entrada" ? "+" : "-"}{hideValues ? "•••" : toBRL(tx.amount)}
+                        {tx.type === "entrada" ? "+" : "-"}{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}
                       </td>
                     </tr>
                   ))
@@ -1156,156 +1193,203 @@ export default function RelatoriosPage() {
         {/* Aba: Faturamento */}
         {activeTab === "faturamento" && (
           <div className="space-y-6 fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="cf-card p-6 flex flex-col items-center justify-center text-center space-y-2">
-                <BarChart3 className="text-primary mb-2" size={32} />
-                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
-                  Receita Bruta {filterPeriod === "ano" ? "Anual" : "do Mês"}
-                </p>
-                <p className="text-4xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-                  {hideValues ? "••••••" : toBRL(dreData.receita)}
-                </p>
-                <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{faturamentoLedger.periodLabel}</p>
-              </div>
-              <div className="cf-card p-6 flex flex-col items-center justify-center text-center space-y-2">
-                <Activity className="text-primary mb-2" size={32} />
-                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Ticket Médio Estimado</p>
-                <p className="text-4xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-                  {hideValues ? "••••••" : toBRL(dreData.receita / (filteredTxs.filter(t => t.type === "entrada").length || 1))}
-                </p>
-              </div>
-            </div>
-
-            {/* Demonstrativo de Faturamento — formato gerencial/contábil,
-                agrupado por mês (visão Anual) ou por dia (visão Mensal),
-                sempre a partir das entradas do Fluxo de Caixa. */}
-            <div className="cf-card p-6 sm:p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <FileText className="text-primary" size={24} />
-                <div>
-                  <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>
-                    Demonstrativo de Faturamento {filterPeriod === "ano" ? "— Mensal" : "— Diário"}
-                  </h2>
-                  <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.periodLabel} · Vinculado às entradas do Fluxo de Caixa</p>
+            {faturamentoReport.rows.length === 0 ? (
+              <div className="cf-card p-10 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: "var(--db-card-hover)", color: "var(--db-text-3)" }}>
+                  <BarChart3 size={22} />
                 </div>
+                <h4 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum faturamento no período</h4>
+                <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
+                  As entradas do fluxo de caixa em {periodLabel} aparecem aqui agrupadas por categoria, do maior pro menor.
+                </p>
               </div>
+            ) : (
+              <>
+                {/* Cards de resumo */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="cf-card p-5 space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Total de Faturamento</span>
+                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--success)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.total)}</Sensitive>}</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{periodLabel}</p>
+                  </div>
+                  <div className="cf-card p-5 space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Categorias</span>
+                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>{faturamentoReport.categorias}</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>com faturamento no período</p>
+                  </div>
+                  <div className="cf-card p-5 space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Maior Fonte</span>
+                    <p className="text-lg font-extrabold truncate" style={{ color: "var(--db-text)" }}>{faturamentoReport.maior?.name ?? "—"}</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>
+                      {faturamentoReport.maior ? <><Sensitive hidden={hideValues}>{toBRL(faturamentoReport.maior.total)}</Sensitive> · {faturamentoReport.maior.pct.toFixed(1)}%</> : ""}
+                    </p>
+                  </div>
+                </div>
 
-              {faturamentoLedger.rows.length === 0 ? (
-                <p className="text-sm text-center py-8" style={{ color: "var(--db-text-3)" }}>Nenhum faturamento registrado no período.</p>
-              ) : (
-                <>
-                  <div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--db-border)" }}>
-                    <table className="w-full text-left text-sm">
+                {/* Demonstrativo de Faturamento — entradas do Fluxo de Caixa
+                    agrupadas por dia (Mensal) ou por mês (Anual). */}
+                <div className="cf-card p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="text-primary" size={20} />
+                    <div>
+                      <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>
+                        Demonstrativo de Faturamento {filterPeriod === "ano" ? "— Mensal" : "— Diário"}
+                      </h2>
+                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.periodLabel} · Vinculado às entradas do Fluxo de Caixa</p>
+                    </div>
+                  </div>
+
+                  {faturamentoLedger.rows.length === 0 ? (
+                    <p className="text-sm text-center py-8" style={{ color: "var(--db-text-3)" }}>Nenhum faturamento registrado no período.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
+                            <th className="py-2.5 font-bold">{faturamentoLedger.granularity === "mes" ? "Mês" : "Dia"}</th>
+                            <th className="py-2.5 font-bold text-right">Faturamento</th>
+                          </tr>
+                        </thead>
+                        <tbody style={{ color: "var(--db-text)" }}>
+                          {faturamentoLedger.rows.map((row, i) => (
+                            <tr key={i} className="border-b" style={{ borderColor: "var(--db-border)" }}>
+                              <td className="py-3 font-semibold">{row.label}</td>
+                              <td className="py-3 text-right font-mono font-semibold">{<Sensitive hidden={hideValues}>{toBRL(row.total)}</Sensitive>}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
+                            <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total</td>
+                            <td className="py-3 text-right font-mono font-extrabold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.total)}</Sensitive>}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-4 px-1">
+                        <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.countLabel}</p>
+                        <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>
+                          Média: <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.average)}</Sensitive>}</span>
+                          <span className="mx-1.5" style={{ color: "var(--db-text-3)" }}>·</span>
+                          Ticket médio: <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.ticketMedio)}</Sensitive>}</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Projeção de Faturamento — estimativa linear pela média já
+                    observada, extrapolada pro que falta. Borda tracejada marca
+                    que é estimativa, não fato realizado. */}
+                {faturamentoLedger.rows.length > 0 && faturamentoLedger.projection.remainingUnits > 0 && (
+                  <div className="cf-card p-6 space-y-4" style={{ border: "1px dashed var(--db-border)" }}>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="text-primary" size={20} />
+                      <div>
+                        <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>Projeção de Faturamento</h2>
+                        <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
+                          Estimativa pela média {faturamentoLedger.granularity === "mes" ? "mensal" : "diária"} observada · {faturamentoLedger.projection.remainingLabel}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Realizado até hoje</p>
+                        <p className="text-xl font-extrabold mono" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.total)}</Sensitive>}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Projeção do restante</p>
+                        <p className="text-xl font-extrabold mono" style={{ color: "var(--primary)" }}>+{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.projection.projectedRemaining)}</Sensitive>}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
+                          {faturamentoLedger.granularity === "mes" ? "Projeção do ano" : "Projeção do mês"}
+                        </p>
+                        <p className="text-xl font-extrabold mono" style={{ color: "var(--success)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.projection.projectedTotal)}</Sensitive>}</p>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px]" style={{ color: "var(--db-text-3)" }}>
+                      Estimativa linear a partir do ritmo de faturamento já registrado no período — não considera sazonalidade nem contratos futuros.
+                    </p>
+                  </div>
+                )}
+
+                {/* Faturamento por Categoria — espelha "Gastos por Categoria" */}
+                <div className="cf-card p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="text-primary" size={20} />
+                    <div>
+                      <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>Faturamento por Categoria</h2>
+                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Do maior pro menor · {filterPeriod === "ano" ? "Anual" : "Mensal"} — {periodLabel}</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="bg-slate-50 dark:bg-slate-800/50">
-                          <th className="p-3 font-bold" style={{ color: "var(--db-text)" }}>
-                            {faturamentoLedger.granularity === "mes" ? "Mês" : "Dia"}
-                          </th>
-                          <th className="p-3 font-bold text-right" style={{ color: "var(--db-text)" }}>Faturamento</th>
+                        <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
+                          <th className="py-2.5 font-bold">Categoria</th>
+                          <th className="py-2.5 font-bold text-right">Valor</th>
+                          <th className="py-2.5 font-bold text-right">%</th>
+                          <th className="py-2.5 font-bold pl-4 w-[34%]">Participação</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {faturamentoLedger.rows.map((row, i) => (
-                          <tr key={i} className="border-t" style={{ borderColor: "var(--db-border)" }}>
-                            <td className="p-3" style={{ color: "var(--db-text-2)" }}>{row.label}</td>
-                            <td className="p-3 text-right font-mono font-semibold" style={{ color: "var(--db-text)" }}>
-                              {hideValues ? "••••••" : toBRL(row.total)}
-                            </td>
-                          </tr>
-                        ))}
+                      <tbody style={{ color: "var(--db-text)" }}>
+                        {faturamentoReport.rows.map((row) => {
+                          const open = faturamentoOpen.has(row.name);
+                          return (
+                            <Fragment key={row.name}>
+                              <tr className="border-b cursor-pointer" style={{ borderColor: "var(--db-border)" }} onClick={() => toggleFaturamento(row.name)}>
+                                <td className="py-3 font-semibold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <ChevronDown size={12} className="transition-transform shrink-0" style={{ transform: open ? "rotate(180deg)" : "none", color: "var(--db-text-3)" }} />
+                                    {row.name}
+                                    <span style={{ color: "var(--db-text-3)" }}>({row.txs.length})</span>
+                                  </span>
+                                </td>
+                                <td className="py-3 text-right font-mono font-bold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(row.total)}</Sensitive>}</td>
+                                <td className="py-3 text-right font-mono" style={{ color: "var(--db-text-2)" }}>{row.pct.toFixed(1)}%</td>
+                                <td className="py-3 pl-4">
+                                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
+                                    <div className="h-full rounded-full" style={{ width: `${row.pct}%`, background: "var(--success)" }} />
+                                  </div>
+                                </td>
+                              </tr>
+                              {open && (
+                                <tr style={{ background: "var(--db-bg-alt)" }}>
+                                  <td colSpan={4} className="px-3 py-2">
+                                    <div className="space-y-1">
+                                      {row.txs.map((tx) => (
+                                        <div key={tx.id} className="flex items-center justify-between gap-3 text-xs py-1">
+                                          <span className="truncate" style={{ color: "var(--db-text-2)" }}>
+                                            {tx.description} <span style={{ color: "var(--db-text-3)" }}>· {tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span>
+                                          </span>
+                                          <span className="font-mono shrink-0 text-emerald-500">+{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t-2 bg-slate-100 dark:bg-slate-900" style={{ borderColor: "var(--db-border)" }}>
-                          <td className="p-3 font-extrabold uppercase tracking-wider text-xs" style={{ color: "var(--db-text)" }}>Total</td>
-                          <td className="p-3 text-right font-mono font-extrabold" style={{ color: "var(--success)" }}>
-                            {hideValues ? "••••••" : toBRL(faturamentoLedger.total)}
-                          </td>
+                        <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
+                          <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total</td>
+                          <td className="py-3 text-right font-mono font-extrabold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.total)}</Sensitive>}</td>
+                          <td className="py-3 text-right font-mono font-extrabold" style={{ color: "var(--db-text-2)" }}>100%</td>
+                          <td className="pl-4" />
                         </tr>
                       </tfoot>
                     </table>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-4 px-1">
-                    <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.countLabel}</p>
-                    <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>
-                      Média de Faturamento: <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(faturamentoLedger.average)}</span>
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Projeção de Faturamento — estimativa linear a partir da média
-                já observada no período, extrapolada pro que falta (resto do
-                mês ou resto do ano). Borda tracejada marca visualmente que é
-                estimativa, não fato realizado. */}
-            {faturamentoLedger.rows.length > 0 && faturamentoLedger.projection.remainingUnits > 0 && (
-              <div className="cf-card p-6 sm:p-8" style={{ border: "1px dashed var(--db-border)" }}>
-                <div className="mb-5 flex items-center gap-3">
-                  <TrendingUp className="text-primary" size={24} />
-                  <div>
-                    <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>Projeção de Faturamento</h2>
-                    <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
-                      Estimativa pela média {faturamentoLedger.granularity === "mes" ? "mensal" : "diária"} observada · {faturamentoLedger.projection.remainingLabel}
-                    </p>
-                  </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Realizado até hoje</p>
-                    <p className="text-xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-                      {hideValues ? "••••••" : toBRL(faturamentoLedger.total)}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Projeção do restante</p>
-                    <p className="text-xl font-extrabold mono" style={{ color: "var(--primary)" }}>
-                      +{hideValues ? "••••••" : toBRL(faturamentoLedger.projection.projectedRemaining)}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
-                      {faturamentoLedger.granularity === "mes" ? "Projeção do ano" : "Projeção do mês"}
-                    </p>
-                    <p className="text-xl font-extrabold mono" style={{ color: "var(--success)" }}>
-                      {hideValues ? "••••••" : toBRL(faturamentoLedger.projection.projectedTotal)}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-[10px] mt-5" style={{ color: "var(--db-text-3)" }}>
-                  Estimativa linear a partir do ritmo de faturamento já registrado no período — não considera sazonalidade nem contratos futuros.
-                </p>
-              </div>
+              </>
             )}
-
-            <div className="cf-card p-6">
-              <h3 className="font-heading text-lg font-bold mb-4" style={{ color: "var(--db-text)" }}>Maiores Fontes de Faturamento</h3>
-              <div className="space-y-4">
-                {categoryBreakdown.filter(c => c.type === "entrada").length === 0 ? (
-                  <p className="text-sm" style={{ color: "var(--db-text-3)" }}>Nenhum faturamento registrado no período.</p>
-                ) : (
-                  categoryBreakdown.filter(c => c.type === "entrada").map((cat, i) => {
-                    const maxAmt = Math.max(...categoryBreakdown.filter(c => c.type === "entrada").map(c => c.total)) || 1;
-                    const pct = (cat.total / maxAmt) * 100;
-                    return (
-                      <div key={i} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm font-semibold">
-                          <span style={{ color: "var(--db-text)" }}>{cat.name}</span>
-                          <span style={{ color: "var(--success)" }}>
-                            {hideValues ? "•••" : toBRL(cat.total)}
-                          </span>
-                        </div>
-                        <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                          <div className="h-full rounded-full transition-all duration-500 bg-emerald-500" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
           </div>
         )}
 
@@ -1328,7 +1412,7 @@ export default function RelatoriosPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="cf-card p-5 space-y-2">
                     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Total de Gastos</span>
-                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : toBRL(gastosReport.total)}</p>
+                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--danger)" }}>{<Sensitive hidden={hideValues}>{toBRL(gastosReport.total)}</Sensitive>}</p>
                     <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{periodLabel}</p>
                   </div>
                   <div className="cf-card p-5 space-y-2">
@@ -1340,7 +1424,7 @@ export default function RelatoriosPage() {
                     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Maior Categoria</span>
                     <p className="text-lg font-extrabold truncate" style={{ color: "var(--db-text)" }}>{gastosReport.maior?.name ?? "—"}</p>
                     <p className="text-xs" style={{ color: "var(--db-text-3)" }}>
-                      {gastosReport.maior ? `${hideValues ? "•••" : toBRL(gastosReport.maior.total)} · ${gastosReport.maior.pct.toFixed(1)}%` : ""}
+                      {gastosReport.maior ? <><Sensitive hidden={hideValues}>{toBRL(gastosReport.maior.total)}</Sensitive> · {gastosReport.maior.pct.toFixed(1)}%</> : ""}
                     </p>
                   </div>
                 </div>
@@ -1378,7 +1462,7 @@ export default function RelatoriosPage() {
                                     <span style={{ color: "var(--db-text-3)" }}>({row.txs.length})</span>
                                   </span>
                                 </td>
-                                <td className="py-3 text-right font-mono font-bold text-rose-500">{hideValues ? "•••" : toBRL(row.total)}</td>
+                                <td className="py-3 text-right font-mono font-bold text-rose-500">{<Sensitive hidden={hideValues}>{toBRL(row.total)}</Sensitive>}</td>
                                 <td className="py-3 text-right font-mono" style={{ color: "var(--db-text-2)" }}>{row.pct.toFixed(1)}%</td>
                                 <td className="py-3 pl-4">
                                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
@@ -1395,7 +1479,7 @@ export default function RelatoriosPage() {
                                           <span className="truncate" style={{ color: "var(--db-text-2)" }}>
                                             {tx.description} <span style={{ color: "var(--db-text-3)" }}>· {tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span>
                                           </span>
-                                          <span className="font-mono shrink-0 text-rose-500">-{hideValues ? "•••" : toBRL(tx.amount)}</span>
+                                          <span className="font-mono shrink-0 text-rose-500">-{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1409,7 +1493,7 @@ export default function RelatoriosPage() {
                       <tfoot>
                         <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
                           <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total</td>
-                          <td className="py-3 text-right font-mono font-extrabold text-rose-500">{hideValues ? "•••" : toBRL(gastosReport.total)}</td>
+                          <td className="py-3 text-right font-mono font-extrabold text-rose-500">{<Sensitive hidden={hideValues}>{toBRL(gastosReport.total)}</Sensitive>}</td>
                           <td className="py-3 text-right font-mono font-extrabold" style={{ color: "var(--db-text-2)" }}>100%</td>
                           <td className="pl-4" />
                         </tr>
@@ -1452,7 +1536,7 @@ export default function RelatoriosPage() {
                 {/* = Receita Operacional Líquida — subtotal */}
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
                   <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>= Receita Operacional Líquida</span>
-                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.receitaLiquida)}</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.receitaLiquida)}</Sensitive>}</span>
                 </div>
                 {/* (-) CMV — expansível */}
                 <DreLine
@@ -1463,7 +1547,7 @@ export default function RelatoriosPage() {
                 {/* = Lucro Bruto — subtotal */}
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
                   <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>= Lucro Bruto</span>
-                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{hideValues ? "••••••" : toBRL(dreData.lucroBruto)}</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.lucroBruto)}</Sensitive>}</span>
                 </div>
                 {/* (-) Despesas Operacionais — expansível */}
                 <DreLine
@@ -1481,7 +1565,7 @@ export default function RelatoriosPage() {
                   </span>
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono font-extrabold text-xl" style={{ color: dreData.lucroLiquido >= 0 ? "var(--success)" : "var(--danger)" }}>
-                      {hideValues ? "••••••" : toBRL(dreData.lucroLiquido)}
+                      {<Sensitive hidden={hideValues}>{toBRL(dreData.lucroLiquido)}</Sensitive>}
                     </span>
                     <span className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>
                       margem {dreData.margemLiquida.toFixed(1)}%

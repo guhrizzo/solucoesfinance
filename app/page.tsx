@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -106,6 +106,7 @@ const tickers = [
 export default function FinanceHome() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -113,8 +114,80 @@ export default function FinanceHome() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // ── Scroll suave + reveal fade/blur — tudo forçado via JS ──────────────────
+  // O usuário pediu explicitamente para forçar por JS (estilo inline vence o
+  // CSS global) em vez de depender de `scroll-behavior` no stylesheet.
+  useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // 1) Scroll suave forçado no documento.
+    const html = document.documentElement;
+    const prevBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = "smooth";
+
+    // Âncoras internas (#planos, …): rolagem suave garantida via JS,
+    // compensando a navbar fixa (~80px).
+    const onClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement | null)?.closest?.('a[href^="#"]') as HTMLAnchorElement | null;
+      const hash = link?.getAttribute("href") ?? "";
+      if (!link || hash.length < 2) return;
+      const el = document.getElementById(hash.slice(1));
+      if (!el) return;
+      e.preventDefault();
+      const top = el.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+    };
+    document.addEventListener("click", onClick);
+
+    // 2) Fade + blur: na entrada da página inteira e a cada seção que aparece.
+    let observer: IntersectionObserver | undefined;
+    if (!reduceMotion) {
+      const page = pageRef.current;
+      if (page) {
+        page.style.opacity = "0";
+        page.style.filter = "blur(14px)";
+        page.style.transition = "opacity 0.6s ease, filter 0.6s ease";
+        requestAnimationFrame(() => {
+          page.style.opacity = "1";
+          page.style.filter = "blur(0px)";
+        });
+      }
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const el = entry.target as HTMLElement;
+            el.style.opacity = "1";
+            el.style.filter = "blur(0px)";
+            el.style.transform = "none";
+            observer?.unobserve(el);
+          });
+        },
+        { threshold: 0.1, rootMargin: "0px 0px -8% 0px" }
+      );
+
+      document.querySelectorAll<HTMLElement>("section").forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const alreadyVisible = r.top < window.innerHeight * 0.9 && r.bottom > 0;
+        if (alreadyVisible) return; // hero / primeira dobra ficam intactos
+        el.style.opacity = "0";
+        el.style.filter = "blur(12px)";
+        el.style.transform = "translateY(28px)";
+        el.style.transition = "opacity 0.7s ease, filter 0.7s ease, transform 0.7s ease";
+        observer!.observe(el);
+      });
+    }
+
+    return () => {
+      html.style.scrollBehavior = prevBehavior;
+      document.removeEventListener("click", onClick);
+      observer?.disconnect();
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white font-sans overflow-x-hidden">
+    <div ref={pageRef} className="min-h-screen bg-white font-sans overflow-x-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
