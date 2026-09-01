@@ -279,3 +279,24 @@ da lista é preservado como `<option>` extra.
 (opcionais). No `exportReportPdf`, cada linha componente é seguida das suas
 categorias (linhas indentadas com prefixo de 4 espaços, texto menor/cinza) —
 o mesmo detalhamento que na tela fica recolhido.
+
+### E. Mês âncora via seletor global + modal de escolha
+
+- `app/components/MonthPickerModal.tsx` (novo): usa o `Modal` do design system;
+  stepper de ano + grade de 12 meses + botão "Mês atual". `onSelect` recebe o
+  primeiro dia do mês escolhido.
+- `Navbar`: o `<span class="nxfi-period-current">` do stepper vira `<button>`
+  que abre o `MonthPickerModal` (estado `monthPickerOpen`). Vale pra todas as
+  páginas que mostram o seletor. Regra CSS extra neutraliza o
+  `.nxfi-period-stepper button { width: 26px }` nesse botão.
+- `Relatórios`: sai o `hidePeriod` do `<Navbar>`. A página passa a ler
+  `usePeriod().refDate` como âncora. `filterPeriod` continua: `"mes"` = mês do
+  `refDate`, `"ano"` = ano do `refDate`. `filteredTxs`, `periodLabel`,
+  `faturamentoLedger`, `svgChartData` (e por consequência todas as abas +
+  PDF) trocaram `new Date()` por `refDate`.
+- `faturamentoLedger`: para mês/ano **passado**, `elapsed` = período inteiro e
+  `remainingUnits` = 0 (esconde a Projeção); **futuro**, `elapsed` = 0 (idem);
+  só o período **corrente** mantém projeção.
+- `usePeriod.tsx`: comentário do topo atualizado (Relatórios agora usa o
+  contexto).
+- Renomeado o KPI "Caixa Conferido" → "Conciliação" na aba Fluxo de Caixa.
