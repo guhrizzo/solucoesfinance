@@ -20,6 +20,7 @@ import { Modal, Button, MoneyInput, parseAmount } from "./ui";
 import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
 import AccessDenied from "./AccessDenied";
 import { PageLoader } from "./ui";
+import { CASHFLOW_CATEGORIES } from "@/lib/cashflowCategories";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -65,10 +66,7 @@ interface ImportedTx {
 
 const TODAY = new Date().toISOString().split("T")[0];
 
-const CAT: Record<TxType, string[]> = {
-  entrada: ["Vendas", "Serviços prestados", "Recebimento de clientes", "Investimentos", "Outros recebimentos"],
-  saida: ["Fornecedores", "Folha de pagamento", "Aluguel", "Impostos", "Marketing", "TI / Software", "Outros gastos"],
-};
+const CAT = CASHFLOW_CATEGORIES;
 
 const CAT_ICON: Record<string, LucideIcon> = {
   "Vendas": ShoppingCart,

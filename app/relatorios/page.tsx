@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import {
   TrendingUp, DollarSign, Landmark,
   FileText, Search, RefreshCw, ShieldCheck, Download,
-  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity
+  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity, ChevronDown
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
 import { PageLoader, Badge } from "../components/ui";
+import { CASHFLOW_CATEGORIES } from "@/lib/cashflowCategories";
 import type { ReportData } from "@/lib/reportPdf";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -62,6 +63,10 @@ export default function RelatoriosPage() {
   // Fechamento de caixa: qual período está sendo conferido/reaberto agora
   const [closingBusy, setClosingBusy] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  // Conciliação linha a linha: qual dia/mês está expandido e qual lançamento
+  // está gravando agora (tag `${txId}:cat` ou `${txId}:rec`).
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [lineBusy, setLineBusy] = useState<string | null>(null);
 
   // Inicialização e Auth
   useEffect(() => {
@@ -279,15 +284,16 @@ export default function RelatoriosPage() {
   // lançamentos daquele dia/mês; "Reabrir" desfaz. Um período conta como
   // conferido quando todos os seus lançamentos estão conciliados.
   const periodClosings = useMemo(() => {
-    const map = new Map<string, { label: string; ids: string[]; count: number; entradas: number; saidas: number; reconciledCount: number }>();
+    const map = new Map<string, { label: string; ids: string[]; txs: Tx[]; count: number; entradas: number; saidas: number; reconciledCount: number }>();
 
     filteredTxs.forEach(tx => {
       const key = filterPeriod === "ano" ? tx.date.slice(0, 7) : tx.date;
       const label = filterPeriod === "ano"
         ? `${MONTH_LABELS[Number(tx.date.slice(5, 7)) - 1]}/${tx.date.slice(0, 4)}`
         : `${tx.date.slice(8, 10)}/${tx.date.slice(5, 7)}`;
-      const g = map.get(key) ?? { label, ids: [], count: 0, entradas: 0, saidas: 0, reconciledCount: 0 };
+      const g = map.get(key) ?? { label, ids: [], txs: [], count: 0, entradas: 0, saidas: 0, reconciledCount: 0 };
       g.ids.push(tx.id);
+      g.txs.push(tx);
       g.count++;
       if (tx.type === "entrada") g.entradas += tx.amount;
       else g.saidas += tx.amount;
@@ -301,6 +307,7 @@ export default function RelatoriosPage() {
         key,
         label: g.label,
         ids: g.ids,
+        txs: [...g.txs].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
         count: g.count,
         entradas: g.entradas,
         saidas: g.saidas,
@@ -311,6 +318,24 @@ export default function RelatoriosPage() {
     const doneCount = rows.filter(r => r.done).length;
     return { rows, doneCount, total: rows.length };
   }, [filteredTxs, filterPeriod]);
+
+  // Total do que já foi efetivamente conciliado no período — só lançamentos
+  // com reconciled=true. Alimenta o rodapé "Total conciliado" e o contador
+  // de lançamentos conciliados no cabeçalho do card.
+  const conciliado = useMemo(() => {
+    let entradas = 0, saidas = 0, count = 0;
+    filteredTxs.forEach(tx => {
+      if (!tx.reconciled) return;
+      count++;
+      if (tx.type === "entrada") entradas += tx.amount;
+      else saidas += tx.amount;
+    });
+    return { entradas, saidas, saldo: entradas - saidas, count, total: filteredTxs.length };
+  }, [filteredTxs]);
+
+  // Um dia expandido pode deixar de existir ao trocar de período ou buscar —
+  // fecha a expansão pra não ficar apontando pra uma key fantasma.
+  useEffect(() => { setExpandedKey(null); }, [filterPeriod, searchQuery]);
 
   // Fecha ou reabre um período — grava em lote em todos os lançamentos dele.
   const handleToggleClosing = async (row: { key: string; ids: string[]; done: boolean }) => {
@@ -333,6 +358,24 @@ export default function RelatoriosPage() {
       console.error("Erro ao fechar período:", err);
     } finally {
       setClosingBusy(null);
+    }
+  };
+
+  // Conciliação linha a linha — grava na hora (auto-save) num único lançamento
+  // do cashflow. Usado pela troca de categoria e pela checkbox "Conciliado".
+  // O onSnapshot de `txs` repinta a tabela; não há estado local otimista.
+  const updateLine = async (txId: string, patch: Record<string, unknown>, busyTag: string) => {
+    if (!uid || lineBusy) return;
+    setLineBusy(busyTag);
+    try {
+      const { getFirebase } = await import("@/lib/firebase");
+      const { doc, updateDoc } = await import("firebase/firestore");
+      const { db } = await getFirebase();
+      await updateDoc(doc(db, "users", uid, "cashflow", txId), patch);
+    } catch (err) {
+      console.error("Erro ao atualizar lançamento:", err);
+    } finally {
+      setLineBusy(null);
     }
   };
 
@@ -388,29 +431,40 @@ export default function RelatoriosPage() {
     }
   };
 
-  // Renderização do gráfico SVG de colunas
+  // Renderização do gráfico SVG de colunas — acompanha o toggle Mensal/Anual:
+  // na visão Mensal, uma coluna por dia do mês corrente que teve movimento;
+  // na visão Anual, uma coluna por mês do ano corrente.
   const svgChartData = useMemo(() => {
-    // Agrupar por data dos últimos 7 dias para desenhar gráfico simples
-    const days: Record<string, { entrada: number; saida: number }> = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateString = d.toISOString().split("T")[0];
-      days[dateString] = { entrada: 0, saida: 0 };
+    const now = new Date();
+
+    if (filterPeriod === "ano") {
+      const months = MONTH_LABELS.map(label => ({ label, entrada: 0, saida: 0 }));
+      filteredTxs.forEach(tx => {
+        const m = Number(tx.date.split("-")[1]) - 1;
+        if (months[m]) {
+          if (tx.type === "entrada") months[m].entrada += tx.amount;
+          else months[m].saida += tx.amount;
+        }
+      });
+      return months;
     }
 
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const days = Array.from({ length: daysInMonth }, (_, i) => ({
+      label: `${String(i + 1).padStart(2, "0")}/${mm}`,
+      entrada: 0,
+      saida: 0,
+    }));
     filteredTxs.forEach(tx => {
-      if (days[tx.date]) {
-        if (tx.type === "entrada") days[tx.date].entrada += tx.amount;
-        else days[tx.date].saida += tx.amount;
+      const d = Number(tx.date.split("-")[2]) - 1;
+      if (days[d]) {
+        if (tx.type === "entrada") days[d].entrada += tx.amount;
+        else days[d].saida += tx.amount;
       }
     });
-
-    return Object.entries(days).map(([date, val]) => ({
-      label: date.split("-")[2] + "/" + date.split("-")[1],
-      ...val
-    }));
-  }, [filteredTxs]);
+    return days.filter(d => d.entrada > 0 || d.saida > 0);
+  }, [filteredTxs, filterPeriod]);
 
   if (blocked) return <AccessDenied category="Relatórios" />;
 
@@ -572,11 +626,22 @@ export default function RelatoriosPage() {
           {/* Gráfico de Barras */}
           <div className="cf-card p-5 lg:col-span-2 space-y-4">
             <div>
-              <h3 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>Histórico de Fluxo Diário</h3>
-              <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Entradas vs Saídas nos últimos dias ativos</p>
+              <h3 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>
+                {filterPeriod === "ano" ? "Histórico de Fluxo Mensal" : "Histórico de Fluxo Diário"}
+              </h3>
+              <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
+                {filterPeriod === "ano"
+                  ? `Entradas vs Saídas mês a mês em ${new Date().getFullYear()}`
+                  : "Entradas vs Saídas nos dias ativos do mês"}
+              </p>
             </div>
-            
+
             {/* SVG Plot */}
+            {svgChartData.length === 0 ? (
+              <div className="h-64 w-full flex items-center justify-center text-center text-xs" style={{ color: "var(--db-text-3)" }}>
+                Nenhum lançamento no período.
+              </div>
+            ) : (
             <div className="h-64 w-full flex items-end justify-between pt-6 px-4 relative">
               <div className="absolute inset-x-0 top-1/2 border-t border-dashed" style={{ borderColor: "var(--db-border)" }} />
               {svgChartData.map((data, i) => {
@@ -604,6 +669,7 @@ export default function RelatoriosPage() {
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Distribuição por Categoria */}
@@ -669,6 +735,11 @@ export default function RelatoriosPage() {
               <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
                 Períodos conferidos
               </p>
+              {conciliado.total > 0 && (
+                <p className="text-[10px] font-semibold mt-1" style={{ color: "var(--db-text-3)" }}>
+                  {conciliado.count} de {conciliado.total} lançamentos conciliados
+                </p>
+              )}
             </div>
           </div>
 
@@ -704,10 +775,24 @@ export default function RelatoriosPage() {
                   </tr>
                 </thead>
                 <tbody style={{ color: "var(--db-text)" }}>
-                  {periodClosings.rows.map((row) => (
-                    <tr key={row.key} className="border-b" style={{ borderColor: "var(--db-border)" }}>
+                  {periodClosings.rows.map((row) => {
+                    const open = expandedKey === row.key;
+                    return (
+                    <Fragment key={row.key}>
+                    <tr className="border-b" style={{ borderColor: "var(--db-border)" }}>
                       <td className="py-3 font-semibold">{row.label}</td>
-                      <td className="py-3 text-center">{row.count}</td>
+                      <td className="py-3 text-center">
+                        <button
+                          onClick={() => setExpandedKey(open ? null : row.key)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                          style={{ background: "var(--cf-input)", color: "var(--db-text-2)" }}
+                          aria-expanded={open}
+                          title={open ? "Recolher lançamentos" : "Ver lançamentos"}
+                        >
+                          {row.count}
+                          <ChevronDown size={12} className="transition-transform" style={{ transform: open ? "rotate(180deg)" : "none" }} />
+                        </button>
+                      </td>
                       <td className="py-3 text-right font-mono text-emerald-500">
                         {hideValues ? "•••" : toBRL(row.entradas)}
                       </td>
@@ -737,8 +822,87 @@ export default function RelatoriosPage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    {open && (
+                      <tr style={{ background: "var(--cf-input)" }}>
+                        <td colSpan={7} className="p-0">
+                          <div className="px-3 py-2">
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr style={{ color: "var(--db-text-3)" }}>
+                                  <th className="py-1.5 font-bold">Descrição</th>
+                                  <th className="py-1.5 font-bold text-center">Tipo</th>
+                                  <th className="py-1.5 font-bold">Categoria</th>
+                                  <th className="py-1.5 font-bold text-right">Valor</th>
+                                  <th className="py-1.5 font-bold text-center">Conciliado</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {row.txs.map((tx) => {
+                                  const opts = CASHFLOW_CATEGORIES[tx.type] ?? [];
+                                  const catOptions = tx.category && !opts.includes(tx.category) ? [tx.category, ...opts] : opts;
+                                  return (
+                                    <tr key={tx.id} className="border-t" style={{ borderColor: "var(--db-border)" }}>
+                                      <td className="py-2 pr-3">
+                                        <span className="font-semibold block max-w-[220px] truncate" style={{ color: "var(--db-text)" }}>{tx.description}</span>
+                                        <span style={{ color: "var(--db-text-3)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span>
+                                      </td>
+                                      <td className="py-2 text-center">
+                                        {tx.type === "entrada"
+                                          ? <ArrowUpRight size={14} className="inline text-emerald-500" />
+                                          : <ArrowDownRight size={14} className="inline text-rose-500" />}
+                                      </td>
+                                      <td className="py-2 pr-3">
+                                        <select
+                                          value={tx.category}
+                                          disabled={lineBusy === `${tx.id}:cat`}
+                                          onChange={(e) => updateLine(tx.id, { category: e.target.value }, `${tx.id}:cat`)}
+                                          className="w-full max-w-[180px] px-2 py-1 rounded-lg text-xs outline-none border cursor-pointer disabled:opacity-60"
+                                          style={{ background: "var(--db-card)", borderColor: "var(--db-border)", color: "var(--db-text)" }}
+                                        >
+                                          {catOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                      </td>
+                                      <td className={`py-2 text-right font-mono font-bold ${tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"}`}>
+                                        {tx.type === "entrada" ? "+" : "-"}{hideValues ? "•••" : toBRL(tx.amount)}
+                                      </td>
+                                      <td className="py-2 text-center">
+                                        <input
+                                          type="checkbox"
+                                          checked={!!tx.reconciled}
+                                          disabled={lineBusy === `${tx.id}:rec`}
+                                          onChange={(e) => updateLine(tx.id, { reconciled: e.target.checked, reconciledAt: e.target.checked ? Date.now() : null }, `${tx.id}:rec`)}
+                                          className="w-4 h-4 cursor-pointer accent-emerald-600 disabled:opacity-60"
+                                        />
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
+                    );
+                  })}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
+                    <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total conciliado</td>
+                    <td className="py-3 text-center font-mono" style={{ color: "var(--db-text-2)" }}>{conciliado.count}</td>
+                    <td className="py-3 text-right font-mono font-bold text-emerald-500">
+                      {hideValues ? "•••" : toBRL(conciliado.entradas)}
+                    </td>
+                    <td className="py-3 text-right font-mono font-bold text-rose-500">
+                      {hideValues ? "•••" : toBRL(conciliado.saidas)}
+                    </td>
+                    <td className="py-3 text-right font-mono font-extrabold" style={{ color: conciliado.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
+                      {hideValues ? "•••" : toBRL(conciliado.saldo)}
+                    </td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
