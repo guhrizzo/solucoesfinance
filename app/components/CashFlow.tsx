@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Navbar from "./Navbar";
 import { usePeriod } from "../hooks/usePeriod";
-import { Modal, Button, MoneyInput, parseAmount } from "./ui";
+import { Modal, Button, MoneyInput, parseAmount, Sensitive } from "./ui";
 import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
 import AccessDenied from "./AccessDenied";
 import { PageLoader } from "./ui";
@@ -1021,7 +1021,7 @@ export default function CashFlowPage() {
     return result;
   }, [filtered]);
 
-  const displayValue = (val: number) => hideValues ? "• • •" : toBRL(val);
+  const displayValue = (val: number) => <Sensitive hidden={hideValues}>{toBRL(val)}</Sensitive>;
 
   const kpis = [
     { label: "Orçamento", val: previsao, Icon: ClipboardList, ibg: "#eff6ff", color: "#3b82f6" },
@@ -1300,7 +1300,7 @@ export default function CashFlowPage() {
                       </div>
                       <div className="text-right">
                         <span className="mono text-sm font-bold block" style={{ color: monthTotal >= 0 ? "#059669" : "#dc2626" }}>
-                          {hideValues ? "• • •" : (monthTotal >= 0 ? "+" : "") + toBRL(monthTotal)}
+                          <Sensitive hidden={hideValues}>{(monthTotal >= 0 ? "+" : "") + toBRL(monthTotal)}</Sensitive>
                         </span>
                       </div>
                       <ChevronDown
@@ -1363,7 +1363,7 @@ export default function CashFlowPage() {
                                 </div>
                                 <div className="text-right">
                                   <span className="mono text-xs font-bold block" style={{ color: dayNet >= 0 ? "#059669" : "#dc2626" }}>
-                                    {hideValues ? "• • •" : (dayNet >= 0 ? "+" : "") + toBRL(dayNet)}
+                                    <Sensitive hidden={hideValues}>{(dayNet >= 0 ? "+" : "") + toBRL(dayNet)}</Sensitive>
                                   </span>
                                 </div>
                                 <ChevronDown
@@ -1414,7 +1414,7 @@ export default function CashFlowPage() {
                                       </div>
                                     </div>
                                     <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
-                                      {hideValues ? "• • •" : (tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}
+                                      <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
                                     </span>
                                     <div className="cf-txa flex items-center gap-1 shrink-0">
                                       <button onClick={() => { setEditing(tx); setModal(true); }}

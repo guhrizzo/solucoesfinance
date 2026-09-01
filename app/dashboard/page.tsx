@@ -12,7 +12,7 @@ import {
 import OnboardingModal, { type OnboardingAnswers } from "../components/OnboardingModal";
 import CreatePasswordGate from "../components/CreatePasswordGate";
 import Navbar from "../components/Navbar";
-import { Badge, PageLoader } from "../components/ui";
+import { Badge, PageLoader, Sensitive } from "../components/ui";
 import AccessDenied from "../components/AccessDenied";
 import { usePeriod } from "../hooks/usePeriod";
 
@@ -266,9 +266,9 @@ export default function Dashboard() {
     const taxaInadimplencia = totalPendingVal > 0 ? (overdueVal / totalPendingVal) * 100 : 0;
 
     return [
-      { label: "Receita bruta",   value: hideValues ? "••••••" : toBRL(receitaMes), change: varReceita, up: parseFloat(varReceita) >= 0, sub: "vs. mês anterior", icon: TrendingUp,  color: "blue"    },
-      { label: "Despesas totais", value: hideValues ? "••••••" : toBRL(despesaMes), change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: "vs. mês anterior", icon: CreditCard,  color: "rose"    },
-      { label: "Lucro líquido",   value: hideValues ? "••••••" : toBRL(lucroMes),   change: varLucro,   up: lucroMes >= 0,           sub: "vs. mês anterior", icon: Wallet,      color: "emerald" },
+      { label: "Receita bruta",   value: <Sensitive hidden={hideValues}>{toBRL(receitaMes)}</Sensitive>, change: varReceita, up: parseFloat(varReceita) >= 0, sub: "vs. mês anterior", icon: TrendingUp,  color: "blue"    },
+      { label: "Despesas totais", value: <Sensitive hidden={hideValues}>{toBRL(despesaMes)}</Sensitive>, change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: "vs. mês anterior", icon: CreditCard,  color: "rose"    },
+      { label: "Lucro líquido",   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: "vs. mês anterior", icon: Wallet,      color: "emerald" },
       { label: "Inadimplência",   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? "Atrasadas" : "Em dia",  up: taxaInadimplencia === 0,  sub: `${toBRL(overdueVal)} pendente`, icon: AlertCircle, color: "amber"   },
     ];
   }, [txs, receivables, hideValues, refDate]);
@@ -784,14 +784,14 @@ export default function Dashboard() {
                     <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-500)" }} />
                     <span style={{ color: "var(--db-text-2)" }}>Receita</span>
                     <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
-                      {hideValues ? "••••••" : toBRL(chartData.revenues[hoverMonth])}
+                      <Sensitive hidden={hideValues}>{toBRL(chartData.revenues[hoverMonth])}</Sensitive>
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs mt-1">
                     <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-400)" }} />
                     <span style={{ color: "var(--db-text-2)" }}>Despesa</span>
                     <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
-                      {hideValues ? "••••••" : toBRL(chartData.expenses[hoverMonth])}
+                      <Sensitive hidden={hideValues}>{toBRL(chartData.expenses[hoverMonth])}</Sensitive>
                     </span>
                   </div>
                 </div>
@@ -800,9 +800,9 @@ export default function Dashboard() {
             )}
             <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
               {[
-                { label:"Total receitas (ano)", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0)), color:"var(--brand-500)" },
-                { label:"Total despesas (ano)", val: hideValues ? "••••••" : toBRL(chartData.expenses.reduce((a,b)=>a+b,0)), color:"var(--brand-400)" },
-                { label:"Saldo acumulado", val: hideValues ? "••••••" : toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)), color: (chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)) >= 0 ? "var(--success)" : "var(--danger)" },
+                { label:"Total receitas (ano)", val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-500)" },
+                { label:"Total despesas (ano)", val: <Sensitive hidden={hideValues}>{toBRL(chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-400)" },
+                { label:"Saldo acumulado", val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color: (chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)) >= 0 ? "var(--success)" : "var(--danger)" },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-xs mb-0.5 leading-tight" style={{ color: "var(--db-text-2)" }}>{s.label}</p>
@@ -842,7 +842,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <p className="text-xs font-bold mono shrink-0 ml-2" style={{ color: bill.urgent ? "#f87171" : "var(--db-text)" }}>
-                      {hideValues ? "••••" : toBRL(bill.amount)}
+                      <Sensitive hidden={hideValues}>{toBRL(bill.amount)}</Sensitive>
                     </p>
                   </div>
                 ))
@@ -883,7 +883,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex flex-col items-end gap-1 ml-3 shrink-0">
                       <span className={`mono text-xs font-bold ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>
-                        {tx.type === "entrada" ? "+" : "-"}{hideValues ? "•••" : toBRL(tx.amount)}
+                        <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
                       </span>
                       <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
                         {tx.reconciled ? "Conciliado" : "Pendente"}
@@ -913,7 +913,7 @@ export default function Dashboard() {
                       <tr key={tx.id} className="tx-row">
                         <td className="py-3 pr-4"><p className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>{tx.description}</p></td>
                         <td className="py-3 pr-4"><span className={`text-xs font-medium ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>{tx.type === "entrada" ? "Entrada" : "Saída"}</span></td>
-                        <td className="py-3 pr-4"><span className={`mono text-xs font-bold ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>{tx.type === "entrada" ? "+" : "-"}{hideValues ? "••••" : toBRL(tx.amount)}</span></td>
+                        <td className="py-3 pr-4"><span className={`mono text-xs font-bold ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}><Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive></span></td>
                         <td className="py-3 pr-4"><span className="text-xs whitespace-nowrap" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span></td>
                         <td className="py-3"><Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">{tx.reconciled ? "Conciliado" : "Pendente"}</Badge></td>
                       </tr>
@@ -946,9 +946,13 @@ export default function Dashboard() {
                     return el;
                   });
                 })()}
-                <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
-                  {hideValues ? "••••" : toBRL(costCenterData.totalExpenses)}
-                </text>
+                {hideValues ? (
+                  <rect x="42" y="57" width="56" height="12" rx="3" fill="var(--db-text-4)" />
+                ) : (
+                  <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
+                    {toBRL(costCenterData.totalExpenses)}
+                  </text>
+                )}
                 <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text-3)" fontFamily="Sora">total despesas</text>
               </svg>
             </div>
@@ -985,9 +989,9 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
             {[
-              { label:"Saldo atual",        val: hideValues ? "••••" : toBRL(projection.saldoAtual), icon:Wallet,       color:"blue",    note:"consolidado histórico" },
-              { label:"Entradas previstas", val: hideValues ? "••••" : `+ ${toBRL(projection.entradasPrevistas)}`, icon:TrendingUp,   color:"emerald", note:"recebíveis próximos 30 dias"  },
-              { label:"Saídas agendadas",   val: hideValues ? "••••" : `- ${toBRL(projection.saidasAgendadas)}`, icon:TrendingDown, color:"rose",    note:"compromissos próximos 30 dias"  },
+              { label:"Saldo atual",        val: <Sensitive hidden={hideValues}>{toBRL(projection.saldoAtual)}</Sensitive>, icon:Wallet,       color:"blue",    note:"consolidado histórico" },
+              { label:"Entradas previstas", val: <Sensitive hidden={hideValues}>{`+ ${toBRL(projection.entradasPrevistas)}`}</Sensitive>, icon:TrendingUp,   color:"emerald", note:"recebíveis próximos 30 dias"  },
+              { label:"Saídas agendadas",   val: <Sensitive hidden={hideValues}>{`- ${toBRL(projection.saidasAgendadas)}`}</Sensitive>, icon:TrendingDown, color:"rose",    note:"compromissos próximos 30 dias"  },
             ].map((item) => {
               const cMap: Record<string, { bg: string; text: string; icon: string }> = {
                 blue:    { bg:"rgba(21,101,192,0.12)",  text:"#60a5fa", icon:"rgba(21,101,192,0.2)"  },
@@ -1013,7 +1017,7 @@ export default function Dashboard() {
             <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--db-text-2)" }}>
               <span>Saldo projetado final</span>
               <span className="mono font-semibold text-emerald-400">
-                {hideValues ? "••••" : toBRL(projection.saldoProjetado)} 
+                <Sensitive hidden={hideValues}>{toBRL(projection.saldoProjetado)}</Sensitive>{" "}
                 <span className="font-normal text-xs ml-1" style={{ color: "var(--db-text-2)" }}>
                   ({projection.variacaoPct >= 0 ? "+" : ""}{projection.variacaoPct.toFixed(1)}%)
                 </span>
