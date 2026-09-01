@@ -4,7 +4,7 @@
 // ou DRE) para o período selecionado. Usado só no cliente, via import() dinâmico
 // em app/relatorios/page.tsx — jspdf não entra no bundle inicial.
 
-export type ReportTab = "fluxo" | "faturamento" | "dre";
+export type ReportTab = "fluxo" | "faturamento" | "gastos" | "dre";
 
 interface ClosingRow {
   label: string;
@@ -38,6 +38,16 @@ export interface ReportData {
   dre?: {
     receita: number; impostos: number; receitaLiquida: number; cmv: number;
     lucroBruto: number; despesas: number; lucroLiquido: number; margemLiquida: number;
+    receitaCats?: { name: string; total: number }[];
+    impostosCats?: { name: string; total: number }[];
+    cmvCats?: { name: string; total: number }[];
+    despesasCats?: { name: string; total: number }[];
+  };
+
+  gastos?: {
+    total: number;
+    categorias: number;
+    rows: { name: string; total: number; pct: number }[];
   };
 }
 
@@ -47,6 +57,7 @@ const shortDate = (d: string) => `${d.split("-")[2]}/${d.split("-")[1]}`;
 const TAB_LABEL: Record<ReportTab, string> = {
   fluxo: "Fluxo de Caixa",
   faturamento: "Faturamento",
+  gastos: "Relatório de Gastos",
   dre: "Demonstração do Resultado (DRE)",
 };
 
@@ -205,9 +216,47 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
     }
   }
 
+  if (data.tab === "gastos" && data.gastos) {
+    const g = data.gastos;
+    heading("Resumo");
+    autoTable(doc, {
+      startY: y,
+      margin: { left: marginX, right: marginX },
+      theme: "plain",
+      styles: { fontSize: 10 },
+      body: [
+        ["Total de gastos", BRL(g.total)],
+        ["Categorias", String(g.categorias)],
+        ["Maior categoria", g.rows[0] ? `${g.rows[0].name} — ${BRL(g.rows[0].total)} (${g.rows[0].pct.toFixed(1)}%)` : "—"],
+      ],
+      columnStyles: { 0: { textColor: 90 }, 1: { halign: "right", fontStyle: "bold" } },
+    });
+    afterTable();
+
+    heading("Gastos por categoria");
+    autoTable(doc, {
+      startY: y,
+      margin: { left: marginX, right: marginX },
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 9 },
+      head: [["Categoria", "Valor", "%"]],
+      body: g.rows.map((r) => [r.name, BRL(r.total), `${r.pct.toFixed(1)}%`]),
+      foot: [["Total", BRL(g.total), "100%"]],
+      columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
+      footStyles: { fillColor: [241, 245, 249], textColor: 20, fontStyle: "bold", halign: "right" },
+    });
+    afterTable();
+  }
+
   if (data.tab === "dre" && data.dre) {
     const d = data.dre;
     heading("Demonstração do Resultado do Exercício");
+
+    // Cada linha componente vem seguida das categorias que a compõem (o mesmo
+    // detalhamento que fica recolhido na tela).
+    const detail = (cats?: { name: string; total: number }[]) =>
+      (cats ?? []).map((c) => [`    ${c.name}`, BRL(c.total)]);
+
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
@@ -216,11 +265,15 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
       head: [["Linha", "Valor"]],
       body: [
         ["Receita Operacional Bruta", BRL(d.receita)],
+        ...detail(d.receitaCats),
         ["(-) Deduções e Impostos", `-${BRL(d.impostos)}`],
+        ...detail(d.impostosCats),
         ["= Receita Operacional Líquida", BRL(d.receitaLiquida)],
         ["(-) Custo da Mercadoria Vendida (CMV)", `-${BRL(d.cmv)}`],
+        ...detail(d.cmvCats),
         ["= Lucro Bruto", BRL(d.lucroBruto)],
         ["(-) Despesas Operacionais", `-${BRL(d.despesas)}`],
+        ...detail(d.despesasCats),
         ["= Lucro Líquido do Exercício", BRL(d.lucroLiquido)],
         ["Margem Líquida", `${d.margemLiquida.toFixed(1)}%`],
       ],
@@ -228,8 +281,13 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
       didParseCell: (h) => {
         const raw = h.row.raw as unknown;
         const label = Array.isArray(raw) ? String(raw[0] ?? "") : "";
-        if (h.section === "body" && (label.startsWith("=") || label.startsWith("Margem"))) {
+        if (h.section !== "body") return;
+        if (label.startsWith("=") || label.startsWith("Margem")) {
           h.cell.styles.fillColor = [241, 245, 249];
+        } else if (label.startsWith("    ")) {
+          h.cell.styles.textColor = 120;
+          h.cell.styles.fontSize = 8.5;
+          h.cell.styles.fontStyle = "normal";
         }
       },
     });

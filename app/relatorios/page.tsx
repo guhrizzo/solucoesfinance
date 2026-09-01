@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Fragment } from "react";
 import {
   TrendingUp, DollarSign, Landmark,
   FileText, Search, RefreshCw, ShieldCheck, Download,
-  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity, ChevronDown
+  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity, ChevronDown, TrendingDown
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
@@ -159,7 +159,7 @@ export default function RelatoriosPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hideValues, setHideValues] = useState(false);
 
-  type TabType = "fluxo" | "faturamento" | "dre";
+  type TabType = "fluxo" | "faturamento" | "gastos" | "dre";
   const [activeTab, setActiveTab] = useState<TabType>("fluxo");
 
   // Fechamento de caixa: qual período está sendo conferido/reaberto agora
@@ -172,6 +172,13 @@ export default function RelatoriosPage() {
   // DRE: quais linhas componentes estão com o detalhamento por categoria aberto.
   const [dreOpen, setDreOpen] = useState<Set<string>>(new Set());
   const toggleDre = (k: string) => setDreOpen(prev => {
+    const next = new Set(prev);
+    if (next.has(k)) next.delete(k); else next.add(k);
+    return next;
+  });
+  // Relatório de Gastos: quais categorias estão com os lançamentos abertos.
+  const [gastosOpen, setGastosOpen] = useState<Set<string>>(new Set());
+  const toggleGastos = (k: string) => setGastosOpen(prev => {
     const next = new Set(prev);
     if (next.has(k)) next.delete(k); else next.add(k);
     return next;
@@ -310,6 +317,32 @@ export default function RelatoriosPage() {
       cmvCats: toRows(bucket.cmv),
       despesasCats: toRows(bucket.despesas),
     };
+  }, [filteredTxs]);
+
+  // Relatório de Gastos (aba Gastos) — só saídas, agrupadas por categoria, com
+  // valor, % do total de gastos e os lançamentos de cada uma. Do maior pro
+  // menor. Segue o período Mensal/Anual via filteredTxs.
+  const gastosReport = useMemo(() => {
+    const map = new Map<string, { total: number; txs: Tx[] }>();
+    let total = 0;
+    filteredTxs.forEach(tx => {
+      if (tx.type !== "saida") return;
+      total += tx.amount;
+      const name = tx.category || "Sem categoria";
+      const g = map.get(name) ?? { total: 0, txs: [] };
+      g.total += tx.amount;
+      g.txs.push(tx);
+      map.set(name, g);
+    });
+    const rows = [...map.entries()]
+      .map(([name, g]) => ({
+        name,
+        total: g.total,
+        pct: total > 0 ? (g.total / total) * 100 : 0,
+        txs: [...g.txs].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
+      }))
+      .sort((a, b) => b.total - a.total);
+    return { rows, total, categorias: rows.length, maior: rows[0] ?? null };
   }, [filteredTxs]);
 
   // Categorias de Entrada e Saída agrupadas
@@ -540,6 +573,15 @@ export default function RelatoriosPage() {
             } : undefined,
           },
         };
+      } else if (activeTab === "gastos") {
+        payload = {
+          ...base,
+          gastos: {
+            total: gastosReport.total,
+            categorias: gastosReport.categorias,
+            rows: gastosReport.rows.map(r => ({ name: r.name, total: r.total, pct: r.pct })),
+          },
+        };
       } else {
         payload = { ...base, dre: dreData };
       }
@@ -649,6 +691,7 @@ export default function RelatoriosPage() {
           {[
             { id: "fluxo", label: "Fluxo de Caixa", icon: Activity },
             { id: "faturamento", label: "Faturamento", icon: BarChart3 },
+            { id: "gastos", label: "Gastos", icon: TrendingDown },
             { id: "dre", label: "DRE", icon: FileText },
           ].map((tab) => (
             <button
@@ -1246,6 +1289,119 @@ export default function RelatoriosPage() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Aba: Gastos */}
+        {activeTab === "gastos" && (
+          <div className="space-y-6 fade-in">
+            {gastosReport.rows.length === 0 ? (
+              <div className="cf-card p-10 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: "var(--db-card-hover)", color: "var(--db-text-3)" }}>
+                  <TrendingDown size={22} />
+                </div>
+                <h4 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum gasto no período</h4>
+                <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
+                  As saídas do fluxo de caixa em {periodLabel} aparecem aqui agrupadas por categoria, do maior pro menor.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Cards de resumo */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="cf-card p-5 space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Total de Gastos</span>
+                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--danger)" }}>{hideValues ? "••••••" : toBRL(gastosReport.total)}</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{periodLabel}</p>
+                  </div>
+                  <div className="cf-card p-5 space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Categorias</span>
+                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>{gastosReport.categorias}</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>com gastos no período</p>
+                  </div>
+                  <div className="cf-card p-5 space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Maior Categoria</span>
+                    <p className="text-lg font-extrabold truncate" style={{ color: "var(--db-text)" }}>{gastosReport.maior?.name ?? "—"}</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>
+                      {gastosReport.maior ? `${hideValues ? "•••" : toBRL(gastosReport.maior.total)} · ${gastosReport.maior.pct.toFixed(1)}%` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tabela por categoria */}
+                <div className="cf-card p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="text-primary" size={20} />
+                    <div>
+                      <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>Gastos por Categoria</h2>
+                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Do maior pro menor · {filterPeriod === "ano" ? "Anual" : "Mensal"} — {periodLabel}</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
+                          <th className="py-2.5 font-bold">Categoria</th>
+                          <th className="py-2.5 font-bold text-right">Valor</th>
+                          <th className="py-2.5 font-bold text-right">%</th>
+                          <th className="py-2.5 font-bold pl-4 w-[34%]">Participação</th>
+                        </tr>
+                      </thead>
+                      <tbody style={{ color: "var(--db-text)" }}>
+                        {gastosReport.rows.map((row) => {
+                          const open = gastosOpen.has(row.name);
+                          return (
+                            <Fragment key={row.name}>
+                              <tr className="border-b cursor-pointer" style={{ borderColor: "var(--db-border)" }} onClick={() => toggleGastos(row.name)}>
+                                <td className="py-3 font-semibold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <ChevronDown size={12} className="transition-transform shrink-0" style={{ transform: open ? "rotate(180deg)" : "none", color: "var(--db-text-3)" }} />
+                                    {row.name}
+                                    <span style={{ color: "var(--db-text-3)" }}>({row.txs.length})</span>
+                                  </span>
+                                </td>
+                                <td className="py-3 text-right font-mono font-bold text-rose-500">{hideValues ? "•••" : toBRL(row.total)}</td>
+                                <td className="py-3 text-right font-mono" style={{ color: "var(--db-text-2)" }}>{row.pct.toFixed(1)}%</td>
+                                <td className="py-3 pl-4">
+                                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
+                                    <div className="h-full rounded-full" style={{ width: `${row.pct}%`, background: "var(--danger)" }} />
+                                  </div>
+                                </td>
+                              </tr>
+                              {open && (
+                                <tr style={{ background: "var(--db-bg-alt)" }}>
+                                  <td colSpan={4} className="px-3 py-2">
+                                    <div className="space-y-1">
+                                      {row.txs.map((tx) => (
+                                        <div key={tx.id} className="flex items-center justify-between gap-3 text-xs py-1">
+                                          <span className="truncate" style={{ color: "var(--db-text-2)" }}>
+                                            {tx.description} <span style={{ color: "var(--db-text-3)" }}>· {tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span>
+                                          </span>
+                                          <span className="font-mono shrink-0 text-rose-500">-{hideValues ? "•••" : toBRL(tx.amount)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
+                          <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total</td>
+                          <td className="py-3 text-right font-mono font-extrabold text-rose-500">{hideValues ? "•••" : toBRL(gastosReport.total)}</td>
+                          <td className="py-3 text-right font-mono font-extrabold" style={{ color: "var(--db-text-2)" }}>100%</td>
+                          <td className="pl-4" />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
