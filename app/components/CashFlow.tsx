@@ -20,7 +20,7 @@ import { Modal, Button, MoneyInput, parseAmount } from "./ui";
 import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
 import AccessDenied from "./AccessDenied";
 import { PageLoader } from "./ui";
-import { CASHFLOW_CATEGORIES } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/cashflowCategories";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +158,8 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
   const [type, setType] = useState<TxType>("entrada");
   const [desc, setDesc] = useState("");
   const [cat, setCat] = useState("");
+  // "custom" = categoria digitada à mão (opção "Descrição" do select).
+  const [catMode, setCatMode] = useState<"list" | "custom">("list");
   const [rawAmt, setRawAmt] = useState("");
   const [date, setDate] = useState(TODAY);
   const [note, setNote] = useState("");
@@ -176,6 +178,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
     setType(editing?.type ?? "entrada");
     setDesc(editing?.description ?? "");
     setCat(editing?.category ?? "");
+    setCatMode(isCustomCategory(editing?.category ?? "", editing?.type ?? "entrada") ? "custom" : "list");
     setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
     setDate(editing?.date ?? TODAY);
     setNote(editing?.note ?? "");
@@ -372,14 +375,25 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
             <div className="relative">
-              <select value={cat} onChange={(e) => setCat(e.target.value)}
+              <select
+                value={catMode === "custom" ? CUSTOM_CATEGORY : cat}
+                onChange={(e) => {
+                  if (e.target.value === CUSTOM_CATEGORY) { setCatMode("custom"); setCat(""); }
+                  else { setCatMode("list"); setCat(e.target.value); }
+                }}
                 className="w-full appearance-none rounded-xl px-4 py-3 pr-9 text-sm outline-none cursor-pointer transition-colors"
                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
                 <option value="">— Selecione —</option>
                 {CAT[type].map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value={CUSTOM_CATEGORY}>Descrição (especificar)…</option>
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-2)" }} />
             </div>
+            {catMode === "custom" && (
+              <input value={cat} onChange={(e) => setCat(e.target.value)} placeholder="Descreva a categoria"
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
+                style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+            )}
           </div>
           {/* Centro de custo — só faz sentido pra saída; vincula o pagamento a um
               centro pra lançar a despesa automaticamente lá e acompanhar o

@@ -9,7 +9,7 @@ import {
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
 import { PageLoader, Badge } from "../components/ui";
-import { CASHFLOW_CATEGORIES } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/cashflowCategories";
 import type { ReportData } from "@/lib/reportPdf";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -32,6 +32,59 @@ const toBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+// Célula de categoria da conciliação linha a linha: <select> com as categorias
+// do tipo + opção "Descrição (especificar)", que troca por um input livre.
+// Grava só ao confirmar (blur/Enter no input, ou escolha direta no select).
+// O pai passa key={`${tx.id}:${tx.category}`}, então o estado local re-inicia
+// sozinho quando o snapshot traz outro valor — sem efeito de sincronização.
+function CategoryCell({ tx, busy, onSave }: { tx: Tx; busy: boolean; onSave: (value: string) => void }) {
+  const opts = CASHFLOW_CATEGORIES[tx.type] ?? [];
+  const startCustom = isCustomCategory(tx.category, tx.type);
+  const [mode, setMode] = useState<"list" | "custom">(startCustom ? "custom" : "list");
+  const [draft, setDraft] = useState(startCustom ? tx.category : "");
+
+  const commit = () => {
+    const v = draft.trim();
+    if (v && v !== tx.category) onSave(v);
+  };
+
+  const selectStyle = { background: "var(--db-card)", borderColor: "var(--db-border)", color: "var(--db-text)" } as const;
+
+  return (
+    <div className="space-y-1">
+      <select
+        value={mode === "custom" ? CUSTOM_CATEGORY : tx.category}
+        disabled={busy}
+        onChange={(e) => {
+          if (e.target.value === CUSTOM_CATEGORY) { setMode("custom"); setDraft(""); }
+          else { setMode("list"); onSave(e.target.value); }
+        }}
+        className="w-full max-w-[200px] px-2 py-1 rounded-lg text-xs outline-none border cursor-pointer disabled:opacity-60"
+        style={selectStyle}
+      >
+        {opts.map((c) => <option key={c} value={c}>{c}</option>)}
+        {mode !== "custom" && tx.category && !opts.includes(tx.category) && (
+          <option value={tx.category}>{tx.category}</option>
+        )}
+        <option value={CUSTOM_CATEGORY}>Descrição (especificar)…</option>
+      </select>
+      {mode === "custom" && (
+        <input
+          value={draft}
+          disabled={busy}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }}
+          placeholder="Descreva a categoria"
+          className="w-full max-w-[200px] px-2 py-1 rounded-lg text-xs outline-none border disabled:opacity-60"
+          style={selectStyle}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function RelatoriosPage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -838,8 +891,6 @@ export default function RelatoriosPage() {
                               </thead>
                               <tbody>
                                 {row.txs.map((tx) => {
-                                  const opts = CASHFLOW_CATEGORIES[tx.type] ?? [];
-                                  const catOptions = tx.category && !opts.includes(tx.category) ? [tx.category, ...opts] : opts;
                                   return (
                                     <tr key={tx.id} className="border-t" style={{ borderColor: "var(--db-border)" }}>
                                       <td className="py-2 pr-3">
@@ -852,15 +903,12 @@ export default function RelatoriosPage() {
                                           : <ArrowDownRight size={14} className="inline text-rose-500" />}
                                       </td>
                                       <td className="py-2 pr-3">
-                                        <select
-                                          value={tx.category}
-                                          disabled={lineBusy === `${tx.id}:cat`}
-                                          onChange={(e) => updateLine(tx.id, { category: e.target.value }, `${tx.id}:cat`)}
-                                          className="w-full max-w-[180px] px-2 py-1 rounded-lg text-xs outline-none border cursor-pointer disabled:opacity-60"
-                                          style={{ background: "var(--db-card)", borderColor: "var(--db-border)", color: "var(--db-text)" }}
-                                        >
-                                          {catOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-                                        </select>
+                                        <CategoryCell
+                                          key={`${tx.id}:${tx.category}`}
+                                          tx={tx}
+                                          busy={lineBusy === `${tx.id}:cat`}
+                                          onSave={(v) => updateLine(tx.id, { category: v }, `${tx.id}:cat`)}
+                                        />
                                       </td>
                                       <td className={`py-2 text-right font-mono font-bold ${tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"}`}>
                                         {tx.type === "entrada" ? "+" : "-"}{hideValues ? "•••" : toBRL(tx.amount)}
