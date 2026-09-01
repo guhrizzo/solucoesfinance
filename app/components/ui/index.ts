@@ -4,3 +4,4 @@ export { Card } from "./Card";
 export { Modal } from "./Modal";
 export { Input, MoneyInput, parseAmount, formatAmount } from "./Input";
 export { PageLoader } from "./PageLoader";
+export { Sensitive } from "./Sensitive";
