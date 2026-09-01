@@ -206,3 +206,56 @@ Via preview (dev server) na aba Relatórios → Fluxo de Caixa:
    marcados; contador "N de M lançamentos conciliados" correto.
 6. `Ocultar valores` mascara a sub-tabela e o rodapé.
 7. Sem erros no console / network.
+
+---
+
+## Adendo — 2026-08-31 (iterações posteriores)
+
+### A. Lista de categorias ampliada + categoria livre "Descrição"
+
+`lib/cashflowCategories.ts` passou a exportar, além de `CASHFLOW_CATEGORIES`:
+
+- `CUSTOM_CATEGORY = "__custom__"` — sentinela de `<option>`.
+- `isCustomCategory(category, type)` — true quando o valor não está na lista fixa.
+
+Lista expandida (vale nos **dois lugares**: formulário do Fluxo de Caixa e
+conciliação do Fechamento):
+
+- **entrada:** Vendas, Vendas Mercado Livre, Vendas Shopee, Serviços prestados,
+  Recebimento de clientes, Rendimentos financeiros, Investimentos, Aporte de
+  sócios, Empréstimos recebidos, Estorno / Reembolso, Transferência mesma
+  titularidade.
+- **saida:** Fornecedores, Folha de pagamento, Pró-labore, Aluguel,
+  Energia / Água / Internet, Transporte / Frete, Manutenção, Marketing,
+  TI / Software, Impostos, Taxas bancárias, Taxas Marketplace,
+  Empréstimos / Financiamentos, Transferência mesma titularidade.
+
+"Outros gastos" / "Outros recebimentos" saíram da lista; no lugar, a opção
+**"Descrição (especificar)…"** troca o `<select>` por um `<input>` de texto
+livre — o valor salvo em `category` é o que o usuário digitar. Valor legado fora
+da lista é preservado como `<option>` extra.
+
+- **Fluxo de Caixa** (`TransactionModal`): estado `catMode: "list" | "custom"`;
+  o input livre fica ligado ao mesmo `cat`. `catOk` continua exigindo texto.
+- **Fechamento** (`CategoryCell` em `app/relatorios/page.tsx`): componente com
+  `key={`${tx.id}:${tx.category}`}` — re-inicia o estado local quando o snapshot
+  muda, sem `useEffect` de sincronização. Grava só ao confirmar (escolha direta
+  no select, ou blur/Enter no input livre).
+
+### B. DRE com linhas expansíveis + visual novo (aba DRE)
+
+- `dreData` agrega, por linha componente, o detalhamento `categoria → valor`
+  (`receitaCats`, `impostosCats`, `cmvCats`, `despesasCats`), ordenado por valor.
+  **A regra de classificação por palavra-chave não mudou.**
+- Componente `DreLine`: Receita Bruta / Deduções / CMV / Despesas viram
+  `<button>` com chevron, recolhidas por padrão; expandir revela a lista de
+  categorias indentada. Linha sem categorias não expande. Estado:
+  `dreOpen: Set<string>`.
+- Subtotais (Receita Líquida, Lucro Bruto) e o destaque final (Lucro Líquido)
+  redesenhados: sem faixas cinza pesadas, separação por borda, número do
+  resultado grande na cor `--success`/`--danger`, margem ao lado legível.
+- **Só tokens `var(--db-*)`** — removidas as classes `dark:` / `bg-slate-*`.
+  Causa do rodapé ilegível: no Tailwind v4 sem `@custom-variant dark`, `dark:`
+  segue `prefers-color-scheme` (modo do SO), enquanto o tema real do app é o
+  atributo `[data-theme]` — os dois dessincronizam.
+- Toggle Mensal/Anual inalterado (continua via `filteredTxs`).
