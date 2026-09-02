@@ -1,5 +1,7 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// refresh de token + fetchOrder + baixa/propagação multi-canal por item.
+export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
@@ -223,10 +225,13 @@ export async function POST(request: Request) {
       }
       if (!sku) continue;
 
-      await baixarEstoqueEPropagar(db, integracao.userId, sku, quantitySold, { platform: "mercadolivre", adId });
-
-      // Registra a venda como entrada no Fluxo de Caixa (dedupe por orderId).
-      await registrarVendaAdmin(db, integracao.userId, {
+      // Registra a venda PRIMEIRO. `registrarVendaAdmin` deduplica por
+      // orderId+canal e devolve null quando o pedido já foi lançado (o ML
+      // reenvia a mesma notificação `orders_v2` várias vezes). Só baixamos o
+      // estoque quando o pedido é inédito — senão cada reenvio subtrai de novo.
+      // null também cobre falha transitória: nada foi gravado e o próximo
+      // reenvio reprocessa.
+      const vendaId = await registrarVendaAdmin(db, integracao.userId, {
         channel: "mercadolivre",
         sku,
         productName: titulo || sku,
@@ -236,6 +241,10 @@ export async function POST(request: Request) {
         orderId: items.length > 1 ? `${orderId}:${adId}` : orderId,
         occurredAt,
       });
+
+      if (vendaId) {
+        await baixarEstoqueEPropagar(db, integracao.userId, sku, quantitySold, { platform: "mercadolivre", adId });
+      }
     }
 
     return NextResponse.json({ received: true });

@@ -26,6 +26,30 @@ import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/ca
 
 type TxType = "entrada" | "saida";
 
+/** Espelho local de uma conta a pagar / cobrança, o suficiente pro Orçamento
+ *  do mês e pro bloco de lançamentos previstos (parcelas de série "numeral"). */
+interface ForecastDoc {
+  id: string;
+  title: string;
+  amount: number;
+  dueDate: string;
+  status: string;
+  recurrence?: string;
+  installmentIndex?: number;
+  installmentCount?: number;
+}
+
+/** Linha do bloco "Previstos" — derivada de bills/receivables, nunca gravada. */
+interface Previsto {
+  id: string;
+  kind: "aPagar" | "aReceber";
+  description: string;
+  amount: number;
+  dueDate: string;
+  installmentIndex?: number;
+  installmentCount?: number;
+}
+
 interface Tx {
   id: string;
   type: TxType;
@@ -725,9 +749,10 @@ export default function CashFlowPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [hideValues, setHideValues] = useState(false);
-  // Contas a pagar / impostos do dono, só o que o Orçamento do mês precisa
-  // (valor + vencimento). Os centros de custo já vêm em `costCenters`.
-  const [bills, setBills] = useState<{ amount: number; dueDate: string }[]>([]);
+  // Contas a pagar / a receber / impostos do dono. O Orçamento do mês só precisa
+  // de valor + vencimento; os campos de parcela alimentam o bloco "Previstos".
+  const [bills, setBills] = useState<ForecastDoc[]>([]);
+  const [receivables, setReceivables] = useState<ForecastDoc[]>([]);
   const [taxes, setTaxes] = useState<{ amount: number; dueDate: string }[]>([]);
 
   // Mês em foco = seletor global da Navbar (usePeriod). Tudo nesta tela —
@@ -769,6 +794,7 @@ export default function CashFlowPage() {
       let snapUnsub: (() => void) | undefined;
       let snapCenterUnsub: (() => void) | undefined;
       let snapBillsUnsub: (() => void) | undefined;
+      let snapReceivablesUnsub: (() => void) | undefined;
       let snapTaxesUnsub: (() => void) | undefined;
       let authUnsub: (() => void) | undefined;
       (async () => {
@@ -827,16 +853,38 @@ export default function CashFlowPage() {
             );
 
             // ── Listener de contas a pagar (TODAS, pagas ou não) ──
-            // O Orçamento não desconta pagamento: guarda valor + vencimento e
-            // o useMemo filtra pelo mês em foco.
+            // O Orçamento não desconta pagamento; os campos de parcela alimentam
+            // o bloco "Previstos". O useMemo filtra pelo mês em foco.
+            const toForecastDoc = (d: any): ForecastDoc => {
+              const x = d.data();
+              return {
+                id: d.id,
+                title: x.title || x.description || "",
+                amount: Number(x.amount) || 0,
+                dueDate: (x.dueDate as string) || "",
+                status: String(x.status || ""),
+                recurrence: x.recurrence as string | undefined,
+                installmentIndex: x.installmentIndex as number | undefined,
+                installmentCount: x.installmentCount as number | undefined,
+              };
+            };
+
             snapBillsUnsub?.();
             snapBillsUnsub = onSnapshot(
               collection(db, "users", ownerUid, "bills"),
-              (snap) => {
-                setBills(snap.docs.map((d) => ({ amount: d.data().amount || 0, dueDate: (d.data().dueDate as string) || "" })));
-              },
+              (snap) => setBills(snap.docs.map(toForecastDoc)),
               (err) => {
                 console.debug("Aviso ao sincronizar contas a pagar:", err.code);
+              }
+            );
+
+            // ── Listener de contas a receber (TODAS) — só pro bloco "Previstos" ──
+            snapReceivablesUnsub?.();
+            snapReceivablesUnsub = onSnapshot(
+              collection(db, "users", ownerUid, "receivables"),
+              (snap) => setReceivables(snap.docs.map(toForecastDoc)),
+              (err) => {
+                console.debug("Aviso ao sincronizar contas a receber:", err.code);
               }
             );
 
@@ -854,7 +902,7 @@ export default function CashFlowPage() {
           });
         } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
       })();
-      return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); snapTaxesUnsub?.(); };
+      return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); snapReceivablesUnsub?.(); snapTaxesUnsub?.(); };
     }, []);
 
   async function handleLogout() {
@@ -987,6 +1035,34 @@ export default function CashFlowPage() {
   }, [costCenters, bills, taxes, monthKey, currentMonthKey]);
 
   const superavitDeficit = saldo - previsao;
+
+  // ─── Lançamentos PREVISTOS (informativo) ────────────────────────────────────
+  // Só parcelas de série "numeral" ainda não quitadas, com vencimento no mês em
+  // foco. Nada é gravado na coleção cashflow — é derivado de bills/receivables.
+  // Não entra em Entradas/Saídas/Saldo; some sozinho quando a parcela é quitada.
+  const previstos = useMemo<Previsto[]>(() => {
+    const naoQuitada = (s: string, quitado: string) => s !== quitado;
+    const doMes = (iso: string) => (iso ?? "").slice(0, 7) === monthKey;
+
+    const saidas = bills
+      .filter(b => b.recurrence === "numeral" && b.installmentCount && doMes(b.dueDate) && naoQuitada(b.status, "pago"))
+      .map<Previsto>(b => ({
+        id: b.id, kind: "aPagar", description: b.title, amount: b.amount, dueDate: b.dueDate,
+        installmentIndex: b.installmentIndex, installmentCount: b.installmentCount,
+      }));
+
+    const entradas = receivables
+      .filter(r => r.recurrence === "numeral" && r.installmentCount && doMes(r.dueDate) && naoQuitada(r.status, "recebido"))
+      .map<Previsto>(r => ({
+        id: r.id, kind: "aReceber", description: r.title, amount: r.amount, dueDate: r.dueDate,
+        installmentIndex: r.installmentIndex, installmentCount: r.installmentCount,
+      }));
+
+    return [...entradas, ...saidas].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  }, [bills, receivables, monthKey]);
+
+  const previstoEntradas = useMemo(() => previstos.filter(p => p.kind === "aReceber").reduce((s, p) => s + p.amount, 0), [previstos]);
+  const previstoSaidas = useMemo(() => previstos.filter(p => p.kind === "aPagar").reduce((s, p) => s + p.amount, 0), [previstos]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -1225,8 +1301,50 @@ export default function CashFlowPage() {
           </div>
         </div>
 
+        {/* ═══ PREVISTOS (parcelas de série ainda não quitadas) ═══ */}
+        {previstos.length > 0 && (
+          <div className="cf-card overflow-hidden mb-5 sm:mb-6">
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b" style={{ borderColor: "var(--cf-border)", background: "var(--cf-txhdr)" }}>
+              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
+                <Calendar size={13} /> Previstos · {periodLabel}
+              </span>
+              <span className="flex items-center gap-3 text-xs font-semibold shrink-0">
+                {previstoEntradas > 0 && <span style={{ color: "#15803d" }}>+{displayValue(previstoEntradas)}</span>}
+                {previstoSaidas > 0 && <span style={{ color: "#b91c1c" }}>-{displayValue(previstoSaidas)}</span>}
+              </span>
+            </div>
+            <div>
+              {previstos.map((p) => (
+                <a
+                  key={`${p.kind}-${p.id}`}
+                  href={p.kind === "aPagar" ? "/contasPagar" : "/contasReceber"}
+                  className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b last:border-b-0 transition-colors hover:bg-[var(--cf-hover)]"
+                  style={{ borderColor: "var(--cf-border)", opacity: 0.75 }}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--cf-input)" }}>
+                    {p.kind === "aReceber"
+                      ? <ArrowUpRight size={15} style={{ color: "#15803d" }} />
+                      : <ArrowDownRight size={15} style={{ color: "#b91c1c" }} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{p.description}</p>
+                    <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
+                      {p.kind === "aPagar" ? "A pagar" : "A receber"}
+                      {p.installmentIndex ? ` · Parcela ${p.installmentIndex}/${p.installmentCount}` : ""}
+                      {" · "}{labelDate(p.dueDate)}
+                    </p>
+                  </div>
+                  <span className="text-sm font-bold font-mono shrink-0" style={{ color: p.kind === "aReceber" ? "#15803d" : "#b91c1c" }}>
+                    {p.kind === "aReceber" ? "+" : "-"}{displayValue(p.amount)}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Lista */}
-        {grouped.length === 0 ? (
+        {grouped.length === 0 && previstos.length === 0 ? (
           <div className="cf-card p-12 flex flex-col items-center text-center gap-3">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "var(--cf-input)" }}>
               <TrendingUp size={24} style={{ color: "var(--cf-text-3)" }} />

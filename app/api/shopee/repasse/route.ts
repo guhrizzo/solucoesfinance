@@ -1,9 +1,12 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Varre get_order_list + até ~80 get_escrow_detail sequenciais.
+export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { requireScope, isScopeError } from "@/lib/apiScope";
 import {
   isMockToken,
   getValidShopeeToken,
@@ -30,11 +33,11 @@ interface RepasseResponse {
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId") || "";
-  if (!userId) {
-    return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
+  const scope = await requireScope(request, ["estoque", "vendas"]);
+  if (isScopeError(scope)) {
+    return NextResponse.json({ error: scope.error }, { status: scope.status });
   }
+  const userId = scope.ownerUid;
 
   const { limited, retryAfterSec } = checkRateLimit(
     `shopee-repasse:${getClientIp(request)}:${userId}`,

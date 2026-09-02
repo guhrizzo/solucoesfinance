@@ -6,7 +6,6 @@ import {
   TrendingDown,
   DollarSign,
   BarChart2,
-  Shield,
   Zap,
   ArrowRight,
   ChevronRight,
@@ -58,9 +57,9 @@ const features = [
     desc: "Controle de acesso por perfil: administrador, financeiro, gestor. Cada colaborador vê apenas o que precisa.",
   },
   {
-    icon: Shield,
-    title: "Conformidade fiscal e segurança",
-    desc: "Integração com obrigações fiscais brasileiras, criptografia de ponta e backups automáticos na nuvem.",
+    icon: Globe,
+    title: "Integração com marketplaces",
+    desc: "Conecte Mercado Livre e Shopee: cada venda entra automaticamente no fluxo de caixa, com taxas e repasses já lançados.",
   },
 ];
 

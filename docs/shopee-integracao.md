@@ -11,7 +11,7 @@ e empurra a nova quantidade pros demais anúncios/itens. Cada venda também vira
 |---|---|
 | `lib/shopee.ts` | Assinatura HMAC, URL de auth, troca/refresh de token, listagem de itens, push de estoque, detalhe de pedido, validação do push |
 | `lib/estoqueSync.ts` | Baixa de estoque central + propagação multi-canal (ML + Shopee) — compartilhado pelos dois webhooks |
-| `app/api/auth/shopee/redirect/route.ts` | Inicia o OAuth (gera `state`, grava cookie `shopee_oauth`, redireciona pra Shopee) |
+| `app/api/auth/shopee/redirect/route.ts` | `POST` autenticado: gera `state`, grava cookie `shopee_oauth`, devolve `{ authUrl }` pro client navegar |
 | `app/api/auth/shopee/callback/route.ts` | Troca `code` por token, salva integração, importa itens |
 | `app/api/webhooks/shopee/route.ts` | Recebe push de pedido (`code: 3`), baixa e propaga o estoque, lança a venda no caixa |
 | `app/api/estoque/sincronizar/route.ts` | Sincronização manual (botão de refresh na tabela) — trata ML e Shopee |
@@ -74,7 +74,14 @@ SHOPEE_PARTNER_KEY="..."         # Partner Key do console
 SHOPEE_REDIRECT_URI="https://nexusfi.com.br/api/auth/shopee/callback"
 SHOPEE_SANDBOX=""                # "true" = host de testes; vazio = produção
 SHOPEE_PUSH_STRICT=""            # deixe vazio até ver "assinatura valid" no log; depois "true"
+SHOPEE_PUSH_URL="https://nexusfi.com.br/api/webhooks/shopee"  # idêntica à Push URL do console
 ```
+
+> **`SHOPEE_PUSH_URL`** — a Shopee assina o push com a URL exata cadastrada no
+> console. Atrás do proxy da Vercel, o `request.url` interno pode vir como
+> `http://` ou com host interno e a assinatura **nunca** bateria (você ficaria
+> preso sem conseguir ligar o `SHOPEE_PUSH_STRICT`). Com essa env o webhook usa
+> o valor fixo. Sem ela, cai num fallback via headers `x-forwarded-*`.
 
 > Sem `SHOPEE_PARTNER_ID`/`KEY` (ou com os placeholders) a integração cai em **modo simulado
 > (mock)** automaticamente — cria 3 itens fake pra testar a UI e o simulador de vendas.
@@ -96,9 +103,24 @@ Deixe `SHOPEE_PUSH_STRICT` vazio no começo. Nos logs vai aparecer
 `[Shopee push] assinatura valid|invalid`. Quando estiver saindo `valid` de forma
 consistente, ligue `SHOPEE_PUSH_STRICT="true"` pra rejeitar chamadas forjadas.
 
+## Autenticação das rotas
+
+`GET /api/shopee/repasse`, `POST /api/estoque/sincronizar` e
+`POST /api/auth/shopee/redirect` exigem o header `Authorization: Bearer <ID token
+do Firebase>`. O servidor (`lib/apiScope.ts` → `requireScope`) verifica o token,
+resolve o escopo em `users/{uid}/profile/access` e usa o **ownerUid do token** —
+nunca um `userId` vindo do cliente. O client usa `lib/authedFetch.ts`.
+
+- `repasse`: precisa da permissão `estoque` **ou** `vendas`.
+- `sincronizar` e `redirect`: precisam da permissão `estoque`.
+- O webhook (`/api/webhooks/shopee`) continua sem auth — é a assinatura HMAC da
+  Shopee que o protege.
+- ⚠️ O `redirect` do **Mercado Livre** ainda é `GET ?userId=` sem auth — migrar
+  pro mesmo padrão.
+
 ## Estoque cadastrado + valor líquido a receber
 
-`GET /api/shopee/repasse?userId=<ownerUid>` devolve:
+`GET /api/shopee/repasse` (com Bearer token) devolve:
 
 ```jsonc
 {
@@ -139,6 +161,26 @@ Quando o webhook processa um pedido real, ele busca o `get_escrow_detail` e, al�
 Assim o saldo do caixa reflete o líquido a receber, mas os KPIs de receita bruta do
 `/vendas` continuam certos (eles só somam `type: "entrada"`). Dedupe por `orderId:fee`.
 Vendas simuladas e o mock do webhook não têm dado de taxa — entram só com o bruto.
+
+## Idempotência do estoque
+
+A Shopee dispara um push `code 3` a **cada** transição de status do pedido
+(`READY_TO_SHIP` → `PROCESSED` → `SHIPPED` → `TO_CONFIRM_RECEIVE` → `COMPLETED`),
+e todos esses status estão em `STATUS_BAIXA`. O ML idem (reenvia `orders_v2`).
+
+Para não baixar o mesmo pedido várias vezes, o webhook chama
+`registrarVendaAdmin` **primeiro** — ele deduplica por `orderId`+canal e devolve
+`null` num reenvio. A baixa de estoque (`baixarEstoqueEPropagar`) só roda quando
+o retorno é um id (pedido inédito). `null` também cobre falha transitória: nada
+foi gravado e o próximo push reprocessa. As vendas simuladas usam `orderId`
+único a cada clique, então continuam baixando normalmente.
+
+## Timeout das funções
+
+`callback`, `webhooks/shopee`, `webhooks/mercadolivre`, `shopee/repasse` e
+`estoque/sincronizar` declaram `export const maxDuration = 60` — o default da
+Vercel (10s) não cobre troca de token + varredura de itens/escrow + escritas
+sequenciais no Firestore.
 
 ## Limitações conhecidas / próximos passos
 

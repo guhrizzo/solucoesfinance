@@ -7,6 +7,7 @@ import { useAuth } from "../hooks/useAuth";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
+import { authedFetch } from "@/lib/authedFetch";
 import {
   ShoppingCart, DollarSign, Receipt, Package, TrendingUp,
   ArrowRight, AlertTriangle, Zap, Boxes, Layers,
@@ -160,7 +161,7 @@ export default function VendasPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/shopee/repasse?userId=${ownerUid}`);
+        const res = await authedFetch("/api/shopee/repasse");
         const data = await res.json();
         if (!cancelled && res.ok && (data.configured || data.mock)) {
           setShopeeRepasse({

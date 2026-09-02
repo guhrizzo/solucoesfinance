@@ -27,9 +27,7 @@ export const CAT_TO_CASHFLOW: Record<string, string> = {
 
 const RECURRENCE_LABEL: Record<string, string> = {
   unica: "Única",
-  mensal: "Mensal",
-  trimestral: "Trimestral",
-  anual: "Anual",
+  numeral: "Parcelada",
 };
 
 const FREQUENCY_LABEL: Record<string, string> = {
@@ -49,6 +47,8 @@ interface BillLike {
   category: string;
   status: string;
   recurrence?: string;
+  installmentIndex?: number;
+  installmentCount?: number;
   paidAt?: string;
   paidPaymentMethod?: string;
 }
@@ -90,7 +90,10 @@ export async function syncBillCashflow(db: Firestore, uid: string, bill: BillLik
       category: CAT_TO_CASHFLOW[bill.category] ?? "Outros gastos",
       amount: bill.amount,
       date: bill.paidAt || bill.dueDate || today(),
-      note: `Conta a pagar · ${RECURRENCE_LABEL[bill.recurrence ?? "unica"] ?? "Única"}`,
+      note:
+        bill.installmentIndex && bill.installmentCount
+          ? `Conta a pagar · Parcela ${bill.installmentIndex}/${bill.installmentCount}`
+          : `Conta a pagar · ${RECURRENCE_LABEL[bill.recurrence ?? "unica"] ?? "Única"}`,
       sourceBillId: bill.id,
     };
     if (bill.paidPaymentMethod) data.paymentMethod = bill.paidPaymentMethod;

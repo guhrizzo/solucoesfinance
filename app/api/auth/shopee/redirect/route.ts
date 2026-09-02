@@ -4,18 +4,24 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { shopeeCredentials, buildShopeeAuthUrl } from "@/lib/shopee";
+import { requireScope, isScopeError } from "@/lib/apiScope";
 
 // Cookie que carrega o state (CSRF) + userId entre este redirect e o /callback.
 // A Shopee só devolve `code` e `shop_id`, então o rastro do usuário vem daqui.
 const OAUTH_COOKIE = "shopee_oauth";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
-
-  if (!userId) {
-    return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
+/**
+ * POST autenticado (Bearer ID token). O cliente faz o fetch, recebe `{ authUrl }`
+ * e navega pra lá — o cookie `shopee_oauth` já vai gravado nesta resposta. O uid
+ * vem SEMPRE do token (nunca de um parâmetro do cliente), pra ninguém amarrar
+ * uma loja Shopee na conta de outra pessoa.
+ */
+export async function POST(request: Request) {
+  const scope = await requireScope(request, "estoque");
+  if (isScopeError(scope)) {
+    return NextResponse.json({ error: scope.error }, { status: scope.status });
   }
+  const userId = scope.ownerUid;
 
   const { redirectUri, configured } = shopeeCredentials();
 
@@ -39,23 +45,19 @@ export async function GET(request: Request) {
     callbackUrl.searchParams.set("shop_id", "998877");
     callbackUrl.searchParams.set("state", userId);
     callbackUrl.searchParams.set("mock", "true");
-    return NextResponse.redirect(callbackUrl.toString());
+    return NextResponse.json({ authUrl: callbackUrl.toString() });
   }
 
   const state = randomBytes(16).toString("hex");
   const authUrl = buildShopeeAuthUrl({ state });
 
-  const res = NextResponse.redirect(authUrl);
-  res.cookies.set(
-    OAUTH_COOKIE,
-    JSON.stringify({ s: state, u: userId }),
-    {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 600,
-    }
-  );
+  const res = NextResponse.json({ authUrl });
+  res.cookies.set(OAUTH_COOKIE, JSON.stringify({ s: state, u: userId }), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600,
+  });
   return res;
 }

@@ -1,5 +1,8 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Um push pode disparar refresh de token + get_order_detail + get_escrow_detail
+// + baixa/propagação em vários canais. 10s (default) é pouco.
+export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
@@ -24,6 +27,24 @@ const STATUS_BAIXA = new Set([
   "TO_CONFIRM_RECEIVE",
   "COMPLETED",
 ]);
+
+/**
+ * Push URL pública desta rota, pra validar a assinatura da Shopee.
+ * `SHOPEE_PUSH_URL` (recomendado) → headers de forward → `request.url`.
+ */
+function resolvePushUrl(request: Request): string {
+  const envUrl = process.env.SHOPEE_PUSH_URL?.trim();
+  if (envUrl) return envUrl;
+  const u = new URL(request.url);
+  const proto =
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+    u.protocol.replace(":", "");
+  const host =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    request.headers.get("host") ||
+    u.host;
+  return `${proto}://${host}${u.pathname}`;
+}
 
 export async function POST(request: Request) {
   const raw = await request.text();
@@ -76,8 +97,11 @@ export async function POST(request: Request) {
 
     // ── Push real da Shopee ────────────────────────────────────────────────
     // Assinatura: header Authorization = HMAC-SHA256(`${url}|${body}`, partner_key).
-    const u = new URL(request.url);
-    const pushUrl = `${u.origin}${u.pathname}`;
+    // A Shopee assina com a Push URL EXATA cadastrada no console. Atrás do
+    // proxy da Vercel, `request.url` pode vir como http:// ou com host interno
+    // e a assinatura nunca bateria. Preferimos a env fixa; senão reconstruímos
+    // a partir dos headers de forward.
+    const pushUrl = resolvePushUrl(request);
     const sig = verifyShopeePush({
       authorization: request.headers.get("authorization"),
       url: pushUrl,
@@ -156,9 +180,14 @@ export async function POST(request: Request) {
       }
       if (!sku) continue;
 
-      await baixarEstoqueEPropagar(db, integ.userId, sku, it.quantity, { platform: "shopee", adId });
-
-      await registrarVendaAdmin(db, integ.userId, {
+      // Registra a venda PRIMEIRO. `registrarVendaAdmin` deduplica por
+      // orderId+canal e devolve null quando o pedido já foi lançado (a Shopee
+      // reenvia um push code 3 a CADA transição de status — READY_TO_SHIP,
+      // SHIPPED, COMPLETED... — e todos caem em STATUS_BAIXA). Só baixamos o
+      // estoque quando o pedido é inédito, senão o mesmo pedido baixaria o
+      // estoque 4-5 vezes. null também cobre falha transitória: aí nada foi
+      // gravado e o próximo push reprocessa.
+      const vendaId = await registrarVendaAdmin(db, integ.userId, {
         channel: "shopee",
         sku,
         productName: titulo || sku,
@@ -170,6 +199,10 @@ export async function POST(request: Request) {
         feeAmount: primeiroItem ? taxasPedido : 0,
       });
       primeiroItem = false;
+
+      if (vendaId) {
+        await baixarEstoqueEPropagar(db, integ.userId, sku, it.quantity, { platform: "shopee", adId });
+      }
     }
 
     return NextResponse.json({ received: true });

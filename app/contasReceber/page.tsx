@@ -22,11 +22,16 @@ import { verifyPin, loadPinHash, getPinLockStatus } from "../hooks/usePin";
 import { usePeriod } from "../hooks/usePeriod";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "../components/AuditTrail";
+import SeriesScopeDialog, { type SeriesScope } from "../components/SeriesScopeDialog";
+import { addMonthsClamped, monthLabel } from "@/lib/dateSeries";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type ReceivableStatus = "pendente" | "recebido" | "atrasado" | "agendado";
-type Recurrence = "unica" | "mensal" | "trimestral" | "anual";
+// "unica" = 1 lançamento. "numeral" = série de N parcelas mensais (N documentos,
+// um por mês, agrupados por seriesId). Valores antigos ("mensal"/"trimestral"/
+// "anual") não existem mais na UI — são tratados como "unica".
+type Recurrence = "unica" | "numeral";
 
 interface Receivable {
     id: string;
@@ -36,6 +41,10 @@ interface Receivable {
     category: string;
     status: ReceivableStatus;
     recurrence: Recurrence;
+    // Preenchidos só quando recurrence === "numeral":
+    seriesId?: string;
+    installmentIndex?: number;
+    installmentCount?: number;
     notes: string;
     photos: string[];      // URLs de Storage
     receivedAt?: string;
@@ -71,9 +80,7 @@ const CATEGORIES: { label: string; icon: LucideIcon; color: string }[] = [
 
 const RECURRENCE_LABEL: Record<Recurrence, string> = {
     unica: "Única",
-    mensal: "Mensal",
-    trimestral: "Trimestral",
-    anual: "Anual",
+    numeral: "Parcelada",
 };
 
 const STATUS_META: Record<ReceivableStatus, { label: string; bg: string; color: string; border: string }> = {
@@ -186,6 +193,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     const [dueDate, setDueDate] = useState(TODAY);
     const [category, setCategory] = useState("Clientes");
     const [recurrence, setRecurrence] = useState<Recurrence>("unica");
+    const [installments, setInstallments] = useState(2);
     const [notes, setNotes] = useState("");
     const [status, setStatus] = useState<ReceivableStatus>("pendente");
     const [photos, setPhotos] = useState<string[]>([]);
@@ -205,7 +213,8 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
         setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
         setDueDate(editing?.dueDate ?? TODAY);
         setCategory(editing?.category ?? "Clientes");
-        setRecurrence(editing?.recurrence ?? "unica");
+        setRecurrence(editing?.recurrence === "numeral" ? "numeral" : "unica");
+        setInstallments(editing?.installmentCount && editing.installmentCount >= 2 ? editing.installmentCount : 2);
         setNotes(editing?.notes ?? "");
         setStatus(editing?.status ?? "pendente");
         setPhotos(editing?.photos ?? []);
@@ -219,10 +228,19 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
         setPinErr("");
     }, [open]);
 
+    // Série "numeral" nasce toda pendente — não se pré-baixa um parcelamento.
+    useEffect(() => {
+        if (recurrence === "numeral") setStatus("pendente");
+    }, [recurrence]);
+
     if (!open) return null;
 
     const amount = parseAmount(rawAmt);
-    const canSave = title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null;
+    const isSeries = recurrence === "numeral";
+    const numeralAllowed = !editing || !!editing.seriesId;
+    const installmentsOk = !isSeries || (Number.isFinite(installments) && installments >= 2 && installments <= 60);
+    const canSave =
+        title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null && installmentsOk;
 
     async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -276,13 +294,15 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
             try {
                 await onSave({
                     title: title.trim(), amount, dueDate, category,
-                    recurrence, notes: notes.trim(), status,
+                    recurrence, notes: notes.trim(),
+                    status: isSeries ? "pendente" : status,
                     photos,
                     receivedAt: editing?.receivedAt,
                     paymentMethod: paymentMethod ?? undefined,
                     paidPaymentMethod: editing?.paidPaymentMethod,
                     partyName: partyName.trim() || "",
                     partyDoc: partyDoc ? onlyDigits(partyDoc) : "",
+                    installmentCount: isSeries && !editing ? installments : undefined,
                 });
                 onClose();
             } catch (e: any) {
@@ -386,14 +406,18 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Valor (R$)</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                                {isSeries ? "Valor por parcela (R$)" : "Valor (R$)"}
+                            </label>
                             <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Prazo</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                                {isSeries ? "1º prazo" : "Prazo"}
+                            </label>
                             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -423,17 +447,49 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     {/* Recorrência */}
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Recorrência</label>
-                        <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
-                            {(["unica", "mensal", "trimestral", "anual"] as Recurrence[]).map(r => (
-                                <button key={r} onClick={() => setRecurrence(r)}
-                                    className="py-2 rounded-lg text-xs font-bold cursor-pointer transition-all"
-                                    style={recurrence === r
-                                        ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }
-                                        : { background: "transparent", color: "var(--cf-text2)" }}>
-                                    {RECURRENCE_LABEL[r]}
-                                </button>
-                            ))}
+                        <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
+                            {([["unica", "Única"], ["numeral", "Numeral"]] as [Recurrence, string][]).map(([r, label]) => {
+                                const disabled = r === "numeral" && !numeralAllowed;
+                                return (
+                                    <button key={r} type="button"
+                                        onClick={() => !disabled && setRecurrence(r)}
+                                        disabled={disabled}
+                                        title={disabled ? "Parcelamento só na criação de uma cobrança nova" : undefined}
+                                        className="py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                        style={recurrence === r
+                                            ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", cursor: "pointer" }
+                                            : { background: "transparent", color: "var(--cf-text2)", cursor: disabled ? "not-allowed" : "pointer" }}>
+                                        {label}
+                                    </button>
+                                );
+                            })}
                         </div>
+
+                        {isSeries && (
+                            <div className="pt-1 space-y-2">
+                                <div className="flex items-center gap-3">
+                                    <label className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>
+                                        Parcelas mensais
+                                    </label>
+                                    <input
+                                        type="number" min={2} max={60} value={installments}
+                                        onChange={e => setInstallments(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                                        disabled={!!editing}
+                                        className="w-20 rounded-lg px-3 py-2 text-sm outline-none font-mono disabled:opacity-50"
+                                        style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                                    {editing && (
+                                        <span className="text-[11px]" style={{ color: "var(--cf-text3)" }}>(fixo após criar)</span>
+                                    )}
+                                </div>
+                                {!installmentsOk ? (
+                                    <p className="text-[11px]" style={{ color: "#dc2626" }}>Informe de 2 a 60 parcelas.</p>
+                                ) : amount > 0 ? (
+                                    <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                        {installments} parcelas de {toBRL(amount)} · total {toBRL(amount * installments)}
+                                    </p>
+                                ) : null}
+                            </div>
+                        )}
                     </div>
 
                     {/* Status */}
@@ -443,16 +499,22 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                             {(["pendente", "recebido", "agendado", "atrasado"] as ReceivableStatus[]).map(s => {
                                 const meta = STATUS_META[s];
                                 return (
-                                    <button key={s} onClick={() => setStatus(s)}
-                                        className="py-2.5 rounded-xl text-xs font-bold border-2 cursor-pointer transition-all"
+                                    <button key={s} type="button" onClick={() => !isSeries && setStatus(s)}
+                                        disabled={isSeries}
+                                        className="py-2.5 rounded-xl text-xs font-bold border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={status === s
-                                            ? { background: meta.bg, borderColor: meta.border, color: meta.color }
-                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text2)" }}>
+                                            ? { background: meta.bg, borderColor: meta.border, color: meta.color, cursor: isSeries ? "not-allowed" : "pointer" }
+                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
                                         {meta.label}
                                     </button>
                                 );
                             })}
                         </div>
+                        {isSeries && (
+                            <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                Toda série começa pendente. Baixe cada parcela ao recebê-la.
+                            </p>
+                        )}
                     </div>
 
                     {/* Fotos */}
@@ -864,9 +926,9 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                         style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
                                         {meta.label}
                                     </span>
-                                    {receivable.recurrence !== "unica" && (
+                                    {receivable.seriesId && receivable.installmentCount && (
                                         <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text3)" }}>
-                                            <Repeat size={10} /> {RECURRENCE_LABEL[receivable.recurrence]}
+                                            <Repeat size={10} /> Parcela {receivable.installmentIndex}/{receivable.installmentCount}
                                         </span>
                                     )}
                                     {receivable?.photos?.length > 0 && (
@@ -1004,6 +1066,12 @@ export default function ContasReceberPage() {
     const [deleting, setDeleting] = useState(false);
     const [pinOpenDelete, setPinOpenDelete] = useState(false);
 
+    // Séries "numeral" (parcelas)
+    const [seriesEdit, setSeriesEdit] = useState<{ base: Receivable; data: Omit<Receivable, "id" | "userId" | "createdAt"> } | null>(null);
+    const [seriesBusy, setSeriesBusy] = useState(false);
+    const [seriesDelete, setSeriesDelete] = useState<Receivable | null>(null);
+    const [deleteScope, setDeleteScope] = useState<SeriesScope>("one");
+
     // Receive states
     const [receiveModalOpen, setReceiveModalOpen] = useState(false);
     const [receiveTarget, setReceiveTarget] = useState<Receivable | null>(null);
@@ -1119,21 +1187,99 @@ export default function ContasReceberPage() {
     // ── Salvar cobrança ────────────────────────────────────────────────────────
     async function handleSave(data: Omit<Receivable, "id" | "userId" | "createdAt">) {
         if (!uid) throw new Error("Não autenticado");
-        const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
+        const [{ getFirebase }, { doc, updateDoc, collection, addDoc, writeBatch }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
         const { db } = await getFirebase();
+        const actor = { uid: authUid ?? uid, name: userName };
+
+        // ── Série "numeral" nova: N documentos, um por mês ──────────────────────
+        if (!editing && data.recurrence === "numeral") {
+            const n = Math.min(60, Math.max(2, Math.round(data.installmentCount || 2)));
+            const seriesId = (crypto as Crypto).randomUUID();
+            const batch = writeBatch(db);
+            for (let i = 0; i < n; i++) {
+                const ref = doc(collection(db, "users", uid, "receivables"));
+                const parcela = Object.fromEntries(
+                    Object.entries({
+                        ...data,
+                        userId: uid,
+                        recurrence: "numeral",
+                        status: "pendente",
+                        seriesId,
+                        installmentIndex: i + 1,
+                        installmentCount: n,
+                        dueDate: addMonthsClamped(data.dueDate, i),
+                        receivedAt: undefined,
+                        paidPaymentMethod: undefined,
+                        createdAt: Date.now(),
+                        ...stampCreate(actor),
+                    }).filter(([, v]) => v !== undefined)
+                );
+                batch.set(ref, parcela);
+            }
+            await batch.commit();
+            const last = addMonthsClamped(data.dueDate, n - 1);
+            showToast(`${n} parcelas criadas (${monthLabel(data.dueDate)} → ${monthLabel(last)})`);
+            return;
+        }
+
+        // ── Cobrança única (ou edição de uma parcela) ──────────────────────────
         const clean = Object.fromEntries(
             Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
         );
-        const actor = { uid: authUid ?? uid, name: userName };
+        if (data.recurrence !== "numeral") delete (clean as Record<string, unknown>).installmentCount;
+
         if (editing) {
             await updateDoc(doc(db, "users", uid, "receivables", editing.id), { ...clean, ...stampUpdate(actor) } as any);
             showToast("Cobrança atualizada!");
+            if (editing.seriesId) setSeriesEdit({ base: editing, data });
         } else {
             await addDoc(collection(db, "users", uid, "receivables"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
             showToast("Cobrança criada!");
+        }
+    }
+
+    // ── Propaga a edição de uma parcela pras próximas não recebidas da série ──
+    async function applySeriesEdit(scope: SeriesScope) {
+        if (!seriesEdit || !uid) { setSeriesEdit(null); return; }
+        if (scope === "one") { setSeriesEdit(null); return; }
+        setSeriesBusy(true);
+        try {
+            const { base, data } = seriesEdit;
+            const [{ getFirebase }, { collection, query, where, getDocs, writeBatch }] = await Promise.all([
+                import("@/lib/firebase"),
+                import("firebase/firestore"),
+            ]);
+            const { db } = await getFirebase();
+            const snap = await getDocs(
+                query(collection(db, "users", uid, "receivables"), where("seriesId", "==", base.seriesId))
+            );
+            const actor = { uid: authUid ?? uid, name: userName };
+            const batch = writeBatch(db);
+            let count = 0;
+            snap.docs.forEach((d) => {
+                const r = d.data() as Receivable;
+                if ((r.installmentIndex ?? 0) <= (base.installmentIndex ?? 0)) return;
+                if (r.status === "recebido") return;
+                batch.update(d.ref, {
+                    title: data.title,
+                    amount: data.amount,
+                    category: data.category,
+                    notes: data.notes,
+                    paymentMethod: data.paymentMethod ?? null,
+                    ...stampUpdate(actor),
+                });
+                count++;
+            });
+            if (count) await batch.commit();
+            showToast(count ? `${count} parcela(s) futura(s) atualizada(s)` : "Nenhuma parcela futura pendente");
+        } catch (e: any) {
+            showToast(e?.message ?? "Erro ao atualizar a série", "err");
+        } finally {
+            setSeriesBusy(false);
+            setSeriesEdit(null);
         }
     }
 
@@ -1161,7 +1307,10 @@ export default function ContasReceberPage() {
             category: CAT_TO_CASHFLOW[receiveTarget.category] ?? "Outros ganhos",
             amount: receiveTarget.amount,
             date: receivedAt,
-            note: `Cobrança · ${RECURRENCE_LABEL[receiveTarget.recurrence]}`,
+            note:
+                receiveTarget.installmentIndex && receiveTarget.installmentCount
+                    ? `Cobrança · Parcela ${receiveTarget.installmentIndex}/${receiveTarget.installmentCount}`
+                    : `Cobrança · ${RECURRENCE_LABEL[receiveTarget.recurrence] ?? "Única"}`,
             sourceReceivableId: receiveTarget.id,
             paymentMethod: method,
             createdAt: Date.now(),
@@ -1174,14 +1323,22 @@ export default function ContasReceberPage() {
     }
 
     // ── Excluir cobrança ───────────────────────────────────────────────────────
-    async function handleDeleteClick(id: string) {
+    // Parcela de série abre o diálogo de escopo antes do PIN.
+    function onDeleteRequested(r: Receivable) {
+        if (r.seriesId) setSeriesDelete(r);
+        else startDelete(r.id, "one");
+    }
+
+    async function startDelete(id: string, scope: SeriesScope) {
         if (!uid) return;
         const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
             showToast("Configure seu PIN na página de Perfil antes de excluir.", "err");
             return;
         }
+        setDeleteScope(scope);
         setConfirmId(id);
+        setSeriesDelete(null);
         setPinOpenDelete(true);
     }
 
@@ -1192,14 +1349,31 @@ export default function ContasReceberPage() {
             setPinOpenDelete(false);
             setDeleting(true);
             try {
-                const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
+                const [{ getFirebase }, { doc, deleteDoc, collection, query, where, getDocs, writeBatch }] = await Promise.all([
                     import("@/lib/firebase"),
                     import("firebase/firestore"),
                 ]);
                 const { db } = await getFirebase();
-                await deleteDoc(doc(db, "users", uid, "receivables", confirmId));
+                const target = receivables.find((r) => r.id === confirmId);
+
+                if (deleteScope === "forward" && target?.seriesId) {
+                    const snap = await getDocs(
+                        query(collection(db, "users", uid, "receivables"), where("seriesId", "==", target.seriesId))
+                    );
+                    const alvo = snap.docs.filter((d) => {
+                        const r = d.data() as Receivable;
+                        return (r.installmentIndex ?? 0) >= (target.installmentIndex ?? 0) && r.status !== "recebido";
+                    });
+                    const batch = writeBatch(db);
+                    alvo.forEach((d) => batch.delete(d.ref));
+                    await batch.commit();
+                    showToast(`${alvo.length} parcela(s) removida(s).`);
+                } else {
+                    await deleteDoc(doc(db, "users", uid, "receivables", confirmId));
+                    showToast("Cobrança removida.");
+                }
                 setConfirmId(null);
-                showToast("Cobrança removida.");
+                setDeleteScope("one");
             } catch (e: any) {
                 showToast(e.message, "err");
             } finally {
@@ -1329,8 +1503,37 @@ export default function ContasReceberPage() {
                 open={pinOpenDelete}
                 title="Confirmar Exclusão"
                 subtitle="Digite seu PIN de 4 dígitos para excluir esta cobrança."
-                onClose={() => setPinOpenDelete(false)}
+                onClose={() => { setPinOpenDelete(false); setConfirmId(null); setDeleteScope("one"); }}
                 onSuccess={handlePinDeleteSuccess}
+            />
+
+            {/* Escopo de exclusão de série (parcela) */}
+            <SeriesScopeDialog
+                open={!!seriesDelete}
+                title="Excluir parcela"
+                message={
+                    seriesDelete
+                        ? `"${seriesDelete.title}" — parcela ${seriesDelete.installmentIndex}/${seriesDelete.installmentCount}. Parcelas já recebidas nunca são removidas.`
+                        : ""
+                }
+                actionLabel="Excluir"
+                onPick={(scope) => seriesDelete && startDelete(seriesDelete.id, scope)}
+                onCancel={() => setSeriesDelete(null)}
+            />
+
+            {/* Escopo de edição de série (parcela) */}
+            <SeriesScopeDialog
+                open={!!seriesEdit}
+                title="Aplicar em quais parcelas?"
+                message={
+                    seriesEdit
+                        ? `Você editou a parcela ${seriesEdit.base.installmentIndex}/${seriesEdit.base.installmentCount} de "${seriesEdit.base.title}".`
+                        : ""
+                }
+                actionLabel="Salvando"
+                loading={seriesBusy}
+                onPick={applySeriesEdit}
+                onCancel={() => setSeriesEdit(null)}
             />
 
             {/* (O modal de confirmação visual antigo foi removido, agora apenas usamos PinModal para confirmar deleção, 
@@ -1494,7 +1697,7 @@ export default function ContasReceberPage() {
                                             receivable={receivable}
                                             alertDays={alertDays}
                                             onEdit={() => { setEditing(receivable); setModal(true); }}
-                                            onDelete={() => handleDeleteClick(receivable.id)}
+                                            onDelete={() => onDeleteRequested(receivable)}
                                             onOpenReceiveModal={() => {
                                                 setReceiveTarget(receivable);
                                                 setReceiveModalOpen(true);

@@ -1,9 +1,12 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Itera todos os anúncios/itens de cada integração com escritas no Firestore.
+export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { requireScope, isScopeError } from "@/lib/apiScope";
 import {
   isMockToken,
   getValidAccessToken,
@@ -27,11 +30,13 @@ const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: 5 }; // 5 sincronizações / 
 
 export async function POST(request: Request) {
   try {
-    const { userId, platform, direction } = await request.json();
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
+    const scope = await requireScope(request, "estoque");
+    if (isScopeError(scope)) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
     }
+    const userId = scope.ownerUid;
+
+    const { platform, direction } = await request.json().catch(() => ({}));
 
     // direction "pull" = o canal é a fonte da verdade (edição manual no ML
     // deve refletir aqui). Sem direction / "push" = comportamento atual

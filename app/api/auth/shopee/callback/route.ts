@@ -1,5 +1,7 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Troca de token + fetchShopInfo + importação item a item (loja grande = lento).
+export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";

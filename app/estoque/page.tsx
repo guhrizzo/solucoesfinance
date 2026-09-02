@@ -5,11 +5,13 @@ import { useAuth } from "../hooks/useAuth";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
+import ConfirmModal from "../components/ConfirmModal";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
   Zap, Loader2, ArrowRight, Package, X, CheckCircle, Download
 } from "lucide-react";
+import { authedFetch } from "@/lib/authedFetch";
 
 // Interfaces de Dados
 interface ProdutoEstoque {
@@ -89,6 +91,26 @@ export default function EstoquePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"todos" | "mercadolivre" | "shopee" | "local" | "baixo">("todos");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
+
+  // Confirmação no estilo NexusFi (substitui o confirm() nativo do navegador).
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmText: string;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const runConfirm = async () => {
+    if (!confirmDialog) return;
+    setConfirmLoading(true);
+    try {
+      await confirmDialog.onConfirm();
+    } finally {
+      setConfirmLoading(false);
+      setConfirmDialog(null);
+    }
+  };
   const [syncing, setSyncing] = useState(false);
 
   // Estados de Modais
@@ -306,10 +328,10 @@ export default function EstoquePage() {
     );
 
     try {
-      const res = await fetch("/api/estoque/sincronizar", {
+      const res = await authedFetch("/api/estoque/sincronizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: ownerUid, platform: platformFilter, direction }),
+        body: JSON.stringify({ platform: platformFilter, direction }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -330,7 +352,7 @@ export default function EstoquePage() {
     if (!ownerUid) return;
     setShopeeResumoLoading(true);
     try {
-      const res = await fetch(`/api/shopee/repasse?userId=${ownerUid}`);
+      const res = await authedFetch("/api/shopee/repasse");
       const data = await res.json();
       if (res.ok) setShopeeResumo(data);
       else showToast(data.error || "Falha ao consultar repasse da Shopee", "error");
@@ -460,9 +482,16 @@ export default function EstoquePage() {
   };
 
   // Excluir Produto
-  const handleDeleteProduto = async (id: string, sku: string) => {
-    if (!confirm(`Deseja realmente remover o produto ${sku} e todos os seus vínculos com anúncios?`)) return;
+  const handleDeleteProduto = (id: string, sku: string) => {
+    setConfirmDialog({
+      title: "Remover produto",
+      message: `Deseja realmente remover o produto ${sku} e todos os seus vínculos com anúncios?`,
+      confirmText: "Remover",
+      onConfirm: () => doDeleteProduto(id, sku),
+    });
+  };
 
+  const doDeleteProduto = async (id: string, sku: string) => {
     try {
       const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
@@ -472,7 +501,7 @@ export default function EstoquePage() {
       await deleteDoc(doc(db, "estoque", id));
 
       // Remover vínculos desse SKU
-      const qVinculos = query(collection(db, "vinculos"), where("userId", "==", user!.uid), where("sku", "==", sku));
+      const qVinculos = query(collection(db, "vinculos"), where("userId", "==", ownerUid), where("sku", "==", sku));
       const snapVinculos = await getDocs(qVinculos);
       for (const d of snapVinculos.docs) {
         await deleteDoc(doc(db, "vinculos", d.id));
@@ -486,9 +515,16 @@ export default function EstoquePage() {
   };
 
   // Desconectar Integração
-  const handleDisconnect = async (id: string, platform: string) => {
-    if (!confirm(`Deseja desconectar a conta integrada da plataforma ${platform}? Seus anúncios vinculados não serão mais sincronizados.`)) return;
+  const handleDisconnect = (id: string, platform: string) => {
+    setConfirmDialog({
+      title: "Desconectar integração",
+      message: `Deseja desconectar a conta integrada da plataforma ${platform}? Seus anúncios vinculados não serão mais sincronizados.`,
+      confirmText: "Desconectar",
+      onConfirm: () => doDisconnect(id),
+    });
+  };
 
+  const doDisconnect = async (id: string) => {
     try {
       const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
@@ -498,7 +534,7 @@ export default function EstoquePage() {
       await deleteDoc(doc(db, "integracoes", id));
 
       // Remover vínculos associados a essa integração
-      const qVinculos = query(collection(db, "vinculos"), where("userId", "==", user!.uid), where("connectionId", "==", id));
+      const qVinculos = query(collection(db, "vinculos"), where("userId", "==", ownerUid), where("connectionId", "==", id));
       const snapVinculos = await getDocs(qVinculos);
       for (const d of snapVinculos.docs) {
         await deleteDoc(doc(db, "vinculos", d.id));
@@ -573,9 +609,16 @@ export default function EstoquePage() {
   };
 
   // Remover Vínculo Individual
-  const handleRemoveVinculo = async (id: string) => {
-    if (!confirm("Deseja realmente desvincular este anúncio do produto central?")) return;
+  const handleRemoveVinculo = (id: string) => {
+    setConfirmDialog({
+      title: "Desvincular anúncio",
+      message: "Deseja realmente desvincular este anúncio do produto central?",
+      confirmText: "Desvincular",
+      onConfirm: () => doRemoveVinculo(id),
+    });
+  };
 
+  const doRemoveVinculo = async (id: string) => {
     try {
       const { getFirebase } = await import("@/lib/firebase");
       const { db } = await getFirebase();
@@ -731,10 +774,28 @@ export default function EstoquePage() {
   }, [produtos, integracoes, vinculos]);
 
   // Redirecionamento OAuth das Plataformas
-  const handleConnectAccount = (platform: "mercadolivre" | "shopee") => {
+  const handleConnectAccount = async (platform: "mercadolivre" | "shopee") => {
     if (!user) return;
-    const url = `/api/auth/${platform}/redirect?userId=${ownerUid}`;
-    window.location.href = url;
+
+    // Shopee: rota autenticada (POST) — o ownerUid sai do ID token, não da URL.
+    if (platform === "shopee") {
+      try {
+        const res = await authedFetch("/api/auth/shopee/redirect", { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.authUrl) {
+          showToast(data.error || "Não foi possível iniciar a conexão com a Shopee", "error");
+          return;
+        }
+        window.location.href = data.authUrl;
+      } catch (err) {
+        console.error(err);
+        showToast(err instanceof Error ? err.message : "Erro ao conectar à Shopee", "error");
+      }
+      return;
+    }
+
+    // TODO: migrar o ML pro mesmo fluxo autenticado (hoje ainda é GET com userId na URL).
+    window.location.href = `/api/auth/${platform}/redirect?userId=${ownerUid}`;
   };
 
   if (blocked) return <AccessDenied category="Estoque" />;
@@ -764,6 +825,17 @@ export default function EstoquePage() {
           {toast.msg}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmDialog}
+        title={confirmDialog?.title ?? ""}
+        message={confirmDialog?.message ?? ""}
+        confirmText={confirmDialog?.confirmText ?? "Confirmar"}
+        isDangerous
+        loading={confirmLoading}
+        onConfirm={runConfirm}
+        onCancel={() => setConfirmDialog(null)}
+      />
 
       <main className="px-6 py-8 max-w-7xl mx-auto space-y-8 pb-20">
 

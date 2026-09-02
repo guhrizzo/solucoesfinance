@@ -23,11 +23,16 @@ import { usePeriod } from "../hooks/usePeriod";
 import { syncBillCashflow } from "@/lib/billTaxSync";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "../components/AuditTrail";
+import SeriesScopeDialog, { type SeriesScope } from "../components/SeriesScopeDialog";
+import { addMonthsClamped, monthLabel } from "@/lib/dateSeries";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type BillStatus = "pendente" | "pago" | "vencido" | "agendado";
-type Recurrence = "unica" | "mensal" | "trimestral" | "anual";
+// "unica" = 1 lançamento. "numeral" = série de N parcelas mensais (N documentos,
+// um por mês, agrupados por seriesId). Valores antigos ("mensal"/"trimestral"/
+// "anual") não existem mais na UI — são tratados como "unica".
+type Recurrence = "unica" | "numeral";
 
 interface Bill {
     id: string;
@@ -37,6 +42,10 @@ interface Bill {
     category: string;
     status: BillStatus;
     recurrence: Recurrence;
+    // Preenchidos só quando recurrence === "numeral":
+    seriesId?: string;          // agrupa as parcelas da mesma série
+    installmentIndex?: number;  // 1..N — posição desta parcela
+    installmentCount?: number;  // N — tamanho da série
     notes: string;
     photos: string[];      // URLs de Storage
     paidAt?: string;
@@ -69,13 +78,6 @@ const CATEGORIES: { label: string; icon: LucideIcon; color: string }[] = [
     { label: "Serviços", icon: Zap, color: "#3b82f6" },
     { label: "Outros", icon: ArrowDownRight, color: "#8b5cf6" },
 ];
-
-const RECURRENCE_LABEL: Record<Recurrence, string> = {
-    unica: "Única",
-    mensal: "Mensal",
-    trimestral: "Trimestral",
-    anual: "Anual",
-};
 
 const STATUS_META: Record<BillStatus, { label: string; bg: string; color: string; border: string }> = {
     pendente: { label: "Pendente", bg: "#fef9c3", color: "#b45309", border: "#fde68a" },
@@ -180,6 +182,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const [dueDate, setDueDate] = useState(TODAY);
     const [category, setCategory] = useState("Outros");
     const [recurrence, setRecurrence] = useState<Recurrence>("unica");
+    const [installments, setInstallments] = useState(2);
     const [notes, setNotes] = useState("");
     const [status, setStatus] = useState<BillStatus>("pendente");
     const [photos, setPhotos] = useState<string[]>([]);
@@ -199,7 +202,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
         setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
         setDueDate(editing?.dueDate ?? TODAY);
         setCategory(editing?.category ?? "Outros");
-        setRecurrence(editing?.recurrence ?? "unica");
+        setRecurrence(editing?.recurrence === "numeral" ? "numeral" : "unica");
+        setInstallments(editing?.installmentCount && editing.installmentCount >= 2 ? editing.installmentCount : 2);
         setNotes(editing?.notes ?? "");
         setStatus(editing?.status ?? "pendente");
         setPhotos(editing?.photos ?? []);
@@ -213,10 +217,20 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
         setPinErr("");
     }, [open]);
 
+    // Série "numeral" nasce toda pendente — não se pré-quita um parcelamento.
+    useEffect(() => {
+        if (recurrence === "numeral") setStatus("pendente");
+    }, [recurrence]);
+
     if (!open) return null;
 
     const amount = parseAmount(rawAmt);
-    const canSave = title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null;
+    const isSeries = recurrence === "numeral";
+    // "numeral" só na criação, ou ao editar uma parcela que já é de série.
+    const numeralAllowed = !editing || !!editing.seriesId;
+    const installmentsOk = !isSeries || (Number.isFinite(installments) && installments >= 2 && installments <= 60);
+    const canSave =
+        title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null && installmentsOk;
 
     async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -272,13 +286,16 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
             try {
                 await onSave({
                     title: title.trim(), amount, dueDate, category,
-                    recurrence, notes: notes.trim(), status,
+                    recurrence, notes: notes.trim(),
+                    status: isSeries ? "pendente" : status,
                     photos,
                     paidAt: editing?.paidAt,
                     paymentMethod: paymentMethod ?? undefined,
                     paidPaymentMethod: editing?.paidPaymentMethod,
                     partyName: partyName.trim() || "",
                     partyDoc: partyDoc ? onlyDigits(partyDoc) : "",
+                    // Só na criação de série nova; edição preserva os campos no doc.
+                    installmentCount: isSeries && !editing ? installments : undefined,
                 });
                 onClose();
             } catch (e: any) {
@@ -382,14 +399,18 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Valor (R$)</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                                {isSeries ? "Valor por parcela (R$)" : "Valor (R$)"}
+                            </label>
                             <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Vencimento</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                                {isSeries ? "1º vencimento" : "Vencimento"}
+                            </label>
                             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -419,17 +440,51 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     {/* Recorrência */}
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Recorrência</label>
-                        <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
-                            {(["unica", "mensal", "trimestral", "anual"] as Recurrence[]).map(r => (
-                                <button key={r} onClick={() => setRecurrence(r)}
-                                    className="py-2 rounded-lg text-xs font-bold cursor-pointer transition-all"
-                                    style={recurrence === r
-                                        ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }
-                                        : { background: "transparent", color: "var(--cf-text2)" }}>
-                                    {RECURRENCE_LABEL[r]}
-                                </button>
-                            ))}
+                        <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
+                            {([["unica", "Única"], ["numeral", "Numeral"]] as [Recurrence, string][]).map(([r, label]) => {
+                                const disabled = r === "numeral" && !numeralAllowed;
+                                return (
+                                    <button key={r} type="button"
+                                        onClick={() => !disabled && setRecurrence(r)}
+                                        disabled={disabled}
+                                        title={disabled ? "Parcelamento só na criação de uma conta nova" : undefined}
+                                        className="py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                        style={recurrence === r
+                                            ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", cursor: "pointer" }
+                                            : { background: "transparent", color: "var(--cf-text2)", cursor: disabled ? "not-allowed" : "pointer" }}>
+                                        {label}
+                                    </button>
+                                );
+                            })}
                         </div>
+
+                        {isSeries && (
+                            <div className="pt-1 space-y-2">
+                                <div className="flex items-center gap-3">
+                                    <label className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>
+                                        Parcelas mensais
+                                    </label>
+                                    <input
+                                        type="number" min={2} max={60} value={installments}
+                                        onChange={e => setInstallments(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                                        disabled={!!editing}
+                                        className="w-20 rounded-lg px-3 py-2 text-sm outline-none font-mono disabled:opacity-50"
+                                        style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                                    {editing && (
+                                        <span className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                            (fixo após criar)
+                                        </span>
+                                    )}
+                                </div>
+                                {!installmentsOk ? (
+                                    <p className="text-[11px]" style={{ color: "#dc2626" }}>Informe de 2 a 60 parcelas.</p>
+                                ) : amount > 0 ? (
+                                    <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                        {installments} parcelas de {toBRL(amount)} · total {toBRL(amount * installments)}
+                                    </p>
+                                ) : null}
+                            </div>
+                        )}
                     </div>
 
                     {/* Status */}
@@ -439,16 +494,22 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                             {(["pendente", "pago", "agendado", "vencido"] as BillStatus[]).map(s => {
                                 const meta = STATUS_META[s];
                                 return (
-                                    <button key={s} onClick={() => setStatus(s)}
-                                        className="py-2.5 rounded-xl text-xs font-bold border-2 cursor-pointer transition-all"
+                                    <button key={s} type="button" onClick={() => !isSeries && setStatus(s)}
+                                        disabled={isSeries}
+                                        className="py-2.5 rounded-xl text-xs font-bold border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={status === s
-                                            ? { background: meta.bg, borderColor: meta.border, color: meta.color }
-                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text2)" }}>
+                                            ? { background: meta.bg, borderColor: meta.border, color: meta.color, cursor: isSeries ? "not-allowed" : "pointer" }
+                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
                                         {meta.label}
                                     </button>
                                 );
                             })}
                         </div>
+                        {isSeries && (
+                            <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                Toda série começa pendente. Baixe cada parcela ao pagá-la.
+                            </p>
+                        )}
                     </div>
 
                     {/* Fotos */}
@@ -860,9 +921,9 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                         style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
                                         {meta.label}
                                     </span>
-                                    {bill.recurrence !== "unica" && (
+                                    {bill.seriesId && bill.installmentCount && (
                                         <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text3)" }}>
-                                            <Repeat size={10} /> {RECURRENCE_LABEL[bill.recurrence]}
+                                            <Repeat size={10} /> Parcela {bill.installmentIndex}/{bill.installmentCount}
                                         </span>
                                     )}
                                     {bill?.photos?.length > 0 && (
@@ -999,6 +1060,14 @@ export default function ContasPagarPage() {
     const [deletePinOpen, setDeletePinOpen] = useState(false);
     const [payBill, setPayBill] = useState<Bill | null>(null);
 
+    // ── Séries "numeral" (parcelas) ──
+    // Edição: guardado quando uma parcela é salva, pra oferecer propagar.
+    const [seriesEdit, setSeriesEdit] = useState<{ base: Bill; data: Omit<Bill, "id" | "userId" | "createdAt"> } | null>(null);
+    const [seriesBusy, setSeriesBusy] = useState(false);
+    // Exclusão: parcela alvo + escopo escolhido no diálogo.
+    const [seriesDelete, setSeriesDelete] = useState<Bill | null>(null);
+    const [deleteScope, setDeleteScope] = useState<SeriesScope>("one");
+
     const [alertDays, setAlertDays] = useState(5);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"todos" | BillStatus>("todos");
@@ -1111,15 +1180,51 @@ export default function ContasPagarPage() {
     // ── Salvar conta ───────────────────────────────────────────────────────────
     async function handleSave(data: Omit<Bill, "id" | "userId" | "createdAt">) {
         if (!uid) throw new Error("Não autenticado");
-        const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
+        const [{ getFirebase }, { doc, updateDoc, collection, addDoc, writeBatch }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
         const { db } = await getFirebase();
+        const actor = { uid: authUid ?? uid, name: userName };
+
+        // ── Série "numeral" nova: N documentos, um por mês ──────────────────────
+        if (!editing && data.recurrence === "numeral") {
+            const n = Math.min(60, Math.max(2, Math.round(data.installmentCount || 2)));
+            const seriesId = (crypto as Crypto).randomUUID();
+            const batch = writeBatch(db);
+            for (let i = 0; i < n; i++) {
+                const ref = doc(collection(db, "users", uid, "bills"));
+                const parcela = Object.fromEntries(
+                    Object.entries({
+                        ...data,
+                        userId: uid,
+                        recurrence: "numeral",
+                        status: "pendente",
+                        seriesId,
+                        installmentIndex: i + 1,
+                        installmentCount: n,
+                        dueDate: addMonthsClamped(data.dueDate, i),
+                        paidAt: undefined,
+                        paidPaymentMethod: undefined,
+                        createdAt: Date.now(),
+                        ...stampCreate(actor),
+                    }).filter(([, v]) => v !== undefined)
+                );
+                batch.set(ref, parcela);
+            }
+            await batch.commit();
+            const last = addMonthsClamped(data.dueDate, n - 1);
+            showToast(`${n} parcelas criadas (${monthLabel(data.dueDate)} → ${monthLabel(last)})`);
+            return;
+        }
+
+        // ── Conta única (ou edição de uma parcela) ─────────────────────────────
         const clean = Object.fromEntries(
             Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
         );
-        const actor = { uid: authUid ?? uid, name: userName };
+        // Não deixa o installmentCount do form virar campo solto num doc único.
+        if (data.recurrence !== "numeral") delete (clean as Record<string, unknown>).installmentCount;
+
         let billId: string;
         if (editing) {
             await updateDoc(doc(db, "users", uid, "bills", editing.id), { ...clean, ...stampUpdate(actor) } as any);
@@ -1141,9 +1246,58 @@ export default function ContasPagarPage() {
             category: data.category,
             status: data.status,
             recurrence: data.recurrence,
+            installmentIndex: editing?.installmentIndex,
+            installmentCount: editing?.installmentCount,
             paidAt: data.paidAt,
             paidPaymentMethod: data.paidPaymentMethod as string | undefined,
         });
+
+        // Editou uma parcela de série → oferece propagar pras próximas não pagas.
+        if (editing?.seriesId) {
+            setSeriesEdit({ base: editing, data });
+        }
+    }
+
+    // ── Propaga a edição de uma parcela pras próximas não pagas da série ───────
+    async function applySeriesEdit(scope: SeriesScope) {
+        if (!seriesEdit || !uid) { setSeriesEdit(null); return; }
+        if (scope === "one") { setSeriesEdit(null); return; }
+        setSeriesBusy(true);
+        try {
+            const { base, data } = seriesEdit;
+            const [{ getFirebase }, { collection, query, where, getDocs, writeBatch }] = await Promise.all([
+                import("@/lib/firebase"),
+                import("firebase/firestore"),
+            ]);
+            const { db } = await getFirebase();
+            const snap = await getDocs(
+                query(collection(db, "users", uid, "bills"), where("seriesId", "==", base.seriesId))
+            );
+            const actor = { uid: authUid ?? uid, name: userName };
+            const batch = writeBatch(db);
+            let count = 0;
+            snap.docs.forEach((d) => {
+                const b = d.data() as Bill;
+                if ((b.installmentIndex ?? 0) <= (base.installmentIndex ?? 0)) return;
+                if (b.status === "pago") return;
+                batch.update(d.ref, {
+                    title: data.title,
+                    amount: data.amount,
+                    category: data.category,
+                    notes: data.notes,
+                    paymentMethod: data.paymentMethod ?? null,
+                    ...stampUpdate(actor),
+                });
+                count++;
+            });
+            if (count) await batch.commit();
+            showToast(count ? `${count} parcela(s) futura(s) atualizada(s)` : "Nenhuma parcela futura pendente");
+        } catch (e: any) {
+            showToast(e?.message ?? "Erro ao atualizar a série", "err");
+        } finally {
+            setSeriesBusy(false);
+            setSeriesEdit(null);
+        }
     }
 
     // ── Marcar como pago + lançar no cashflow ──────────────────────────────────
@@ -1191,6 +1345,26 @@ export default function ContasPagarPage() {
     }
 
     // ── Excluir conta ──────────────────────────────────────────────────────────
+    // Clique na lixeira: parcela de série abre o diálogo de escopo; o resto vai
+    // direto pro modal de confirmação.
+    function onDeleteRequested(bill: Bill) {
+        if (bill.seriesId) setSeriesDelete(bill);
+        else { setDeleteScope("one"); setConfirmId(bill.id); }
+    }
+
+    async function startSeriesDelete(bill: Bill, scope: SeriesScope) {
+        if (!uid) return;
+        const pinHash = await loadPinHash(authUid ?? uid);
+        if (!pinHash) {
+            showToast("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.", "err");
+            return;
+        }
+        setDeleteScope(scope);
+        setConfirmId(bill.id);
+        setSeriesDelete(null);
+        setDeletePinOpen(true);
+    }
+
     async function handleDeleteClick() {
         if (!confirmId || !uid || deleting) return;
         const pinHash = await loadPinHash(authUid ?? uid);
@@ -1208,16 +1382,41 @@ export default function ContasPagarPage() {
             setDeletePinOpen(false);
             setDeleting(true);
             try {
-                const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
+                const [{ getFirebase }, { doc, deleteDoc, collection, query, where, getDocs, writeBatch }] = await Promise.all([
                     import("@/lib/firebase"),
                     import("firebase/firestore"),
                 ]);
                 const { db } = await getFirebase();
-                // Remove a saída espelho no Fluxo de Caixa (se a conta estava paga).
-                await syncBillCashflow(db, uid, { id: confirmId, title: "", amount: 0, dueDate: "", category: "", status: "removido" });
-                await deleteDoc(doc(db, "users", uid, "bills", confirmId));
+
+                const target = bills.find((b) => b.id === confirmId);
+
+                // ── Série: "esta e as próximas não pagas" ──
+                if (deleteScope === "forward" && target?.seriesId) {
+                    const snap = await getDocs(
+                        query(collection(db, "users", uid, "bills"), where("seriesId", "==", target.seriesId))
+                    );
+                    const alvo = snap.docs.filter((d) => {
+                        const b = d.data() as Bill;
+                        return (b.installmentIndex ?? 0) >= (target.installmentIndex ?? 0) && b.status !== "pago";
+                    });
+                    const batch = writeBatch(db);
+                    alvo.forEach((d) => batch.delete(d.ref));
+                    await batch.commit();
+                    await Promise.all(
+                        alvo.map((d) =>
+                            syncBillCashflow(db, uid, { id: d.id, title: "", amount: 0, dueDate: "", category: "", status: "removido" })
+                        )
+                    );
+                    showToast(`${alvo.length} parcela(s) removida(s).`);
+                } else {
+                    // ── Conta única ou "só esta parcela" ──
+                    await syncBillCashflow(db, uid, { id: confirmId, title: "", amount: 0, dueDate: "", category: "", status: "removido" });
+                    await deleteDoc(doc(db, "users", uid, "bills", confirmId));
+                    showToast("Conta removida.");
+                }
+
                 setConfirmId(null);
-                showToast("Conta removida.");
+                setDeleteScope("one");
             } catch (e: any) {
                 showToast(e.message, "err");
             } finally {
@@ -1342,8 +1541,37 @@ export default function ContasPagarPage() {
                 onConfirm={(paidAt, method) => handlePay(payBill!, paidAt, method)}
             />
 
-            {/* Confirm delete */}
-            {confirmId && (
+            {/* Escopo de exclusão de série (parcela) */}
+            <SeriesScopeDialog
+                open={!!seriesDelete}
+                title="Excluir parcela"
+                message={
+                    seriesDelete
+                        ? `"${seriesDelete.title}" — parcela ${seriesDelete.installmentIndex}/${seriesDelete.installmentCount}. Parcelas já pagas nunca são removidas.`
+                        : ""
+                }
+                actionLabel="Excluir"
+                onPick={(scope) => seriesDelete && startSeriesDelete(seriesDelete, scope)}
+                onCancel={() => setSeriesDelete(null)}
+            />
+
+            {/* Escopo de edição de série (parcela) */}
+            <SeriesScopeDialog
+                open={!!seriesEdit}
+                title="Aplicar em quais parcelas?"
+                message={
+                    seriesEdit
+                        ? `Você editou a parcela ${seriesEdit.base.installmentIndex}/${seriesEdit.base.installmentCount} de "${seriesEdit.base.title}".`
+                        : ""
+                }
+                actionLabel="Salvando"
+                loading={seriesBusy}
+                onPick={applySeriesEdit}
+                onCancel={() => setSeriesEdit(null)}
+            />
+
+            {/* Confirm delete (conta única — série já confirmou no diálogo de escopo) */}
+            {confirmId && !deletePinOpen && (
                 <div className="fixed inset-0 z-[990] flex items-center justify-center p-4"
                     style={{ background: "rgba(13,17,23,0.5)", backdropFilter: "blur(8px)" }}>
                     <div className="cf-card p-6 w-full max-w-xs text-center"
@@ -1378,7 +1606,7 @@ export default function ContasPagarPage() {
                 open={deletePinOpen}
                 title="Confirmar exclusão"
                 subtitle="Digite seu PIN de 4 dígitos para excluir"
-                onClose={() => setDeletePinOpen(false)}
+                onClose={() => { setDeletePinOpen(false); setConfirmId(null); setDeleteScope("one"); }}
                 onSuccess={handleDeleteConfirm}
             />
 
@@ -1540,7 +1768,7 @@ export default function ContasPagarPage() {
                                             bill={bill}
                                             alertDays={alertDays}
                                             onEdit={() => { setEditing(bill); setModal(true); }}
-                                            onDelete={() => setConfirmId(bill.id)}
+                                            onDelete={() => onDeleteRequested(bill)}
                                             onOpenPayModal={() => setPayBill(bill)}
                                         />
                                     ))}
