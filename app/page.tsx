@@ -22,6 +22,19 @@ import {
 } from "lucide-react";
 import Footer from "./components/Footer";
 import Link from "next/link";
+import { BILLING_PLANS, formatBRLFromCents } from "@/lib/billingPlans";
+
+// Benefícios exibidos nos dois cards de plano (mesmo produto, o que muda é o
+// período de cobrança).
+const PLAN_FEATURES = [
+  "Fluxo de caixa em tempo real",
+  "Contas a pagar e receber",
+  "Relatórios automáticos (DRE)",
+  "Centro de custos ilimitado",
+  "Integração Mercado Livre e Shopee",
+  "Multi-usuário com permissões",
+  "Suporte prioritário",
+];
 
 const stats = [
   { label: "Empresas atendidas", value: "12.4K", change: "+18.2%", up: true },
@@ -593,80 +606,70 @@ export default function FinanceHome() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
-            {/* Essencial */}
-            <div className="relative bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col">
-              <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100/40 flex items-center justify-center mb-5">
-                <Zap size={20} className="text-blue-600" />
-              </div>
-              <h3 className="text-blue-950 text-xl font-bold mb-1">Essencial</h3>
-              <p className="text-slate-400 text-sm mb-5">Para pequenas empresas e MEIs</p>
-              <div className="mb-2">
-                <span className="text-blue-950 text-4xl font-extrabold">R$ 49,90</span>
-                <span className="text-slate-400 text-sm font-medium">/mês</span>
-              </div>
-              <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
-                7 dias grátis para testar
-              </p>
-              <ul className="space-y-3 mb-8 flex-1">
-                {[
-                  "Fluxo de caixa básico",
-                  "Contas a pagar e receber",
-                  "Até 2 usuários",
-                  "Relatórios mensais",
-                  "Suporte por e-mail",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-2.5 text-slate-600 text-sm">
-                    <CheckCircle size={15} className="text-green-500 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full py-3 rounded-xl border border-blue-200 text-blue-600 font-semibold text-sm hover:bg-blue-50 transition-colors cursor-pointer">
-                Testar grátis por 7 dias
-              </button>
-            </div>
-
-            {/* Profissional — Destaque */}
-            <div className="relative bg-white rounded-2xl p-8 border-2 border-blue-500 shadow-lg shadow-blue-500/10 hover:shadow-xl hover:shadow-blue-500/15 hover:-translate-y-1 transition-all duration-300 flex flex-col z-10">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="bg-linear-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
-                  Mais popular
-                </span>
-              </div>
-              <div className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center mb-5">
-                <BarChart2 size={20} className="text-white" />
-              </div>
-              <h3 className="text-blue-950 text-xl font-bold mb-1">Profissional</h3>
-              <p className="text-slate-400 text-sm mb-5">Para empresas em crescimento</p>
-              <div className="mb-2">
-                <span className="text-blue-950 text-4xl font-extrabold">R$ 69,90</span>
-                <span className="text-slate-400 text-sm font-medium">/mês</span>
-              </div>
-              <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
-                7 dias grátis para testar
-              </p>
-              <ul className="space-y-3 mb-8 flex-1">
-                {[
-                  "Tudo do plano Essencial",
-                  "Fluxo de caixa em tempo real",
-                  "Centro de custos ilimitado",
-                  "Até 10 usuários",
-                  "Relatórios automáticos (DRE)",
-                  "Integração com contabilidade",
-                  "Suporte prioritário",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-2.5 text-slate-600 text-sm">
-                    <CheckCircle size={15} className="text-green-500 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full py-3 rounded-xl bg-linear-to-r from-blue-600 to-blue-500 text-white font-semibold text-sm hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all cursor-pointer">
-                Testar grátis por 7 dias
-              </button>
-            </div>
+            {BILLING_PLANS.map((plan, i) => {
+              const destaque = i === BILLING_PLANS.length - 1; // Anual em destaque
+              const periodo = plan.months === 12 ? "/ano" : plan.months === 1 ? "/mês" : `/${plan.months} meses`;
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative bg-white rounded-2xl p-8 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
+                    destaque
+                      ? "border-2 border-blue-500 shadow-lg shadow-blue-500/10 hover:shadow-xl hover:shadow-blue-500/15 z-10"
+                      : "border border-slate-200 shadow-sm hover:shadow-md"
+                  }`}
+                >
+                  {destaque && plan.badge && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <span className="bg-linear-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
+                        {plan.badge}
+                      </span>
+                    </div>
+                  )}
+                  <div
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center mb-5 ${
+                      destaque ? "bg-blue-600" : "bg-blue-50 border border-blue-100/40"
+                    }`}
+                  >
+                    {destaque ? (
+                      <BarChart2 size={20} className="text-white" />
+                    ) : (
+                      <Zap size={20} className="text-blue-600" />
+                    )}
+                  </div>
+                  <h3 className="text-blue-950 text-xl font-bold mb-1">Plano {plan.label}</h3>
+                  <p className="text-slate-400 text-sm mb-5">{plan.description}</p>
+                  <div className="mb-2">
+                    <span className="text-blue-950 text-4xl font-extrabold">
+                      {formatBRLFromCents(plan.priceCents)}
+                    </span>
+                    <span className="text-slate-400 text-sm font-medium">{periodo}</span>
+                  </div>
+                  <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
+                    7 dias grátis para testar
+                  </p>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {PLAN_FEATURES.map((item) => (
+                      <li key={item} className="flex items-center gap-2.5 text-slate-600 text-sm">
+                        <CheckCircle size={15} className="text-green-500 shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={`/register?plano=${plan.id}`} className="w-full">
+                    <button
+                      className={`w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
+                        destaque
+                          ? "bg-linear-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg"
+                          : "border border-blue-200 text-blue-600 hover:bg-blue-50"
+                      }`}
+                    >
+                      Assinar plano {plan.label}
+                    </button>
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

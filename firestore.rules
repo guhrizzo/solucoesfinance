@@ -55,9 +55,24 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // profile/billing — assinatura da conta. Igual a `access`: a conta LÊ
+      // (pra saber se está liberada) mas NUNCA escreve pelo client — só o
+      // Admin SDK (rotas /api/billing/* e o webhook da InfinitePay).
+      match /profile/billing {
+        allow read: if inAccount(userId);
+        allow write: if false;
+      }
+
       // profile/pin, profile/onboarding — dono e membros da conta.
       match /profile/{doc} {
-        allow read, write: if doc != 'access' && inAccount(userId);
+        allow read, write: if doc != 'access' && doc != 'billing' && inAccount(userId);
+      }
+
+      // Histórico de pagamentos (idempotência do webhook) — leitura pela
+      // conta, escrita só pelo Admin SDK.
+      match /billingEvents/{eventId} {
+        allow read: if inAccount(userId);
+        allow write: if false;
       }
 
       // Espelho da equipe — só o dono lê/escreve (membros não gerenciam
@@ -70,6 +85,7 @@ service cloud.firestore {
       match /{collection}/{document=**} {
         allow read, write: if collection != 'profile'
           && collection != 'team'
+          && collection != 'billingEvents'
           && inAccount(userId);
       }
     }

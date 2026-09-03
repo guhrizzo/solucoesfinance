@@ -26,7 +26,12 @@ export function useAuth() {
         setLoading(false);
 
         const isPublic = PUBLIC_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
-        if (!u && !isPublic) router.replace("/login");
+        if (!u && !isPublic) {
+          // Preserva a intenção de assinar (?plano= / ?checkout=) até o login.
+          const q = new URLSearchParams(window.location.search);
+          const plano = q.get("plano") || q.get("checkout");
+          router.replace(plano ? `/login?plano=${encodeURIComponent(plano)}` : "/login");
+        }
         if (u && (pathname === "/login" || pathname === "/register")) router.replace("/dashboard");
       });
     })();
