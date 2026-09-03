@@ -7,6 +7,7 @@ import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { getPlan } from "@/lib/billingPlans";
 import { createCheckoutLink, buildOrderNsu, infinitepayConfigured } from "@/lib/infinitepay";
+import { isCompedEmail } from "@/lib/compAccounts";
 
 // POST /api/billing/checkout   body: { plan: "mensal" | "anual" }
 //
@@ -28,6 +29,19 @@ export async function POST(request: Request) {
       { error: "Apenas o titular da conta pode contratar ou renovar a assinatura." },
       { status: 403 }
     );
+  }
+
+  // Conta cortesia (adm supremo): nunca é cobrada — não gera checkout.
+  try {
+    const rec = await (await getAdminAuth()).getUser(scope.ownerUid);
+    if (isCompedEmail(rec.email)) {
+      return NextResponse.json(
+        { error: "Sua conta é cortesia e tem acesso liberado — não é necessário assinar." },
+        { status: 409 }
+      );
+    }
+  } catch {
+    /* sem e-mail → segue o fluxo normal de cobrança */
   }
 
   if (!infinitepayConfigured()) {

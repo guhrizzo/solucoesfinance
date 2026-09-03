@@ -8,6 +8,7 @@
 // `currentPeriodEnd`. `isActive` = agora < max(trialEndsAt, currentPeriodEnd).
 
 import { TRIAL_DAYS, type PlanId } from "./billingPlans";
+import { COMP_ACCESS_UNTIL } from "./compAccounts";
 
 export interface BillingDoc {
   /** Fim do período de trial (ms epoch). Definido na criação da conta. */
@@ -20,6 +21,11 @@ export interface BillingDoc {
   lastPaidAt: number | null;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Conta "cortesia" (adm supremo): acesso vitalício, nunca cobrada.
+   * Marcado pelo servidor quando o dono está em lib/compAccounts.
+   */
+  comped?: boolean;
 }
 
 export type BillingStatus = "trialing" | "active" | "past_due";
@@ -33,6 +39,8 @@ export interface SubscriptionState {
   daysLeft: number;
   plan: PlanId | null;
   inTrial: boolean;
+  /** true = conta cortesia (adm supremo): sempre ativa, nunca cobrada. */
+  comped: boolean;
 }
 
 export function trialEndFrom(startMs: number): number {
@@ -65,6 +73,19 @@ export function resolveSubscriptionState(
   doc: Partial<BillingDoc> | null | undefined,
   nowMs = Date.now()
 ): SubscriptionState {
+  // Conta cortesia (adm supremo): acesso vitalício, sem trial e sem cobrança.
+  if (doc?.comped) {
+    return {
+      status: "active",
+      isActive: true,
+      accessUntil: COMP_ACCESS_UNTIL,
+      daysLeft: Math.ceil((COMP_ACCESS_UNTIL - nowMs) / (24 * 60 * 60 * 1000)),
+      plan: (doc?.plan as PlanId) || null,
+      inTrial: false,
+      comped: true,
+    };
+  }
+
   const trialEndsAt = Number(doc?.trialEndsAt) || 0;
   const currentPeriodEnd = Number(doc?.currentPeriodEnd) || 0;
   const accessUntil = Math.max(trialEndsAt, currentPeriodEnd);
@@ -81,5 +102,6 @@ export function resolveSubscriptionState(
     daysLeft,
     plan: (doc?.plan as PlanId) || null,
     inTrial,
+    comped: false,
   };
 }

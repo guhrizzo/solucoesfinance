@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { resolveSubscriptionState, type SubscriptionState } from "@/lib/billing";
+import { isCompedEmail } from "@/lib/compAccounts";
 
 // Estado ao vivo da assinatura da CONTA (o dono — membros herdam).
 //
@@ -27,6 +28,7 @@ const INITIAL: State = {
   daysLeft: 0,
   plan: null,
   inTrial: true,
+  comped: false,
 };
 
 export function useSubscription(): State {
@@ -52,6 +54,20 @@ export function useSubscription(): State {
           unsubDoc?.();
           if (!u) {
             if (!cancelled) setState({ ...INITIAL, loading: false, signedOut: true });
+            return;
+          }
+
+          // Conta cortesia (adm supremo): libera na hora, sem trial/paywall.
+          // Não depende do doc de billing nem de ser dono ou membro.
+          if (isCompedEmail(u.email)) {
+            if (!cancelled) {
+              setState({
+                ...resolveSubscriptionState({ comped: true }),
+                loading: false,
+                isOwner: true,
+                signedOut: false,
+              });
+            }
             return;
           }
 

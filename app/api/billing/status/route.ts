@@ -2,9 +2,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { freshBillingDoc, resolveSubscriptionState, type BillingDoc } from "@/lib/billing";
+import { isCompedEmail } from "@/lib/compAccounts";
 
 // GET /api/billing/status
 //
@@ -35,6 +36,22 @@ export async function GET(request: Request) {
       await ref.set(doc);
     } else {
       doc = snap.data() as BillingDoc;
+    }
+
+    // Conta cortesia (adm supremo): se o DONO está na allowlist e o doc ainda
+    // não foi marcado, marca agora. O client destrava via onSnapshot.
+    if (!doc.comped) {
+      let ownerEmail: string | null = null;
+      try {
+        ownerEmail = (await (await getAdminAuth()).getUser(ownerUid)).email ?? null;
+      } catch {
+        /* sem e-mail → trata como conta normal */
+      }
+      if (isCompedEmail(ownerEmail)) {
+        const now = Date.now();
+        await ref.set({ comped: true, updatedAt: now }, { merge: true });
+        doc = { ...doc, comped: true, updatedAt: now };
+      }
     }
 
     const state = resolveSubscriptionState(doc);

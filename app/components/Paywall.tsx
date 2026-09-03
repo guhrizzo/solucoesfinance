@@ -40,8 +40,9 @@ export default function Paywall({ state, blocking = false, initialError = null }
     window.location.href = "/login";
   };
 
-  const titulo =
-    state.status === "past_due"
+  const titulo = state.comped
+    ? "Acesso cortesia"
+    : state.status === "past_due"
       ? blocking
         ? "Seu acesso expirou"
         : "Renovar assinatura"
@@ -49,8 +50,9 @@ export default function Paywall({ state, blocking = false, initialError = null }
         ? `Teste grátis — ${state.daysLeft} ${state.daysLeft === 1 ? "dia restante" : "dias restantes"}`
         : "Sua assinatura está ativa";
 
-  const subtitulo =
-    state.status === "past_due"
+  const subtitulo = state.comped
+    ? "Sua conta tem acesso completo e ilimitado, sem cobrança. Nada a pagar."
+    : state.status === "past_due"
       ? state.isOwner
         ? "Escolha um plano pra continuar usando o NexusFi. Pagamento via Pix ou cartão em até 12x."
         : "A assinatura desta conta está pendente. Fale com o titular pra regularizar o pagamento."
@@ -60,7 +62,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
           : "Conta em período de teste. O titular pode assinar a qualquer momento."
         : `Plano ${state.plan ?? ""} · acesso até ${new Date(state.accessUntil).toLocaleDateString("pt-BR")}.`;
 
-  const mostrarPlanos = state.isOwner && state.status !== "active";
+  const mostrarPlanos = state.isOwner && state.status !== "active" && !state.comped;
 
   return (
     <div
