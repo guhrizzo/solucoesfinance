@@ -3,7 +3,7 @@
 // app/login/page.tsx
 export const dynamic = "force-dynamic"; // nunca faz prerender
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Eye, EyeOff, ArrowRight,
   Shield, TrendingUp, Lock, Mail, AlertCircle, Link2,
@@ -82,8 +82,24 @@ export default function LoginPage() {
   // Credencial do Google que ficou pendente de vínculo porque já existe
   // conta com senha para esse e-mail (evita criar um 2º usuário).
   const [pendingGoogleLink, setPendingGoogleLink] = useState<PendingGoogleLink | null>(null);
+  // ?plano= (veio da landing) — propaga pro link de cadastro.
+  const [planoParam, setPlanoParam] = useState("");
+  useEffect(() => {
+    setPlanoParam(new URLSearchParams(window.location.search).get("plano") || "");
+  }, []);
+  const registerHref = planoParam ? `/register?plano=${encodeURIComponent(planoParam)}` : "/register";
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+
+  // ?plano=mensal|anual (veio da landing) → depois do login vai pro checkout
+  // via /assinatura (que ignora se a assinatura já estiver ativa).
+  const goAfterLogin = () => {
+    const plano =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("plano")
+        : null;
+    router.push(plano ? `/assinatura?checkout=${encodeURIComponent(plano)}` : "/dashboard");
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -99,7 +115,7 @@ export default function LoginPage() {
         setPendingGoogleLink(null);
       }
 
-      router.push("/dashboard");
+      goAfterLogin();
     } catch (err: any) {
       setError(getErrorMessage(err.code, err.message));
     } finally {
@@ -112,7 +128,7 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
       await loginWithGoogle();
-      router.push("/dashboard");
+      goAfterLogin();
     } catch (err: any) {
       const pending = await extractPendingGoogleLink(err);
       if (pending) {
@@ -430,7 +446,7 @@ export default function LoginPage() {
 
           <p className="fade-in-4 text-center text-slate-400 text-sm mt-8">
             Ainda não tem conta?{" "}
-            <a href="/register" className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
+            <a href={registerHref} className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
               Testar 7 dias grátis
             </a>
           </p>

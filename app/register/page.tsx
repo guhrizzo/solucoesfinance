@@ -3,7 +3,7 @@
 // app/register/page.tsx
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Eye, EyeOff,
   ArrowRight,
@@ -65,10 +65,26 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  // ?plano= escolhido na landing — carregado pro link de login também.
+  const [planoParam, setPlanoParam] = useState("");
+  useEffect(() => {
+    setPlanoParam(new URLSearchParams(window.location.search).get("plano") || "");
+  }, []);
+  const loginHref = planoParam ? `/login?plano=${encodeURIComponent(planoParam)}` : "/login";
 
   const passOk = passwordRules.every((r) => r.test(password));
   const confirmOk = password === confirm && confirm.length > 0;
   const formOk = name.trim() && email && passOk && confirmOk && agreed;
+
+  // Se veio da landing com um plano escolhido (?plano=mensal|anual), manda pro
+  // checkout logo após criar a conta; senão, direto pro dashboard (trial).
+  const goAfterSignup = () => {
+    const plano =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("plano")
+        : null;
+    router.push(plano ? `/assinatura?checkout=${encodeURIComponent(plano)}` : "/dashboard");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +93,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await registerWithEmail(name.trim(), email, password);
-      router.push("/dashboard");
+      goAfterSignup();
     } catch (err: any) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -90,7 +106,7 @@ export default function RegisterPage() {
     setGoogleLoading(true);
     try {
       await registerWithGoogle();
-      router.push("/dashboard");
+      goAfterSignup();
     } catch (err: any) {
       const pending = await extractPendingGoogleLink(err);
       if (pending) {
@@ -383,7 +399,7 @@ export default function RegisterPage() {
             </h1>
             <p className="text-slate-400 text-sm">
               Já tem conta?{" "}
-              <a href="/login" className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
+              <a href={loginHref} className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
                 Fazer login
               </a>
             </p>
