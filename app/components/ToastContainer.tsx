@@ -12,22 +12,22 @@ interface ToastContainerProps {
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   const typeConfig = {
     success: {
-      bg: "linear-gradient(135deg, #10b981, #059669)",
+      bg: "linear-gradient(135deg, var(--pos), var(--pos))",
       icon: CheckCircle,
       border: "border-green-600",
     },
     error: {
-      bg: "linear-gradient(135deg, #ef4444, #dc2626)",
+      bg: "linear-gradient(135deg, var(--neg), var(--neg))",
       icon: AlertCircle,
       border: "border-red-600",
     },
     warning: {
-      bg: "linear-gradient(135deg, #f59e0b, #d97706)",
+      bg: "linear-gradient(135deg, var(--warn), var(--warn))",
       icon: AlertTriangle,
       border: "border-amber-600",
     },
     info: {
-      bg: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+      bg: "linear-gradient(135deg, var(--brand), var(--brand))",
       icon: Info,
       border: "border-blue-600",
     },

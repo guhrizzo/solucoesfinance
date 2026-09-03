@@ -823,7 +823,7 @@ function Kpi({ label, value, hint, icon, tone }: {
   const toneMap = {
     success: { bg: "rgba(16,185,129,0.1)", fg: "var(--success)" },
     primary: { bg: "rgba(21,101,192,0.1)", fg: "var(--primary)" },
-    purple: { bg: "rgba(139,92,246,0.12)", fg: "#8b5cf6" },
+    purple: { bg: "var(--brand-weak)", fg: "var(--brand)" },
     amber: { bg: "rgba(245,158,11,0.12)", fg: "var(--warning)" },
   }[tone];
   return (

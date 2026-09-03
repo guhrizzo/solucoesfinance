@@ -226,7 +226,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
 
             {/* Formulário de novo cadastro */}
             <div className="rounded-xl p-3 space-y-3" style={{ border: "1px solid var(--cf-border)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                     Novo {noun.one}
                 </p>
                 <div className="space-y-2">
@@ -263,7 +263,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                     className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canAdd ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                     style={canAdd
                         ? { background: accent, color: "white" }
-                        : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                     {busy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
                     Adicionar {noun.one}
                 </button>
@@ -272,7 +272,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
             {/* Busca (só quando a lista cresce) */}
             {items.length > 4 && (
                 <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text3)" }} />
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-3)" }} />
                     <input
                         value={q}
                         onChange={e => setQ(e.target.value)}
@@ -285,16 +285,16 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
 
             {/* Lista */}
             <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                     {noun.many} — {items.length}
                 </p>
 
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
-                        <Loader2 size={18} className="animate-spin" style={{ color: "var(--cf-text3)" }} />
+                        <Loader2 size={18} className="animate-spin" style={{ color: "var(--cf-text-3)" }} />
                     </div>
                 ) : filtered.length === 0 ? (
-                    <p className="text-xs py-6 text-center" style={{ color: "var(--cf-text3)" }}>
+                    <p className="text-xs py-6 text-center" style={{ color: "var(--cf-text-3)" }}>
                         {items.length === 0
                             ? `Nenhum ${noun.one} cadastrado ainda.`
                             : "Nenhum resultado para a busca."}
@@ -314,7 +314,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{c.name}</p>
-                                        <p className="text-xs font-mono truncate" style={{ color: "var(--cf-text3)" }}>{formatDoc(c.doc)}</p>
+                                        <p className="text-xs font-mono truncate" style={{ color: "var(--cf-text-3)" }}>{formatDoc(c.doc)}</p>
                                     </div>
 
                                     {confirmDel === c.id ? (
@@ -326,7 +326,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                             </button>
                                             <button onClick={() => setConfirmDel(null)}
                                                 className="p-1.5 rounded-lg cursor-pointer"
-                                                style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                                                style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                                                 <X size={13} />
                                             </button>
                                         </div>
@@ -341,7 +341,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                             )}
                                             <button onClick={() => setConfirmDel(c.id)}
                                                 className="p-1.5 rounded-lg cursor-pointer"
-                                                style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                                                style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                                                 <Trash2 size={13} />
                                             </button>
                                         </div>
@@ -395,7 +395,7 @@ export function CadastroField({ uid, kind, accent, label, placeholder, title, pa
 
     return (
         <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>{label}</label>
+            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{label}</label>
 
             <select
                 value={selectValue}

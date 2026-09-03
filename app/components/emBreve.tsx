@@ -80,16 +80,16 @@ export default function ComingSoon() {
         {/* animated icon */}
         <div className="w-16 h-16 rounded-[20px] bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-6">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <rect x="2" y="2" width="10" height="10" rx="3" fill="#bfdbfe">
+            <rect x="2" y="2" width="10" height="10" rx="3" fill="var(--brand-weak)">
               <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" begin="0s" repeatCount="indefinite"/>
             </rect>
-            <rect x="16" y="2" width="10" height="10" rx="3" fill="#93c5fd">
+            <rect x="16" y="2" width="10" height="10" rx="3" fill="var(--brand-weak)">
               <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" begin="0.4s" repeatCount="indefinite"/>
             </rect>
-            <rect x="16" y="16" width="10" height="10" rx="3" fill="#1d4ed8">
+            <rect x="16" y="16" width="10" height="10" rx="3" fill="var(--brand)">
               <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" begin="0.8s" repeatCount="indefinite"/>
             </rect>
-            <rect x="2" y="16" width="10" height="10" rx="3" fill="#93c5fd">
+            <rect x="2" y="16" width="10" height="10" rx="3" fill="var(--brand-weak)">
               <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" begin="1.2s" repeatCount="indefinite"/>
             </rect>
           </svg>

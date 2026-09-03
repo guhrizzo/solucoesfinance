@@ -49,7 +49,7 @@ export function AuditTrail({ record, settleLabel = "Baixa" }: {
             {rows.map((r, i) => {
                 const Icon = r.icon;
                 return (
-                    <p key={i} className="flex items-center gap-1.5 text-[11px] leading-tight" style={{ color: "var(--cf-text3)" }}>
+                    <p key={i} className="flex items-center gap-1.5 text-[11px] leading-tight" style={{ color: "var(--cf-text-3)" }}>
                         <Icon size={11} className="shrink-0" /> {r.text}
                     </p>
                 );

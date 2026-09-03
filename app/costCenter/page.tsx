@@ -168,10 +168,10 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Transporte": "#06b6d4",
   "Hospedagem": "#ec4899",
   "Comunicação": "#8b5cf6",
-  "Equipamentos": "#10b981",
+  "Equipamentos": "var(--pos)",
   "Consultoria": "#3b82f6",
-  "Treinamento": "#f59e0b",
-  "Marketing": "#ef4444",
+  "Treinamento": "var(--warn)",
+  "Marketing": "var(--neg)",
   "Utilities": "#6366f1",
   "Manutenção": "#14b8a6",
   "Outros": "#6b7280",
@@ -181,10 +181,10 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Aluguel do ponto": "#a855f7",
   "Folha de pagamento": "#22c55e",
   "Embalagens": "#f472b6",
-  "Impostos": "#dc2626",
+  "Impostos": "var(--neg)",
   "TI / Software": "#6366f1",
   "Plataforma / Marketplace": "#8b5cf6",
-  "Marketing digital": "#ef4444",
+  "Marketing digital": "var(--neg)",
   "Devoluções": "#fb923c",
   // Indústria
   "Matéria-prima": "#92400e",
@@ -194,7 +194,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Logística": "#38bdf8",
   "Segurança do trabalho": "#f43f5e",
   // Serviço
-  "Ferramentas e equipamentos": "#10b981",
+  "Ferramentas e equipamentos": "var(--pos)",
   "Deslocamento": "#0284c7",
 };
 
@@ -302,13 +302,13 @@ function ConfirmModal({
             disabled={loading}
             className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
           >
-            <X size={16} style={{ color: "var(--db-text2)" }} />
+            <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
         </div>
 
         {/* Body */}
         <div className="p-5">
-          <p className="text-sm" style={{ color: "var(--db-text2)" }}>
+          <p className="text-sm" style={{ color: "var(--db-text-2)" }}>
             {message}
           </p>
         </div>
@@ -320,7 +320,7 @@ function ConfirmModal({
             onClick={onCancel}
             disabled={loading}
             className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-50"
-            style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}
+            style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}
           >
             {cancelText}
           </button>
@@ -437,7 +437,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer">
-            <X size={16} style={{ color: "var(--db-text2)" }} />
+            <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
         </div>
 
@@ -452,8 +452,8 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 
           {/* Descrição */}
           <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
-              Descrição <span style={{ color: "var(--db-text3)" }}>(opcional)</span>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
+              Descrição <span style={{ color: "var(--db-text-3)" }}>(opcional)</span>
             </label>
             <input type="text" value={description} onChange={e => setDescription(e.target.value)}
               placeholder="Ex: Almoço com cliente"
@@ -463,7 +463,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 
           {/* Categoria */}
           <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
               Categoria <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             <select value={category} onChange={e => setCategory(e.target.value)} required
@@ -482,12 +482,12 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 
           {/* Centro de custo */}
           <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
               Centro de custo <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             {centers.length === 0 ? (
               <p className="text-xs px-3 py-2.5 rounded-xl"
-                style={{ background: "var(--db-sub)", border: "1px solid var(--db-border)", color: "var(--db-text3)" }}>
+                style={{ background: "var(--db-sub)", border: "1px solid var(--db-border)", color: "var(--db-text-3)" }}>
                 Crie um centro de custo primeiro.
               </p>
             ) : (
@@ -503,7 +503,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
                 Valor (R$) <span style={{ color: "var(--danger)" }}>*</span>
               </label>
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
@@ -512,7 +512,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
             </div>
             <div>
-              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
                 Data <span style={{ color: "var(--danger)" }}>*</span>
               </label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} required
@@ -523,7 +523,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 
           {/* Status */}
           <div>
-            <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text2)" }}>
+            <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text-2)" }}>
               Status <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -534,9 +534,9 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
                     ? s === "pago"
                       ? { background: "var(--entrada-bg)", borderColor: "var(--entrada-border)", color: "var(--entrada-text)" }
                       : s === "pendente"
-                        ? { background: "#fef9c3", borderColor: "#fde047", color: "#b45309" }
-                        : { background: "#dbeafe", borderColor: "#93c5fd", color: "#1d4ed8" }
-                    : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text2)" }
+                        ? { background: "var(--warn-weak)", borderColor: "#fde047", color: "var(--warn)" }
+                        : { background: "var(--brand-weak)", borderColor: "var(--brand-weak)", color: "var(--brand)" }
+                    : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text-2)" }
                   }>
                   {s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
@@ -553,7 +553,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose}
               className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
-              style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
+              style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
               Cancelar
             </button>
             <button type="submit" disabled={!canSave || saving || centers.length === 0}
@@ -873,30 +873,6 @@ export default function CostCenterPage() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-        *, body { font-family: 'Sora', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        * { transition: background-color .2s, border-color .2s, color .15s; }
-        button, a, input, select { transition: background-color .15s, border-color .15s, color .1s, opacity .15s !important; }
-        .kpi-card { background:var(--db-card); border:1px solid var(--db-border); box-shadow:0 1px 3px rgba(13,34,71,0.06),0 4px 16px rgba(13,34,71,0.04); animation:slideUp 0.5s ease both; }
-        .chart-card { background:var(--db-card); border:1px solid var(--db-border); box-shadow:0 1px 3px rgba(13,34,71,0.06),0 4px 16px rgba(13,34,71,0.04); border-radius:1rem; animation:slideUp 0.5s 0.2s ease both; }
-        @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes cpDropIn { from{opacity:0;transform:translateY(-6px) scale(0.97)} to{opacity:1;transform:none} }
-        .expense-row { transition:background 0.15s; border-bottom:1px solid var(--db-border); }
-        .expense-row:last-child { border-bottom:none; }
-        .expense-row:hover { background:var(--db-hover); }
-        .badge-pago     { background:var(--entrada-bg); color:var(--entrada-text); }
-        .badge-pendente { background:#fef9c3; color:#b45309; }
-        .badge-agendado { background:#dbeafe; color:#1d4ed8; }
-        .cf-badge { background:rgba(16,185,129,0.12); color:var(--success); font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; }
-        .atbl th { font-size:11px; font-weight:600; color:var(--db-text); padding:8px 12px; text-align:left; border-bottom:1px solid var(--db-border); white-space:nowrap; }
-        .atbl td { font-size:12px; padding:10px 12px; border-bottom:1px solid var(--db-border); }
-        .atbl tr:last-child td { border-bottom:none; }
-        .atbl tr:hover td { background:var(--db-hover); }
-        ::-webkit-scrollbar { width:4px; }
-        ::-webkit-scrollbar-thumb { background:var(--db-border); border-radius:4px; }
-      `}</style>
 
       {/* Toast */}
       {toast && (
@@ -953,7 +929,7 @@ export default function CostCenterPage() {
             return (
               <div key={kpi.label} className="kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3" style={{ animationDelay: `${i * 80}ms` }}>
                 <div className="flex items-start justify-between">
-                  <p className="text-xs font-medium" style={{ color: "var(--db-text2)" }}>{kpi.label}</p>
+                  <p className="text-xs font-medium" style={{ color: "var(--db-text-2)" }}>{kpi.label}</p>
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
                     <kpi.icon size={16} style={{ color: c.text }} />
                   </div>
@@ -964,7 +940,7 @@ export default function CostCenterPage() {
                     <span className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: c.bg, color: c.text }}>
                       {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}{kpi.change}
                     </span>
-                    <span className="text-xs" style={{ color: "var(--db-text2)" }}>{kpi.sub}</span>
+                    <span className="text-xs" style={{ color: "var(--db-text-2)" }}>{kpi.sub}</span>
                   </div>
                 </div>
               </div>
@@ -977,11 +953,11 @@ export default function CostCenterPage() {
           <div className="flex items-start md:items-center justify-between mb-3 gap-2 flex-wrap">
             <div>
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centros de custo</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>Com detalhamento por categoria</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Com detalhamento por categoria</p>
             </div>
             <div className="flex items-center gap-2">
               {/* O mês em foco vem do seletor global na Navbar (‹ {period} ›). */}
-              <span className="text-xs font-semibold px-2.5 py-1.5 rounded-lg" style={{ background: "var(--db-sub)", color: "var(--db-text2)" }}>
+              <span className="text-xs font-semibold px-2.5 py-1.5 rounded-lg" style={{ background: "var(--db-sub)", color: "var(--db-text-2)" }}>
                 {period}
               </span>
               <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
@@ -994,8 +970,8 @@ export default function CostCenterPage() {
 
           {costCenters.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <BarChart2 size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.4 }} />
-              <p style={{ color: "var(--db-text2)" }}>Nenhum centro de custo criado</p>
+              <BarChart2 size={32} style={{ color: "var(--db-text-2)", marginBottom: "1rem", opacity: 0.4 }} />
+              <p style={{ color: "var(--db-text-2)" }}>Nenhum centro de custo criado</p>
               <button onClick={() => setShowCenterModal(true)} className="mt-3 text-xs font-semibold cursor-pointer transition-colors"
                 style={{ color: "var(--primary)" }}>
                 Criar primeiro centro
@@ -1040,7 +1016,7 @@ export default function CostCenterPage() {
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ background: center.color }} />
                           <div className="text-left min-w-0 flex-1">
                             <p className="text-xs font-bold" style={{ color: "var(--db-text)" }}>{center.name}</p>
-                            <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>Criado em {formatFullDate(center.createdAt)} • {(center.categories || []).length} categorias</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>Criado em {formatFullDate(center.createdAt)} • {(center.categories || []).length} categorias</p>
                           </div>
                         </div>
 
@@ -1052,20 +1028,20 @@ export default function CostCenterPage() {
                                   <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: over ? "var(--danger)" : warn ? "var(--warning)" : "var(--success)" }} />
                                 </div>
                                 <span className="mono text-xs font-bold px-2 py-0.5 rounded-full"
-                                  style={{ background: over ? "var(--saida-bg)" : warn ? "#fef9c3" : "var(--entrada-bg)", color: over ? "var(--saida-text)" : warn ? "#b45309" : "var(--entrada-text)" }}>
+                                  style={{ background: over ? "var(--saida-bg)" : warn ? "var(--warn-weak)" : "var(--entrada-bg)", color: over ? "var(--saida-text)" : warn ? "var(--warn)" : "var(--entrada-text)" }}>
                                   {pct}%
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 text-xs">
                                 <span className="mono font-semibold" style={{ color: "var(--db-text)" }}>{fmt(spentThisMonth)}</span>
-                                <span style={{ color: "var(--db-text3)" }}>de</span>
-                                <span className="mono font-semibold" style={{ color: "var(--db-text2)" }}>{fmt(budgetThisMonth)}</span>
+                                <span style={{ color: "var(--db-text-3)" }}>de</span>
+                                <span className="mono font-semibold" style={{ color: "var(--db-text-2)" }}>{fmt(budgetThisMonth)}</span>
                               </div>
                             </div>
                           ) : (
                             <div className="flex flex-col items-end gap-1">
                               <span className="mono text-xs font-bold px-2 py-0.5 rounded-full"
-                                style={{ background: "var(--db-sub)", color: "var(--db-text3)" }}>
+                                style={{ background: "var(--db-sub)", color: "var(--db-text-3)" }}>
                                 {fmt(0)}
                               </span>
                               {/* span, não button — já está dentro do botão de expandir/recolher o centro */}
@@ -1084,7 +1060,7 @@ export default function CostCenterPage() {
                           <ChevronDown
                             size={16}
                             style={{
-                              color: "var(--db-text2)",
+                              color: "var(--db-text-2)",
                               transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
                               transition: "transform .2s",
                             }}
@@ -1096,7 +1072,7 @@ export default function CostCenterPage() {
                       {isExpanded && (
                         <div className="px-4 py-4 space-y-2" style={{ background: "var(--db-sub)" }}>
                           {(center.categories || []).length === 0 ? (
-                            <p className="text-xs text-center py-4" style={{ color: "var(--db-text3)" }}>Nenhuma categoria com lançamentos</p>
+                            <p className="text-xs text-center py-4" style={{ color: "var(--db-text-3)" }}>Nenhuma categoria com lançamentos</p>
                           ) : (
                             (center.categories || []).map(cat => {
                               // Gasto por categoria também é derivado das despesas pagas do mês selecionado.
@@ -1112,12 +1088,12 @@ export default function CostCenterPage() {
                                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cat.color }} />
                                       <div className="text-left min-w-0 flex-1">
                                         <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{cat.name}</p>
-                                        <p className="text-xs mt-0.5" style={{ color: "var(--db-text3)" }}>{catCount} lançamento{catCount !== 1 ? "s" : ""}</p>
+                                        <p className="text-xs mt-0.5" style={{ color: "var(--db-text-3)" }}>{catCount} lançamento{catCount !== 1 ? "s" : ""}</p>
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0">
                                       <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(catSpent)}</span>
-                                      <span className="text-xs font-semibold px-1.5" style={{ color: "var(--db-text2)" }}>
+                                      <span className="text-xs font-semibold px-1.5" style={{ color: "var(--db-text-2)" }}>
                                         {budgetThisMonth > 0 ? ((catSpent / budgetThisMonth) * 100).toFixed(1) : "0.0"}%
                                       </span>
                                     </div>
@@ -1153,14 +1129,14 @@ export default function CostCenterPage() {
           <div className="flex items-start md:items-center justify-between mb-4 gap-2 flex-wrap">
             <div>
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Despesas de {period}</h2>
-              <p className="text-xs mt-0.5 flex items-center gap-2" style={{ color: "var(--db-text2)" }}>
+              <p className="text-xs mt-0.5 flex items-center gap-2" style={{ color: "var(--db-text-2)" }}>
                 Total: {fmt(filteredExpenses.reduce((s, e) => s + e.amount, 0))}
                 <span className="cf-badge">✓ Sincroniza com fluxo de caixa</span>
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative hidden sm:flex">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--db-text2)" }} />
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--db-text-2)" }} />
                 <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                   className="pl-9 pr-3 py-1.5 text-xs rounded-lg border"
                   style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
@@ -1183,10 +1159,10 @@ export default function CostCenterPage() {
 
           {filteredExpenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <CreditCard size={32} style={{ color: "var(--db-text2)", marginBottom: "1rem", opacity: 0.4 }} />
-              <p style={{ color: "var(--db-text2)" }}>Nenhuma despesa encontrada</p>
+              <CreditCard size={32} style={{ color: "var(--db-text-2)", marginBottom: "1rem", opacity: 0.4 }} />
+              <p style={{ color: "var(--db-text-2)" }}>Nenhuma despesa encontrada</p>
               {costCenters.length === 0 && (
-                <p className="text-xs mt-1" style={{ color: "var(--db-text3)" }}>Crie um centro de custo primeiro</p>
+                <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>Crie um centro de custo primeiro</p>
               )}
             </div>
           ) : (
@@ -1198,7 +1174,7 @@ export default function CostCenterPage() {
                     style={{ border: "1px solid var(--db-border)" }}>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || exp.category}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--db-text2)" }}>{exp.center} · {exp.date}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{exp.center} · {exp.date}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span>
@@ -1236,7 +1212,7 @@ export default function CostCenterPage() {
                     <tr className="border-b" style={{ borderColor: "var(--db-border)" }}>
                       {["Descrição", "Categoria", "Centro", "Valor", "Data", "Status", ""].map(h => (
                         <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap"
-                          style={{ color: "var(--db-text2)" }}>{h}</th>
+                          style={{ color: "var(--db-text-2)" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1246,10 +1222,10 @@ export default function CostCenterPage() {
                         <td className="py-3 pr-4 max-w-[150px]">
                           <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || "—"}</p>
                         </td>
-                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.category}</span></td>
-                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.center}</span></td>
+                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text-2)" }}>{exp.category}</span></td>
+                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text-2)" }}>{exp.center}</span></td>
                         <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span></td>
-                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text2)" }}>{exp.date}</span></td>
+                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text-2)" }}>{exp.date}</span></td>
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-1.5">
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
@@ -1299,7 +1275,7 @@ export default function CostCenterPage() {
                 {editingCenter ? "Editar centro" : "Novo centro de custo"}
               </h3>
               <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} className="p-1.5 rounded-lg cursor-pointer hover:opacity-70 transition-opacity">
-                <X size={16} style={{ color: "var(--db-text2)" }} />
+                <X size={16} style={{ color: "var(--db-text-2)" }} />
               </button>
             </div>
             <form onSubmit={handleSaveCenter} className="p-5 space-y-4">
@@ -1309,7 +1285,7 @@ export default function CostCenterPage() {
                 { name: "createdAt", label: "Data de cadastro", placeholder: undefined, type: "date", defaultValue: editingCenter ? toDateInputValue(editingCenter.createdAt) : selectedDate, min: undefined, step: undefined },
               ].map(f => (
                 <div key={f.name}>
-                  <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text2)" }}>{f.label}</label>
+                  <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>{f.label}</label>
                   <input type={f.type} name={f.name} defaultValue={f.defaultValue} placeholder={f.placeholder}
                     required min={f.min} step={f.step}
                     className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1319,7 +1295,7 @@ export default function CostCenterPage() {
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
-                  style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}>
+                  style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
                   Cancelar
                 </button>
                 <button type="submit" disabled={savingCenter}

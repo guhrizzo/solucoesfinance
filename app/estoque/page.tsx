@@ -855,7 +855,7 @@ export default function EstoquePage() {
               onClick={openSimulador}
               disabled={produtos.length === 0}
               className="btn-success flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg, #10b981, #059669)", cursor: "pointer" }}
+              style={{ background: "linear-gradient(135deg, var(--pos), var(--pos))", cursor: "pointer" }}
             >
               <Zap size={15} /> Simular Venda (Teste)
             </button>
@@ -1241,7 +1241,7 @@ export default function EstoquePage() {
                               onClick={() => handleDeleteProduto(p.id, p.sku)}
                               title="Excluir Produto"
                               className="p-1.5 rounded-lg border-none cursor-pointer"
-                              style={{ background: "#FEE2E2", color: "#DC2626" }}
+                              style={{ background: "var(--neg-weak)", color: "var(--neg)" }}
                             >
                               <Trash2 size={13} />
                             </button>
@@ -1717,7 +1717,7 @@ export default function EstoquePage() {
                       onClick={() => setSimChannel(c)}
                       className="px-3 py-2.5 rounded-xl text-xs font-bold border cursor-pointer transition-all"
                       style={simChannel === c
-                        ? { background: "rgba(16,185,129,0.12)", borderColor: "#10b981", color: "#059669" }
+                        ? { background: "rgba(16,185,129,0.12)", borderColor: "var(--pos)", color: "var(--pos)" }
                         : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}
                     >
                       {c === "mercadolivre" ? "Mercado Livre" : "Shopee"}
@@ -1766,7 +1766,7 @@ export default function EstoquePage() {
                   type="submit"
                   disabled={simRunning || !simSku}
                   className="btn-success px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
+                  style={{ background: "linear-gradient(135deg, var(--pos), var(--pos))" }}
                 >
                   {simRunning ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
                   Registrar venda simulada

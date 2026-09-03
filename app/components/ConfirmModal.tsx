@@ -54,13 +54,13 @@ export default function ConfirmModal({
             className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
             aria-label="Fechar"
           >
-            <X size={16} style={{ color: "var(--db-text2)" }} />
+            <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
         </div>
 
         {/* Body */}
         <div className="p-5">
-          <p className="text-sm" style={{ color: "var(--db-text2)" }}>
+          <p className="text-sm" style={{ color: "var(--db-text-2)" }}>
             {message}
           </p>
         </div>
@@ -72,7 +72,7 @@ export default function ConfirmModal({
             onClick={onCancel}
             disabled={loading}
             className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-50"
-            style={{ borderColor: "var(--db-border)", color: "var(--db-text2)" }}
+            style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}
           >
             {cancelText}
           </button>

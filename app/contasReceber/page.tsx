@@ -349,7 +349,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     </div>
                     <button onClick={() => !saving && onClose()}
                         className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -361,7 +361,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                             className="px-3 py-2.5 text-xs font-bold cursor-pointer -mb-px"
                             style={tab === t
                                 ? { color: "var(--pos)", borderBottom: "2px solid var(--pos)" }
-                                : { color: "var(--cf-text2)", borderBottom: "2px solid transparent" }}>
+                                : { color: "var(--cf-text-2)", borderBottom: "2px solid transparent" }}>
                             {label}
                         </button>
                     ))}
@@ -406,7 +406,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                                 {isSeries ? "Valor por parcela (R$)" : "Valor (R$)"}
                             </label>
                             <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
@@ -415,7 +415,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                                 {isSeries ? "1º prazo" : "Prazo"}
                             </label>
                             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
@@ -426,7 +426,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Categoria */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Categoria</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
                         <div className="grid grid-cols-3 gap-2">
                             {CATEGORIES.map(cat => {
                                 const sel = category === cat.label;
@@ -435,7 +435,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                         className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all"
                                         style={sel
                                             ? { borderColor: cat.color, background: cat.color + "18", color: cat.color }
-                                            : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text2)" }}>
+                                            : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
                                         <cat.icon size={13} />
                                         {cat.label}
                                     </button>
@@ -446,7 +446,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Recorrência */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Recorrência</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Recorrência</label>
                         <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
                             {([["unica", "Única"], ["numeral", "Numeral"]] as [Recurrence, string][]).map(([r, label]) => {
                                 const disabled = r === "numeral" && !numeralAllowed;
@@ -458,7 +458,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                         className="py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={recurrence === r
                                             ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", cursor: "pointer" }
-                                            : { background: "transparent", color: "var(--cf-text2)", cursor: disabled ? "not-allowed" : "pointer" }}>
+                                            : { background: "transparent", color: "var(--cf-text-2)", cursor: disabled ? "not-allowed" : "pointer" }}>
                                         {label}
                                     </button>
                                 );
@@ -468,7 +468,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         {isSeries && (
                             <div className="pt-1 space-y-2">
                                 <div className="flex items-center gap-3">
-                                    <label className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>
+                                    <label className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>
                                         Parcelas mensais
                                     </label>
                                     <input
@@ -478,13 +478,13 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                         className="w-20 rounded-lg px-3 py-2 text-sm outline-none font-mono disabled:opacity-50"
                                         style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                                     {editing && (
-                                        <span className="text-[11px]" style={{ color: "var(--cf-text3)" }}>(fixo após criar)</span>
+                                        <span className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>(fixo após criar)</span>
                                     )}
                                 </div>
                                 {!installmentsOk ? (
                                     <p className="text-[11px]" style={{ color: "var(--neg)" }}>Informe de 2 a 60 parcelas.</p>
                                 ) : amount > 0 ? (
-                                    <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                    <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                                         {installments} parcelas de {toBRL(amount)} · total {toBRL(amount * installments)}
                                     </p>
                                 ) : null}
@@ -494,7 +494,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Status */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Status inicial</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Status inicial</label>
                         <div className="grid grid-cols-2 gap-2">
                             {(["pendente", "recebido", "agendado", "atrasado"] as ReceivableStatus[]).map(s => {
                                 const meta = STATUS_META[s];
@@ -504,14 +504,14 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                         className="py-2.5 rounded-xl text-xs font-bold border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={status === s
                                             ? { background: meta.bg, borderColor: meta.border, color: meta.color, cursor: isSeries ? "not-allowed" : "pointer" }
-                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
+                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text-2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
                                         {meta.label}
                                     </button>
                                 );
                             })}
                         </div>
                         {isSeries && (
-                            <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                            <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                                 Toda série começa pendente. Baixe cada parcela ao recebê-la.
                             </p>
                         )}
@@ -519,7 +519,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Fotos */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                             Fotos (invoice, recibo...) — {photos.length}
                         </label>
                         
@@ -542,7 +542,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                         {/* Input de upload */}
                         <label className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border-2 border-dashed cursor-pointer transition-all"
-                            style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                             <ImageIcon size={16} />
                             {uploadingPhoto ? "Enviando..." : "Adicionar foto"}
                             <input
@@ -565,7 +565,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Observação */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Observação (opcional)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
                         <input value={notes} onChange={e => setNotes(e.target.value)}
                             placeholder="Nome do cliente, referência…"
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
@@ -576,7 +576,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canSave && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canSave && !saving
                             ? { background: "var(--pos)", color: "white" }
-                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
                             : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar cobrança"}</>}
@@ -616,12 +616,12 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                         <h3 className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             Alertas de cobrança
                         </h3>
-                        <p className="text-xs mt-1" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>
                             Quantos dias antes do prazo alertar?
                         </p>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -629,9 +629,9 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                 {/* Slider visual */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text2)" }}>1 dia</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>1 dia</span>
                         <span className="font-heading text-2xl font-bold" style={{ color: "var(--cf-text)" }}>{val}d</span>
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text2)" }}>30 dias</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>30 dias</span>
                     </div>
                     <input type="range" min={1} max={30} value={val} onChange={e => setVal(Number(e.target.value))}
                         className="w-full cursor-pointer accent-green-500" />
@@ -641,7 +641,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                                 className="py-2 rounded-xl text-xs font-bold border-2 cursor-pointer transition-all"
                                 style={val === d
                                     ? { background: "var(--pos)", borderColor: "transparent", color: "white" }
-                                    : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text2)" }}>
+                                    : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}>
                                 {d}d
                             </button>
                         ))}
@@ -659,7 +659,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
 
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold cursor-pointer"
-                        style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>
+                        style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
                         Cancelar
                     </button>
                     <button onClick={() => { onSave(val); onClose(); }}
@@ -822,10 +822,10 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                 <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                     <div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Registrar recebimento</p>
-                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text2)" }}>{receivable.title} · {toBRL(receivable.amount)}</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{receivable.title} · {toBRL(receivable.amount)}</p>
                     </div>
                     <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -840,7 +840,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
 
                     {/* Data do recebimento */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Data do recebimento</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data do recebimento</label>
                         <input type="date" value={receivedAt} onChange={e => setReceivedAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -858,7 +858,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canConfirm && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canConfirm && !saving
                             ? { background: "var(--pos)", color: "white" }
-                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
                             : <><ShieldCheck size={15} /> Confirmar recebimento</>}
@@ -917,7 +917,7 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                     {receivable.title}
                                 </p>
                                 {receivable.partyDoc && (
-                                    <p className="text-xs font-mono truncate mt-0.5" style={{ color: "var(--cf-text3)" }}>
+                                    <p className="text-xs font-mono truncate mt-0.5" style={{ color: "var(--cf-text-3)" }}>
                                         {formatDoc(receivable.partyDoc)}
                                     </p>
                                 )}
@@ -927,7 +927,7 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                         {meta.label}
                                     </span>
                                     {receivable.seriesId && receivable.installmentCount && (
-                                        <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text3)" }}>
+                                        <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text-3)" }}>
                                             <Repeat size={10} /> Parcela {receivable.installmentIndex}/{receivable.installmentCount}
                                         </span>
                                     )}
@@ -949,9 +949,9 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                         {/* Prazo */}
                         <div className="flex items-center gap-1.5 mt-2.5">
                             <CalendarClock size={13}
-                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text3)" }} />
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-3)" }} />
                             <span className="text-xs font-medium"
-                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text2)" }}>
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-2)" }}>
                                 {status === ("recebido" as const)
                                     ? `Recebido em ${receivable.receivedAt ? labelDate(receivable.receivedAt) : "—"}`
                                     : isOverdue
@@ -983,7 +983,7 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                         )}
 
                         {receivable.notes && (
-                            <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text3)" }}>📝 {receivable.notes}</p>
+                            <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text-3)" }}>📝 {receivable.notes}</p>
                         )}
                     </div>
                 </div>
@@ -1004,11 +1004,11 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                         </div>
                     )}
                     <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
                     <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>
                 </div>
@@ -1532,7 +1532,7 @@ export default function ContasReceberPage() {
                         <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>
                             Contas a receber
                         </h1>
-                        <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text-2)" }}>
                             {kpis.alert > 0
                                 ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "var(--warn)" }}>
                                     <AlertTriangle size={12} />
@@ -1550,7 +1550,7 @@ export default function ContasReceberPage() {
                     <div className="flex items-center gap-2">
                         <button onClick={() => setSettingsOpen(true)}
                             className="relative p-2 rounded-xl cursor-pointer"
-                            style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                            style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                             title={`Alertas: ${alertDays} dias`}>
                             <Settings2 size={16} />
                             {/* Indicador do prazo configurado */}
@@ -1577,9 +1577,9 @@ export default function ContasReceberPage() {
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
-                            <p className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>{label}</p>
+                            <p className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>{label}</p>
                             <p className="font-heading font-bold text-base sm:text-lg mono" style={{ color }}>{val}</p>
-                            <p className="text-xs" style={{ color: "var(--cf-text3)" }}>{sub}</p>
+                            <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>{sub}</p>
                         </div>
                     ))}
                 </div>
@@ -1588,7 +1588,7 @@ export default function ContasReceberPage() {
                 <div className="cf-card p-3.5 space-y-3">
                     <div className="relative">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                            style={{ color: "var(--cf-text3)" }} />
+                            style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
                             placeholder="Buscar descrição ou observação…"
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
@@ -1602,7 +1602,7 @@ export default function ContasReceberPage() {
                                     className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-all"
                                     style={filterStatus === f
                                         ? { background: meta?.bg ?? "var(--cf-text)", color: meta?.color ?? "var(--cf-bg)", borderColor: meta?.border ?? "transparent" }
-                                        : { background: "transparent", color: "var(--cf-text2)", borderColor: "var(--cf-border)" }}>
+                                        : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
                                     {f === "todos" ? "Todos" : STATUS_META[f].label}
                                 </button>
                             );
@@ -1610,7 +1610,7 @@ export default function ContasReceberPage() {
                         <div className="ml-auto flex items-center gap-2 shrink-0">
                             <div className="relative">
                                 <Filter size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                                    style={{ color: "var(--cf-text3)" }} />
+                                    style={{ color: "var(--cf-text-3)" }} />
                                 <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
@@ -1618,11 +1618,11 @@ export default function ContasReceberPage() {
                                     {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
                                 </select>
                             </div>
-                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                                 title="Vencimentos deste mês — troque o mês no seletor da Navbar">
                                 {periodLabel}
                             </span>
-                            <span className="text-xs font-medium" style={{ color: "var(--cf-text3)" }}>
+                            <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
                                 {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
                             </span>
                         </div>
@@ -1634,14 +1634,14 @@ export default function ContasReceberPage() {
                     <div className="cf-card p-12 flex flex-col items-center text-center gap-3">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
                             style={{ background: "var(--cf-input)" }}>
-                            <CalendarClock size={24} style={{ color: "var(--cf-text3)" }} />
+                            <CalendarClock size={24} style={{ color: "var(--cf-text-3)" }} />
                         </div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? "Nenhum resultado"
                                 : `Nada em ${periodLabel}`}
                         </p>
-                        <p className="text-xs max-w-xs" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? "Ajuste os filtros para ver outras cobranças."
                                 : "Nenhuma cobrança vence neste mês. Troque o mês no seletor da Navbar ou adicione uma cobrança."}

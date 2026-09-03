@@ -37,6 +37,17 @@
   --warn: #b0751a;
   --warn-weak: #fbf2e0;
 
+  /* Paleta categórica — séries de dados (donut de centro de custos, impostos
+     por tipo, gráficos). 8 matizes distinguíveis; NÃO são cor de status. */
+  --cat-1: #3b6fd4;
+  --cat-2: #0f9488;
+  --cat-3: #7c5cd6;
+  --cat-4: #c0863a;
+  --cat-5: #cf5d7a;
+  --cat-6: #2f9e5f;
+  --cat-7: #3f8fb0;
+  --cat-8: #8a94a2;
+
   /* Forma */
   --radius-card: 12px;
   --radius-control: 8px;
@@ -215,6 +226,15 @@
   --warn-weak: rgba(224, 165, 61, 0.13);
 
   --brand-400: #6aa4ff;
+
+  --cat-1: #6f9df0;
+  --cat-2: #35b3a6;
+  --cat-3: #a58af0;
+  --cat-4: #d9a45f;
+  --cat-5: #e6849c;
+  --cat-6: #4fc07f;
+  --cat-7: #63acc9;
+  --cat-8: #99a3b2;
 
   --shadow-pop: 0 10px 34px -8px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
 

@@ -38,7 +38,7 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
           {withSpend.length > 0 ? (
             withSpend.map((cat) => {
               const pct = totalSpent > 0 ? (cat.spent / totalSpent) * 100 : 0;
-              const color = cat.color || "#6b7280";
+              const color = cat.color || "var(--text-subtle)";
               return (
                 <div key={cat.id} className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />

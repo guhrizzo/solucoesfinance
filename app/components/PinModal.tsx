@@ -140,19 +140,19 @@ export default function PinModal({
                     <div className="flex items-center gap-3">
                         <div
                             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)" }}
+                            style={{ background: "linear-gradient(135deg, var(--brand), var(--brand))" }}
                         >
                             {isLocked ? <Lock size={18} color="white" /> : <Shield size={18} color="white" />}
                         </div>
                         <div>
                             <p className="font-bold text-sm" style={{ color: "var(--cf-text)" }}>{title}</p>
-                            <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>{subtitle}</p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>{subtitle}</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
                         className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                     >
                         <X size={15} />
                     </button>
@@ -164,11 +164,11 @@ export default function PinModal({
                     {isLocked ? (
                         <div
                             className="rounded-xl p-4 text-center"
-                            style={{ background: "#fef2f2", border: "1px solid #fecdd3" }}
+                            style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)" }}
                         >
-                            <Lock size={24} className="mx-auto mb-2" style={{ color: "#be123c" }} />
-                            <p className="text-sm font-bold" style={{ color: "#be123c" }}>PIN bloqueado</p>
-                            <p className="text-xs mt-1" style={{ color: "#be123c" }}>
+                            <Lock size={24} className="mx-auto mb-2" style={{ color: "var(--neg)" }} />
+                            <p className="text-sm font-bold" style={{ color: "var(--neg)" }}>PIN bloqueado</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--neg)" }}>
                                 Muitas tentativas incorretas. Aguarde{" "}
                                 <strong>{minutes > 0 ? `${minutes}m ` : ""}{String(seconds).padStart(2, "0")}s</strong>
                             </p>
@@ -193,7 +193,7 @@ export default function PinModal({
                                         className="w-14 h-14 text-center text-2xl font-bold rounded-xl outline-none"
                                         style={{
                                             background: "var(--cf-input)",
-                                            border: `2px solid ${d ? "#3b82f6" : "var(--cf-border)"}`,
+                                            border: `2px solid ${d ? "var(--brand)" : "var(--cf-border)"}`,
                                             color: "var(--cf-text)",
                                             fontSize: d ? "28px" : "14px",
                                             transition: "border-color .15s",
@@ -207,7 +207,7 @@ export default function PinModal({
                             {error && (
                                 <div
                                     className="flex items-center gap-2 rounded-xl px-3 py-2.5 mb-3 text-xs"
-                                    style={{ background: "#fef2f2", color: "#be123c", border: "1px solid #fecdd3" }}
+                                    style={{ background: "var(--neg-weak)", color: "var(--neg)", border: "1px solid var(--neg-weak)" }}
                                 >
                                     <AlertTriangle size={13} />
                                     {error}
@@ -220,7 +220,7 @@ export default function PinModal({
                                 disabled={pin.length < 4}
                                 className="w-full py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                                 style={{
-                                    background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                                    background: "linear-gradient(135deg, var(--brand), var(--brand))",
                                     color: "white",
                                     boxShadow: pin.length === 4 ? "0 4px 16px rgba(59,130,246,0.4)" : "none",
                                 }}

@@ -98,7 +98,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "irpj",
         label: "IRPJ",
         icon: Building2,
-        color: "#1d4ed8",
+        color: "var(--brand)",
         description: "Imposto de Renda Pessoa Jurídica",
         esfera: "federal",
     },
@@ -196,7 +196,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "iss",
         label: "ISS",
         icon: FileText,
-        color: "#059669",
+        color: "var(--pos)",
         description: "Imposto Sobre Serviços",
         esfera: "municipal",
     },
@@ -204,7 +204,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "iptu",
         label: "IPTU",
         icon: Home,
-        color: "#10b981",
+        color: "var(--pos)",
         description: "Imposto Predial e Territorial Urbano",
         esfera: "municipal",
     },
@@ -235,10 +235,10 @@ const FREQUENCY_LABEL: Record<TaxFrequency, string> = {
 };
 
 const STATUS_META: Record<TaxStatus, { label: string; bg: string; color: string; border: string; icon: LucideIcon }> = {
-    nao_pago: { label: "Não Pago", bg: "#fef9c3", color: "#b45309", border: "#fde68a", icon: Clock },
-    pago: { label: "Pago", bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", icon: Check },
-    atraso: { label: "Em Atraso", bg: "#fee2e2", color: "#b91c1c", border: "#fecaca", icon: AlertTriangle },
-    agendado: { label: "Agendado", bg: "#dbeafe", color: "#1d4ed8", border: "#bfdbfe", icon: Calendar },
+    nao_pago: { label: "Não Pago", bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)", icon: Clock },
+    pago: { label: "Pago", bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)", icon: Check },
+    atraso: { label: "Em Atraso", bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)", icon: AlertTriangle },
+    agendado: { label: "Agendado", bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)", icon: Calendar },
 };
 
 // Mapeamento de tipo de imposto → categoria do cashflow
@@ -495,14 +495,14 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                             <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                                 {editing ? "Editar imposto" : "Novo imposto"}
                             </p>
-                            <p className="text-xs mt-0.5" style={{ color: "var(--cf-text2)" }}>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
                                 Acompanhe seus impostos e prazos
                             </p>
                         </div>
                     </div>
                     <button onClick={() => !saving && onClose()}
                         className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -510,14 +510,14 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                 <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "82vh" }}>
                     {err && (
                         <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-                            style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                            style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)", color: "var(--neg)" }}>
                             <span>⚠</span> {err}
                         </div>
                     )}
 
                     {/* Nome */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Nome/Descrição</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Nome/Descrição</label>
                         <input value={name} onChange={e => setName(e.target.value)}
                             placeholder="Ex: IRPF 2024 - Período" autoFocus
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
@@ -526,7 +526,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Tipo de imposto */}
                     <div className="space-y-2.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Tipo de imposto</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Tipo de imposto</label>
                         
                         {/* Abas por Esfera Tributária */}
                         <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)" }}>
@@ -543,7 +543,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                         className="flex-1 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-center transition-all border-none"
                                         style={active
                                             ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-                                            : { color: "var(--cf-text2)", background: "transparent" }}>
+                                            : { color: "var(--cf-text-2)", background: "transparent" }}>
                                         {sphereLabels[s]}
                                     </button>
                                 );
@@ -559,7 +559,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                         className="flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all text-left w-full"
                                         style={sel
                                             ? { borderColor: t.color, background: t.color + "18", color: t.color }
-                                            : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text2)" }}>
+                                            : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
                                         <span className="flex items-center gap-1 font-bold">
                                             <t.icon size={12} /> {t.label}
                                         </span>
@@ -575,14 +575,14 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     {/* Valor + Valor estimado */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Valor (R$)</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
                             <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Estimado (opcional)</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Estimado (opcional)</label>
                             <input inputMode="decimal" value={estimatedRawAmt} onChange={e => setEstimatedRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
@@ -593,13 +593,13 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     {/* Vencimento + Frequência */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Vencimento</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Vencimento</label>
                             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Frequência</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Frequência</label>
                             <select value={frequency} onChange={e => setFrequency(e.target.value as TaxFrequency)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
@@ -612,7 +612,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Status */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Status inicial</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Status inicial</label>
                         <div className="grid grid-cols-2 gap-2">
                             {(["nao_pago", "pago", "agendado", "atraso"] as TaxStatus[]).map(s => {
                                 const meta = STATUS_META[s];
@@ -621,7 +621,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                         className="py-2.5 rounded-xl text-xs font-bold border-2 cursor-pointer transition-all"
                                         style={status === s
                                             ? { background: meta.bg, borderColor: meta.border, color: meta.color }
-                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text2)" }}>
+                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}>
                                         {meta.label}
                                     </button>
                                 );
@@ -639,7 +639,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Documentos */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                             Documentos (DARF, RPA...) — {attachments.length}
                         </label>
 
@@ -649,7 +649,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                     <div key={idx} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
                                         style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)" }}>
                                         <div className="flex items-center gap-2 min-w-0">
-                                            <FileText size={14} style={{ color: "var(--cf-text2)", flexShrink: 0 }} />
+                                            <FileText size={14} style={{ color: "var(--cf-text-2)", flexShrink: 0 }} />
                                             <a href={url} target="_blank" rel="noopener noreferrer"
                                                 className="text-xs truncate"
                                                 style={{ color: "#3b82f6", textDecoration: "underline" }}>
@@ -658,8 +658,8 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                         </div>
                                         <button onClick={() => removeAttachment(idx)}
                                             className="p-1 rounded-lg cursor-pointer"
-                                            style={{ background: "#fee2e2" }}>
-                                            <Trash2 size={12} style={{ color: "#dc2626" }} />
+                                            style={{ background: "var(--neg-weak)" }}>
+                                            <Trash2 size={12} style={{ color: "var(--neg)" }} />
                                         </button>
                                     </div>
                                 ))}
@@ -667,7 +667,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                         )}
 
                         <label className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border-2 border-dashed cursor-pointer transition-all"
-                            style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                             <Download size={16} />
                             {uploadingFile ? "Enviando..." : "Adicionar documento"}
                             <input
@@ -682,7 +682,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Observações */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Observações</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observações</label>
                         <input value={notes} onChange={e => setNotes(e.target.value)}
                             placeholder="Código, referência, observações..."
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
@@ -693,7 +693,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canSave && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canSave && !saving
                             ? { background: `linear-gradient(135deg, ${typeMeta.color}, ${typeMeta.color}cc)`, color: "white" }
-                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
                             : <><Check size={15} /> {editing ? "Salvar alterações" : "Criar imposto"}</>}
@@ -794,10 +794,10 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                 <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                     <div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Confirmar pagamento</p>
-                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text2)" }}>{tax.name} · {toBRL(tax.amount)}</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{tax.name} · {toBRL(tax.amount)}</p>
                     </div>
                     <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -805,13 +805,13 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                 <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "80vh" }}>
                     {err && (
                         <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-                            style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                            style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)", color: "var(--neg)" }}>
                             <AlertTriangle size={13} />{err}
                         </div>
                     )}
 
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Data de pagamento</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data de pagamento</label>
                         <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -827,8 +827,8 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                     <button onClick={handleOpenPin} disabled={!canConfirm || saving}
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canConfirm && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canConfirm && !saving
-                            ? { background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }
-                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            ? { background: "linear-gradient(135deg, var(--pos), var(--pos))", color: "white" }
+                            : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
                             : <><ShieldCheck size={15} /> Confirmar pagamento</>}
@@ -867,7 +867,7 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
 
     return (
         <div className="cf-card overflow-hidden transition-all hover:shadow-md"
-            style={{ borderColor: isOverdue ? "#fecaca" : isUrgent ? "#fde68a" : "var(--cf-border)" }}>
+            style={{ borderColor: isOverdue ? "var(--neg-weak)" : isUrgent ? "var(--warn-weak)" : "var(--cf-border)" }}>
             {/* Barra colorida */}
             <div className="h-2" style={{ background: taxMeta.color }} />
 
@@ -886,12 +886,12 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                 <p className="font-heading text-sm font-bold truncate" style={{ color: "var(--cf-text)" }}>
                                     {tax.name}
                                 </p>
-                                <p className="text-xs mt-0.5" style={{ color: "var(--cf-text3)" }}>
+                                <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-3)" }}>
                                     {taxMeta.label} · {taxMeta.description}
                                 </p>
                             </div>
                             <span className="font-heading font-bold text-base shrink-0 mono"
-                                style={{ color: isOverdue ? "#dc2626" : "var(--cf-text)" }}>
+                                style={{ color: isOverdue ? "var(--neg)" : "var(--cf-text)" }}>
                                 {toBRL(tax.amount)}
                             </span>
                         </div>
@@ -903,12 +903,12 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                 <meta.icon size={11} /> {meta.label}
                             </span>
                             <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                                style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                                style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                                 {FREQUENCY_LABEL[tax.frequency]}
                             </span>
                             {tax.attachments?.length > 0 && (
                                 <span className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1"
-                                    style={{ background: "#dbeafe", color: "#1d4ed8" }}>
+                                    style={{ background: "var(--brand-weak)", color: "var(--brand)" }}>
                                     <FileText size={10} /> {tax.attachments.length}
                                 </span>
                             )}
@@ -927,9 +927,9 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         {/* Vencimento */}
                         <div className="flex items-center gap-1.5 mt-2.5">
                             <Calendar size={13}
-                                style={{ color: isOverdue ? "#dc2626" : isUrgent ? "#b45309" : "var(--cf-text3)" }} />
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-3)" }} />
                             <span className="text-xs font-medium"
-                                style={{ color: isOverdue ? "#dc2626" : isUrgent ? "#b45309" : "var(--cf-text2)" }}>
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-2)" }}>
                                 {status === "pago"
                                     ? `Pago em ${tax.paidAt ? labelDate(tax.paidAt) : "—"}`
                                     : isOverdue
@@ -940,19 +940,19 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             </span>
                             {isUrgent && (
                                 <span className="ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
-                                    style={{ background: "#fef9c3", color: "#b45309" }}>!</span>
+                                    style={{ background: "var(--warn-weak)", color: "var(--warn)" }}>!</span>
                             )}
                         </div>
 
                         {/* Estimativa */}
                         {tax.estimatedAmount && (
-                            <p className="text-xs mt-1.5" style={{ color: "var(--cf-text3)" }}>
+                            <p className="text-xs mt-1.5" style={{ color: "var(--cf-text-3)" }}>
                                 💡 Estimado: {toBRL(tax.estimatedAmount)}
                             </p>
                         )}
 
                         {tax.notes && (
-                            <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text3)" }}>📝 {tax.notes}</p>
+                            <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text-3)" }}>📝 {tax.notes}</p>
                         )}
                     </div>
                 </div>
@@ -968,16 +968,16 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         </button>
                     ) : (
                         <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold"
-                            style={{ background: "#dcfce7", color: "#15803d" }}>
+                            style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
                             <Check size={13} /> Imposto pago
                         </div>
                     )}
                     <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
                     <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>
                 </div>
@@ -993,9 +993,9 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
 function ToastStack({ toasts }: { toasts: ToastItem[] }) {
     if (toasts.length === 0) return null;
     const colors: Record<ToastItem["type"], string> = {
-        ok: "#10b981",
-        err: "#ef4444",
-        warn: "#f59e0b",
+        ok: "var(--pos)",
+        err: "var(--neg)",
+        warn: "var(--warn)",
     };
     return (
         <div className="fixed top-4 right-4 z-9999 flex flex-col gap-2 pointer-events-none">
@@ -1280,10 +1280,10 @@ export default function ImpostosPage() {
     }, [enriched, filterStatus, filterSphere, filterType, search, monthKey]);
 
     const sections = useMemo(() => [
-        { key: "atraso", label: "Em Atraso", color: "#dc2626", taxes: filtered.filter(t => t._status === "atraso") },
-        { key: "nao_pago", label: "A Pagar", color: "#b45309", taxes: filtered.filter(t => t._status === "nao_pago") },
-        { key: "agendado", label: "Agendados", color: "#1d4ed8", taxes: filtered.filter(t => t._status === "agendado") },
-        { key: "pago", label: "Pagos", color: "#15803d", taxes: filtered.filter(t => t._status === "pago") },
+        { key: "atraso", label: "Em Atraso", color: "var(--neg)", taxes: filtered.filter(t => t._status === "atraso") },
+        { key: "nao_pago", label: "A Pagar", color: "var(--warn)", taxes: filtered.filter(t => t._status === "nao_pago") },
+        { key: "agendado", label: "Agendados", color: "var(--brand)", taxes: filtered.filter(t => t._status === "agendado") },
+        { key: "pago", label: "Pagos", color: "var(--pos)", taxes: filtered.filter(t => t._status === "pago") },
     ].filter(s => s.taxes.length > 0), [filtered]);
 
     const kpis = useMemo(() => {
@@ -1322,24 +1322,6 @@ export default function ImpostosPage() {
 
     return (
         <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
-            <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-        *, *::before, *::after { font-family: 'Sora', sans-serif; box-sizing: border-box; }
-        .font-heading { font-family: 'Sora', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .cf-card { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; }
-        .cf-kpi  { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; transition: all .2s; }
-        .cf-kpi:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
-        @keyframes slideUp { from { opacity:0; transform:translateY(20px) scale(.95) } to { opacity:1; transform:none } }
-        @keyframes kIn     { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
-        .kin { animation: kIn .35s ease both; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: var(--cf-border); border-radius: 3px; }
-        .scrollbar-none { scrollbar-width:none; }
-        .scrollbar-none::-webkit-scrollbar { display:none; }
-        button, a, input, select { transition: all .12s cubic-bezier(.4,0,.2,1) !important; }
-        input:focus, select:focus { border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,0.1) !important; }
-      `}</style>
 
             <Navbar user={{ displayName: userName, email: userEmail }} activePath="/impostos" onLogout={handleLogout} />
 
@@ -1375,24 +1357,24 @@ export default function ImpostosPage() {
                     <div className="cf-card p-6 w-full max-w-xs text-center"
                         style={{ animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
                         <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-                            style={{ background: "#fee2e2" }}>
-                            <Trash2 size={20} style={{ color: "#dc2626" }} />
+                            style={{ background: "var(--neg-weak)" }}>
+                            <Trash2 size={20} style={{ color: "var(--neg)" }} />
                         </div>
                         <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>
                             Excluir imposto?
                         </p>
-                        <p className="text-xs mb-5" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>
                             Esta ação não pode ser desfeita.
                         </p>
                         <div className="flex gap-2">
                             <button onClick={() => setConfirmId(null)}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>
+                                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
                                 Cancelar
                             </button>
                             <button onClick={handleDelete} disabled={deleting}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
-                                style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "white" }}>
+                                style={{ background: "linear-gradient(135deg, var(--neg), var(--neg))", color: "white" }}>
                                 {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Excluir</>}
                             </button>
                         </div>
@@ -1410,18 +1392,18 @@ export default function ImpostosPage() {
                         <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>
                             Impostos
                         </h1>
-                        <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text-2)" }}>
                             {kpis.alert > 0
-                                ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "#b45309" }}>
+                                ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "var(--warn)" }}>
                                     <AlertTriangle size={12} />
                                     {kpis.alert} vence{kpis.alert !== 1 ? "m" : ""} nos próximos {alertDays} dias
                                 </span>
                                 : kpis.totalOverdue > 0
-                                    ? <span className="flex items-center gap-1 font-semibold" style={{ color: "#dc2626" }}>
+                                    ? <span className="flex items-center gap-1 font-semibold" style={{ color: "var(--neg)" }}>
                                         <AlertTriangle size={12} />
                                         {kpis.totalOverdue} imposto{kpis.totalOverdue !== 1 ? "s" : ""} em atraso
                                     </span>
-                                    : <span style={{ color: "#10b981" }}>✓ Tudo em dia!</span>
+                                    : <span style={{ color: "var(--pos)" }}>✓ Tudo em dia!</span>
                             }
                         </p>
                     </div>
@@ -1435,16 +1417,16 @@ export default function ImpostosPage() {
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
-                        { label: "A Pagar", val: toBRL(kpis.aPagar), color: "#3b82f6", bg: "#eff6ff", sub: `${kpis.totalNotPaid} imposto${kpis.totalNotPaid !== 1 ? "s" : ""}` },
-                        { label: "Em Atraso", val: toBRL(kpis.atraso), color: "#dc2626", bg: "#fee2e2", sub: `${kpis.totalOverdue} imposto${kpis.totalOverdue !== 1 ? "s" : ""}` },
-                        { label: "Pagos", val: toBRL(kpis.pago), color: "#059669", bg: "#dcfce7", sub: `${kpis.totalPaid} imposto${kpis.totalPaid !== 1 ? "s" : ""}` },
-                        { label: "Estimado", val: toBRL(kpis.estimado), color: "#8b5cf6", bg: "#f3e8ff", sub: "planejamento" },
+                        { label: "A Pagar", val: toBRL(kpis.aPagar), color: "#3b82f6", bg: "var(--brand-weak)", sub: `${kpis.totalNotPaid} imposto${kpis.totalNotPaid !== 1 ? "s" : ""}` },
+                        { label: "Em Atraso", val: toBRL(kpis.atraso), color: "var(--neg)", bg: "var(--neg-weak)", sub: `${kpis.totalOverdue} imposto${kpis.totalOverdue !== 1 ? "s" : ""}` },
+                        { label: "Pagos", val: toBRL(kpis.pago), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalPaid} imposto${kpis.totalPaid !== 1 ? "s" : ""}` },
+                        { label: "Estimado", val: toBRL(kpis.estimado), color: "#8b5cf6", bg: "var(--brand-weak)", sub: "planejamento" },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
-                            <p className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>{label}</p>
+                            <p className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>{label}</p>
                             <p className="font-heading font-bold text-base sm:text-lg mono" style={{ color }}>{val}</p>
-                            <p className="text-xs" style={{ color: "var(--cf-text3)" }}>{sub}</p>
+                            <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>{sub}</p>
                         </div>
                     ))}
                 </div>
@@ -1453,7 +1435,7 @@ export default function ImpostosPage() {
                 <div className="cf-card p-3.5 space-y-3">
                     <div className="relative">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                            style={{ color: "var(--cf-text3)" }} />
+                            style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
                             placeholder="Buscar imposto ou observação…"
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
@@ -1467,7 +1449,7 @@ export default function ImpostosPage() {
                                     className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-all"
                                     style={filterStatus === f
                                         ? { background: meta?.bg ?? "var(--cf-text)", color: meta?.color ?? "var(--cf-bg)", borderColor: meta?.border ?? "transparent" }
-                                        : { background: "transparent", color: "var(--cf-text2)", borderColor: "var(--cf-border)" }}>
+                                        : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
                                     {f === "todos" ? "Todos" : STATUS_META[f].label}
                                 </button>
                             );
@@ -1476,7 +1458,7 @@ export default function ImpostosPage() {
                             {/* Filtro por Esfera */}
                             <div className="relative">
                                 <Filter size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                                    style={{ color: "var(--cf-text3)" }} />
+                                    style={{ color: "var(--cf-text-3)" }} />
                                 <select value={filterSphere} onChange={e => {
                                     setFilterSphere(e.target.value as "todos" | TaxSphere);
                                     setFilterType("todos"); // Reseta o tipo de imposto
@@ -1494,7 +1476,7 @@ export default function ImpostosPage() {
                             {/* Filtro por Tipo */}
                             <div className="relative">
                                 <Filter size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                                    style={{ color: "var(--cf-text3)" }} />
+                                    style={{ color: "var(--cf-text-3)" }} />
                                 <select value={filterType} onChange={e => setFilterType(e.target.value)}
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
@@ -1529,11 +1511,11 @@ export default function ImpostosPage() {
                                     )}
                                 </select>
                             </div>
-                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                                 title="Vencimentos deste mês — troque o mês no seletor da Navbar">
                                 {periodLabel}
                             </span>
-                            <span className="text-xs font-medium" style={{ color: "var(--cf-text3)" }}>
+                            <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
                                 {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
                             </span>
                         </div>
@@ -1545,14 +1527,14 @@ export default function ImpostosPage() {
                     <div className="cf-card p-12 flex flex-col items-center text-center gap-3">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
                             style={{ background: "var(--cf-input)" }}>
-                            <Target size={24} style={{ color: "var(--cf-text3)" }} />
+                            <Target size={24} style={{ color: "var(--cf-text-3)" }} />
                         </div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
                                 ? "Nenhum resultado"
                                 : `Nada em ${periodLabel}`}
                         </p>
-                        <p className="text-xs max-w-xs" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
                                 ? "Ajuste os filtros para ver outros impostos."
                                 : "Nenhum imposto vence neste mês. Troque o mês no seletor da Navbar ou adicione um imposto."}

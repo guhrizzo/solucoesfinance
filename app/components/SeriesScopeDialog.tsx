@@ -46,7 +46,7 @@ export default function SeriesScopeDialog({
         <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>
           {title}
         </p>
-        <p className="text-xs mb-5" style={{ color: "var(--cf-text2)" }}>
+        <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>
           {message}
         </p>
 
@@ -57,12 +57,12 @@ export default function SeriesScopeDialog({
             className="w-full flex items-center gap-3 p-3 rounded-xl text-left cursor-pointer transition-all disabled:opacity-60"
             style={{ border: "1px solid var(--cf-border)", background: "var(--cf-input)" }}
           >
-            <FileText size={16} style={{ color: "var(--cf-text2)" }} />
+            <FileText size={16} style={{ color: "var(--cf-text-2)" }} />
             <span className="flex-1">
               <span className="block text-sm font-bold" style={{ color: "var(--cf-text)" }}>
                 Só esta parcela
               </span>
-              <span className="block text-[11px]" style={{ color: "var(--cf-text2)" }}>
+              <span className="block text-[11px]" style={{ color: "var(--cf-text-2)" }}>
                 Não altera as outras parcelas da série
               </span>
             </span>
@@ -74,12 +74,12 @@ export default function SeriesScopeDialog({
             className="w-full flex items-center gap-3 p-3 rounded-xl text-left cursor-pointer transition-all disabled:opacity-60"
             style={{ border: "1px solid var(--cf-border)", background: "var(--cf-input)" }}
           >
-            <Layers size={16} style={{ color: "var(--cf-text2)" }} />
+            <Layers size={16} style={{ color: "var(--cf-text-2)" }} />
             <span className="flex-1">
               <span className="block text-sm font-bold" style={{ color: "var(--cf-text)" }}>
                 Esta e as próximas não pagas
               </span>
-              <span className="block text-[11px]" style={{ color: "var(--cf-text2)" }}>
+              <span className="block text-[11px]" style={{ color: "var(--cf-text-2)" }}>
                 Parcelas já quitadas não são afetadas
               </span>
             </span>
@@ -90,7 +90,7 @@ export default function SeriesScopeDialog({
           onClick={onCancel}
           disabled={loading}
           className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1"
-          style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}
+          style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}
         >
           {loading ? <Loader2 size={14} className="animate-spin" /> : null}
           {loading ? `${actionLabel}…` : "Cancelar"}

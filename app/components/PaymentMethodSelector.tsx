@@ -40,10 +40,10 @@ export default function PaymentMethodSelector({
         <div className="space-y-2">
             <label
                 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1"
-                style={{ color: "var(--cf-text2)" }}
+                style={{ color: "var(--cf-text-2)" }}
             >
                 {label}
-                {required && <span style={{ color: "#ef4444" }}>*</span>}
+                {required && <span style={{ color: "var(--neg)" }}>*</span>}
             </label>
             <div className="grid grid-cols-4 gap-2">
                 {PAYMENT_METHODS.map(method => {
@@ -67,7 +67,7 @@ export default function PaymentMethodSelector({
                                     : {
                                         borderColor: "var(--cf-border)",
                                         background: "transparent",
-                                        color: "var(--cf-text2)",
+                                        color: "var(--cf-text-2)",
                                     }
                             }
                         >

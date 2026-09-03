@@ -342,7 +342,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     </div>
                     <button onClick={() => !saving && onClose()}
                         className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -354,7 +354,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                             className="px-3 py-2.5 text-xs font-bold cursor-pointer -mb-px"
                             style={tab === t
                                 ? { color: "var(--brand)", borderBottom: "2px solid var(--brand)" }
-                                : { color: "var(--cf-text2)", borderBottom: "2px solid transparent" }}>
+                                : { color: "var(--cf-text-2)", borderBottom: "2px solid transparent" }}>
                             {label}
                         </button>
                     ))}
@@ -399,7 +399,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                                 {isSeries ? "Valor por parcela (R$)" : "Valor (R$)"}
                             </label>
                             <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
@@ -408,7 +408,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                                 {isSeries ? "1º vencimento" : "Vencimento"}
                             </label>
                             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
@@ -419,7 +419,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Categoria */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Categoria</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
                         <div className="grid grid-cols-3 gap-2">
                             {CATEGORIES.map(cat => {
                                 const sel = category === cat.label;
@@ -428,7 +428,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                         className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all"
                                         style={sel
                                             ? { borderColor: cat.color, background: cat.color + "18", color: cat.color }
-                                            : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text2)" }}>
+                                            : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
                                         <cat.icon size={13} />
                                         {cat.label}
                                     </button>
@@ -439,7 +439,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Recorrência */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Recorrência</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Recorrência</label>
                         <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
                             {([["unica", "Única"], ["numeral", "Numeral"]] as [Recurrence, string][]).map(([r, label]) => {
                                 const disabled = r === "numeral" && !numeralAllowed;
@@ -451,7 +451,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                         className="py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={recurrence === r
                                             ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", cursor: "pointer" }
-                                            : { background: "transparent", color: "var(--cf-text2)", cursor: disabled ? "not-allowed" : "pointer" }}>
+                                            : { background: "transparent", color: "var(--cf-text-2)", cursor: disabled ? "not-allowed" : "pointer" }}>
                                         {label}
                                     </button>
                                 );
@@ -461,7 +461,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         {isSeries && (
                             <div className="pt-1 space-y-2">
                                 <div className="flex items-center gap-3">
-                                    <label className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>
+                                    <label className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>
                                         Parcelas mensais
                                     </label>
                                     <input
@@ -471,7 +471,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                         className="w-20 rounded-lg px-3 py-2 text-sm outline-none font-mono disabled:opacity-50"
                                         style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                                     {editing && (
-                                        <span className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                        <span className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                                             (fixo após criar)
                                         </span>
                                     )}
@@ -479,7 +479,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                 {!installmentsOk ? (
                                     <p className="text-[11px]" style={{ color: "var(--neg)" }}>Informe de 2 a 60 parcelas.</p>
                                 ) : amount > 0 ? (
-                                    <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                                    <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                                         {installments} parcelas de {toBRL(amount)} · total {toBRL(amount * installments)}
                                     </p>
                                 ) : null}
@@ -489,7 +489,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Status */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Status inicial</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Status inicial</label>
                         <div className="grid grid-cols-2 gap-2">
                             {(["pendente", "pago", "agendado", "vencido"] as BillStatus[]).map(s => {
                                 const meta = STATUS_META[s];
@@ -499,14 +499,14 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                         className="py-2.5 rounded-xl text-xs font-bold border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={status === s
                                             ? { background: meta.bg, borderColor: meta.border, color: meta.color, cursor: isSeries ? "not-allowed" : "pointer" }
-                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
+                                            : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text-2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
                                         {meta.label}
                                     </button>
                                 );
                             })}
                         </div>
                         {isSeries && (
-                            <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
+                            <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                                 Toda série começa pendente. Baixe cada parcela ao pagá-la.
                             </p>
                         )}
@@ -514,7 +514,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Fotos */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                             Fotos (boleto, nota fiscal...) — {photos.length}
                         </label>
                         
@@ -537,7 +537,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                         {/* Input de upload */}
                         <label className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border-2 border-dashed cursor-pointer transition-all"
-                            style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                             <ImageIcon size={16} />
                             {uploadingPhoto ? "Enviando..." : "Adicionar foto"}
                             <input
@@ -560,7 +560,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Observação */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Observação (opcional)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
                         <input value={notes} onChange={e => setNotes(e.target.value)}
                             placeholder="Número do boleto, fornecedor..."
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
@@ -571,7 +571,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canSave && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canSave && !saving
                             ? { background: "var(--brand)", color: "white" }
-                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
                             : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar conta"}</>}
@@ -611,12 +611,12 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                         <h3 className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             Alertas de vencimento
                         </h3>
-                        <p className="text-xs mt-1" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>
                             Quantos dias antes do vencimento alertar?
                         </p>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -624,9 +624,9 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                 {/* Slider visual */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text2)" }}>1 dia</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>1 dia</span>
                         <span className="font-heading text-2xl font-bold" style={{ color: "var(--cf-text)" }}>{val}d</span>
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text2)" }}>30 dias</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>30 dias</span>
                     </div>
                     <input type="range" min={1} max={30} value={val} onChange={e => setVal(Number(e.target.value))}
                         className="w-full cursor-pointer accent-blue-500" />
@@ -636,7 +636,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                                 className="py-2 rounded-xl text-xs font-bold border-2 cursor-pointer transition-all"
                                 style={val === d
                                     ? { background: "var(--brand)", borderColor: "transparent", color: "white" }
-                                    : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text2)" }}>
+                                    : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}>
                                 {d}d
                             </button>
                         ))}
@@ -654,7 +654,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
 
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold cursor-pointer"
-                        style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>
+                        style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
                         Cancelar
                     </button>
                     <button onClick={() => { onSave(val); onClose(); }}
@@ -817,10 +817,10 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
                 <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                     <div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Registrar pagamento</p>
-                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text2)" }}>{bill.title} · {toBRL(bill.amount)}</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{bill.title} · {toBRL(bill.amount)}</p>
                     </div>
                     <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
                 </div>
@@ -835,7 +835,7 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
 
                     {/* Data do pagamento */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text2)" }}>Data do pagamento</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data do pagamento</label>
                         <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -853,7 +853,7 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canConfirm && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canConfirm && !saving
                             ? { background: "var(--pos)", color: "white" }
-                            : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                            : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
                             : <><ShieldCheck size={15} /> Confirmar pagamento</>}
@@ -912,7 +912,7 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                     {bill.title}
                                 </p>
                                 {bill.partyDoc && (
-                                    <p className="text-xs font-mono truncate mt-0.5" style={{ color: "var(--cf-text3)" }}>
+                                    <p className="text-xs font-mono truncate mt-0.5" style={{ color: "var(--cf-text-3)" }}>
                                         {formatDoc(bill.partyDoc)}
                                     </p>
                                 )}
@@ -922,7 +922,7 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                         {meta.label}
                                     </span>
                                     {bill.seriesId && bill.installmentCount && (
-                                        <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text3)" }}>
+                                        <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text-3)" }}>
                                             <Repeat size={10} /> Parcela {bill.installmentIndex}/{bill.installmentCount}
                                         </span>
                                     )}
@@ -944,9 +944,9 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         {/* Vencimento */}
                         <div className="flex items-center gap-1.5 mt-2.5">
                             <CalendarClock size={13}
-                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text3)" }} />
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-3)" }} />
                             <span className="text-xs font-medium"
-                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text2)" }}>
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-2)" }}>
                                 {status === ("pago" as const)
                                     ? `Pago em ${bill.paidAt ? labelDate(bill.paidAt) : "—"}`
                                     : isOverdue
@@ -978,7 +978,7 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         )}
 
                         {bill.notes && (
-                            <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text3)" }}>📝 {bill.notes}</p>
+                            <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text-3)" }}>📝 {bill.notes}</p>
                         )}
                     </div>
                 </div>
@@ -999,11 +999,11 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         </div>
                     )}
                     <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
                     <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer"
-                        style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}>
+                        style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>
                 </div>
@@ -1565,13 +1565,13 @@ export default function ContasPagarPage() {
                         <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>
                             Excluir conta?
                         </p>
-                        <p className="text-xs mb-5" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>
                             Esta ação não pode ser desfeita. Será solicitado o seu PIN.
                         </p>
                         <div className="flex gap-2">
                             <button onClick={() => setConfirmId(null)}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text2)" }}>
+                                style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
                                 Cancelar
                             </button>
                             <button onClick={handleDeleteClick} disabled={deleting}
@@ -1603,7 +1603,7 @@ export default function ContasPagarPage() {
                         <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>
                             Contas a pagar
                         </h1>
-                        <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text-2)" }}>
                             {kpis.alert > 0
                                 ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "var(--warn)" }}>
                                     <AlertTriangle size={12} />
@@ -1621,7 +1621,7 @@ export default function ContasPagarPage() {
                     <div className="flex items-center gap-2">
                         <button onClick={() => setSettingsOpen(true)}
                             className="relative p-2 rounded-xl cursor-pointer"
-                            style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                            style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                             title={`Alertas: ${alertDays} dias`}>
                             <Settings2 size={16} />
                             {/* Indicador do prazo configurado */}
@@ -1648,9 +1648,9 @@ export default function ContasPagarPage() {
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
-                            <p className="text-xs font-semibold" style={{ color: "var(--cf-text2)" }}>{label}</p>
+                            <p className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>{label}</p>
                             <p className="font-heading font-bold text-base sm:text-lg mono" style={{ color }}>{val}</p>
-                            <p className="text-xs" style={{ color: "var(--cf-text3)" }}>{sub}</p>
+                            <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>{sub}</p>
                         </div>
                     ))}
                 </div>
@@ -1659,7 +1659,7 @@ export default function ContasPagarPage() {
                 <div className="cf-card p-3.5 space-y-3">
                     <div className="relative">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                            style={{ color: "var(--cf-text3)" }} />
+                            style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
                             placeholder="Buscar título ou observação…"
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
@@ -1673,7 +1673,7 @@ export default function ContasPagarPage() {
                                     className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-all"
                                     style={filterStatus === f
                                         ? { background: meta?.bg ?? "var(--cf-text)", color: meta?.color ?? "var(--cf-bg)", borderColor: meta?.border ?? "transparent" }
-                                        : { background: "transparent", color: "var(--cf-text2)", borderColor: "var(--cf-border)" }}>
+                                        : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
                                     {f === "todos" ? "Todos" : STATUS_META[f].label}
                                 </button>
                             );
@@ -1681,7 +1681,7 @@ export default function ContasPagarPage() {
                         <div className="ml-auto flex items-center gap-2 shrink-0">
                             <div className="relative">
                                 <Filter size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                                    style={{ color: "var(--cf-text3)" }} />
+                                    style={{ color: "var(--cf-text-3)" }} />
                                 <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
@@ -1689,11 +1689,11 @@ export default function ContasPagarPage() {
                                     {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
                                 </select>
                             </div>
-                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text2)" }}
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                                 title="Vencimentos deste mês — troque o mês no seletor da Navbar">
                                 {periodLabel}
                             </span>
-                            <span className="text-xs font-medium" style={{ color: "var(--cf-text3)" }}>
+                            <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
                                 {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
                             </span>
                         </div>
@@ -1705,14 +1705,14 @@ export default function ContasPagarPage() {
                     <div className="cf-card p-12 flex flex-col items-center text-center gap-3">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
                             style={{ background: "var(--cf-input)" }}>
-                            <CalendarClock size={24} style={{ color: "var(--cf-text3)" }} />
+                            <CalendarClock size={24} style={{ color: "var(--cf-text-3)" }} />
                         </div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? "Nenhum resultado"
                                 : `Nada em ${periodLabel}`}
                         </p>
-                        <p className="text-xs max-w-xs" style={{ color: "var(--cf-text2)" }}>
+                        <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? "Ajuste os filtros para ver outras contas."
                                 : "Nenhuma conta vence neste mês. Troque o mês no seletor da Navbar ou adicione uma conta."}

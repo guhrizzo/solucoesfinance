@@ -140,7 +140,7 @@ function TeamMemberModal({
     <Modal open={open} onClose={onClose} title={editing ? "Editar permissões" : "Adicionar membro"} size="sm" closeDisabled={saving}>
       <form onSubmit={handleSubmit} className="p-5 space-y-4">
         {err && (
-          <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm" style={{ background: "rgba(239,68,68,0.08)", color: "#dc2626" }}>
+          <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm" style={{ background: "rgba(239,68,68,0.08)", color: "var(--neg)" }}>
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             {err}
           </div>
@@ -529,7 +529,7 @@ export default function PerfilPage() {
             {!hasPassword && showPasswordForm && (
               <form onSubmit={handleAddPassword} className="pt-4 pb-1 space-y-3">
                 {passwordError && (
-                  <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm" style={{ background: "rgba(239,68,68,0.08)", color: "#dc2626" }}>
+                  <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm" style={{ background: "rgba(239,68,68,0.08)", color: "var(--neg)" }}>
                     <AlertCircle size={14} className="shrink-0 mt-0.5" />
                     {passwordError}
                   </div>
@@ -578,7 +578,7 @@ export default function PerfilPage() {
                   </div>
                 )}
                 {confirmPassword && !confirmOk && (
-                  <p className="text-xs px-1" style={{ color: "#dc2626" }}>As senhas não coincidem.</p>
+                  <p className="text-xs px-1" style={{ color: "var(--neg)" }}>As senhas não coincidem.</p>
                 )}
 
                 <div className="flex gap-2 pt-1">
