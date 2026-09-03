@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { PeriodProvider } from "../hooks/usePeriod";
+import { SubscriptionGate } from "./SubscriptionGate";
 
 // Keep in sync with the internalPrefixes list in the inline script in
 // layout.tsx (that copy provides the pre-hydration value for the first paint;
@@ -46,7 +47,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <PeriodProvider>
-      <div className="app-shell">{children}</div>
+      <div className="app-shell">
+        <SubscriptionGate>{children}</SubscriptionGate>
+      </div>
     </PeriodProvider>
   );
 }
