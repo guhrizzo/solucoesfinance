@@ -21,6 +21,7 @@ import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth 
 import AccessDenied from "./AccessDenied";
 import { PageLoader } from "./ui";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/cashflowCategories";
+import "./cashflow.css";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -370,7 +371,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
             {nfFile && (
               <button onClick={scanNf} disabled={scanning}
                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${scanning ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-                style={{ borderColor: "#c4b5fd", background: "#f5f3ff", color: "#6d28d9" }}>
+                style={{ borderColor: "color-mix(in srgb, var(--brand) 45%, var(--surface))", background: "var(--brand-weak)", color: "var(--brand)" }}>
                 {scanning ? <><Loader2 size={14} className="animate-spin" /> Analisando…</> : <><FileScan size={14} /> Extrair dados com IA</>}
               </button>
             )}
@@ -382,7 +383,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
               <button key={t} onClick={() => { setType(t); setCat(""); }}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer"
                 style={type === t
-                  ? { background: t === "entrada" ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #ef4444, #dc2626)", color: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }
+                  ? { background: t === "entrada" ? "var(--pos)" : "var(--neg)", color: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }
                   : { background: "transparent", color: "var(--cf-text-2)" }}>
                 {t === "entrada" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
                 {t === "entrada" ? "Entrada" : "Saída"}
@@ -460,7 +461,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           {/* Observação */}
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="NF #123, parcela 1/5…"
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="NF nº 123, parcela 1/5…"
               className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
@@ -572,7 +573,7 @@ function ImportModal({ open, onClose, onImport }: {
       <div style={{ maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--cf-border)" }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)" }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "var(--brand)" }}>
               <Sparkles size={16} className="text-white" />
             </div>
             <div>
@@ -631,7 +632,7 @@ function ImportModal({ open, onClose, onImport }: {
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <div className="relative">
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center animate-pulse" style={{ background: "var(--cf-input)" }}>
-                  <Sparkles size={28} className="text-blue-500" />
+                  <Sparkles size={28} style={{ color: "var(--brand)" }} />
                 </div>
               </div>
               <div className="text-center">
@@ -644,9 +645,9 @@ function ImportModal({ open, onClose, onImport }: {
             <>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Entradas", val: preview.filter(t => t.type === "entrada").length, color: "#059669", bg: "#dcfce7" },
-                  { label: "Saídas", val: preview.filter(t => t.type === "saida").length, color: "#dc2626", bg: "#fee2e2" },
-                  { label: "Selecionados", val: selected.size, color: "#2563eb", bg: "#dbeafe" },
+                  { label: "Entradas", val: preview.filter(t => t.type === "entrada").length, color: "var(--pos)", bg: "var(--pos-weak)" },
+                  { label: "Saídas", val: preview.filter(t => t.type === "saida").length, color: "var(--neg)", bg: "var(--neg-weak)" },
+                  { label: "Selecionados", val: selected.size, color: "var(--brand)", bg: "var(--brand-weak)" },
                 ].map(({ label, val, color, bg }) => (
                   <div key={label} className="rounded-xl p-3 text-center" style={{ background: bg }}>
                     <p className="text-lg font-heading font-bold" style={{ color }}>{val}</p>
@@ -658,7 +659,7 @@ function ImportModal({ open, onClose, onImport }: {
                 className="w-full flex items-center gap-2 px-3 py-3 rounded-xl cursor-pointer text-sm font-semibold transition-colors"
                 style={{ border: "1px solid var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text)" }}>
                 <div className="w-4 h-4 rounded border-2 flex items-center justify-center"
-                  style={selected.size === preview.length ? { background: "#2563eb", borderColor: "#2563eb" } : { borderColor: "var(--cf-border)" }}>
+                  style={selected.size === preview.length ? { background: "var(--brand)", borderColor: "var(--brand)" } : { borderColor: "var(--cf-border)" }}>
                   {selected.size === preview.length && <Check size={10} className="text-white" />}
                 </div>
                 {selected.size === preview.length ? "Desmarcar todos" : "Selecionar todos"}
@@ -672,21 +673,21 @@ function ImportModal({ open, onClose, onImport }: {
                     <button key={i} onClick={() => toggle(i)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all cursor-pointer text-left`}
                       style={isSel
-                        ? { borderColor: tx.type === "entrada" ? "#a7f3d0" : "#fca5a5", background: tx.type === "entrada" ? "#f0fdf4" : "#fff1f2" }
+                        ? { borderColor: tx.type === "entrada" ? "var(--pos-weak)" : "var(--neg)", background: tx.type === "entrada" ? "var(--pos-weak)" : "var(--neg-weak)" }
                         : { borderColor: "var(--cf-border)", background: "var(--cf-input)", opacity: 0.5 }}>
                       <div className="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0"
-                        style={isSel ? { background: "#2563eb", borderColor: "#2563eb" } : { borderColor: "var(--cf-border)" }}>
+                        style={isSel ? { background: "var(--brand)", borderColor: "var(--brand)" } : { borderColor: "var(--cf-border)" }}>
                         {isSel && <Check size={9} className="text-white" />}
                       </div>
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2" }}>
-                        <CatIcon size={14} style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }} />
+                        style={{ background: tx.type === "entrada" ? "var(--pos-weak)" : "var(--neg-weak)" }}>
+                        <CatIcon size={14} style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</p>
                         <p className="text-xs truncate" style={{ color: "var(--cf-text-2)" }}>{tx.category} · {shortDate(tx.date)}</p>
                       </div>
-                      <span className="text-xs font-mono font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
+                      <span className="text-xs font-mono font-bold shrink-0" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
                         {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
                       </span>
                     </button>
@@ -697,8 +698,8 @@ function ImportModal({ open, onClose, onImport }: {
           )}
           {step === "done" && (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "#dcfce7" }}>
-                <CheckCircle2 size={32} className="text-emerald-600" />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "var(--pos-weak)" }}>
+                <CheckCircle2 size={32} style={{ color: "var(--pos)" }} />
               </div>
               <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Pronto!</p>
               <p className="text-sm text-center" style={{ color: "var(--cf-text-2)" }}>
@@ -741,10 +742,10 @@ function ImportModal({ open, onClose, onImport }: {
 type LineStatus = "pago" | "aberto" | "vencido" | "agendado";
 
 const STATUS_META: Record<LineStatus, { label: string; fg: string; bg: string }> = {
-  pago:     { label: "Pago",      fg: "#15803d", bg: "#dcfce7" },
-  aberto:   { label: "Em aberto", fg: "#b45309", bg: "#fef3c7" },
-  vencido:  { label: "Vencido",   fg: "#b91c1c", bg: "#fee2e2" },
-  agendado: { label: "Agendado",  fg: "#1d4ed8", bg: "#dbeafe" },
+  pago:     { label: "Pago",      fg: "var(--pos)", bg: "var(--pos-weak)" },
+  aberto:   { label: "Em aberto", fg: "var(--warn)", bg: "var(--warn-weak)" },
+  vencido:  { label: "Vencido",   fg: "var(--neg)", bg: "var(--neg-weak)" },
+  agendado: { label: "Agendado",  fg: "var(--brand)", bg: "var(--brand-weak)" },
 };
 
 const normalizeBillStatus = (s: string): LineStatus =>
@@ -857,8 +858,8 @@ function BudgetSection({ icon: Icon, title, hint, subtotal, pago, hideValues, ch
       </div>
       <div className="flex items-center gap-3 text-[11px]">
         <span style={{ color: "var(--cf-text-3)" }}>{hint}</span>
-        <span className="ml-auto shrink-0" style={{ color: "#15803d" }}>Pago <Sensitive hidden={hideValues}>{toBRL(pago)}</Sensitive></span>
-        <span className="shrink-0" style={{ color: "#b45309" }}>Aberto <Sensitive hidden={hideValues}>{toBRL(aberto)}</Sensitive></span>
+        <span className="ml-auto shrink-0" style={{ color: "var(--pos)" }}>Pago <Sensitive hidden={hideValues}>{toBRL(pago)}</Sensitive></span>
+        <span className="shrink-0" style={{ color: "var(--warn)" }}>Aberto <Sensitive hidden={hideValues}>{toBRL(aberto)}</Sensitive></span>
       </div>
       {children}
     </div>
@@ -880,12 +881,12 @@ function CenterBudgetRow({ name, orcado, realizado, hideValues }: {
         </span>
       </div>
       <div className="cf-progress">
-        <div className="cf-progress-fill" style={{ width: `${pct}%`, background: over ? "#dc2626" : "#3b82f6" }} />
+        <div className="cf-progress-fill" style={{ width: `${pct}%`, background: over ? "var(--neg)" : "var(--brand)" }} />
       </div>
       <div className="flex items-center justify-between mt-1 text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-        <span>Realizado <b style={{ color: over ? "#b91c1c" : "#15803d" }}><Sensitive hidden={hideValues}>{toBRL(realizado)}</Sensitive></b></span>
+        <span>Realizado <b style={{ color: over ? "var(--neg)" : "var(--pos)" }}><Sensitive hidden={hideValues}>{toBRL(realizado)}</Sensitive></b></span>
         <span>{over ? "Estourou " : "Falta "}
-          <b style={{ color: over ? "#b91c1c" : "var(--cf-text-2)" }}><Sensitive hidden={hideValues}>{toBRL(Math.abs(restante))}</Sensitive></b>
+          <b style={{ color: over ? "var(--neg)" : "var(--cf-text-2)" }}><Sensitive hidden={hideValues}>{toBRL(Math.abs(restante))}</Sensitive></b>
         </span>
       </div>
     </div>
@@ -1355,11 +1356,11 @@ export default function CashFlowPage() {
   const displayValue = (val: number) => <Sensitive hidden={hideValues}>{toBRL(val)}</Sensitive>;
 
   const kpis = [
-    { label: "Orçamento", val: previsao, Icon: ClipboardList, ibg: "#eff6ff", color: "#3b82f6" },
-    { label: "Entradas", val: entradas, Icon: ArrowUpRight, ibg: "#dcfce7", color: "#059669", sub: `${monthTxs.filter(t => t.type === "entrada").length} lançamentos` },
-    { label: "Saídas", val: saidas, Icon: ArrowDownRight, ibg: "#fee2e2", color: "#dc2626", sub: `${monthTxs.filter(t => t.type === "saida").length} lançamentos` },
-    { label: "Saldo", val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "#dbeafe" : "#fee2e2", color: saldo >= 0 ? "#3b82f6" : "#dc2626", sub: saldo >= 0 ? "Positivo" : "Negativo" },
-    { label: "Resultado", val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "#dcfce7" : "#fee2e2", color: superavitDeficit >= 0 ? "#059669" : "#dc2626", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
+    { label: "Orçamento", val: previsao, Icon: ClipboardList, ibg: "var(--brand-weak)", color: "var(--brand)" },
+    { label: "Entradas", val: entradas, Icon: ArrowUpRight, ibg: "var(--pos-weak)", color: "var(--pos)", sub: `${monthTxs.filter(t => t.type === "entrada").length} lançamentos` },
+    { label: "Saídas", val: saidas, Icon: ArrowDownRight, ibg: "var(--neg-weak)", color: "var(--neg)", sub: `${monthTxs.filter(t => t.type === "saida").length} lançamentos` },
+    { label: "Saldo", val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "var(--brand-weak)" : "var(--neg-weak)", color: saldo >= 0 ? "var(--brand)" : "var(--neg)", sub: saldo >= 0 ? "Positivo" : "Negativo" },
+    { label: "Resultado", val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "var(--pos-weak)" : "var(--neg-weak)", color: superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
   ];
 
   if (pageState === "blocked") return <AccessDenied category="Fluxo de Caixa" />;
@@ -1368,9 +1369,9 @@ export default function CashFlowPage() {
 
   if (pageState === "error") return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
-      <p className="font-heading text-lg font-bold text-rose-500">Erro ao conectar</p>
+      <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>Erro ao conectar</p>
       <div className="rounded-xl p-4 max-w-sm w-full text-left cf-card" style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)" }}>
-        <p className="text-xs font-mono break-all text-rose-700">{errMsg || "Erro desconhecido"}</p>
+        <p className="text-xs font-mono break-all" style={{ color: "var(--neg)" }}>{errMsg || "Erro desconhecido"}</p>
       </div>
       <Button variant="primary" onClick={() => window.location.reload()} className="mt-2">Tentar novamente</Button>
     </div>
@@ -1378,69 +1379,6 @@ export default function CashFlowPage() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; }
-
-        .cf-card { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; }
-         .cf-kpi { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px;
-           transition: all .2s cubic-bezier(.4, 0, .2, 1); }
-         .cf-kpi:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
-        .cf-kpi.clickable { cursor: pointer; }
-        .cf-kpi.clickable:active { transform: translateY(0); }
-
-        .cf-tx { border-bottom: 1px solid var(--cf-border); transition: all .15s; cursor: pointer; }
-        .cf-tx:last-child { border-bottom: none; }
-        .cf-tx:hover { background: var(--cf-hover); transform: translateX(2px); }
-        .cf-tx:hover .cf-txa { opacity: 1; pointer-events: auto; }
-        .cf-txa { opacity: 0; pointer-events: none; transition: all .15s; }
-        @media (max-width: 639px) { .cf-txa { opacity: 1; pointer-events: auto; } }
-
-        .cf-group-header {
-          cursor: pointer;
-          transition: background .15s;
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 16px 20px;
-          background: var(--cf-txhdr);
-          border: none;
-          text-align: left;
-        }
-        .cf-group-header:hover { filter: brightness(0.97); }
-        .cf-group-header:active { filter: brightness(0.94); }
-
-        .cf-group-body {
-          overflow: hidden;
-          transition: max-height .32s cubic-bezier(.4,0,.2,1), opacity .22s ease;
-        }
-        .cf-group-body.open  { opacity: 1; }
-        .cf-group-body.closed { opacity: 0; max-height: 0 !important; }
-
-        .cf-chevron {
-          transition: transform .25s cubic-bezier(.4,0,.2,1);
-          flex-shrink: 0;
-        }
-        .cf-chevron.open { transform: rotate(180deg); }
-
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(.95) } to { opacity: 1; transform: none } }
-        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes kIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-        .kin { animation: kIn .35s ease both; }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--cf-border); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--cf-text-3); }
-        .scrollbar-none { scrollbar-width: none; }
-        .scrollbar-none::-webkit-scrollbar { display: none; }
-
-        .cf-progress { height: 4px; border-radius: 2px; background: var(--cf-border); overflow: hidden; margin-top: 8px; }
-        .cf-progress-fill { height: 100%; border-radius: 2px; transition: width .4s cubic-bezier(.4,0,.2,1); }
-
-        button, a, input, select, textarea { transition: all .12s cubic-bezier(.4, 0, .2, 1) !important; }
-        input:focus, select:focus, textarea:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important; }
-      `}</style>
 
       <Navbar user={{ displayName: userName, email: userEmail }} activePath="/fluxo-caixa" onLogout={handleLogout} />
 
@@ -1466,8 +1404,8 @@ export default function CashFlowPage() {
         <div style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
           <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--cf-border)" }}>
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#eff6ff" }}>
-                <ClipboardList size={16} style={{ color: "#3b82f6" }} />
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--brand-weak)" }}>
+                <ClipboardList size={16} style={{ color: "var(--brand)" }} />
               </div>
               <div className="min-w-0">
                 <p className="font-heading text-base font-bold truncate" style={{ color: "var(--cf-text)" }}>Orçamento · {periodLabel}</p>
@@ -1499,7 +1437,7 @@ export default function CashFlowPage() {
                     </div>
                     <div className="flex items-center gap-3 text-[11px]">
                       <span style={{ color: "var(--cf-text-3)" }}>Orçado do mês × já gasto (despesas pagas)</span>
-                      <span className="ml-auto shrink-0" style={{ color: "#15803d" }}>
+                      <span className="ml-auto shrink-0" style={{ color: "var(--pos)" }}>
                         Realizado <Sensitive hidden={hideValues}>{toBRL(previsaoDetalhe.centrosRealizado)}</Sensitive>
                       </span>
                     </div>
@@ -1508,7 +1446,7 @@ export default function CashFlowPage() {
                         <CenterBudgetRow key={c.id} name={c.name} orcado={c.orcado} realizado={c.realizado} hideValues={hideValues} />
                       ))}
                     </div>
-                    <a href="/costCenter" className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: "#3b82f6" }}>
+                    <a href="/costCenter" className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: "var(--brand)" }}>
                       Abrir centros de custo <ExternalLink size={11} />
                     </a>
                   </div>
@@ -1536,7 +1474,7 @@ export default function CashFlowPage() {
           </div>
           <div className="px-5 py-4 shrink-0 flex items-center justify-between" style={{ borderTop: "1px solid var(--cf-border)" }}>
             <span className="text-sm font-semibold" style={{ color: "var(--cf-text-2)" }}>Total do orçamento</span>
-            <span className="font-heading text-lg font-bold mono" style={{ color: "#3b82f6" }}>{displayValue(previsao)}</span>
+            <span className="font-heading text-lg font-bold mono" style={{ color: "var(--brand)" }}>{displayValue(previsao)}</span>
           </div>
         </div>
       </Modal>
@@ -1587,7 +1525,7 @@ export default function CashFlowPage() {
                   <p className="font-heading font-bold text-base sm:text-[17px] mono leading-tight tracking-tight" style={{ color }}>
                     {isSaldo && val > 0 ? "+" : ""}{displayValue(val)}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: clickable ? "#3b82f6" : "var(--cf-text-3)" }}>
+                  <p className="text-xs mt-1" style={{ color: clickable ? "var(--brand)" : "var(--cf-text-3)" }}>
                     {clickable ? "Ver detalhamento →" : sub}
                   </p>
                 </div>
@@ -1603,7 +1541,7 @@ export default function CashFlowPage() {
 
         {/* Banner importação mobile */}
         <button onClick={() => setImportOpen(true)} className="sm:hidden w-full cf-card p-4 flex items-center gap-3 cursor-pointer hover:shadow-md transition-all">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)" }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--brand)" }}>
             <Sparkles size={16} className="text-white" />
           </div>
           <div className="flex-1 text-left">
@@ -1633,8 +1571,8 @@ export default function CashFlowPage() {
                   ? f === "all"
                     ? { background: "var(--cf-text)", color: "var(--cf-bg)", borderColor: "transparent" }
                     : f === "entrada"
-                      ? { background: "linear-gradient(135deg, #dcfce7, #c6f6d5)", color: "#15803d", borderColor: "transparent", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }
-                      : { background: "linear-gradient(135deg, #fee2e2, #fecaca)", color: "#b91c1c", borderColor: "transparent", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }
+                      ? { background: "var(--pos-weak)", color: "var(--pos)", borderColor: "transparent", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }
+                      : { background: "var(--neg-weak)", color: "var(--neg)", borderColor: "transparent", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }
                   : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
                 {Icon && <Icon size={12} />}
                 {label}
@@ -1709,18 +1647,18 @@ export default function CashFlowPage() {
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right hidden sm:block">
                         {monthEntradas > 0 && (
-                          <p className="text-xs font-semibold" style={{ color: "#059669" }}>
+                          <p className="text-xs font-semibold" style={{ color: "var(--pos)" }}>
                             +{displayValue(monthEntradas)}
                           </p>
                         )}
                         {monthSaidas > 0 && (
-                          <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
+                          <p className="text-xs font-semibold" style={{ color: "var(--neg)" }}>
                             -{displayValue(monthSaidas)}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
-                        <span className="mono text-sm font-bold block" style={{ color: monthTotal >= 0 ? "#059669" : "#dc2626" }}>
+                        <span className="mono text-sm font-bold block" style={{ color: monthTotal >= 0 ? "var(--pos)" : "var(--neg)" }}>
                           <Sensitive hidden={hideValues}>{(monthTotal >= 0 ? "+" : "") + toBRL(monthTotal)}</Sensitive>
                         </span>
                       </div>
@@ -1772,18 +1710,18 @@ export default function CashFlowPage() {
                               <div className="flex items-center gap-2.5 shrink-0">
                                 <div className="text-right hidden sm:block">
                                   {dayEntradas > 0 && (
-                                    <p className="text-xs font-semibold" style={{ color: "#059669" }}>
+                                    <p className="text-xs font-semibold" style={{ color: "var(--pos)" }}>
                                       +{displayValue(dayEntradas)}
                                     </p>
                                   )}
                                   {daySaidas > 0 && (
-                                    <p className="text-xs font-semibold" style={{ color: "#dc2626" }}>
+                                    <p className="text-xs font-semibold" style={{ color: "var(--neg)" }}>
                                       -{displayValue(daySaidas)}
                                     </p>
                                   )}
                                 </div>
                                 <div className="text-right">
-                                  <span className="mono text-xs font-bold block" style={{ color: dayNet >= 0 ? "#059669" : "#dc2626" }}>
+                                  <span className="mono text-xs font-bold block" style={{ color: dayNet >= 0 ? "var(--pos)" : "var(--neg)" }}>
                                     <Sensitive hidden={hideValues}>{(dayNet >= 0 ? "+" : "") + toBRL(dayNet)}</Sensitive>
                                   </span>
                                 </div>
@@ -1805,14 +1743,14 @@ export default function CashFlowPage() {
                                 return (
                                   <div key={tx.id} className="cf-tx flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3.5">
                                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
-                                      style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2" }}>
-                                      <CatIcon size={16} style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }} />
+                                      style={{ background: tx.type === "entrada" ? "var(--pos-weak)" : "var(--neg-weak)" }}>
+                                      <CatIcon size={16} style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-start sm:items-center gap-1.5 flex-col sm:flex-row sm:gap-2 mb-0.5">
                                         <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</span>
                                         <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
-                                          style={{ background: tx.type === "entrada" ? "#dcfce7" : "#fee2e2", color: tx.type === "entrada" ? "#15803d" : "#991b1b" }}>
+                                          style={{ background: tx.type === "entrada" ? "var(--pos-weak)" : "var(--neg-weak)", color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
                                           {tx.category}
                                         </span>
                                       </div>
@@ -1826,7 +1764,7 @@ export default function CashFlowPage() {
                                         {tx.nfUrl && (
                                           <a href={tx.nfUrl} target="_blank" rel="noreferrer"
                                             className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors hover:opacity-70 cursor-pointer"
-                                            style={{ color: "#3b82f6" }} title={tx.nfName ?? "Ver Nota Fiscal"}>
+                                            style={{ color: "var(--brand)" }} title={tx.nfName ?? "Ver Nota Fiscal"}>
                                             <Paperclip size={11} />
                                             <span className="hidden sm:inline truncate max-w-24">{tx.nfName ?? "NF"}</span>
                                             <span className="sm:hidden">NF</span>
@@ -1834,7 +1772,7 @@ export default function CashFlowPage() {
                                         )}
                                       </div>
                                     </div>
-                                    <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "#059669" : "#dc2626" }}>
+                                    <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
                                       <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
                                     </span>
                                     <div className="cf-txa flex items-center gap-1 shrink-0">
@@ -1870,12 +1808,12 @@ export default function CashFlowPage() {
       <div className="lg:hidden fixed z-20 flex flex-col gap-2" style={{ bottom: 74, right: 16 }}>
         <button onClick={() => setImportOpen(true)}
           className="w-11 h-11 rounded-xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-          style={{ background: "var(--cf-card)", border: "1px solid var(--cf-border)", color: "#3b82f6" }}>
+          style={{ background: "var(--cf-card)", border: "1px solid var(--cf-border)", color: "var(--brand)" }}>
           <Sparkles size={17} />
         </button>
         <button onClick={() => { setEditing(null); setModal(true); }}
           className="rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-          style={{ width: 52, height: 52, background: "linear-gradient(135deg, #10b981, #059669)", color: "white", boxShadow: "0 8px 24px rgba(16, 185, 129, 0.35)" }}>
+          style={{ width: 52, height: 52, background: "var(--pos)", color: "white", boxShadow: "0 8px 24px rgba(16, 185, 129, 0.35)" }}>
           <Plus size={22} />
         </button>
       </div>

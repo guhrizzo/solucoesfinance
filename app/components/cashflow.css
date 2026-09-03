@@ -1,0 +1,42 @@
+/* Fluxo de caixa — estilos locais que não existem no globals.css.
+   (.cf-card/.cf-kpi/.cf-tx/.cf-progress e keyframes já vêm do globals.)
+   Só tokens. Redesign 2026-09, Fase 3. */
+
+.cf-group-header {
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--cf-txhdr);
+  border: none;
+  text-align: left;
+}
+.cf-group-header:hover {
+  filter: brightness(0.97);
+}
+.cf-group-header:active {
+  filter: brightness(0.94);
+}
+
+.cf-group-body {
+  overflow: hidden;
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease;
+}
+.cf-group-body.open {
+  opacity: 1;
+}
+.cf-group-body.closed {
+  opacity: 0;
+  max-height: 0 !important;
+}
+
+.cf-chevron {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.cf-chevron.open {
+  transform: rotate(180deg);
+}
