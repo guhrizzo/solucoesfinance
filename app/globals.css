@@ -677,13 +677,11 @@ textarea {
 /* ACCESSIBILITY */
 /* ────────────────────────────────────────────────────────────────── */
 
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+/* Movimento forçado: o usuário pediu explicitamente para MANTER animações e rolagem
+   suave mesmo com "desempenho melhorado" / prefers-reduced-motion ligado.
+   Por isso NÃO zeramos as durations aqui. A suavização de scroll que o
+   navegador desliga nesse modo é reimposta via JS em
+   app/components/ForceMotion.tsx + app/lib/motion.ts. */
 
 @media (prefers-color-scheme: dark) {
   [data-theme] {

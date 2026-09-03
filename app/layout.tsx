@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sora, JetBrains_Mono, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeInitializer } from "./components/ThemeInitializer";
+import { ForceMotion } from "./components/ForceMotion";
 import { AppShell } from "./components/AppShell";
 
 const sora = Sora({
@@ -91,6 +92,7 @@ export default function RootLayout({
         style={{ margin: 0, padding: 0 }}
       >
         <ThemeInitializer />
+        <ForceMotion />
         <AppShell>{children}</AppShell>
       </body>
     </html>
