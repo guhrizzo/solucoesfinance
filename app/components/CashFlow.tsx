@@ -34,6 +34,7 @@ interface ForecastDoc {
   amount: number;
   dueDate: string;
   status: string;
+  category?: string;
   recurrence?: string;
   installmentIndex?: number;
   installmentCount?: number;
@@ -731,6 +732,166 @@ function ImportModal({ open, onClose, onImport }: {
   );
 }
 
+// ─── Detalhamento do Orçamento ────────────────────────────────────────────────
+// O modal que abre ao clicar no KPI "Orçamento" abre a conta linha a linha:
+// centros de custo (orçado × realizado), contas a pagar e impostos — estes dois
+// agrupados por categoria e com status de cada item. A soma continua batendo
+// exatamente com o KPI.
+
+type LineStatus = "pago" | "aberto" | "vencido" | "agendado";
+
+const STATUS_META: Record<LineStatus, { label: string; fg: string; bg: string }> = {
+  pago:     { label: "Pago",      fg: "#15803d", bg: "#dcfce7" },
+  aberto:   { label: "Em aberto", fg: "#b45309", bg: "#fef3c7" },
+  vencido:  { label: "Vencido",   fg: "#b91c1c", bg: "#fee2e2" },
+  agendado: { label: "Agendado",  fg: "#1d4ed8", bg: "#dbeafe" },
+};
+
+const normalizeBillStatus = (s: string): LineStatus =>
+  s === "pago" ? "pago" : s === "vencido" ? "vencido" : s === "agendado" ? "agendado" : "aberto";
+const normalizeTaxStatus = (s: string): LineStatus =>
+  s === "pago" ? "pago" : s === "atraso" ? "vencido" : s === "agendado" ? "agendado" : "aberto";
+
+// type do imposto → esfera, pro agrupamento (a esfera não é gravada no doc).
+const TAX_SPHERE: Record<string, string> = {
+  simples_nacional: "Federais", irpf: "Federais", irpj: "Federais", pis: "Federais",
+  cofins: "Federais", csll: "Federais", ipi: "Federais", iof: "Federais", itr: "Federais",
+  inss: "Federais", fgts: "Federais",
+  icms: "Estaduais", ipva: "Estaduais", itcmd: "Estaduais",
+  iss: "Municipais", iptu: "Municipais", itbi: "Municipais",
+};
+
+interface BudgetLine {
+  key: string;
+  label: string;
+  sub: string | null;
+  amount: number;
+  status: LineStatus;
+  href: string;
+  category: string;
+}
+interface BudgetCatGroup {
+  category: string;
+  total: number;
+  pago: number;
+  items: BudgetLine[];
+}
+
+function groupBudgetLines(rows: BudgetLine[]): BudgetCatGroup[] {
+  const m = new Map<string, BudgetLine[]>();
+  for (const r of rows) {
+    const arr = m.get(r.category) ?? [];
+    arr.push(r);
+    m.set(r.category, arr);
+  }
+  return [...m.entries()]
+    .map(([category, items]) => ({
+      category,
+      items: items.sort((a, b) => (a.sub ?? "").localeCompare(b.sub ?? "")),
+      total: items.reduce((s, i) => s + i.amount, 0),
+      pago: items.filter(i => i.status === "pago").reduce((s, i) => s + i.amount, 0),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+function StatusBadge({ status }: { status: LineStatus }) {
+  const m = STATUS_META[status];
+  return (
+    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: m.bg, color: m.fg }}>
+      {m.label}
+    </span>
+  );
+}
+
+function BudgetLineRow({ line, hideValues }: { line: BudgetLine; hideValues: boolean }) {
+  return (
+    <a
+      href={line.href}
+      className="flex items-center gap-2.5 px-4 py-2.5 border-b last:border-b-0 transition-colors hover:bg-[var(--cf-hover)]"
+      style={{ borderColor: "var(--cf-border)" }}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium truncate" style={{ color: "var(--cf-text)" }}>{line.label}</p>
+          <StatusBadge status={line.status} />
+        </div>
+        {line.sub && <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{line.sub}</p>}
+      </div>
+      <span className="text-sm font-semibold mono shrink-0" style={{ color: "var(--cf-text)" }}>
+        <Sensitive hidden={hideValues}>{toBRL(line.amount)}</Sensitive>
+      </span>
+      <ExternalLink size={12} className="shrink-0" style={{ color: "var(--cf-text-3)" }} />
+    </a>
+  );
+}
+
+function BudgetCategoryBlock({ group, hideValues }: { group: BudgetCatGroup; hideValues: boolean }) {
+  return (
+    <div className="cf-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2" style={{ background: "var(--cf-txhdr)", borderBottom: "1px solid var(--cf-border)" }}>
+        <span className="text-xs font-bold" style={{ color: "var(--cf-text-2)" }}>{group.category} · {group.items.length}</span>
+        <span className="text-xs font-bold mono" style={{ color: "var(--cf-text-2)" }}>
+          <Sensitive hidden={hideValues}>{toBRL(group.total)}</Sensitive>
+        </span>
+      </div>
+      {group.items.map(it => <BudgetLineRow key={it.key} line={it} hideValues={hideValues} />)}
+    </div>
+  );
+}
+
+function BudgetSection({ icon: Icon, title, hint, subtotal, pago, hideValues, children }: {
+  icon: LucideIcon; title: string; hint: string; subtotal: number; pago: number;
+  hideValues: boolean; children: React.ReactNode;
+}) {
+  const aberto = subtotal - pago;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon size={14} style={{ color: "var(--cf-text-2)" }} />
+          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{title}</span>
+        </div>
+        <span className="text-sm font-bold mono" style={{ color: "var(--cf-text)" }}>
+          <Sensitive hidden={hideValues}>{toBRL(subtotal)}</Sensitive>
+        </span>
+      </div>
+      <div className="flex items-center gap-3 text-[11px]">
+        <span style={{ color: "var(--cf-text-3)" }}>{hint}</span>
+        <span className="ml-auto shrink-0" style={{ color: "#15803d" }}>Pago <Sensitive hidden={hideValues}>{toBRL(pago)}</Sensitive></span>
+        <span className="shrink-0" style={{ color: "#b45309" }}>Aberto <Sensitive hidden={hideValues}>{toBRL(aberto)}</Sensitive></span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CenterBudgetRow({ name, orcado, realizado, hideValues }: {
+  name: string; orcado: number; realizado: number; hideValues: boolean;
+}) {
+  const pct = orcado > 0 ? Math.min((realizado / orcado) * 100, 100) : 0;
+  const over = orcado > 0 && realizado > orcado;
+  const restante = orcado - realizado;
+  return (
+    <div className="px-4 py-3 border-b last:border-b-0" style={{ borderColor: "var(--cf-border)" }}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <p className="text-sm font-medium truncate" style={{ color: "var(--cf-text)" }}>{name}</p>
+        <span className="text-sm font-semibold mono shrink-0" style={{ color: "var(--cf-text)" }}>
+          <Sensitive hidden={hideValues}>{toBRL(orcado)}</Sensitive>
+        </span>
+      </div>
+      <div className="cf-progress">
+        <div className="cf-progress-fill" style={{ width: `${pct}%`, background: over ? "#dc2626" : "#3b82f6" }} />
+      </div>
+      <div className="flex items-center justify-between mt-1 text-[11px]" style={{ color: "var(--cf-text-3)" }}>
+        <span>Realizado <b style={{ color: over ? "#b91c1c" : "#15803d" }}><Sensitive hidden={hideValues}>{toBRL(realizado)}</Sensitive></b></span>
+        <span>{over ? "Estourou " : "Falta "}
+          <b style={{ color: over ? "#b91c1c" : "var(--cf-text-2)" }}><Sensitive hidden={hideValues}>{toBRL(Math.abs(restante))}</Sensitive></b>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
@@ -749,11 +910,15 @@ export default function CashFlowPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [hideValues, setHideValues] = useState(false);
+  const [budgetOpen, setBudgetOpen] = useState(false);
   // Contas a pagar / a receber / impostos do dono. O Orçamento do mês só precisa
   // de valor + vencimento; os campos de parcela alimentam o bloco "Previstos".
   const [bills, setBills] = useState<ForecastDoc[]>([]);
   const [receivables, setReceivables] = useState<ForecastDoc[]>([]);
-  const [taxes, setTaxes] = useState<{ amount: number; dueDate: string }[]>([]);
+  const [taxes, setTaxes] = useState<{ id: string; name: string; type: string; status: string; amount: number; dueDate: string }[]>([]);
+  // Despesas reais dos centros de custo — só pra mostrar "realizado" (pago) vs
+  // orçado no detalhamento do Orçamento. Não entra em nenhum total da tela.
+  const [expenses, setExpenses] = useState<{ center: string; amount: number; status: string; date: string }[]>([]);
 
   // Mês em foco = seletor global da Navbar (usePeriod). Tudo nesta tela —
   // KPIs (Orçamento/Entradas/Saídas/Saldo/Resultado) e a lista — é recortado
@@ -796,6 +961,7 @@ export default function CashFlowPage() {
       let snapBillsUnsub: (() => void) | undefined;
       let snapReceivablesUnsub: (() => void) | undefined;
       let snapTaxesUnsub: (() => void) | undefined;
+      let snapExpensesUnsub: (() => void) | undefined;
       let authUnsub: (() => void) | undefined;
       (async () => {
         try {
@@ -863,6 +1029,7 @@ export default function CashFlowPage() {
                 amount: Number(x.amount) || 0,
                 dueDate: (x.dueDate as string) || "",
                 status: String(x.status || ""),
+                category: (x.category as string) || undefined,
                 recurrence: x.recurrence as string | undefined,
                 installmentIndex: x.installmentIndex as number | undefined,
                 installmentCount: x.installmentCount as number | undefined,
@@ -893,16 +1060,48 @@ export default function CashFlowPage() {
             snapTaxesUnsub = onSnapshot(
               collection(db, "users", ownerUid, "taxes"),
               (snap) => {
-                setTaxes(snap.docs.map((d) => ({ amount: d.data().amount || 0, dueDate: (d.data().dueDate as string) || "" })));
+                setTaxes(snap.docs.map((d) => {
+                  const x = d.data();
+                  return {
+                    id: d.id,
+                    name: (x.name as string) || "Imposto",
+                    type: (x.type as string) || "outro",
+                    status: String(x.status || ""),
+                    amount: x.amount || 0,
+                    dueDate: (x.dueDate as string) || "",
+                  };
+                }));
               },
               (err) => {
                 console.debug("Aviso ao sincronizar impostos:", err.code);
               }
             );
+
+            // ── Listener de despesas dos centros de custo ──
+            // Só pra calcular o "realizado" (despesas pagas) por centro no
+            // detalhamento do Orçamento. Mesma query que a tela de Centro de Custo.
+            snapExpensesUnsub?.();
+            snapExpensesUnsub = onSnapshot(
+              query(collection(db, "expenses"), where("userId", "==", ownerUid)),
+              (snap) => {
+                setExpenses(snap.docs.map((d) => {
+                  const x = d.data();
+                  return {
+                    center: (x.center as string) || "",
+                    amount: Number(x.amount) || 0,
+                    status: String(x.status || ""),
+                    date: (x.date as string) || "",
+                  };
+                }));
+              },
+              (err) => {
+                console.debug("Aviso ao sincronizar despesas:", err.code);
+              }
+            );
           });
         } catch (e: any) { setErrMsg(e.message); setPageState("error"); }
       })();
-      return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); snapReceivablesUnsub?.(); snapTaxesUnsub?.(); };
+      return () => { authUnsub?.(); snapUnsub?.(); snapCenterUnsub?.(); snapBillsUnsub?.(); snapReceivablesUnsub?.(); snapTaxesUnsub?.(); snapExpensesUnsub?.(); };
     }, []);
 
   async function handleLogout() {
@@ -1036,6 +1235,65 @@ export default function CashFlowPage() {
 
   const superavitDeficit = saldo - previsao;
 
+  // Quebra do Orçamento linha a linha — alimenta o modal que abre ao clicar no
+  // KPI "Orçamento". A soma dos três grupos bate exatamente com `previsao`.
+  const previsaoDetalhe = useMemo(() => {
+    const doMes = (iso: string) => (iso ?? "").slice(0, 7) === monthKey;
+
+    // Centros de custo: orçado no mês × realizado (soma das despesas pagas do
+    // centro naquele mês). O orçado é o que entra no total do Orçamento.
+    const centros = costCenters
+      .map(c => {
+        const orcado = budgetForCenterMonth(c, monthKey, currentMonthKey);
+        const realizado = expenses
+          .filter(e => e.center === c.name && e.status === "pago" && doMes(e.date))
+          .reduce((s, e) => s + e.amount, 0);
+        return { id: c.id, name: c.name, orcado, realizado };
+      })
+      .filter(c => c.orcado > 0)
+      .sort((a, b) => b.orcado - a.orcado);
+    const centrosOrcado = centros.reduce((s, c) => s + c.orcado, 0);
+    const centrosRealizado = centros.reduce((s, c) => s + c.realizado, 0);
+
+    // Contas a pagar do mês, agrupadas por categoria, com status por item.
+    const contasLines: BudgetLine[] = bills
+      .filter(b => doMes(b.dueDate))
+      .map(b => ({
+        key: `b-${b.id}`,
+        label: b.title || "Conta a pagar",
+        sub: labelDate(b.dueDate) + (b.installmentIndex ? ` · Parcela ${b.installmentIndex}/${b.installmentCount}` : ""),
+        amount: b.amount,
+        status: normalizeBillStatus(b.status),
+        href: "/contasPagar",
+        category: b.category || "Sem categoria",
+      }));
+    const contas = groupBudgetLines(contasLines);
+    const contasTotal = contasLines.reduce((s, l) => s + l.amount, 0);
+    const contasPago = contasLines.filter(l => l.status === "pago").reduce((s, l) => s + l.amount, 0);
+
+    // Impostos do mês, agrupados por esfera (Federais / Estaduais / Municipais).
+    const impostosLines: BudgetLine[] = taxes
+      .filter(t => doMes(t.dueDate))
+      .map((t, i) => ({
+        key: `t-${t.id || i}`,
+        label: t.name || "Imposto",
+        sub: labelDate(t.dueDate),
+        amount: t.amount,
+        status: normalizeTaxStatus(t.status),
+        href: "/impostos",
+        category: TAX_SPHERE[t.type] || "Outros",
+      }));
+    const impostos = groupBudgetLines(impostosLines);
+    const impostosTotal = impostosLines.reduce((s, l) => s + l.amount, 0);
+    const impostosPago = impostosLines.filter(l => l.status === "pago").reduce((s, l) => s + l.amount, 0);
+
+    return {
+      centros, centrosOrcado, centrosRealizado,
+      contas, contasTotal, contasPago,
+      impostos, impostosTotal, impostosPago,
+    };
+  }, [costCenters, bills, taxes, expenses, monthKey, currentMonthKey]);
+
   // ─── Lançamentos PREVISTOS (informativo) ────────────────────────────────────
   // Só parcelas de série "numeral" ainda não quitadas, com vencimento no mês em
   // foco. Nada é gravado na coleção cashflow — é derivado de bills/receivables.
@@ -1060,9 +1318,6 @@ export default function CashFlowPage() {
 
     return [...entradas, ...saidas].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   }, [bills, receivables, monthKey]);
-
-  const previstoEntradas = useMemo(() => previstos.filter(p => p.kind === "aReceber").reduce((s, p) => s + p.amount, 0), [previstos]);
-  const previstoSaidas = useMemo(() => previstos.filter(p => p.kind === "aPagar").reduce((s, p) => s + p.amount, 0), [previstos]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -1206,6 +1461,86 @@ export default function CashFlowPage() {
         </div>
       </Modal>
 
+      {/* Detalhamento do Orçamento */}
+      <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} size="md" mobileSheet>
+        <div style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+          <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#eff6ff" }}>
+                <ClipboardList size={16} style={{ color: "#3b82f6" }} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-heading text-base font-bold truncate" style={{ color: "var(--cf-text)" }}>Orçamento · {periodLabel}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>Tudo que compõe o valor previsto do mês</p>
+              </div>
+            </div>
+            <button onClick={() => setBudgetOpen(false)} className="p-1.5 rounded-lg cursor-pointer shrink-0"
+              style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+            {previsao === 0 ? (
+              <p className="text-sm text-center py-10" style={{ color: "var(--cf-text-2)" }}>
+                Sem orçamento de centro de custo, contas a pagar ou impostos com vencimento em {periodLabel}.
+              </p>
+            ) : (
+              <>
+                {previsaoDetalhe.centros.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 size={14} style={{ color: "var(--cf-text-2)" }} />
+                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Centros de custo</span>
+                      </div>
+                      <span className="text-sm font-bold mono" style={{ color: "var(--cf-text)" }}>
+                        <Sensitive hidden={hideValues}>{toBRL(previsaoDetalhe.centrosOrcado)}</Sensitive>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px]">
+                      <span style={{ color: "var(--cf-text-3)" }}>Orçado do mês × já gasto (despesas pagas)</span>
+                      <span className="ml-auto shrink-0" style={{ color: "#15803d" }}>
+                        Realizado <Sensitive hidden={hideValues}>{toBRL(previsaoDetalhe.centrosRealizado)}</Sensitive>
+                      </span>
+                    </div>
+                    <div className="cf-card overflow-hidden">
+                      {previsaoDetalhe.centros.map(c => (
+                        <CenterBudgetRow key={c.id} name={c.name} orcado={c.orcado} realizado={c.realizado} hideValues={hideValues} />
+                      ))}
+                    </div>
+                    <a href="/costCenter" className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: "#3b82f6" }}>
+                      Abrir centros de custo <ExternalLink size={11} />
+                    </a>
+                  </div>
+                )}
+
+                {previsaoDetalhe.contas.length > 0 && (
+                  <BudgetSection
+                    icon={Truck} title="Contas a pagar" hint="Vencem neste mês"
+                    subtotal={previsaoDetalhe.contasTotal} pago={previsaoDetalhe.contasPago} hideValues={hideValues}
+                  >
+                    {previsaoDetalhe.contas.map(g => <BudgetCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
+                  </BudgetSection>
+                )}
+
+                {previsaoDetalhe.impostos.length > 0 && (
+                  <BudgetSection
+                    icon={Receipt} title="Impostos" hint="Vencem neste mês"
+                    subtotal={previsaoDetalhe.impostosTotal} pago={previsaoDetalhe.impostosPago} hideValues={hideValues}
+                  >
+                    {previsaoDetalhe.impostos.map(g => <BudgetCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
+                  </BudgetSection>
+                )}
+              </>
+            )}
+          </div>
+          <div className="px-5 py-4 shrink-0 flex items-center justify-between" style={{ borderTop: "1px solid var(--cf-border)" }}>
+            <span className="text-sm font-semibold" style={{ color: "var(--cf-text-2)" }}>Total do orçamento</span>
+            <span className="font-heading text-lg font-bold mono" style={{ color: "#3b82f6" }}>{displayValue(previsao)}</span>
+          </div>
+        </div>
+      </Modal>
+
       <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 overflow-y-auto overflow-x-hidden pb-24 lg:pb-8">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -1227,13 +1562,21 @@ export default function CashFlowPage() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-          {kpis.map(({ label, val, Icon, ibg, color, sub}, idx) => {
+          {kpis.map(({ label, val, Icon, ibg, color, sub}) => {
             const total = entradas + saidas;
             const pct = total > 0 ? (Math.abs(val) / total) * 100 : 0;
             const showBar = label === "Entradas" || label === "Saídas";
             const isSaldo = label === "Saldo" || label === "Resultado";
+            const clickable = label === "Orçamento";
             return (
-              <div key={label} className={`cf-kpi kin p-3 sm:p-4 flex flex-col gap-2`}>
+              <div
+                key={label}
+                className={`cf-kpi kin p-3 sm:p-4 flex flex-col gap-2 ${clickable ? "clickable" : ""}`}
+                onClick={clickable ? () => setBudgetOpen(true) : undefined}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBudgetOpen(true); } } : undefined}
+              >
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>{label}</p>
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: ibg }}>
@@ -1244,7 +1587,9 @@ export default function CashFlowPage() {
                   <p className="font-heading font-bold text-base sm:text-[17px] mono leading-tight tracking-tight" style={{ color }}>
                     {isSaldo && val > 0 ? "+" : ""}{displayValue(val)}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--cf-text-3)" }}>{sub}</p>
+                  <p className="text-xs mt-1" style={{ color: clickable ? "#3b82f6" : "var(--cf-text-3)" }}>
+                    {clickable ? "Ver detalhamento →" : sub}
+                  </p>
                 </div>
                 {showBar && total > 0 && (
                   <div className="cf-progress">
@@ -1300,48 +1645,6 @@ export default function CashFlowPage() {
             </span>
           </div>
         </div>
-
-        {/* ═══ PREVISTOS (parcelas de série ainda não quitadas) ═══ */}
-        {previstos.length > 0 && (
-          <div className="cf-card overflow-hidden mb-5 sm:mb-6">
-            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b" style={{ borderColor: "var(--cf-border)", background: "var(--cf-txhdr)" }}>
-              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                <Calendar size={13} /> Previstos · {periodLabel}
-              </span>
-              <span className="flex items-center gap-3 text-xs font-semibold shrink-0">
-                {previstoEntradas > 0 && <span style={{ color: "#15803d" }}>+{displayValue(previstoEntradas)}</span>}
-                {previstoSaidas > 0 && <span style={{ color: "#b91c1c" }}>-{displayValue(previstoSaidas)}</span>}
-              </span>
-            </div>
-            <div>
-              {previstos.map((p) => (
-                <a
-                  key={`${p.kind}-${p.id}`}
-                  href={p.kind === "aPagar" ? "/contasPagar" : "/contasReceber"}
-                  className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b last:border-b-0 transition-colors hover:bg-[var(--cf-hover)]"
-                  style={{ borderColor: "var(--cf-border)", opacity: 0.75 }}
-                >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--cf-input)" }}>
-                    {p.kind === "aReceber"
-                      ? <ArrowUpRight size={15} style={{ color: "#15803d" }} />
-                      : <ArrowDownRight size={15} style={{ color: "#b91c1c" }} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{p.description}</p>
-                    <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                      {p.kind === "aPagar" ? "A pagar" : "A receber"}
-                      {p.installmentIndex ? ` · Parcela ${p.installmentIndex}/${p.installmentCount}` : ""}
-                      {" · "}{labelDate(p.dueDate)}
-                    </p>
-                  </div>
-                  <span className="text-sm font-bold font-mono shrink-0" style={{ color: p.kind === "aReceber" ? "#15803d" : "#b91c1c" }}>
-                    {p.kind === "aReceber" ? "+" : "-"}{displayValue(p.amount)}
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Lista */}
         {grouped.length === 0 && previstos.length === 0 ? (
