@@ -19,6 +19,7 @@ import { useAccountScope, hasPermission } from "../hooks/useAccountScope";
 import { usePeriod } from "../hooks/usePeriod";
 import { MonthPickerModal } from "./MonthPickerModal";
 import type { PermissionKey } from "@/lib/accountScope";
+import "./Navbar.css";
 
 interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; permKey?: PermissionKey; }
 interface NavbarProps {
@@ -53,301 +54,6 @@ const notifications = [
   { id: 2, title: "Nova transação", desc: "Recebimento de Delta Tecnologia — R$ 134.000", time: "há 35 min", urgent: false },
   { id: 3, title: "Meta atingida", desc: "Lucro líquido superou projeção de outubro", time: "há 2h", urgent: false },
 ];
-
-const css = `
-  /* --nav-* tokens now live in app/globals.css as the single source of truth
-     (previously duplicated here with its own hardcoded light/dark values). */
-
-  .nxfi-nav *, .nxfi-sidebar *, .nxfi-mobile-nav * {
-    font-family: 'Sora', sans-serif;
-    box-sizing: border-box;
-    transition: background-color .2s, border-color .2s, color .15s;
-  }
-  .nxfi-nav .mono, .nxfi-sidebar .mono { font-family: 'JetBrains Mono', monospace; }
-
-  .nxfi-nav {
-    position: sticky; top: 0; z-index: 50;
-    background: var(--nav-bg);
-    border-bottom: 1px solid var(--nav-border);
-    box-shadow: var(--nav-shadow);
-    display: flex; align-items: center;
-    padding: 0 2rem; height: 64px; gap: 1rem;
-  }
-
-  .nxfi-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-  .nxfi-logo-icon {
-    width: 34px; height: 34px; border-radius: 10px;
-    background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 8px rgba(21,101,192,0.3);
-  }
-  .nxfi-logo-text { font-weight: 800; font-size: 1.1rem; color: var(--nav-text); letter-spacing: -0.03em; }
-  .nxfi-logo-text span { color: var(--brand-500); }
-
-  .nxfi-nav-links { display: flex; align-items: center; gap: 2px; flex: 1; overflow: hidden; }
-  .nxfi-nav-link {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px 12px; border-radius: 10px;
-    text-decoration: none; font-size: 0.8rem; font-weight: 500;
-    color: var(--nav-text-2); white-space: nowrap;
-    transition: all 0.15s ease; position: relative;
-    border: 1.5px solid transparent;
-  }
-  .nxfi-nav-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
-  .nxfi-nav-link.active {
-    color: var(--nav-link-hover-color); background: var(--nav-link-active-bg);
-    border-color: var(--nav-link-active-border); font-weight: 600;
-  }
-  .nxfi-nav-link .badge {
-    background: #ef4444; color: white; font-size: 0.65rem;
-    font-weight: 700; padding: 1px 5px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace; line-height: 1.4;
-  }
-  .nxfi-nav-link .badge.green {
-    background: #10b981; color: white;
-  }
-
-  .nxfi-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-  .nxfi-search-wrap { position: relative; }
-  .nxfi-search {
-    background: var(--nav-input-bg); border: 1.5px solid transparent;
-    border-radius: 10px; padding: 7px 12px 7px 34px;
-    font-size: 0.8rem; color: var(--nav-text); outline: none;
-    width: 200px; transition: all 0.2s; font-family: 'Sora', sans-serif;
-  }
-  .nxfi-search:focus {
-    border-color: var(--brand-500); background: var(--nav-bg); width: 240px;
-    box-shadow: 0 0 0 3px rgba(21,101,192,0.08);
-  }
-  .nxfi-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--nav-text-3); pointer-events: none; }
-  .nxfi-search::placeholder { color: var(--nav-text-3); }
-
-  .nxfi-period-stepper {
-    display: flex; align-items: center; gap: 2px;
-    background: var(--nav-period-bg); border-radius: 10px; padding: 2px;
-  }
-  .nxfi-period-stepper button {
-    border: none; background: transparent; cursor: pointer; color: var(--brand-500);
-    display: flex; align-items: center; justify-content: center;
-    width: 26px; height: 28px; border-radius: 8px; transition: background .15s;
-  }
-  .nxfi-period-stepper button:hover:not(:disabled) { background: var(--nav-period-hover); }
-  .nxfi-period-stepper button:disabled { opacity: .35; cursor: not-allowed; }
-  .nxfi-period-current {
-    display: flex; align-items: center; gap: 5px; justify-content: center;
-    font-size: 0.8rem; font-weight: 600; color: var(--brand-500);
-    min-width: 84px; text-align: center; font-family: 'Sora', sans-serif;
-    white-space: nowrap;
-  }
-  .nxfi-period-stepper button.nxfi-period-current {
-    width: auto; height: 28px; padding: 0 8px; background: transparent;
-  }
-  .nxfi-period-stepper button.nxfi-period-current:hover { background: var(--nav-period-hover); }
-  .nxfi-vertical-period { padding: 14px 12px 2px; flex-shrink: 0; }
-  .nxfi-vertical-period .nxfi-period-stepper { width: 100%; justify-content: space-between; padding: 3px; }
-  .nxfi-vertical-period .nxfi-period-current { flex: 1; }
-
-  .nxfi-icon-btn {
-    width: 36px; height: 36px; border: none; cursor: pointer;
-    border-radius: 10px; background: var(--nav-icon-bg); color: var(--nav-text-2);
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s; position: relative;
-  }
-  .nxfi-icon-btn:hover { background: var(--nav-icon-hover); color: var(--nav-link-hover-color); }
-  .nxfi-notif-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; border: 1.5px solid var(--nav-bg); }
-
-  .nxfi-avatar-btn {
-    display: flex; align-items: center; gap: 8px;
-    background: none; border: none; cursor: pointer;
-    padding: 4px 8px 4px 4px; border-radius: 12px; transition: background 0.15s;
-  }
-  .nxfi-avatar-btn:hover { background: var(--nav-link-hover-bg); }
-  .nxfi-avatar {
-    width: 34px; height: 34px; border-radius: 10px;
-    background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-weight: 700; font-size: 0.875rem; flex-shrink: 0;
-  }
-  .nxfi-avatar-name { font-size: 0.78rem; font-weight: 600; color: var(--nav-text); line-height: 1.2; }
-  .nxfi-avatar-role { font-size: 0.68rem; color: var(--nav-text-3); }
-
-  .nxfi-dropdown {
-    position: absolute; top: calc(100% + 8px);
-    background: var(--nav-drop-bg); border: 1px solid var(--nav-drop-border);
-    border-radius: 14px; z-index: 100; overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
-    animation: dropIn 0.18s cubic-bezier(.22,.68,0,1.1) both;
-  }
-  @keyframes dropIn { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: none; } }
-
-  .nxfi-notif-drop { right: 0; width: 320px; }
-  .nxfi-notif-header {
-    padding: 14px 16px 10px; border-bottom: 1px solid var(--nav-drop-div);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .nxfi-notif-header h3 { font-size: 0.82rem; font-weight: 700; color: var(--nav-text); }
-  .nxfi-notif-header button { font-size: 0.72rem; color: var(--brand-500); background: none; border: none; cursor: pointer; font-weight: 600; font-family: 'Sora', sans-serif; }
-  .nxfi-notif-item {
-    display: flex; gap: 10px; padding: 12px 16px;
-    border-bottom: 1px solid var(--nav-drop-div); transition: background 0.12s; cursor: pointer;
-  }
-  .nxfi-notif-item:last-child { border-bottom: none; }
-  .nxfi-notif-item:hover { background: var(--nav-notif-hover); }
-  .nxfi-notif-dot2 { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-  .nxfi-notif-title { font-size: 0.78rem; font-weight: 600; color: var(--nav-text); }
-  .nxfi-notif-desc  { font-size: 0.72rem; color: var(--nav-text-2); margin-top: 2px; line-height: 1.4; }
-  .nxfi-notif-time  { font-size: 0.68rem; color: var(--nav-text-3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
-
-  .nxfi-user-drop { right: 0; width: 220px; }
-  .nxfi-user-drop-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--nav-drop-div); }
-  .nxfi-user-drop-name  { font-size: 0.82rem; font-weight: 700; color: var(--nav-text); }
-  .nxfi-user-drop-email { font-size: 0.72rem; color: var(--nav-text-3); margin-top: 2px; }
-  .nxfi-drop-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 16px; font-size: 0.8rem; font-weight: 500;
-    color: var(--nav-text-2); cursor: pointer; transition: all 0.12s;
-    background: none; border: none; width: 100%; text-align: left;
-    font-family: 'Sora', sans-serif;
-  }
-  .nxfi-drop-item:hover { background: var(--nav-drop-item-hover); color: var(--nav-link-hover-color); }
-  .nxfi-drop-item.danger:hover { background: #fff1f2; color: #ef4444; }
-  .nxfi-drop-divider { height: 1px; background: var(--nav-drop-div); margin: 4px 0; }
-
-  .nxfi-sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 60; backdrop-filter: blur(2px); animation: fadeIn 0.2s ease both; }
-  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-  .nxfi-sidebar {
-    position: fixed; top: 0; left: 0; height: 100vh; z-index: 70;
-    width: 260px; display: flex; flex-direction: column;
-    background: linear-gradient(180deg, #0a1628 0%, #0d2247 60%, #0e3372 100%);
-    border-right: 1px solid rgba(255,255,255,0.05);
-    animation: slideInLeft 0.25s cubic-bezier(.22,.68,0,1.1) both;
-    overflow-y: auto;
-  }
-  @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-  .nxfi-sidebar-logo { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-  .nxfi-sidebar-logo-inner { display: flex; align-items: center; gap: 10px; }
-  .nxfi-sidebar-logo-text { font-size: 1.1rem; font-weight: 800; color: white; letter-spacing: -0.02em; }
-  .nxfi-sidebar-logo-text span { color: var(--brand-400); }
-  .nxfi-sidebar-close { background: rgba(255,255,255,0.06); border: none; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; color: rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-  .nxfi-sidebar-close:hover { background: rgba(255,255,255,0.12); color: white; }
-  .nxfi-sidebar-nav { flex: 1; padding: 16px 12px; }
-  .nxfi-sidebar-section { font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.25); letter-spacing: 0.1em; text-transform: uppercase; padding: 0 12px; margin: 12px 0 6px; }
-  .nxfi-sidebar-link {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 10px;
-    text-decoration: none; font-size: 0.82rem; font-weight: 500;
-    color: rgba(147,197,253,0.55); margin-bottom: 2px;
-    transition: all 0.15s; border: 1.5px solid transparent;
-  }
-  .nxfi-sidebar-link:hover { color: white; background: rgba(255,255,255,0.06); }
-  .nxfi-sidebar-link.active { color: white; background: rgba(21,101,192,0.25); border-color: rgba(66,165,245,0.2); font-weight: 600; }
-  .nxfi-sidebar-link .dot   { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-400); margin-left: auto; }
-  .nxfi-sidebar-link .badge { margin-left: auto; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 100px; font-family: 'JetBrains Mono', monospace; }
-  .nxfi-sidebar-link .badge.green { background: #10b981; color: white; }
-  .nxfi-sidebar-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; }
-  .nxfi-sidebar-footer-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 500; cursor: pointer; width: 100%; background: none; border: none; transition: all 0.15s; font-family: 'Sora', sans-serif; color: rgba(147,197,253,0.55); }
-  .nxfi-sidebar-footer-btn:hover { color: white; background: rgba(255,255,255,0.06); }
-  .nxfi-sidebar-footer-btn.danger:hover { color: #fca5a5; background: rgba(239,68,68,0.08); }
-
-  .nxfi-mobile-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
-    background: var(--nav-bg); border-top: 1px solid var(--nav-border);
-    box-shadow: var(--nav-shadow);
-    display: flex; justify-content: space-around; align-items: center;
-    padding: 6px 8px 10px;
-    overflow-x: auto;
-  }
-
-  /* Barra superior mobile — usada no layout vertical (sidebar), onde não
-     existe a .nxfi-nav pra abrigar o botão de menu. Some no desktop. */
-  .nxfi-mobile-topbar {
-    display: none;
-    position: sticky; top: 0; z-index: 45;
-    align-items: center; gap: 12px;
-    height: 56px; padding: 0 16px; flex-shrink: 0;
-    background: var(--nav-bg); border-bottom: 1px solid var(--nav-border);
-    box-shadow: var(--nav-shadow);
-  }
-  .nxfi-mobile-topbar .nxfi-icon-btn { flex-shrink: 0; }
-  .nxfi-mobile-link { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 12px; border-radius: 12px; text-decoration: none; transition: all 0.15s; color: var(--nav-text-3); font-size: 0.65rem; font-weight: 500; position: relative; }
-  .nxfi-mobile-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
-  .nxfi-mobile-link.active { color: var(--brand-500); }
-  .nxfi-mobile-link .badge {
-    position: absolute; top: 0; right: 4px;
-    background: #ef4444; color: white; font-size: 0.65rem;
-    font-weight: 700; padding: 1px 5px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace; line-height: 1;
-  }
-  .nxfi-mobile-link .badge.green {
-    background: #10b981; color: white;
-  }
-
-  .nxfi-sidebar-vertical {
-    position: fixed; top: 0; left: 0; height: 100vh; z-index: 50;
-    width: var(--nav-sidebar-width); display: flex; flex-direction: column; flex-shrink: 0;
-    background: var(--nav-bg);
-    overflow-y: auto; overflow-x: hidden;
-  }
-  .nxfi-vertical-logo {
-    display: flex; align-items: center; gap: 10px;
-    padding: 20px; border-bottom: 1px solid var(--nav-border);
-    text-decoration: none; font-weight: 800; font-size: 1.1rem;
-    color: var(--nav-text); letter-spacing: -0.03em; flex-shrink: 0;
-  }
-  .nxfi-vertical-logo span { color: var(--brand-500); }
-  .nxfi-vertical-nav { flex: 1; padding: 16px 8px; overflow-y: auto; }
-  .nxfi-vertical-section {
-    font-size: 0.65rem; font-weight: 700; color: var(--nav-text-3);
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 0 12px; margin: 12px 0 6px;
-  }
-  .nxfi-vertical-link {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 10px;
-    text-decoration: none; font-size: 0.82rem; font-weight: 500;
-    color: var(--nav-text-2); margin-bottom: 2px;
-    transition: all 0.15s; border: 1.5px solid transparent;
-  }
-  .nxfi-vertical-link:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
-  .nxfi-vertical-link.active {
-    color: var(--nav-link-hover-color); background: var(--nav-link-active-bg);
-    border-color: var(--nav-link-active-border); font-weight: 600;
-  }
-  .nxfi-vertical-link .badge {
-    background: #ef4444; color: white; font-size: 0.65rem;
-    font-weight: 700; padding: 1px 5px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace; line-height: 1.4; margin-left: auto;
-  }
-  .nxfi-vertical-link .badge.green {
-    background: #10b981; color: white; margin-left: auto;
-  }
-  .nxfi-vertical-footer {
-    padding: 12px 8px; border-top: 1px solid var(--nav-border);
-    display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;
-  }
-  .nxfi-vertical-footer-btn {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 10px; font-size: 0.82rem;
-    font-weight: 500; cursor: pointer; width: 100%; background: none;
-    border: none; transition: all 0.15s; font-family: 'Sora', sans-serif;
-    color: var(--nav-text-2);
-  }
-  .nxfi-vertical-footer-btn:hover { color: var(--nav-link-hover-color); background: var(--nav-link-hover-bg); }
-  .nxfi-vertical-footer-btn.danger:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
-
-  @media (max-width: 1024px) {
-    .nxfi-nav-links, .nxfi-search-wrap { display: none; }
-    .nxfi-avatar-info { display: none; }
-    .nxfi-sidebar-vertical { display: none; }
-    .nxfi-mobile-topbar { display: flex; }
-  }
-  @media (min-width: 1025px) {
-    .nxfi-hamburger { display: none; }
-    .nxfi-mobile-nav { display: none; }
-    .nxfi-mobile-topbar { display: none; }
-  }
-`;
 
 export default function Navbar({
   user = { displayName: "Carlos Mendes", email: "carlos@nexusfi.com" },
@@ -494,7 +200,6 @@ export default function Navbar({
   // ── Sidebar vertical via Portal ──
   const sidebarJSX = (
     <>
-      <style>{css}</style>
       <aside className="nxfi-sidebar-vertical">
         <a href="/dashboard" className="nxfi-vertical-logo">
           <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 42, width: "auto" }} />
@@ -656,8 +361,6 @@ export default function Navbar({
   // ── Layout Horizontal ──
   return (
     <>
-      <style>{css}</style>
-
       <nav className="nxfi-nav">
         <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)}>
           <Menu size={18} />
@@ -708,7 +411,7 @@ export default function Navbar({
                 </div>
                 {notifications.map((n) => (
                   <div key={n.id} className="nxfi-notif-item">
-                    <span className="nxfi-notif-dot2" style={{ background: n.urgent ? "#ef4444" : "var(--brand-500)" }} />
+                    <span className="nxfi-notif-dot2" style={{ background: n.urgent ? "var(--neg)" : "var(--brand)" }} />
                     <div>
                       <div className="nxfi-notif-title">{n.title}</div>
                       <div className="nxfi-notif-desc">{n.desc}</div>
