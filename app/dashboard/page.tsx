@@ -15,6 +15,7 @@ import Navbar from "../components/Navbar";
 import { Badge, PageLoader, Sensitive } from "../components/ui";
 import AccessDenied from "../components/AccessDenied";
 import { usePeriod } from "../hooks/usePeriod";
+import "./dashboard.css";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -57,11 +58,12 @@ const fmt = (n: number) =>
 
 const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
+// Cor semântica por KPI — resolvida via tokens do design system (nunca hex).
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
-  blue:    { bg:"rgba(21,101,192,0.1)",  text:"#42a5f5", icon:"rgba(21,101,192,0.15)" },
-  rose:    { bg:"rgba(244,63,94,0.08)",  text:"#fb7185", icon:"rgba(244,63,94,0.12)"  },
-  emerald: { bg:"rgba(16,185,129,0.08)", text:"#34d399", icon:"rgba(16,185,129,0.12)" },
-  amber:   { bg:"rgba(245,158,11,0.08)", text:"#fbbf24", icon:"rgba(245,158,11,0.12)" },
+  blue:    { bg: "var(--brand-weak)", text: "var(--brand)", icon: "var(--brand-weak)" },
+  rose:    { bg: "var(--neg-weak)",   text: "var(--neg)",   icon: "var(--neg-weak)"   },
+  emerald: { bg: "var(--pos-weak)",   text: "var(--pos)",   icon: "var(--pos-weak)"   },
+  amber:   { bg: "var(--warn-weak)",  text: "var(--warn)",  icon: "var(--warn-weak)"  },
 };
 
 export default function Dashboard() {
@@ -345,7 +347,15 @@ export default function Dashboard() {
       }
     });
 
-    const colors = ["#1565c0", "#42a5f5", "#90caf9", "#bbdefb", "#e3f2fd", "#cbd5e1"];
+    // Rampa derivada da marca — clareia em direção à superfície.
+    const colors = [
+      "var(--brand)",
+      "color-mix(in srgb, var(--brand) 78%, var(--surface))",
+      "color-mix(in srgb, var(--brand) 56%, var(--surface))",
+      "color-mix(in srgb, var(--brand) 38%, var(--surface))",
+      "color-mix(in srgb, var(--brand) 22%, var(--surface))",
+      "var(--border-strong)",
+    ];
 
     const sortedCenters = Object.entries(categoryTotals)
       .map(([name, amount], idx) => ({
@@ -410,96 +420,6 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
 
-      <style>{`
-        * { transition: background-color .2s, border-color .2s, color .15s; }
-        button, a, input, select { transition: background-color .15s, border-color .15s, color .1s, opacity .15s !important; }
-
-        .kpi-card {
-          background: var(--db-card);
-          border: 1px solid var(--db-border);
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          animation: slideUp 0.5s ease both;
-        }
-        .chart-card {
-          background: var(--db-card);
-          border: 1px solid var(--db-border);
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          border-radius: 1rem;
-          animation: slideUp 0.5s 0.2s ease both;
-        }
-        .side-card {
-          background: var(--db-card);
-          border: 1px solid var(--db-border);
-          box-shadow: 0 1px 3px rgba(13,34,71,0.06), 0 4px 16px rgba(13,34,71,0.04);
-          border-radius: 1rem;
-          animation: slideUp 0.5s 0.3s ease both;
-        }
-        @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-
-        .bar-rev { fill: var(--brand-500); transition: opacity 0.15s; }
-        .bar-exp { fill: var(--brand-400); transition: opacity 0.15s; }
-        .bar-rev-anim { animation: growBar 0.8s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
-        .bar-exp-anim { animation: growBar 0.8s 0.1s cubic-bezier(.22,.68,0,1.2) both; transform-origin: bottom; }
-        @keyframes growBar { from{transform:scaleY(0)} to{transform:scaleY(1)} }
-
-        .tx-row { transition: background 0.15s; border-bottom: 1px solid var(--db-border); }
-        .tx-row:last-child { border-bottom: none; }
-        .tx-row:hover { background: var(--db-hover); }
-
-        .bill-row { transition: background 0.15s; border-radius: 12px; }
-        .bill-row:hover { background: var(--db-hover); }
-
-        .donut-ring { transition: stroke-dashoffset 0.8s cubic-bezier(.22,.68,0,1.2); }
-
-        .db-divider { border-color: var(--db-border); }
-        .db-progress-bg { background: var(--db-border); }
-
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--db-border); border-radius: 4px; }
-
-        /* ── Impressão / PDF do relatório ── */
-        .print-only { display: none; }
-
-        @media print {
-          @page { size: A4; margin: 14mm; }
-
-          /* força paleta clara independentemente do tema */
-          :root {
-            --db-bg: #fff !important;
-            --db-card: #fff !important;
-            --db-border: #d1d5db !important;
-            --db-hover: transparent !important;
-            --db-text: #111827 !important;
-            --db-text-2: #4b5563 !important;
-            --db-text-3: #6b7280 !important;
-          }
-
-          /* some com toda a navegação e os controles interativos */
-          .nxfi-nav, .nxfi-sidebar-vertical, .nxfi-mobile-topbar,
-          .nxfi-mobile-nav, .nxfi-sidebar-overlay, .nxfi-sidebar,
-          .no-print { display: none !important; }
-
-          .app-shell { padding-left: 0 !important; }
-          main { padding: 0 !important; overflow: visible !important; }
-          .print-only { display: block !important; }
-
-          * {
-            animation: none !important;
-            transition: none !important;
-            box-shadow: none !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          .kpi-card, .chart-card, .side-card {
-            background: #fff !important;
-            border: 1px solid #d1d5db !important;
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-        }
-      `}</style>
 
       {/* Senha primeiro, ramo do negócio depois — nunca os dois sobrepostos */}
       <CreatePasswordGate
@@ -541,13 +461,13 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
 
         {/* ── Cabeçalho que só aparece na impressão / PDF ── */}
-        <div className="print-only" style={{ marginBottom: 20, borderBottom: "2px solid #111827", paddingBottom: 12 }}>
+        <div className="print-only" style={{ marginBottom: 20, borderBottom: "2px solid var(--text)", paddingBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
             <div>
-              <p style={{ fontSize: 20, fontWeight: 800, color: "#111827" }}>Relatório financeiro — {periodLabel}</p>
-              <p style={{ fontSize: 12, color: "#4b5563", marginTop: 2 }}>{user?.displayName || user?.email || ""}</p>
+              <p style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>Relatório financeiro — {periodLabel}</p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{user?.displayName || user?.email || ""}</p>
             </div>
-            {printedAt && <p style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>Gerado em {printedAt}</p>}
+            {printedAt && <p style={{ fontSize: 11, color: "var(--text-subtle)", whiteSpace: "nowrap" }}>Gerado em {printedAt}</p>}
           </div>
         </div>
 
@@ -566,8 +486,8 @@ export default function Dashboard() {
               <button
                 onClick={goPrevMonth}
                 aria-label="Mês anterior"
-                className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                style={{ color: "#42a5f5" }}
+                className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer"
+                style={{ color: "var(--brand)" }}
               >
                 <ChevronLeft size={16} />
               </button>
@@ -576,16 +496,16 @@ export default function Dashboard() {
                 onClick={goNextMonth}
                 disabled={isCurrentMonth}
                 aria-label="Próximo mês"
-                className="p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ color: "#42a5f5" }}
+                className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ color: "var(--brand)" }}
               >
                 <ChevronRight size={16} />
               </button>
             </div>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              style={{ borderColor: "var(--db-border)", color: "#42a5f5", background: "var(--db-card)" }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors hover:bg-[var(--sunken)] cursor-pointer"
+              style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "var(--db-card)" }}
               title="Imprimir / salvar em PDF o relatório deste mês"
             >
               <Printer size={14} />
@@ -645,7 +565,7 @@ export default function Dashboard() {
                       className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer"
                       style={{
                         background: chartType === opt.t ? "var(--db-hover)" : "transparent",
-                        color: chartType === opt.t ? "#42a5f5" : "var(--db-text-2)",
+                        color: chartType === opt.t ? "var(--brand)" : "var(--db-text-2)",
                       }}
                     >
                       <opt.icon size={13} />
@@ -661,7 +581,7 @@ export default function Dashboard() {
                 </div>
                 <button
                   onClick={() => setHideValues(!hideValues)}
-                  className="flex items-center gap-1 text-xs text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer no-print"
+                  className="flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer no-print" style={{ color: "var(--brand)" }}
                 >
                   <Download size={12} /><span className="hidden sm:inline">{hideValues ? "Mostrar Valores" : "Ocultar Valores"}</span>
                 </button>
@@ -691,7 +611,7 @@ export default function Dashboard() {
                       <g key={key}>
                         <path d={`M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`} fill={color} />
                         {pct >= 6 && (
-                          <text x={lx} y={ly + 3} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" fontFamily="Sora, sans-serif">{pct}%</text>
+                          <text x={lx} y={ly + 3} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--brand-on)" fontFamily="Sora, sans-serif">{pct}%</text>
                         )}
                       </g>
                     );
@@ -816,7 +736,7 @@ export default function Dashboard() {
           <div className="side-card p-4 md:p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Vencimentos próximos</h2>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "var(--neg-weak)", color: "var(--neg)" }}>
                 {upcomingBillsData.filter(b => b.urgent).length} urgente
               </span>
             </div>
@@ -830,10 +750,10 @@ export default function Dashboard() {
                   <div key={bill.id} className="bill-row flex items-center justify-between p-2.5 md:p-3">
                     <div className="flex items-center gap-2 md:gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: bill.urgent ? "rgba(239,68,68,0.1)" : "rgba(21,101,192,0.1)" }}>
+                        style={{ background: bill.urgent ? "var(--neg-weak)" : "var(--brand-weak)" }}>
                         {bill.urgent
-                          ? <AlertCircle size={14} style={{ color: "#f87171" }} />
-                          : <Clock       size={14} style={{ color: "#60a5fa" }} />
+                          ? <AlertCircle size={14} style={{ color: "var(--neg)" }} />
+                          : <Clock       size={14} style={{ color: "var(--brand)" }} />
                         }
                       </div>
                       <div className="min-w-0">
@@ -841,15 +761,15 @@ export default function Dashboard() {
                         <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>vence {bill.dueFormatted}</p>
                       </div>
                     </div>
-                    <p className="text-xs font-bold mono shrink-0 ml-2" style={{ color: bill.urgent ? "#f87171" : "var(--db-text)" }}>
+                    <p className="text-xs font-bold mono shrink-0 ml-2" style={{ color: bill.urgent ? "var(--neg)" : "var(--db-text)" }}>
                       <Sensitive hidden={hideValues}>{toBRL(bill.amount)}</Sensitive>
                     </p>
                   </div>
                 ))
               )}
             </div>
-            <a href="/contasPagar" className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 text-center no-print"
-              style={{ borderColor: "var(--db-border)", color: "#60a5fa", background: "transparent" }}>
+            <a href="/contasPagar" className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 transition-colors hover:bg-[var(--sunken)] text-center no-print"
+              style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "transparent" }}>
               Ver todas <ChevronRight size={13} />
             </a>
           </div>
@@ -865,7 +785,7 @@ export default function Dashboard() {
                 <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Movimentações de {periodLabel}</p>
               </div>
               <div className="flex items-center gap-2 no-print">
-                <a href="/fluxo-caixa" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                <a href="/fluxo-caixa" className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors" style={{ background: "var(--brand)", color: "var(--brand-on)" }}>
                   Ver todas
                 </a>
               </div>
@@ -882,7 +802,7 @@ export default function Dashboard() {
                       <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 ml-3 shrink-0">
-                      <span className={`mono text-xs font-bold ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>
+                      <span className={`mono text-xs font-bold ${""}`} style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
                         <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
                       </span>
                       <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
@@ -912,8 +832,8 @@ export default function Dashboard() {
                     recentTransactions.map((tx) => (
                       <tr key={tx.id} className="tx-row">
                         <td className="py-3 pr-4"><p className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>{tx.description}</p></td>
-                        <td className="py-3 pr-4"><span className={`text-xs font-medium ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}>{tx.type === "entrada" ? "Entrada" : "Saída"}</span></td>
-                        <td className="py-3 pr-4"><span className={`mono text-xs font-bold ${tx.type === "entrada" ? "text-emerald-400" : "text-rose-400"}`}><Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive></span></td>
+                        <td className="py-3 pr-4"><span className="text-xs font-medium" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>{tx.type === "entrada" ? "Entrada" : "Saída"}</span></td>
+                        <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}><Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive></span></td>
                         <td className="py-3 pr-4"><span className="text-xs whitespace-nowrap" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span></td>
                         <td className="py-3"><Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">{tx.reconciled ? "Conciliado" : "Pendente"}</Badge></td>
                       </tr>
@@ -928,7 +848,7 @@ export default function Dashboard() {
           <div className="side-card p-4 md:p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centro de custos</h2>
-              <a href="/costCenter" style={{ color: "var(--db-text-2)" }} className="hover:text-blue-400 transition-colors no-print"><MoreHorizontal size={16} /></a>
+              <a href="/costCenter" style={{ color: "var(--db-text-2)" }} className="transition-colors no-print"><MoreHorizontal size={16} /></a>
             </div>
             <div className="flex justify-center mb-4 md:mb-5">
               <svg width="130" height="130" viewBox="0 0 140 140">
@@ -994,9 +914,9 @@ export default function Dashboard() {
               { label:"Saídas agendadas",   val: <Sensitive hidden={hideValues}>{`- ${toBRL(projection.saidasAgendadas)}`}</Sensitive>, icon:TrendingDown, color:"rose",    note:"compromissos próximos 30 dias"  },
             ].map((item) => {
               const cMap: Record<string, { bg: string; text: string; icon: string }> = {
-                blue:    { bg:"rgba(21,101,192,0.12)",  text:"#60a5fa", icon:"rgba(21,101,192,0.2)"  },
-                emerald: { bg:"rgba(16,185,129,0.1)",   text:"#34d399", icon:"rgba(16,185,129,0.18)" },
-                rose:    { bg:"rgba(244,63,94,0.1)",    text:"#fb7185", icon:"rgba(244,63,94,0.18)"  },
+                blue:    { bg:"var(--brand-weak)", text:"var(--brand)", icon:"var(--brand-weak)" },
+                emerald: { bg:"var(--pos-weak)",   text:"var(--pos)",   icon:"var(--pos-weak)" },
+                rose:    { bg:"var(--neg-weak)",    text:"var(--neg)",   icon:"var(--neg-weak)" },
               };
               const c = cMap[item.color];
               return (
@@ -1016,7 +936,7 @@ export default function Dashboard() {
           <div className="mt-4 md:mt-5">
             <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--db-text-2)" }}>
               <span>Saldo projetado final</span>
-              <span className="mono font-semibold text-emerald-400">
+              <span className="mono font-semibold" style={{ color: "var(--pos)" }}>
                 <Sensitive hidden={hideValues}>{toBRL(projection.saldoProjetado)}</Sensitive>{" "}
                 <span className="font-normal text-xs ml-1" style={{ color: "var(--db-text-2)" }}>
                   ({projection.variacaoPct >= 0 ? "+" : ""}{projection.variacaoPct.toFixed(1)}%)
@@ -1024,7 +944,7 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="h-2 rounded-full overflow-hidden db-progress-bg">
-              <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max((projection.saldoProjetado / (projection.saldoAtual || 1)) * 50, 10), 100)}%`, background:"linear-gradient(90deg, #1565c0, #42a5f5)" }} />
+              <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max((projection.saldoProjetado / (projection.saldoAtual || 1)) * 50, 10), 100)}%`, background: "var(--brand)" }} />
             </div>
           </div>
         </div>

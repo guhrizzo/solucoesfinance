@@ -1,0 +1,153 @@
+/* Dashboard — estilos locais (antes eram um <style>{`...`}> inline).
+   Só tokens do design system. Redesign 2026-09, Fase 2. */
+
+.dash-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  animation: slideUp 0.5s ease both;
+}
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  animation: slideUp 0.5s 0.2s ease both;
+}
+.side-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  animation: slideUp 0.5s 0.3s ease both;
+}
+
+.bar-rev {
+  fill: var(--brand);
+  transition: opacity 0.15s;
+}
+.bar-exp {
+  fill: var(--brand-400);
+  transition: opacity 0.15s;
+}
+.bar-rev-anim {
+  animation: growBar 0.8s cubic-bezier(0.22, 0.68, 0, 1.2) both;
+  transform-origin: bottom;
+}
+.bar-exp-anim {
+  animation: growBar 0.8s 0.1s cubic-bezier(0.22, 0.68, 0, 1.2) both;
+  transform-origin: bottom;
+}
+@keyframes growBar {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.tx-row {
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--border);
+}
+.tx-row:last-child {
+  border-bottom: none;
+}
+.tx-row:hover {
+  background: var(--sunken);
+}
+
+.bill-row {
+  transition: background 0.15s;
+  border-radius: 12px;
+}
+.bill-row:hover {
+  background: var(--sunken);
+}
+
+.donut-ring {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 0.68, 0, 1.2);
+}
+
+.db-divider {
+  border-color: var(--border);
+}
+.db-progress-bg {
+  background: var(--border);
+}
+
+/* ── Impressão / PDF do relatório ── */
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  /* força paleta clara independentemente do tema */
+  :root {
+    --bg: #fff !important;
+    --surface: #fff !important;
+    --border: #d1d5db !important;
+    --sunken: transparent !important;
+    --text: #111827 !important;
+    --text-muted: #4b5563 !important;
+    --text-subtle: #6b7280 !important;
+  }
+
+  .nxfi-nav,
+  .nxfi-sidebar-vertical,
+  .nxfi-mobile-topbar,
+  .nxfi-mobile-nav,
+  .nxfi-sidebar-overlay,
+  .nxfi-sidebar,
+  .no-print {
+    display: none !important;
+  }
+
+  .app-shell {
+    padding-left: 0 !important;
+  }
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .kpi-card,
+  .chart-card,
+  .side-card {
+    background: #fff !important;
+    border: 1px solid #d1d5db !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
