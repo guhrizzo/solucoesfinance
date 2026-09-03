@@ -1,7 +1,13 @@
 export { Button } from "./Button";
 export { Badge, type BadgeStatus } from "./Badge";
+export { Pill, type PillTone } from "./Pill";
 export { Card } from "./Card";
 export { Modal } from "./Modal";
 export { Input, MoneyInput, parseAmount, formatAmount } from "./Input";
+export { Field } from "./Field";
+export { Table, type Column } from "./Table";
+export { KpiTile } from "./KpiTile";
+export { PageHeader } from "./PageHeader";
+export { EmptyState } from "./EmptyState";
 export { PageLoader } from "./PageLoader";
 export { Sensitive } from "./Sensitive";

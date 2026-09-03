@@ -3,9 +3,10 @@
 import { forwardRef } from "react";
 
 export const inputBaseStyle: React.CSSProperties = {
-  background: "var(--cf-input)",
-  border: "1.5px solid var(--cf-border)",
-  color: "var(--cf-text)",
+  background: "var(--sunken)",
+  border: "1px solid var(--border)",
+  color: "var(--text)",
+  borderRadius: "var(--radius-control)",
 };
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
@@ -55,7 +56,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(function
     <div className="relative">
       <span
         className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium pointer-events-none"
-        style={{ color: "var(--cf-text-3)" }}
+        style={{ color: "var(--text-subtle)" }}
       >
         R$
       </span>

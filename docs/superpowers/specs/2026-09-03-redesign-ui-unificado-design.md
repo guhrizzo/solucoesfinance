@@ -102,7 +102,7 @@ Nada de reorganização de pastas fora do que serve a migração.
 
 Cada fase: própria entrada de plano, implementação, validação em browser, commit. O app compila e funciona ao fim de cada uma.
 
-0. **Base** — tokens novos em `globals.css` (com alias de compat), `Hanken_Grotesk` no `layout.tsx`, revisar `ui/` existentes + criar `Pill`/`Field`/`Table`/`KpiTile`/`PageHeader`/`EmptyState`, regra ESLint anti-hex (warn), página de referência visual temporária para QA.
+0. **Base** ✅ — tokens novos em `globals.css` (com alias de compat), `Hanken_Grotesk` no `layout.tsx`, revisar `ui/` existentes + criar `Pill`/`Field`/`Table`/`KpiTile`/`PageHeader`/`EmptyState`, regra ESLint anti-hex (warn, em `eslint.config.mjs`), rota de QA temporária `app/design-system/page.tsx`.
 1. **Navegação** — `Navbar` + `AppShell` + `Footer` (telas internas) re-skinados e destravados do `<style>` embutido.
 2. **Dashboard** — migração real (hoje é rasa): `useDashboardData`, seções em `app/dashboard/components/`, KPIs/tabela/gráfico nos componentes novos.
 3. **Fluxo de caixa** — `CashFlow.tsx` (1.883 linhas) quebrado: `useCashflowData`, `TransactionTable`, `ForecastPanel`, `BudgetPanel`, modais já em `ui/Modal`.
@@ -113,7 +113,7 @@ Cada fase: própria entrada de plano, implementação, validação em browser, c
 8. **Painel de vendas** — `vendas/page.tsx` (856 linhas).
 9. **Relatórios** — `relatorios/page.tsx` (1.586 linhas) incl. geração de PDF (só apresentação da tela, não o `reportPdf.ts`).
 10. **Usuários + Configurações** — `users/page.tsx` (818), `configuracoes/*`.
-11. **Limpeza final** — remover alias `--db-*`/`--cf-*`, `STATUS_META`/`colorMap` mortos, `@import` de fonte restantes; elevar a regra ESLint anti-hex de `warn` para `error`; atualizar as specs do roadmap.
+11. **Limpeza final** — remover alias `--db-*`/`--cf-*`, `STATUS_META`/`colorMap` mortos, `@import` de fonte restantes, classes `.btn-*` legadas, a rota `app/design-system/`; elevar a regra ESLint anti-hex de `warn` para `error`; atualizar as specs do roadmap.
 
 ## Validação (cada fase)
 

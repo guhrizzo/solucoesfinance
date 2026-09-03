@@ -8,15 +8,15 @@ type PageLoaderProps = {
   background?: string;
 };
 
-export function PageLoader({ label = "Carregando…", background = "var(--db-bg)" }: PageLoaderProps) {
+export function PageLoader({ label = "Carregando…", background = "var(--bg)" }: PageLoaderProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background }}>
       <div
         className="w-8 h-8 border-2 rounded-full animate-spin"
-        style={{ borderColor: "var(--db-border)", borderTopColor: "var(--brand-500)" }}
+        style={{ borderColor: "var(--border)", borderTopColor: "var(--brand)" }}
       />
       {label && (
-        <p className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
           {label}
         </p>
       )}

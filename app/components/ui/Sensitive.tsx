@@ -30,7 +30,7 @@ export function Sensitive({ children, hidden, className = "" }: SensitiveProps) 
           top: "0.1em",
           bottom: "0.1em",
           borderRadius: "0.3em",
-          background: "var(--db-text-3)",
+          background: "var(--text-subtle)",
         }}
       />
     </span>

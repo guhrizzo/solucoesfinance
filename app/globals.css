@@ -1,221 +1,231 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f1117;
+  /* ════════════════════════════════════════════════════════════════════ */
+  /* DESIGN SYSTEM — TOKENS SEMÂNTICOS (fonte única da verdade)            */
+  /* Redesign 2026-09: ver docs/superpowers/specs/                        */
+  /*   2026-09-03-redesign-ui-unificado-design.md                         */
+  /* Regra: componentes leem SÓ estes tokens. Zero hex nas páginas.       */
+  /* ════════════════════════════════════════════════════════════════════ */
 
-  /* ── Brand scale (single source of truth — was split between #3b82f6 and #1565c0) ── */
-  --brand-400: #42a5f5;
-  --brand-500: #1565c0;
-  --brand-600: #0d47a1;
+  /* Superfícies */
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --sunken: #eef0f4;
+  --overlay: rgba(16, 32, 46, 0.5);
 
-  /* ── Core Colors (kept for existing call sites; aliased to the brand/semantic scale) ── */
-  --primary: var(--brand-500);
-  --primary-dark: var(--brand-600);
+  /* Bordas */
+  --border: #e2e5ea;
+  --border-strong: #cfd4dc;
+
+  /* Texto */
+  --text: #16202e;
+  --text-muted: #5a6675;
+  --text-subtle: #8a94a2;
+
+  /* Marca */
+  --brand: #1f6feb;
+  --brand-hover: #1a5fd0;
+  --brand-weak: #e9f1fd;
+  --brand-on: #ffffff;
+
+  /* Semânticos — dinheiro e status (verde/vermelho SÓ aqui) */
+  --pos: #12854a;
+  --pos-weak: #e6f4ec;
+  --neg: #cf3d3d;
+  --neg-weak: #fcecec;
+  --warn: #b0751a;
+  --warn-weak: #fbf2e0;
+
+  /* Forma */
+  --radius-card: 12px;
+  --radius-control: 8px;
+
+  /* Elevação — usada só em modal e dropdown; separação normal é por borda */
+  --shadow-pop: 0 8px 28px -8px rgba(16, 32, 46, 0.18), 0 2px 6px -2px rgba(16, 32, 46, 0.1);
+
+  /* ── Escala de marca (mantida p/ call sites; apontada aos tokens novos) ── */
+  --brand-400: #4d92ff;
+  --brand-500: var(--brand);
+  --brand-600: var(--brand-hover);
+  --primary: var(--brand);
+  --primary-dark: var(--brand-hover);
   --primary-light: var(--brand-400);
-  --success: #10b981;
-  --success-dark: #059669;
-  --danger: #ef4444;
-  --danger-dark: #dc2626;
-  --warning: #f59e0b;
-  --info: #06b6d4;
+  --success: var(--pos);
+  --success-dark: var(--pos);
+  --danger: var(--neg);
+  --danger-dark: var(--neg);
+  --warning: var(--warn);
+  --info: var(--brand);
+  --background: var(--surface);
+  --foreground: var(--text);
 
-  /* ── Semantic status tokens (light) — used by the new ui/ primitives ── */
-  --status-success-bg: #dcfce7;
-  --status-success-text: #15803d;
-  --status-success-border: #bbf7d0;
-  --status-warning-bg: #fef9c3;
-  --status-warning-text: #b45309;
-  --status-warning-border: #fde68a;
-  --status-danger-bg: #fee2e2;
-  --status-danger-text: #b91c1c;
-  --status-danger-border: #fecaca;
-  --status-info-bg: #dbeafe;
-  --status-info-text: #1d4ed8;
-  --status-info-border: #bfdbfe;
+  /* ════════════════════════════════════════════════════════════════════ */
+  /* CAMADA DE COMPATIBILIDADE — REMOVER NA FASE 11                        */
+  /* --db-* / --cf-* / --nav-* viram alias dos tokens acima, para que as  */
+  /* páginas ainda não migradas continuem funcionando. Não adicione       */
+  /* NADA novo aqui.                                                      */
+  /* ════════════════════════════════════════════════════════════════════ */
 
-  /* ── Dashboard Light ── */
-  --db-bg: #f8fafc;
-  --db-bg-alt: #f1f5fb;
-  --db-card: #ffffff;
-  --db-card-alt: #f9fafb;
-  --db-card-hover: #f3f4f6;
-  --db-border: #e2e8f0;
-  --db-border-alt: #cbd5e1;
-  --db-text: #0f1117;
-  --db-text-2: #475569;
-  --db-text-3: #94a3b8;
-  --db-text-4: #cbd5e1;
+  --status-success-bg: var(--pos-weak);
+  --status-success-text: var(--pos);
+  --status-success-border: color-mix(in srgb, var(--pos) 30%, transparent);
+  --status-warning-bg: var(--warn-weak);
+  --status-warning-text: var(--warn);
+  --status-warning-border: color-mix(in srgb, var(--warn) 30%, transparent);
+  --status-danger-bg: var(--neg-weak);
+  --status-danger-text: var(--neg);
+  --status-danger-border: color-mix(in srgb, var(--neg) 30%, transparent);
+  --status-info-bg: var(--brand-weak);
+  --status-info-text: var(--brand);
+  --status-info-border: color-mix(in srgb, var(--brand) 30%, transparent);
+
+  --db-bg: var(--bg);
+  --db-bg-alt: var(--sunken);
+  --db-card: var(--surface);
+  --db-card-alt: var(--sunken);
+  --db-card-hover: var(--sunken);
+  --db-border: var(--border);
+  --db-border-alt: var(--border-strong);
+  --db-text: var(--text);
+  --db-text-2: var(--text-muted);
+  --db-text-3: var(--text-subtle);
+  --db-text-4: var(--text-subtle);
   --db-shadow-sm: 0 1px 2px 0 rgba(15, 17, 23, 0.05);
   --db-shadow-md: 0 4px 6px -1px rgba(15, 17, 23, 0.1);
   --db-shadow-lg: 0 10px 15px -3px rgba(15, 17, 23, 0.1);
-  --db-shadow-xl: 0 20px 25px -5px rgba(15, 17, 23, 0.1);
-  --db-overlay: rgba(15, 17, 23, 0.5);
+  --db-shadow-xl: var(--shadow-pop);
+  --db-overlay: var(--overlay);
 
-  /* ── Fluxo de caixa Light ── */
-  --cf-bg: #f5f7fa;
-  --cf-bg-alt: #eef2f5;
-  --cf-card: #ffffff;
-  --cf-card-2: #f8fafc;
-  --cf-card-3: #f0f4f8;
-  --cf-card-hover: #fafbfd;
-  --cf-input: #f0f4f8;
-  --cf-input-hover: #eef2f5;
-  --cf-border: #d9dfe8;
-  --cf-border-alt: #cad3df;
-  --cf-text: #0f1923;
-  --cf-text-2: #536878;
-  --cf-text-3: #8a95a5;
-  --cf-text-4: #b0bcc8;
-  --cf-hover: #fafbfd;
-  --cf-txhdr: #f8fafc;
-  --cf-divider: #d9dfe8;
+  --cf-bg: var(--bg);
+  --cf-bg-alt: var(--sunken);
+  --cf-card: var(--surface);
+  --cf-card-2: var(--sunken);
+  --cf-card-3: var(--sunken);
+  --cf-card-hover: var(--sunken);
+  --cf-input: var(--sunken);
+  --cf-input-hover: var(--sunken);
+  --cf-border: var(--border);
+  --cf-border-alt: var(--border-strong);
+  --cf-text: var(--text);
+  --cf-text-2: var(--text-muted);
+  --cf-text-3: var(--text-subtle);
+  --cf-text-4: var(--text-subtle);
+  --cf-hover: var(--sunken);
+  --cf-txhdr: var(--sunken);
+  --cf-divider: var(--border);
   --cf-shadow-sm: 0 1px 3px 0 rgba(15, 25, 35, 0.08);
   --cf-shadow-md: 0 4px 8px -1px rgba(15, 25, 35, 0.12);
   --cf-shadow-lg: 0 12px 20px -4px rgba(15, 25, 35, 0.15);
-  --cf-shadow-xl: 0 20px 30px -6px rgba(15, 25, 35, 0.18);
+  --cf-shadow-xl: var(--shadow-pop);
 
-  /* ── Nav / shell surface (was duplicated as its own --nav-* set inside Navbar.tsx) ── */
-  --nav-bg: #ffffff;
-  --nav-border: #e8eef8;
-  --nav-shadow: 0 1px 0 #e8eef8, 0 4px 20px rgba(13, 34, 71, 0.04);
-  --nav-text: #0d2247;
-  --nav-text-2: #64748b;
-  --nav-text-3: #94a3b8;
-  --nav-link-hover-bg: #f0f7ff;
-  --nav-link-hover-color: var(--brand-500);
-  --nav-link-active-bg: rgba(21, 101, 192, 0.08);
-  --nav-link-active-border: rgba(21, 101, 192, 0.15);
-  --nav-input-bg: #f1f5fb;
-  --nav-icon-bg: #f8faff;
-  --nav-icon-hover: #f0f7ff;
-  --nav-drop-bg: #ffffff;
-  --nav-drop-border: #e8eef8;
-  --nav-drop-item-hover: #f0f7ff;
-  --nav-drop-div: #f1f5fb;
-  --nav-notif-hover: #f8faff;
-  --nav-period-bg: #f0f7ff;
-  --nav-period-hover: #dbeafe;
+  --nav-bg: var(--surface);
+  --nav-border: var(--border);
+  --nav-shadow: 0 1px 0 var(--border), 0 4px 20px rgba(13, 34, 71, 0.04);
+  --nav-text: var(--text);
+  --nav-text-2: var(--text-muted);
+  --nav-text-3: var(--text-subtle);
+  --nav-link-hover-bg: var(--brand-weak);
+  --nav-link-hover-color: var(--brand);
+  --nav-link-active-bg: var(--brand-weak);
+  --nav-link-active-border: color-mix(in srgb, var(--brand) 20%, transparent);
+  --nav-input-bg: var(--sunken);
+  --nav-icon-bg: var(--sunken);
+  --nav-icon-hover: var(--brand-weak);
+  --nav-drop-bg: var(--surface);
+  --nav-drop-border: var(--border);
+  --nav-drop-item-hover: var(--brand-weak);
+  --nav-drop-div: var(--sunken);
+  --nav-notif-hover: var(--sunken);
+  --nav-period-bg: var(--brand-weak);
+  --nav-period-hover: color-mix(in srgb, var(--brand) 15%, transparent);
   --nav-sidebar-width: 260px;
 
-  /* ── Success/Entrada ── */
-  --entrada-bg: #ecfdf5;
-  --entrada-border: #a7f3d0;
-  --entrada-text: #065f46;
-  --entrada-icon: #10b981;
+  --entrada-bg: var(--pos-weak);
+  --entrada-border: color-mix(in srgb, var(--pos) 35%, transparent);
+  --entrada-text: var(--pos);
+  --entrada-icon: var(--pos);
   --entrada-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
-
-  /* ── Danger/Saida ── */
-  --saida-bg: #fef2f2;
-  --saida-border: #fecaca;
-  --saida-text: #7f1d1d;
-  --saida-icon: #ef4444;
+  --saida-bg: var(--neg-weak);
+  --saida-border: color-mix(in srgb, var(--neg) 35%, transparent);
+  --saida-text: var(--neg);
+  --saida-icon: var(--neg);
   --saida-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sora);
+  --color-background: var(--surface);
+  --color-foreground: var(--text);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-weak: var(--brand-weak);
+  --color-pos: var(--pos);
+  --color-pos-weak: var(--pos-weak);
+  --color-neg: var(--neg);
+  --color-neg-weak: var(--neg-weak);
+  --color-warn: var(--warn);
+  --color-warn-weak: var(--warn-weak);
+
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+
+  --font-sans: var(--font-hanken);
+  --font-display: var(--font-sora);
   --font-mono: var(--font-jetbrains-mono);
 }
 
+/* ════════════════════════════════════════════════════════════════════ */
+/* TEMA ESCURO — redefine SÓ os tokens semânticos. Toda a camada de     */
+/* compat (--db- / --cf- / --nav-) segue automaticamente pelos alias.   */
+/* ════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --background: #090d16;
-  --foreground: #cbd5e1;
+  --bg: #0b0f17;
+  --surface: #141a24;
+  --sunken: #0f151e;
+  --overlay: rgba(0, 0, 0, 0.7);
 
-  /* ── Semantic status tokens (dark) ── */
-  --status-success-bg: rgba(16, 185, 129, 0.12);
-  --status-success-text: #34d399;
-  --status-success-border: rgba(16, 185, 129, 0.25);
-  --status-warning-bg: rgba(245, 158, 11, 0.12);
-  --status-warning-text: #fbbf24;
-  --status-warning-border: rgba(245, 158, 11, 0.25);
-  --status-danger-bg: rgba(239, 68, 68, 0.12);
-  --status-danger-text: #f87171;
-  --status-danger-border: rgba(239, 68, 68, 0.25);
-  --status-info-bg: rgba(21, 101, 192, 0.15);
-  --status-info-text: #60a5fa;
-  --status-info-border: rgba(96, 165, 250, 0.25);
+  --border: #232b38;
+  --border-strong: #363f4e;
 
-  /* ── Nav / shell surface (dark) ── */
-  --nav-bg: #161b22;
-  --nav-border: #2a3548;
-  --nav-shadow: 0 1px 0 #2a3548, 0 4px 20px rgba(0, 0, 0, 0.2);
-  --nav-text: #e2e8f0;
-  --nav-text-2: #8899b4;
-  --nav-text-3: #4a5568;
-  --nav-link-hover-bg: rgba(59, 130, 246, 0.08);
-  --nav-link-hover-color: #60a5fa;
-  --nav-link-active-bg: rgba(59, 130, 246, 0.12);
-  --nav-link-active-border: rgba(96, 165, 250, 0.2);
-  --nav-input-bg: #0d1117;
-  --nav-icon-bg: #1c2230;
-  --nav-icon-hover: #243040;
-  --nav-drop-bg: #1c2230;
-  --nav-drop-border: #2a3548;
-  --nav-drop-item-hover: #243040;
-  --nav-drop-div: #2a3548;
-  --nav-notif-hover: #1e2a3a;
-  --nav-period-bg: rgba(59, 130, 246, 0.08);
-  --nav-period-hover: rgba(59, 130, 246, 0.15);
+  --text: #e6e9ee;
+  --text-muted: #99a3b2;
+  --text-subtle: #67717e;
 
-  /* ── Dashboard Dark ── */
-  --db-bg: #090d16;
-  --db-bg-alt: #0d1321;
-  --db-card: #111827;
-  --db-card-alt: #1f2937;
-  --db-card-hover: #1e293b;
-  --db-border: #1e293b;
-  --db-border-alt: #334155;
-  --db-text: #f8fafc;
-  --db-text-2: #cbd5e1;
-  --db-text-3: #94a3b8;
-  --db-text-4: #64748b;
+  --brand: #4d92ff;
+  --brand-hover: #6aa4ff;
+  --brand-weak: rgba(77, 146, 255, 0.13);
+  --brand-on: #0b0f17;
+
+  --pos: #3ecf7f;
+  --pos-weak: rgba(62, 207, 127, 0.13);
+  --neg: #f2695f;
+  --neg-weak: rgba(242, 105, 95, 0.13);
+  --warn: #e0a53d;
+  --warn-weak: rgba(224, 165, 61, 0.13);
+
+  --brand-400: #6aa4ff;
+
+  --shadow-pop: 0 10px 34px -8px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+
+  /* sombras legadas que não são alias */
   --db-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
   --db-shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.5);
   --db-shadow-lg: 0 12px 20px -4px rgba(0, 0, 0, 0.6);
-  --db-shadow-xl: 0 20px 30px -6px rgba(0, 0, 0, 0.7);
-  --db-overlay: rgba(0, 0, 0, 0.75);
-
-  /* ── Fluxo de caixa Dark ── */
-  --cf-bg: #090d16;
-  --cf-bg-alt: #0d1321;
-  --cf-card: #111827;
-  --cf-card-2: #1c2535;
-  --cf-card-3: #1f2937;
-  --cf-card-hover: #1e293b;
-  --cf-input: #1f2937;
-  --cf-input-hover: #1e293b;
-  --cf-border: #1e293b;
-  --cf-border-alt: #334155;
-  --cf-text: #f8fafc;
-  --cf-text-2: #cbd5e1;
-  --cf-text-3: #94a3b8;
-  --cf-text-4: #64748b;
-  --cf-hover: #1e293b;
-  --cf-txhdr: #0d1321;
-  --cf-divider: #1e293b;
   --cf-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
   --cf-shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.5);
   --cf-shadow-lg: 0 12px 20px -4px rgba(0, 0, 0, 0.6);
-  --cf-shadow-xl: 0 20px 30px -6px rgba(0, 0, 0, 0.7);
-
-  /* ── Success/Entrada Dark (Suavizado) ── */
-  --entrada-bg: rgba(16, 185, 129, 0.10);
-  --entrada-border: rgba(16, 185, 129, 0.25);
-  --entrada-text: #34d399;
-  --entrada-icon: #10b981;
-  --entrada-shadow: 0 4px 12px rgba(16, 185, 129, 0.05);
-
-  /* ── Danger/Saida Dark (Suavizado) ── */
-  --saida-bg: rgba(239, 68, 68, 0.10);
-  --saida-border: rgba(239, 68, 68, 0.25);
-  --saida-text: #f87171;
-  --saida-icon: #ef4444;
-  --saida-shadow: 0 4px 12px rgba(239, 68, 68, 0.05);
+  --nav-shadow: 0 1px 0 var(--border), 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="light"] {
@@ -223,9 +233,9 @@
 }
 
 body {
-  background: var(--db-bg);
-  color: var(--db-text);
-  font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-hanken), -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -267,8 +277,8 @@ body {
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
-  color: var(--foreground);
+  background: color-mix(in srgb, var(--brand) 30%, transparent);
+  color: var(--text);
 }
 
 /* ────────────────────────────────────────────────────────────────── */
@@ -395,14 +405,14 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent) !important;
   outline: none !important;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--cf-text-4);
+  color: var(--text-subtle);
 }
 
 /* ────────────────────────────────────────────────────────────────── */
@@ -482,70 +492,45 @@ textarea::placeholder {
 }
 
 /* ────────────────────────────────────────────────────────────────── */
-/* GRADIENT BUTTONS */
+/* BOTÕES LEGADOS — DEPRECATED: usar <Button> de app/components/ui/.   */
+/* Sem gradiente, alinhados ao Button novo. Removidos na Fase 11.      */
 /* ────────────────────────────────────────────────────────────────── */
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
+  background: var(--brand);
+  color: var(--brand-on);
   border: none;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
+  background: var(--brand-hover);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  background: var(--pos);
+  color: #fff;
   border: none;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-success:hover {
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-success:active {
-  transform: translateY(0);
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
+  background: var(--neg);
+  color: #fff;
   border: none;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.btn-danger:hover {
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-danger:active {
-  transform: translateY(0);
-}
-
 .btn-secondary {
-  background: var(--cf-card);
-  border: 1px solid var(--cf-border);
-  color: var(--cf-text-2);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-secondary:hover {
-  background: var(--cf-card-hover);
-  border-color: var(--cf-border-alt);
+  background: var(--sunken);
+  border-color: var(--text-subtle);
 }
 
 
@@ -562,10 +547,11 @@ body.modal-open .nxfi-sidebar-vertical > *:not(style) {
 /* TEXT UTILITIES */
 /* ────────────────────────────────────────────────────────────────── */
 
-.font-heading {
+.font-heading,
+.font-display {
   font-family: var(--font-sora), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-weight: 600;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.02em;
 }
 
 .mono {
@@ -578,19 +564,19 @@ body.modal-open .nxfi-sidebar-vertical > *:not(style) {
 /* ────────────────────────────────────────────────────────────────── */
 
 .text-primary {
-  color: var(--primary);
+  color: var(--brand);
 }
 
 .text-success {
-  color: var(--success);
+  color: var(--pos);
 }
 
 .text-danger {
-  color: var(--danger);
+  color: var(--neg);
 }
 
 .text-muted {
-  color: var(--cf-text-3);
+  color: var(--text-muted);
 }
 
 .bg-entrada {
@@ -713,14 +699,4 @@ textarea {
 
 [data-theme="dark"] .cf-card:hover {
   box-shadow: var(--cf-shadow-md);
-}
-
-[data-theme="dark"] .btn-primary {
-  background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
-  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.25);
-}
-
-[data-theme="dark"] .btn-primary:hover {
-  background: linear-gradient(135deg, var(--brand-400), var(--brand-500));
-  box-shadow: 0 8px 24px rgba(21, 101, 192, 0.35);
 }

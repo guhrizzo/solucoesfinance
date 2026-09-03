@@ -13,15 +13,23 @@ const paddingStyles: Record<CardPadding, string> = {
   lg: "p-4 md:p-6",
 };
 
-const variantClass: Record<CardVariant, string> = {
-  default: "cf-card",
-  kpi: "cf-card cf-kpi",
-  interactive: "cf-card cf-kpi clickable",
-};
-
-export function Card({ variant = "default", padding = "md", className = "", children, ...rest }: CardProps) {
+/**
+ * Painel de superfície: borda de 1px, sem sombra por padrão (separação por
+ * borda). `variant="kpi"` / `"interactive"` mantidos por compat — para KPIs
+ * novos prefira <KpiTile>.
+ */
+export function Card({ variant = "default", padding = "md", className = "", style, children, ...rest }: CardProps) {
   return (
-    <div className={`${variantClass[variant]} rounded-2xl ${paddingStyles[padding]} ${className}`} {...rest}>
+    <div
+      className={`${variant === "interactive" ? "cursor-pointer" : ""} ${paddingStyles[padding]} ${className}`}
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-card)",
+        ...style,
+      }}
+      {...rest}
+    >
       {children}
     </div>
   );

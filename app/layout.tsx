@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Sora, JetBrains_Mono } from "next/font/google";
+import { Sora, JetBrains_Mono, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 import { AppShell } from "./components/AppShell";
@@ -14,6 +14,14 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
+});
+
+// Corpo, tabelas e formulários do app interno (redesign 2026-09).
+// Sora fica só em títulos/rótulos (.font-heading / --font-display).
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -78,7 +86,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${sora.variable} ${jetbrainsMono.variable}`}
+        className={`${sora.variable} ${jetbrainsMono.variable} ${hanken.variable}`}
         suppressHydrationWarning
         style={{ margin: 0, padding: 0 }}
       >

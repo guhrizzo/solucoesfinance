@@ -46,37 +46,37 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
   return createPortal(
     <div
       className={`fixed inset-0 z-[100] flex justify-center p-4 ${mobileSheet ? "items-end sm:items-center" : "items-center"}`}
-      style={{ background: "var(--db-overlay)", animation: "fadeIn 0.2s ease both" }}
+      style={{ background: "var(--overlay)", animation: "fadeIn 0.2s ease both" }}
       onClick={() => !closeDisabled && onClose()}
     >
       <div
         className={`w-full ${sizeStyles[size]} overflow-hidden ${mobileSheet ? "rounded-t-3xl sm:rounded-2xl" : "rounded-2xl"}`}
         style={{
-          background: "var(--cf-card)",
-          border: "1px solid var(--cf-border)",
-          boxShadow: "var(--cf-shadow-xl)",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-pop)",
           animation: "slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1) both",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {mobileSheet && (
           <div className="flex justify-center pt-3 pb-1 sm:hidden">
-            <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--cf-border)" }} />
+            <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--border)" }} />
           </div>
         )}
         {title && (
           <div
             className="flex items-center justify-between px-5 py-4 border-b"
-            style={{ borderColor: "var(--cf-border)" }}
+            style={{ borderColor: "var(--border)" }}
           >
-            <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--cf-text)" }}>
+            <h2 className="font-display font-bold text-sm md:text-base" style={{ color: "var(--text)" }}>
               {title}
             </h2>
             <button
               onClick={() => !closeDisabled && onClose()}
               disabled={closeDisabled}
               className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ color: "var(--cf-text-2)" }}
+              style={{ color: "var(--text-muted)" }}
               aria-label="Fechar"
             >
               <X size={16} />
