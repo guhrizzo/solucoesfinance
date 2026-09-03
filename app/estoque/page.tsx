@@ -1189,13 +1189,13 @@ export default function EstoquePage() {
                               skusVinculados.map((v) => {
                                 if (v.platform === "mercadolivre") {
                                   return (
-                                    <span key={v.id} className="text-[9px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: "#FFF159", color: "#111", border: "1px solid #FFE01A" }}>
+                                    <span key={v.id} className="text-[9px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: "var(--brand-ml-bg)", color: "var(--brand-ml-fg)", border: "1px solid var(--brand-ml-solid)" }}>
                                       ML · {v.adId}
                                     </span>
                                   );
                                 } else {
                                   return (
-                                    <span key={v.id} className="text-[9px] font-extrabold px-2 py-0.5 rounded-full text-white" style={{ background: "#FF5722", border: "1px solid #E64A19" }}>
+                                    <span key={v.id} className="text-[9px] font-extrabold px-2 py-0.5 rounded-full text-white" style={{ background: "var(--brand-shopee-bg)", border: "1px solid var(--brand-shopee-bg)" }}>
                                       Shopee · {v.adId}
                                     </span>
                                   );
@@ -1545,8 +1545,8 @@ export default function EstoquePage() {
                           <span
                             className="font-extrabold px-2 py-0.5 rounded text-[8px]"
                             style={{
-                              background: vin.platform === "mercadolivre" ? "#FFF159" : "#FF5722",
-                              color: vin.platform === "mercadolivre" ? "#111" : "#fff"
+                              background: vin.platform === "mercadolivre" ? "var(--brand-ml-bg)" : "var(--brand-shopee-bg)",
+                              color: vin.platform === "mercadolivre" ? "var(--brand-ml-fg)" : "var(--brand-shopee-fg)"
                             }}
                           >
                             {vin.platform === "mercadolivre" ? "MERCADO LIVRE" : "SHOPEE"}

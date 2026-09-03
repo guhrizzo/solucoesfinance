@@ -67,7 +67,7 @@ export function MonthPickerModal({ open, onClose, value, onSelect }: Props) {
                 onClick={() => pick(m)}
                 className="py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-colors"
                 style={isSelected
-                  ? { background: "var(--primary)", color: "#fff" }
+                  ? { background: "var(--primary)", color: "var(--brand-on)" }
                   : { background: "var(--cf-input)", color: "var(--cf-text)", border: isCurrent ? "1px solid var(--primary)" : "1px solid transparent" }}
               >
                 {label}

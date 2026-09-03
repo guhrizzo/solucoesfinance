@@ -14,15 +14,29 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
 
-  // Redesign 2026-09 — barra cor hex crua nas telas em migração. Severidade
-  // `warn` nesta fase (páginas legadas ainda têm centenas de violações); vira
-  // `error` na Fase 11. Ver docs/superpowers/specs/2026-09-03-redesign-ui-unificado-design.md
+  // Redesign 2026-09 — barra cor hex crua nas telas do app interno já migradas.
+  // Ver docs/superpowers/specs/2026-09-03-redesign-ui-unificado-design.md
+  // `ignores`: telas fora do escopo do redesign (landing, auth, onboarding,
+  // páginas de dev) — migrá-las é trabalho futuro.
   {
     files: ["app/**/*.tsx"],
-    ignores: ["app/components/ui/**", "app/design-system/**"],
+    ignores: [
+      "app/components/ui/**",
+      "app/design-system/**",
+      "app/page.tsx",
+      "app/not-found.tsx",
+      "app/login/**",
+      "app/register/**",
+      "app/debug/**",
+      "app/developer/**",
+      "app/assinatura/**",
+      "app/components/OnboardingModal.tsx",
+      "app/components/CreatePasswordGate.tsx",
+      "app/components/Paywall.tsx",
+    ],
     rules: {
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector: "Literal[value=/#(?:[0-9a-fA-F]{3,4}){1,2}\\b/]",
           message:

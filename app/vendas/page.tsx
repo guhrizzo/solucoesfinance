@@ -59,8 +59,8 @@ const toBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const CANAL_INFO: Record<Canal, { label: string; bg: string; fg: string; solid: string }> = {
-  mercadolivre: { label: "Mercado Livre", bg: "#FFF159", fg: "#111", solid: "#FFD000" },
-  shopee: { label: "Shopee", bg: "#FF5722", fg: "#fff", solid: "#FF5722" },
+  mercadolivre: { label: "Mercado Livre", bg: "var(--brand-ml-bg)", fg: "var(--brand-ml-fg)", solid: "var(--brand-ml-solid)" },
+  shopee: { label: "Shopee", bg: "var(--brand-shopee-bg)", fg: "var(--brand-shopee-fg)", solid: "var(--brand-shopee-bg)" },
 };
 
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -338,7 +338,7 @@ export default function VendasPage() {
                     onClick={() => setPeriodo(opt.id)}
                     className="px-3.5 py-2 text-xs font-bold cursor-pointer border-none"
                     style={periodo === opt.id
-                      ? { background: "var(--primary)", color: "#fff" }
+                      ? { background: "var(--primary)", color: "var(--brand-on)" }
                       : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                   >
                     {opt.label}

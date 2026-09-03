@@ -731,7 +731,7 @@ export default function RelatoriosPage() {
               onClick={handleExportPdf}
               disabled={exporting}
               className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "#fff" }}
+              style={{ background: "var(--primary)", color: "var(--brand-on)" }}
               title="Exportar a aba ativa em PDF"
             >
               {exporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
@@ -1031,7 +1031,7 @@ export default function RelatoriosPage() {
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-60"
                           style={row.done
                             ? { background: "var(--cf-input)", color: "var(--db-text-2)" }
-                            : { background: "var(--success)", color: "#fff" }}
+                            : { background: "var(--success)", color: "var(--on-accent)" }}
                         >
                           {closingBusy === row.key
                             ? <RefreshCw size={11} className="animate-spin" />

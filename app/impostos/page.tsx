@@ -82,7 +82,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "simples_nacional",
         label: "Simples Nacional",
         icon: Zap,
-        color: "#1e40af",
+        color: "var(--cat-1)",
         description: "Regime Unificado de Impostos (DAS)",
         esfera: "federal",
     },
@@ -90,7 +90,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "irpf",
         label: "IRPF",
         icon: DollarSign,
-        color: "#2563eb",
+        color: "var(--cat-2)",
         description: "Imposto de Renda Pessoa Física",
         esfera: "federal",
     },
@@ -106,7 +106,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "pis",
         label: "PIS",
         icon: Percent,
-        color: "#0284c7",
+        color: "var(--cat-3)",
         description: "Programa de Integração Social",
         esfera: "federal",
     },
@@ -114,7 +114,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "cofins",
         label: "COFINS",
         icon: BarChart3,
-        color: "#0369a1",
+        color: "var(--cat-4)",
         description: "Contribuição para Financiamento da Seguridade Social",
         esfera: "federal",
     },
@@ -122,7 +122,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "csll",
         label: "CSLL",
         icon: TrendingUp,
-        color: "#0891b2",
+        color: "var(--cat-5)",
         description: "Contribuição Social sobre o Lucro Líquido",
         esfera: "federal",
     },
@@ -130,7 +130,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "ipi",
         label: "IPI",
         icon: Package,
-        color: "#0e7490",
+        color: "var(--cat-6)",
         description: "Imposto sobre Produtos Industrializados",
         esfera: "federal",
     },
@@ -138,7 +138,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "iof",
         label: "IOF",
         icon: DollarSign,
-        color: "#4f46e5",
+        color: "var(--cat-7)",
         description: "Imposto sobre Operações Financeiras",
         esfera: "federal",
     },
@@ -146,7 +146,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "itr",
         label: "ITR",
         icon: Globe,
-        color: "#4338ca",
+        color: "var(--cat-8)",
         description: "Imposto Territorial Rural",
         esfera: "federal",
     },
@@ -154,7 +154,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "inss",
         label: "INSS",
         icon: Shield,
-        color: "#06b6d4",
+        color: "var(--cat-1)",
         description: "Previdência Social",
         esfera: "federal",
     },
@@ -162,7 +162,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "fgts",
         label: "FGTS",
         icon: Briefcase,
-        color: "#0891b2",
+        color: "var(--cat-2)",
         description: "Fundo de Garantia do Tempo de Serviço",
         esfera: "federal",
     },
@@ -171,7 +171,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "icms",
         label: "ICMS",
         icon: TrendingUp,
-        color: "#7c3aed",
+        color: "var(--cat-3)",
         description: "Imposto sobre Circulação de Mercadorias e Serviços",
         esfera: "estadual",
     },
@@ -179,7 +179,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "ipva",
         label: "IPVA",
         icon: Car,
-        color: "#9333ea",
+        color: "var(--cat-4)",
         description: "Imposto sobre a Propriedade de Veículos Automotores",
         esfera: "estadual",
     },
@@ -187,7 +187,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "itcmd",
         label: "ITCMD",
         icon: FileText,
-        color: "#c084fc",
+        color: "var(--cat-5)",
         description: "Imposto sobre Transmissão Causa Mortis e Doação",
         esfera: "estadual",
     },
@@ -212,7 +212,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "itbi",
         label: "ITBI",
         icon: Building2,
-        color: "#0d9488",
+        color: "var(--cat-6)",
         description: "Imposto sobre Transmissão de Bens Imóveis",
         esfera: "municipal",
     },
@@ -221,7 +221,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
         id: "outro",
         label: "Outro",
         icon: HelpCircle,
-        color: "#6366f1",
+        color: "var(--cat-7)",
         description: "Outros impostos e taxas",
         esfera: "outro",
     },
@@ -652,7 +652,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                             <FileText size={14} style={{ color: "var(--cf-text-2)", flexShrink: 0 }} />
                                             <a href={url} target="_blank" rel="noopener noreferrer"
                                                 className="text-xs truncate"
-                                                style={{ color: "#3b82f6", textDecoration: "underline" }}>
+                                                style={{ color: "var(--brand)", textDecoration: "underline" }}>
                                                 Documento {idx + 1}
                                             </a>
                                         </div>
@@ -1314,7 +1314,7 @@ export default function ImpostosPage() {
             <p className="text-xs font-mono text-rose-700 bg-rose-50 rounded-xl p-4 max-w-sm break-all">{errMsg}</p>
             <button onClick={() => window.location.reload()}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
+                style={{ background: "var(--brand)", color: "white" }}>
                 Tentar novamente
             </button>
         </div>
@@ -1409,7 +1409,7 @@ export default function ImpostosPage() {
                     </div>
                     <button onClick={() => { setEditing(null); setModal(true); }}
                         className="hidden sm:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
-                        style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
+                        style={{ background: "var(--brand)", color: "white" }}>
                         <Plus size={14} /> Novo imposto
                     </button>
                 </div>
@@ -1417,10 +1417,10 @@ export default function ImpostosPage() {
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
-                        { label: "A Pagar", val: toBRL(kpis.aPagar), color: "#3b82f6", bg: "var(--brand-weak)", sub: `${kpis.totalNotPaid} imposto${kpis.totalNotPaid !== 1 ? "s" : ""}` },
+                        { label: "A Pagar", val: toBRL(kpis.aPagar), color: "var(--brand)", bg: "var(--brand-weak)", sub: `${kpis.totalNotPaid} imposto${kpis.totalNotPaid !== 1 ? "s" : ""}` },
                         { label: "Em Atraso", val: toBRL(kpis.atraso), color: "var(--neg)", bg: "var(--neg-weak)", sub: `${kpis.totalOverdue} imposto${kpis.totalOverdue !== 1 ? "s" : ""}` },
                         { label: "Pagos", val: toBRL(kpis.pago), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalPaid} imposto${kpis.totalPaid !== 1 ? "s" : ""}` },
-                        { label: "Estimado", val: toBRL(kpis.estimado), color: "#8b5cf6", bg: "var(--brand-weak)", sub: "planejamento" },
+                        { label: "Estimado", val: toBRL(kpis.estimado), color: "var(--brand)", bg: "var(--brand-weak)", sub: "planejamento" },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
@@ -1542,7 +1542,7 @@ export default function ImpostosPage() {
                         {!search && filterStatus === "todos" && filterType === "todos" && filterSphere === "todos" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}
                                 className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer mt-2"
-                                style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white" }}>
+                                style={{ background: "var(--brand)", color: "white" }}>
                                 <Plus size={14} /> Adicionar imposto
                             </button>
                         )}
@@ -1587,7 +1587,7 @@ export default function ImpostosPage() {
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                 style={{
                     bottom: 74, right: 16, width: 52, height: 52,
-                    background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                    background: "var(--brand)",
                     color: "white",
                     boxShadow: "0 8px 24px rgba(59,130,246,0.4)",
                 }}>

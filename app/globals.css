@@ -28,6 +28,8 @@
   --brand-hover: #1a5fd0;
   --brand-weak: #e9f1fd;
   --brand-on: #ffffff;
+  /* Texto/ícone sobre preenchimento saturado (--pos, --neg, gradientes). Sempre claro. */
+  --on-accent: #ffffff;
 
   /* Semânticos — dinheiro e status (verde/vermelho SÓ aqui) */
   --pos: #12854a;
@@ -36,6 +38,14 @@
   --neg-weak: #fcecec;
   --warn: #b0751a;
   --warn-weak: #fbf2e0;
+
+  /* Marcas de marketplace — cores de identidade do Mercado Livre e Shopee.
+     Fixas (não trocam com o tema); usadas só nos chips das integrações. */
+  --brand-ml-bg: #fff159;
+  --brand-ml-fg: #111111;
+  --brand-ml-solid: #ffd000;
+  --brand-shopee-bg: #ff5722;
+  --brand-shopee-fg: #ffffff;
 
   /* Paleta categórica — séries de dados (donut de centro de custos, impostos
      por tipo, gráficos). 8 matizes distinguíveis; NÃO são cor de status. */

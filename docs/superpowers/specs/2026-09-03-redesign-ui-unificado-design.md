@@ -102,26 +102,45 @@ Nada de reorganização de pastas fora do que serve a migração.
 
 Cada fase: própria entrada de plano, implementação, validação em browser, commit. O app compila e funciona ao fim de cada uma.
 
-0. **Base** ✅ — tokens novos em `globals.css` (com alias de compat), `Hanken_Grotesk` no `layout.tsx`, revisar `ui/` existentes + criar `Pill`/`Field`/`Table`/`KpiTile`/`PageHeader`/`EmptyState`, regra ESLint anti-hex (warn, em `eslint.config.mjs`), rota de QA temporária `app/design-system/page.tsx`.
-1. **Navegação** — `Navbar` + `AppShell` + `Footer` (telas internas) re-skinados e destravados do `<style>` embutido.
-2. **Dashboard** — migração real (hoje é rasa): `useDashboardData`, seções em `app/dashboard/components/`, KPIs/tabela/gráfico nos componentes novos.
-3. **Fluxo de caixa** — `CashFlow.tsx` (1.883 linhas) quebrado: `useCashflowData`, `TransactionTable`, `ForecastPanel`, `BudgetPanel`, modais já em `ui/Modal`.
-4. **Contas a pagar + Contas a receber** — telas gêmeas, mesmo tratamento; `STATUS_META` → `Pill`.
-5. **Impostos** — `impostos/page.tsx` (1.617 linhas).
-6. **Centro de custos** — `costCenter/page.tsx` (1.337 linhas).
-7. **Estoque** — `estoque/page.tsx` (1.781 linhas) + integrações ML/Shopee na aba (sem tocar na lógica de sync).
-8. **Painel de vendas** — `vendas/page.tsx` (856 linhas).
-9. **Relatórios** — `relatorios/page.tsx` (1.586 linhas) incl. geração de PDF (só apresentação da tela, não o `reportPdf.ts`).
-10. **Usuários + Configurações** — `users/page.tsx` (818), `configuracoes/*`.
-11. **Limpeza final** — remover alias `--db-*`/`--cf-*`, `STATUS_META`/`colorMap` mortos, `@import` de fonte restantes, classes `.btn-*` legadas, a rota `app/design-system/`; elevar a regra ESLint anti-hex de `warn` para `error`; atualizar as specs do roadmap.
+0. **Base** ✅ — tokens novos em `globals.css` (com alias de compat), `Hanken_Grotesk` no `layout.tsx`, revisar `ui/` existentes + criar `Pill`/`Field`/`Table`/`KpiTile`/`PageHeader`/`EmptyState`, regra ESLint anti-hex, rota de QA `app/design-system/page.tsx`.
+1. **Navegação** ✅ — `Navbar` re-skinado, `<style>{css}` de ~290 linhas → `app/components/Navbar.css` (só tokens). Comportamento (toggle h/v, drawer, bottom nav) intacto. `AppShell` já estava ok; `Footer` não é usado nas telas internas.
+2. **Dashboard** ✅ — sweep de cor: `<style>` → `app/dashboard/dashboard.css`; `colorMap`, rampa do donut, literais Tailwind de cor → tokens. Extração de `useDashboardData`/componentes **não feita** (ver nota).
+3. **Fluxo de caixa** ✅ — sweep de cor: `<style>` redundante removido (sobrou `app/components/cashflow.css` com `.cf-group-*`); ~55 hex/gradientes → tokens. Quebra de `CashFlow.tsx` **não feita**.
+4. **Contas a pagar + receber + `CadastroPanel`** ✅ — `<style>` (com `@import` de fonte) removidos; ~200 hex → tokens; `CadastroPanel` `accent + "18"` → `color-mix`.
+5–6. **Impostos + Centro de custos** ✅ — `<style>` removidos; cores semânticas → tokens; paletas categóricas de imposto/centro → `--cat-1..8`.
+7–10. **Estoque, Vendas, Relatórios, Usuários, Configurações** ✅ — sweep de cor; marcas ML/Shopee → tokens `--brand-ml-*`/`--brand-shopee-*`; logo Google mantido (trademark, `eslint-disable` pontual).
+   - Correção transversal: 201 usos de `var(--cf-text2/3)` / `var(--db-text2/3)` (nomes sem hífen, variáveis inexistentes) em 10 arquivos.
+11. **Trava** ✅ — regra ESLint anti-hex elevada a `error` para as telas migradas (`ignores` cobre landing/auth/dev). Alias `--db-*`/`--cf-*` **mantidos** (ver nota).
 
-## Validação (cada fase)
+### O que ficou de fora (execução conservadora)
 
-- App interno depende de auth Firebase → validação em rota de preview temporária (padrão já usado nas etapas anteriores) ou `dangerouslyDisableSandbox` com credenciais de dev, decidido no plano de cada fase.
-- Tema claro **e** escuro conferidos, incluindo tokens computados no DOM.
-- `tsc --noEmit` e `eslint` comparados contra o baseline da fase — nenhum problema novo.
-- Diff de comportamento: a tela faz exatamente o que fazia antes (mesmos dados, mesmas ações, mesmos cálculos).
-- Sem erros de hidratação nos logs do dev server.
+Sem sessão de login no ambiente, as telas internas (auth-gated) não puderam ter QA
+visual. Para não quebrar telas invisíveis, a migração foi **sweep de cor + extração de
+`<style>`**, não a refatoração arquitetural completa:
+
+- **Alias `--db-*`/`--cf-*` mantidos**: as páginas ainda referenciam `var(--cf-card)`
+  etc. estruturalmente. Os alias apontam para os tokens novos, então o sistema **está**
+  unificado; trocar cada `var(--cf-*)` pelo nome novo é cosmético e fica para depois.
+- **Páginas gigantes não quebradas**: `useDashboardData`, `TransactionTable` etc. não
+  foram extraídos. Requer QA rodando local.
+- **Componentes `ui/` novos** (`PageHeader`, `KpiTile`, `Table`, `EmptyState`) criados e
+  validados em `/design-system`, mas **ainda não adotados** pelas páginas — a adoção
+  troca markup e precisa de olho humano.
+- `STATUS_META`/`colorMap` continuam como objetos, mas agora com **valores em token**.
+- Classes `.btn-*` legadas mantidas (agora sólidas, sem gradiente) — algumas páginas usam.
+
+## Validação (feita)
+
+- `npx tsc --noEmit`: **0 erros** novos (baseline: só stale `.next/types`).
+- `npm run build`: compila; warning de CSS do Lightning corrigido.
+- `npx eslint app`: **0 erros** novos (165 pré-existentes `no-explicit-any` etc.
+  inalterados); warnings de hex: 705 → 93 (as 93 restantes são telas fora do escopo).
+- `/design-system` conferido em tema claro **e** escuro; tokens computados no DOM ok;
+  alias `--cf-*`/`--db-*` resolvendo para os valores novos.
+- **Telas internas não conferidas visualmente** (auth-gated, sem sessão no ambiente) —
+  conferir rodando local: `/dashboard`, `/fluxo-caixa`, `/contasPagar`, `/contasReceber`,
+  `/impostos`, `/costCenter`, `/estoque`, `/vendas`, `/relatorios`, `/users`,
+  `/configuracoes`, em claro e escuro.
 
 ## Fora de escopo
 

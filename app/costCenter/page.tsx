@@ -113,8 +113,8 @@ function centerSpentForMonth(expenses: Expense[], centerName: string, monthKey: 
 const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 const COLORS = [
-  "#1565c0", "#42a5f5", "#90caf9", "#bbdefb",
-  "#64b5f6", "#2196f3", "#1e88e5", "#1976d2",
+  "var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)",
+  "var(--cat-5)", "var(--cat-6)", "var(--cat-7)", "var(--cat-8)",
 ];
 
 // Lista genérica — usada só como fallback pra quem ainda não respondeu o
@@ -164,45 +164,45 @@ function categoriesForSegment(ramo: string | null): string[] {
 
 const CATEGORY_COLORS: Record<string, string> = {
   // Genéricas
-  "Alimentação": "#f97316",
-  "Transporte": "#06b6d4",
-  "Hospedagem": "#ec4899",
-  "Comunicação": "#8b5cf6",
+  "Alimentação": "var(--cat-1)",
+  "Transporte": "var(--cat-2)",
+  "Hospedagem": "var(--cat-3)",
+  "Comunicação": "var(--cat-4)",
   "Equipamentos": "var(--pos)",
-  "Consultoria": "#3b82f6",
+  "Consultoria": "var(--cat-5)",
   "Treinamento": "var(--warn)",
   "Marketing": "var(--neg)",
-  "Utilities": "#6366f1",
-  "Manutenção": "#14b8a6",
-  "Outros": "#6b7280",
+  "Utilities": "var(--cat-6)",
+  "Manutenção": "var(--cat-7)",
+  "Outros": "var(--cat-8)",
   // Comércio / E-commerce
-  "Fornecedores": "#0ea5e9",
-  "Frete e logística": "#0284c7",
-  "Aluguel do ponto": "#a855f7",
-  "Folha de pagamento": "#22c55e",
-  "Embalagens": "#f472b6",
+  "Fornecedores": "var(--cat-1)",
+  "Frete e logística": "var(--cat-2)",
+  "Aluguel do ponto": "var(--cat-3)",
+  "Folha de pagamento": "var(--cat-4)",
+  "Embalagens": "var(--cat-5)",
   "Impostos": "var(--neg)",
-  "TI / Software": "#6366f1",
-  "Plataforma / Marketplace": "#8b5cf6",
+  "TI / Software": "var(--cat-6)",
+  "Plataforma / Marketplace": "var(--cat-7)",
   "Marketing digital": "var(--neg)",
-  "Devoluções": "#fb923c",
+  "Devoluções": "var(--cat-8)",
   // Indústria
-  "Matéria-prima": "#92400e",
-  "Mão de obra": "#0891b2",
-  "Manutenção de máquinas": "#14b8a6",
-  "Energia": "#eab308",
-  "Logística": "#38bdf8",
-  "Segurança do trabalho": "#f43f5e",
+  "Matéria-prima": "var(--cat-1)",
+  "Mão de obra": "var(--cat-2)",
+  "Manutenção de máquinas": "var(--cat-3)",
+  "Energia": "var(--cat-4)",
+  "Logística": "var(--cat-5)",
+  "Segurança do trabalho": "var(--cat-6)",
   // Serviço
   "Ferramentas e equipamentos": "var(--pos)",
-  "Deslocamento": "#0284c7",
+  "Deslocamento": "var(--cat-7)",
 };
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
-  blue: { bg: "rgba(59, 130, 246, 0.1)", text: "#42a5f5", icon: "rgba(59, 130, 246, 0.15)" },
-  rose: { bg: "rgba(244, 63, 94, 0.08)", text: "#fb7185", icon: "rgba(244, 63, 94, 0.12)" },
-  emerald: { bg: "rgba(16, 185, 129, 0.08)", text: "#34d399", icon: "rgba(16, 185, 129, 0.12)" },
-  amber: { bg: "rgba(245, 158, 11, 0.08)", text: "#fbbf24", icon: "rgba(245, 158, 11, 0.12)" },
+  blue: { bg: "rgba(59, 130, 246, 0.1)", text: "var(--brand)", icon: "rgba(59, 130, 246, 0.15)" },
+  rose: { bg: "rgba(244, 63, 94, 0.08)", text: "var(--neg)", icon: "rgba(244, 63, 94, 0.12)" },
+  emerald: { bg: "rgba(16, 185, 129, 0.08)", text: "var(--pos)", icon: "rgba(16, 185, 129, 0.12)" },
+  amber: { bg: "rgba(245, 158, 11, 0.08)", text: "var(--warn)", icon: "rgba(245, 158, 11, 0.12)" },
 };
 
 // (mapCategoryToCashflow e syncExpenseCashflow viraram lib/costCenterSync.ts
@@ -474,8 +474,8 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
             </select>
             {category && (
               <div className="mt-2 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ background: CATEGORY_COLORS[category] || "#6b7280" }} />
-                <span className="text-xs font-semibold" style={{ color: CATEGORY_COLORS[category] || "#6b7280" }}>{category}</span>
+                <div className="w-3 h-3 rounded-full" style={{ background: CATEGORY_COLORS[category] || "var(--cat-8)" }} />
+                <span className="text-xs font-semibold" style={{ color: CATEGORY_COLORS[category] || "var(--cat-8)" }}>{category}</span>
               </div>
             )}
           </div>
@@ -534,7 +534,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
                     ? s === "pago"
                       ? { background: "var(--entrada-bg)", borderColor: "var(--entrada-border)", color: "var(--entrada-text)" }
                       : s === "pendente"
-                        ? { background: "var(--warn-weak)", borderColor: "#fde047", color: "var(--warn)" }
+                        ? { background: "var(--warn-weak)", borderColor: "var(--warn)", color: "var(--warn)" }
                         : { background: "var(--brand-weak)", borderColor: "var(--brand-weak)", color: "var(--brand)" }
                     : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text-2)" }
                   }>
