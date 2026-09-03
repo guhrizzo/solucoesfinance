@@ -219,7 +219,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
         <div className="space-y-4">
             {err && (
                 <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-                    style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                    style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)", color: "var(--neg)" }}>
                     <span>⚠</span> {err}
                 </div>
             )}
@@ -240,10 +240,10 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                     />
                     <div className="flex items-center justify-between px-1 h-4">
                         {docStr && !docOk && (
-                            <span className="text-xs" style={{ color: "#dc2626" }}>Documento inválido</span>
+                            <span className="text-xs" style={{ color: "var(--neg)" }}>Documento inválido</span>
                         )}
                         {docOk && dup && (
-                            <span className="text-xs" style={{ color: "#dc2626" }}>Já cadastrado</span>
+                            <span className="text-xs" style={{ color: "var(--neg)" }}>Já cadastrado</span>
                         )}
                         {docOk && !dup && (
                             <span className="text-xs font-semibold" style={{ color: accent }}>{docKind(docStr)} válido</span>
@@ -309,7 +309,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                     className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                                     style={{ border: "1px solid var(--cf-border)" }}>
                                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                                        style={{ background: accent + "18" }}>
+                                        style={{ background: `color-mix(in srgb, ${accent} 12%, transparent)` }}>
                                         <Icon size={15} style={{ color: accent }} />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -321,7 +321,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                         <div className="flex items-center gap-1.5 shrink-0">
                                             <button onClick={() => del(c.id)}
                                                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer"
-                                                style={{ background: "#fee2e2", color: "#dc2626" }}>
+                                                style={{ background: "var(--neg-weak)", color: "var(--neg)" }}>
                                                 Excluir
                                             </button>
                                             <button onClick={() => setConfirmDel(null)}
@@ -335,7 +335,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                             {onPick && (
                                                 <button onClick={() => onPick(c)}
                                                     className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1"
-                                                    style={{ background: accent + "18", color: accent }}>
+                                                    style={{ background: `color-mix(in srgb, ${accent} 12%, transparent)`, color: accent }}>
                                                     <Check size={12} /> Usar
                                                 </button>
                                             )}

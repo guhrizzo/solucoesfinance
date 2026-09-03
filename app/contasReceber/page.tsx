@@ -70,12 +70,12 @@ interface Receivable {
 const TODAY = new Date().toISOString().split("T")[0];
 
 const CATEGORIES: { label: string; icon: LucideIcon; color: string }[] = [
-    { label: "Clientes", icon: Building2, color: "#10b981" },
-    { label: "Serviços", icon: Zap, color: "#3b82f6" },
-    { label: "Produtos", icon: Receipt, color: "#f59e0b" },
-    { label: "Devoluções", icon: ArrowUpRight, color: "#8b5cf6" },
-    { label: "Empréstimos", icon: CircleDollarSign, color: "#06b6d4" },
-    { label: "Outros", icon: Tag, color: "#6b7280" },
+    { label: "Clientes", icon: Building2, color: "var(--pos)" },
+    { label: "Serviços", icon: Zap, color: "var(--brand)" },
+    { label: "Produtos", icon: Receipt, color: "var(--warn)" },
+    { label: "Devoluções", icon: ArrowUpRight, color: "var(--brand)" },
+    { label: "Empréstimos", icon: CircleDollarSign, color: "var(--brand)" },
+    { label: "Outros", icon: Tag, color: "var(--text-subtle)" },
 ];
 
 const RECURRENCE_LABEL: Record<Recurrence, string> = {
@@ -84,10 +84,10 @@ const RECURRENCE_LABEL: Record<Recurrence, string> = {
 };
 
 const STATUS_META: Record<ReceivableStatus, { label: string; bg: string; color: string; border: string }> = {
-    pendente: { label: "Pendente", bg: "#fef9c3", color: "#b45309", border: "#fde68a" },
-    recebido: { label: "Recebido", bg: "#dcfce7", color: "#15803d", border: "#bbf7d0" },
-    atrasado: { label: "Atrasado", bg: "#fee2e2", color: "#b91c1c", border: "#fecaca" },
-    agendado: { label: "Agendado", bg: "#dbeafe", color: "#1d4ed8", border: "#bfdbfe" },
+    pendente: { label: "Pendente", bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)" },
+    recebido: { label: "Recebido", bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)" },
+    atrasado: { label: "Atrasado", bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)" },
+    agendado: { label: "Agendado", bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)" },
 };
 
 // Mapeamento de categoria → cashflow
@@ -328,7 +328,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
     return (
         <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
-            style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
+            style={{ background: "var(--overlay)", backdropFilter: "blur(8px)" }}>
             <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
                 style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
 
@@ -343,7 +343,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {editing ? "Editar cobrança" : "Nova cobrança"}
                         </p>
-                        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#10b981" }}>
+                        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--pos)" }}>
                             <Check size={11} /> Ao receber, lança automaticamente no Fluxo de Caixa
                         </p>
                     </div>
@@ -360,7 +360,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         <button key={t} onClick={() => setTab(t)} type="button"
                             className="px-3 py-2.5 text-xs font-bold cursor-pointer -mb-px"
                             style={tab === t
-                                ? { color: "#10b981", borderBottom: "2px solid #10b981" }
+                                ? { color: "var(--pos)", borderBottom: "2px solid var(--pos)" }
                                 : { color: "var(--cf-text2)", borderBottom: "2px solid transparent" }}>
                             {label}
                         </button>
@@ -371,7 +371,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                 <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "82vh" }}>
                     {err && (
                         <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-                            style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                            style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)", color: "var(--neg)" }}>
                             <span>⚠</span> {err}
                         </div>
                     )}
@@ -380,7 +380,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         <CadastroManager
                             uid={uid}
                             kind="cliente"
-                            accent="#10b981"
+                            accent="var(--pos)"
                             onPick={c => {
                                 setTitle(c.name);
                                 setPartyName(c.name);
@@ -394,7 +394,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     <CadastroField
                         uid={uid}
                         kind="cliente"
-                        accent="#10b981"
+                        accent="var(--pos)"
                         label="Descrição"
                         placeholder="Ex: Venda para Empresa X"
                         title={title}
@@ -482,7 +482,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                     )}
                                 </div>
                                 {!installmentsOk ? (
-                                    <p className="text-[11px]" style={{ color: "#dc2626" }}>Informe de 2 a 60 parcelas.</p>
+                                    <p className="text-[11px]" style={{ color: "var(--neg)" }}>Informe de 2 a 60 parcelas.</p>
                                 ) : amount > 0 ? (
                                     <p className="text-[11px]" style={{ color: "var(--cf-text3)" }}>
                                         {installments} parcelas de {toBRL(amount)} · total {toBRL(amount * installments)}
@@ -527,7 +527,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         {photos.length > 0 && (
                             <div className="grid grid-cols-3 gap-2 mb-2">
                                 {photos.map((url, idx) => (
-                                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-[var(--sunken)]">
                                         <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                                         <button
                                             onClick={() => removePhoto(idx)}
@@ -575,7 +575,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     <button onClick={submit} disabled={!canSave || saving}
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canSave && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canSave && !saving
-                            ? { background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }
+                            ? { background: "var(--pos)", color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
@@ -609,7 +609,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
 
     return (
         <div className="fixed inset-0 z-[990] flex items-center justify-center p-4"
-            style={{ background: "rgba(13,17,23,0.5)", backdropFilter: "blur(8px)" }}>
+            style={{ background: "var(--overlay)", backdropFilter: "blur(8px)" }}>
             <div className="cf-card p-6 w-full max-w-sm" style={{ animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
                 <div className="flex items-start justify-between mb-5">
                     <div>
@@ -640,7 +640,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                             <button key={d} onClick={() => setVal(d)}
                                 className="py-2 rounded-xl text-xs font-bold border-2 cursor-pointer transition-all"
                                 style={val === d
-                                    ? { background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "transparent", color: "white" }
+                                    ? { background: "var(--pos)", borderColor: "transparent", color: "white" }
                                     : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text2)" }}>
                                 {d}d
                             </button>
@@ -650,9 +650,9 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
 
                 {/* Preview do alerta */}
                 <div className="rounded-xl px-4 py-3 mb-5 flex items-center gap-2.5"
-                    style={{ background: "#ecfdf5", border: "1px solid #d1fae5" }}>
-                    <Bell size={15} style={{ color: "#059669", flexShrink: 0 }} />
-                    <p className="text-xs" style={{ color: "#065f46" }}>
+                    style={{ background: "var(--pos-weak)", border: "1px solid var(--pos-weak)" }}>
+                    <Bell size={15} style={{ color: "var(--pos)", flexShrink: 0 }} />
+                    <p className="text-xs" style={{ color: "var(--pos)" }}>
                         Você verá um badge no menu e um toast ao entrar na página quando uma cobrança vencer em até <strong>{val} dia{val !== 1 ? "s" : ""}</strong>.
                     </p>
                 </div>
@@ -664,7 +664,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                     </button>
                     <button onClick={() => { onSave(val); onClose(); }}
                         className="flex-1 py-3 rounded-xl text-sm font-bold cursor-pointer"
-                        style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
+                        style={{ background: "var(--pos)", color: "white" }}>
                         Salvar
                     </button>
                 </div>
@@ -811,7 +811,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
     return (
         <>
         <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
-            style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
+            style={{ background: "var(--overlay)", backdropFilter: "blur(8px)" }}>
             <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
                 style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
 
@@ -833,7 +833,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                 <div className="px-5 pt-4 pb-6 space-y-4 overflow-y-auto" style={{ maxHeight: "80vh" }}>
                     {err && (
                         <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-                            style={{ background: "#fef2f2", border: "1px solid #fecdd3", color: "#be123c" }}>
+                            style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)", color: "var(--neg)" }}>
                             <AlertTriangle size={13} />{err}
                         </div>
                     )}
@@ -857,7 +857,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                     <button onClick={handleOpenPin} disabled={!canConfirm || saving}
                         className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${canConfirm && !saving ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                         style={canConfirm && !saving
-                            ? { background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }
+                            ? { background: "var(--pos)", color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text2)" }}>
                         {saving
                             ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
@@ -897,7 +897,7 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
 
     return (
         <div className="cf-card overflow-hidden transition-all hover:shadow-md"
-            style={{ borderColor: isOverdue ? "#fecaca" : isUrgent ? "#fde68a" : "var(--cf-border)" }}>
+            style={{ borderColor: isOverdue ? "var(--neg-weak)" : isUrgent ? "var(--warn-weak)" : "var(--cf-border)" }}>
             {/* Barra colorida por categoria */}
             <div className="h-1" style={{ background: catMeta.color }} />
 
@@ -934,14 +934,14 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                     {receivable?.photos?.length > 0 && (
                                         <span onClick={() => setShowPhotos(true)}
                                             className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full cursor-pointer transition-all hover:opacity-80"
-                                            style={{ background: "#10b981" + "20", color: "#10b981" }}>
+                                            style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
                                             <ImageIcon size={10} /> {receivable?.photos?.length} foto{receivable?.photos?.length !== 1 ? "s" : ""}
                                         </span>
                                     )}
                                 </div>
                             </div>
                             <span className="font-heading font-bold text-base shrink-0 mono"
-                                style={{ color: isOverdue ? "#dc2626" : "var(--cf-text)" }}>
+                                style={{ color: isOverdue ? "var(--neg)" : "var(--cf-text)" }}>
                                 {toBRL(receivable.amount)}
                             </span>
                         </div>
@@ -949,9 +949,9 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                         {/* Prazo */}
                         <div className="flex items-center gap-1.5 mt-2.5">
                             <CalendarClock size={13}
-                                style={{ color: isOverdue ? "#dc2626" : isUrgent ? "#b45309" : "var(--cf-text3)" }} />
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text3)" }} />
                             <span className="text-xs font-medium"
-                                style={{ color: isOverdue ? "#dc2626" : isUrgent ? "#b45309" : "var(--cf-text2)" }}>
+                                style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text2)" }}>
                                 {status === ("recebido" as const)
                                     ? `Recebido em ${receivable.receivedAt ? labelDate(receivable.receivedAt) : "—"}`
                                     : isOverdue
@@ -962,7 +962,7 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                             </span>
                             {isUrgent && (
                                 <span className="ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
-                                    style={{ background: "#fef9c3", color: "#b45309" }}>!</span>
+                                    style={{ background: "var(--warn-weak)", color: "var(--warn)" }}>!</span>
                             )}
                         </div>
 
@@ -993,13 +993,13 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                     {status !== ("recebido" as const) ? (
                         <button onClick={onOpenReceiveModal}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
-                            style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
+                            style={{ background: "var(--pos)", color: "white" }}>
                             <CheckCircle2 size={13} />
                             Marcar como recebido
                         </button>
                     ) : (
                         <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold"
-                            style={{ background: "#dcfce7", color: "#15803d" }}>
+                            style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
                             <Check size={13} /> Recebido
                         </div>
                     )}
@@ -1025,9 +1025,9 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
 function ToastStack({ toasts }: { toasts: ToastItem[] }) {
     if (toasts.length === 0) return null;
     const colors: Record<ToastItem["type"], string> = {
-        ok: "#10b981",
-        err: "#ef4444",
-        warn: "#f59e0b",
+        ok: "var(--pos)",
+        err: "var(--neg)",
+        warn: "var(--warn)",
     };
     return (
         <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
@@ -1416,10 +1416,10 @@ export default function ContasReceberPage() {
 
     // Agrupa em seções ordenadas por prioridade
     const sections = useMemo(() => [
-        { key: "atrasado", label: "Atrasadas", color: "#dc2626", receivables: filtered.filter(r => r._status === ("atrasado" as const)) },
-        { key: "pendente", label: "Pendentes", color: "#b45309", receivables: filtered.filter(r => r._status === ("pendente" as const)) },
-        { key: "agendado", label: "Agendadas", color: "#1d4ed8", receivables: filtered.filter(r => r._status === ("agendado" as const)) },
-        { key: "recebido", label: "Recebidas", color: "#15803d", receivables: filtered.filter(r => r._status === ("recebido" as const)) },
+        { key: "atrasado", label: "Atrasadas", color: "var(--neg)", receivables: filtered.filter(r => r._status === ("atrasado" as const)) },
+        { key: "pendente", label: "Pendentes", color: "var(--warn)", receivables: filtered.filter(r => r._status === ("pendente" as const)) },
+        { key: "agendado", label: "Agendadas", color: "var(--brand)", receivables: filtered.filter(r => r._status === ("agendado" as const)) },
+        { key: "recebido", label: "Recebidas", color: "var(--pos)", receivables: filtered.filter(r => r._status === ("recebido" as const)) },
     ].filter(s => s.receivables.length > 0), [filtered]);
 
     // KPIs
@@ -1448,11 +1448,11 @@ export default function ContasReceberPage() {
 
     if (pageState === "error") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
-            <p className="font-heading text-lg font-bold text-rose-500">Erro ao conectar</p>
-            <p className="text-xs font-mono text-rose-700 bg-rose-50 rounded-xl p-4 max-w-sm break-all">{errMsg}</p>
+            <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>Erro ao conectar</p>
+            <p className="text-xs font-mono rounded-xl p-4 max-w-sm break-all" style={{ color: "var(--neg)", background: "var(--neg-weak)" }}>{errMsg}</p>
             <button onClick={() => window.location.reload()}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
+                style={{ background: "var(--pos)", color: "white" }}>
                 Tentar novamente
             </button>
         </div>
@@ -1460,24 +1460,6 @@ export default function ContasReceberPage() {
 
     return (
         <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
-            <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-        *, *::before, *::after { font-family: 'Sora', sans-serif; box-sizing: border-box; }
-        .font-heading { font-family: 'Sora', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .cf-card { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; }
-        .cf-kpi  { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: 16px; transition: all .2s; }
-        .cf-kpi:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
-        @keyframes slideUp { from { opacity:0; transform:translateY(20px) scale(.95) } to { opacity:1; transform:none } }
-        @keyframes kIn     { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
-        .kin { animation: kIn .35s ease both; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: var(--cf-border); border-radius: 3px; }
-        .scrollbar-none { scrollbar-width:none; }
-        .scrollbar-none::-webkit-scrollbar { display:none; }
-        button, a, input, select { transition: all .12s cubic-bezier(.4,0,.2,1) !important; }
-        input:focus, select:focus { border-color:#10b981 !important; box-shadow:0 0 0 3px rgba(16,185,129,0.1) !important; }
-      `}</style>
 
             <Navbar user={{ displayName: userName, email: userEmail }} activePath="/contas-receber" onLogout={handleLogout} />
 
@@ -1552,16 +1534,16 @@ export default function ContasReceberPage() {
                         </h1>
                         <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text2)" }}>
                             {kpis.alert > 0
-                                ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "#b45309" }}>
+                                ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "var(--warn)" }}>
                                     <AlertTriangle size={12} />
                                     {kpis.alert} vence{kpis.alert !== 1 ? "m" : ""} nos próximos {alertDays} dias
                                 </span>
                                 : kpis.totalOverdue > 0
-                                    ? <span className="flex items-center gap-1 font-semibold" style={{ color: "#dc2626" }}>
+                                    ? <span className="flex items-center gap-1 font-semibold" style={{ color: "var(--neg)" }}>
                                         <AlertTriangle size={12} />
                                         {kpis.totalOverdue} cobrança{kpis.totalOverdue !== 1 ? "s" : ""} atrasada{kpis.totalOverdue !== 1 ? "s" : ""}
                                     </span>
-                                    : <span style={{ color: "#10b981" }}>✓ Tudo em dia!</span>
+                                    : <span style={{ color: "var(--pos)" }}>✓ Tudo em dia!</span>
                             }
                         </p>
                     </div>
@@ -1573,13 +1555,13 @@ export default function ContasReceberPage() {
                             <Settings2 size={16} />
                             {/* Indicador do prazo configurado */}
                             <span className="absolute -top-1 -right-1 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
-                                style={{ background: "#10b981", color: "white" }}>
+                                style={{ background: "var(--pos)", color: "white" }}>
                                 {alertDays}
                             </span>
                         </button>
                         <button onClick={() => { setEditing(null); setModal(true); }}
                             className="hidden sm:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
-                            style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
+                            style={{ background: "var(--pos)", color: "white" }}>
                             <Plus size={14} /> Nova cobrança
                         </button>
                     </div>
@@ -1588,10 +1570,10 @@ export default function ContasReceberPage() {
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
-                        { label: "A receber", val: toBRL(kpis.aReceber), color: "#10b981", bg: "#ecfdf5", sub: `${kpis.totalNotReceived} cobrança${kpis.totalNotReceived !== 1 ? "s" : ""}` },
-                        { label: "Atrasadas", val: toBRL(kpis.atrasado), color: "#dc2626", bg: "#fee2e2", sub: `${kpis.totalOverdue} cobrança${kpis.totalOverdue !== 1 ? "s" : ""}` },
-                        { label: "Recebidas", val: toBRL(kpis.recebido), color: "#059669", bg: "#dcfce7", sub: `${kpis.totalReceived} cobrança${kpis.totalReceived !== 1 ? "s" : ""}` },
-                        { label: `Alerta (${alertDays}d)`, val: String(kpis.alert), color: "#b45309", bg: "#fef9c3", sub: "vence em breve" },
+                        { label: "A receber", val: toBRL(kpis.aReceber), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalNotReceived} cobrança${kpis.totalNotReceived !== 1 ? "s" : ""}` },
+                        { label: "Atrasadas", val: toBRL(kpis.atrasado), color: "var(--neg)", bg: "var(--neg-weak)", sub: `${kpis.totalOverdue} cobrança${kpis.totalOverdue !== 1 ? "s" : ""}` },
+                        { label: "Recebidas", val: toBRL(kpis.recebido), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalReceived} cobrança${kpis.totalReceived !== 1 ? "s" : ""}` },
+                        { label: `Alerta (${alertDays}d)`, val: String(kpis.alert), color: "var(--warn)", bg: "var(--warn-weak)", sub: "vence em breve" },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
@@ -1667,7 +1649,7 @@ export default function ContasReceberPage() {
                         {!search && filterStatus === "todos" && filterCategory === "todas" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}
                                 className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer mt-2"
-                                style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "white" }}>
+                                style={{ background: "var(--pos)", color: "white" }}>
                                 <Plus size={14} /> Adicionar cobrança
                             </button>
                         )}
@@ -1716,7 +1698,7 @@ export default function ContasReceberPage() {
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                 style={{
                     bottom: 74, right: 16, width: 52, height: 52,
-                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    background: "var(--pos)",
                     color: "white",
                     boxShadow: "0 8px 24px rgba(16,185,129,0.4)",
                 }}>
