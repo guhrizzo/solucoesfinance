@@ -1,115 +1,160 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f1117;
+  /* ════════════════════════════════════════════════════════════════════ */
+  /* DESIGN SYSTEM — TOKENS SEMÂNTICOS (fonte única da verdade)            */
+  /* Redesign 2026-09: ver docs/superpowers/specs/                        */
+  /*   2026-09-03-redesign-ui-unificado-design.md                         */
+  /* Regra: componentes leem SÓ estes tokens. Zero hex nas páginas.       */
+  /* ════════════════════════════════════════════════════════════════════ */
 
-  /* ── Brand scale (single source of truth — was split between #3b82f6 and #1565c0) ── */
-  --brand-400: #42a5f5;
-  --brand-500: #1565c0;
-  --brand-600: #0d47a1;
+  /* Superfícies */
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --sunken: #eef0f4;
+  --overlay: rgba(16, 32, 46, 0.5);
 
-  /* ── Core Colors (kept for existing call sites; aliased to the brand/semantic scale) ── */
-  --primary: var(--brand-500);
-  --primary-dark: var(--brand-600);
+  /* Bordas */
+  --border: #e2e5ea;
+  --border-strong: #cfd4dc;
+
+  /* Texto */
+  --text: #16202e;
+  --text-muted: #5a6675;
+  --text-subtle: #8a94a2;
+
+  /* Marca */
+  --brand: #1f6feb;
+  --brand-hover: #1a5fd0;
+  --brand-weak: #e9f1fd;
+  --brand-on: #ffffff;
+
+  /* Semânticos — dinheiro e status (verde/vermelho SÓ aqui) */
+  --pos: #12854a;
+  --pos-weak: #e6f4ec;
+  --neg: #cf3d3d;
+  --neg-weak: #fcecec;
+  --warn: #b0751a;
+  --warn-weak: #fbf2e0;
+
+  /* Forma */
+  --radius-card: 12px;
+  --radius-control: 8px;
+
+  /* Elevação — usada só em modal e dropdown; separação normal é por borda */
+  --shadow-pop: 0 8px 28px -8px rgba(16, 32, 46, 0.18), 0 2px 6px -2px rgba(16, 32, 46, 0.1);
+
+  /* ── Escala de marca (mantida p/ call sites; apontada aos tokens novos) ── */
+  --brand-400: #4d92ff;
+  --brand-500: var(--brand);
+  --brand-600: var(--brand-hover);
+  --primary: var(--brand);
+  --primary-dark: var(--brand-hover);
   --primary-light: var(--brand-400);
-  --success: #10b981;
-  --success-dark: #059669;
-  --danger: #ef4444;
-  --danger-dark: #dc2626;
-  --warning: #f59e0b;
-  --info: #06b6d4;
+  --success: var(--pos);
+  --success-dark: var(--pos);
+  --danger: var(--neg);
+  --danger-dark: var(--neg);
+  --warning: var(--warn);
+  --info: var(--brand);
+  --background: var(--surface);
+  --foreground: var(--text);
 
-  /* ── Semantic status tokens (light) — used by the new ui/ primitives ── */
-  --status-success-bg: #dcfce7;
-  --status-success-text: #15803d;
-  --status-success-border: #bbf7d0;
-  --status-warning-bg: #fef9c3;
-  --status-warning-text: #b45309;
-  --status-warning-border: #fde68a;
-  --status-danger-bg: #fee2e2;
-  --status-danger-text: #b91c1c;
-  --status-danger-border: #fecaca;
-  --status-info-bg: #dbeafe;
-  --status-info-text: #1d4ed8;
-  --status-info-border: #bfdbfe;
+  /* ════════════════════════════════════════════════════════════════════ */
+  /* CAMADA DE COMPATIBILIDADE — REMOVER NA FASE 11                        */
+  /* --db-* / --cf-* / --nav-* viram alias dos tokens acima, para que as  */
+  /* páginas ainda não migradas continuem funcionando. Não adicione       */
+  /* NADA novo aqui.                                                      */
+  /* ════════════════════════════════════════════════════════════════════ */
 
-  /* ── Dashboard Light ── */
-  --db-bg: #f8fafc;
-  --db-bg-alt: #f1f5fb;
-  --db-card: #ffffff;
-  --db-card-alt: #f9fafb;
-  --db-card-hover: #f3f4f6;
-  --db-border: #e2e8f0;
-  --db-border-alt: #cbd5e1;
-  --db-text: #0f1117;
-  --db-text-2: #475569;
-  --db-text-3: #94a3b8;
-  --db-text-4: #cbd5e1;
+  /* status (usados por ui/Pill e páginas legadas) */
+  --status-success-bg: var(--pos-weak);
+  --status-success-text: var(--pos);
+  --status-success-border: color-mix(in srgb, var(--pos) 30%, transparent);
+  --status-warning-bg: var(--warn-weak);
+  --status-warning-text: var(--warn);
+  --status-warning-border: color-mix(in srgb, var(--warn) 30%, transparent);
+  --status-danger-bg: var(--neg-weak);
+  --status-danger-text: var(--neg);
+  --status-danger-border: color-mix(in srgb, var(--neg) 30%, transparent);
+  --status-info-bg: var(--brand-weak);
+  --status-info-text: var(--brand);
+  --status-info-border: color-mix(in srgb, var(--brand) 30%, transparent);
+
+  /* dashboard */
+  --db-bg: var(--bg);
+  --db-bg-alt: var(--sunken);
+  --db-card: var(--surface);
+  --db-card-alt: var(--sunken);
+  --db-card-hover: var(--sunken);
+  --db-border: var(--border);
+  --db-border-alt: var(--border-strong);
+  --db-text: var(--text);
+  --db-text-2: var(--text-muted);
+  --db-text-3: var(--text-subtle);
+  --db-text-4: var(--text-subtle);
   --db-shadow-sm: 0 1px 2px 0 rgba(15, 17, 23, 0.05);
   --db-shadow-md: 0 4px 6px -1px rgba(15, 17, 23, 0.1);
   --db-shadow-lg: 0 10px 15px -3px rgba(15, 17, 23, 0.1);
-  --db-shadow-xl: 0 20px 25px -5px rgba(15, 17, 23, 0.1);
-  --db-overlay: rgba(15, 17, 23, 0.5);
+  --db-shadow-xl: var(--shadow-pop);
+  --db-overlay: var(--overlay);
 
-  /* ── Fluxo de caixa Light ── */
-  --cf-bg: #f5f7fa;
-  --cf-bg-alt: #eef2f5;
-  --cf-card: #ffffff;
-  --cf-card-2: #f8fafc;
-  --cf-card-3: #f0f4f8;
-  --cf-card-hover: #fafbfd;
-  --cf-input: #f0f4f8;
-  --cf-input-hover: #eef2f5;
-  --cf-border: #d9dfe8;
-  --cf-border-alt: #cad3df;
-  --cf-text: #0f1923;
-  --cf-text-2: #536878;
-  --cf-text-3: #8a95a5;
-  --cf-text-4: #b0bcc8;
-  --cf-hover: #fafbfd;
-  --cf-txhdr: #f8fafc;
-  --cf-divider: #d9dfe8;
+  /* fluxo de caixa */
+  --cf-bg: var(--bg);
+  --cf-bg-alt: var(--sunken);
+  --cf-card: var(--surface);
+  --cf-card-2: var(--sunken);
+  --cf-card-3: var(--sunken);
+  --cf-card-hover: var(--sunken);
+  --cf-input: var(--sunken);
+  --cf-input-hover: var(--sunken);
+  --cf-border: var(--border);
+  --cf-border-alt: var(--border-strong);
+  --cf-text: var(--text);
+  --cf-text-2: var(--text-muted);
+  --cf-text-3: var(--text-subtle);
+  --cf-text-4: var(--text-subtle);
+  --cf-hover: var(--sunken);
+  --cf-txhdr: var(--sunken);
+  --cf-divider: var(--border);
   --cf-shadow-sm: 0 1px 3px 0 rgba(15, 25, 35, 0.08);
   --cf-shadow-md: 0 4px 8px -1px rgba(15, 25, 35, 0.12);
   --cf-shadow-lg: 0 12px 20px -4px rgba(15, 25, 35, 0.15);
-  --cf-shadow-xl: 0 20px 30px -6px rgba(15, 25, 35, 0.18);
+  --cf-shadow-xl: var(--shadow-pop);
 
-  /* ── Nav / shell surface (was duplicated as its own --nav-* set inside Navbar.tsx) ── */
-  --nav-bg: #ffffff;
-  --nav-border: #e8eef8;
-  --nav-shadow: 0 1px 0 #e8eef8, 0 4px 20px rgba(13, 34, 71, 0.04);
-  --nav-text: #0d2247;
-  --nav-text-2: #64748b;
-  --nav-text-3: #94a3b8;
-  --nav-link-hover-bg: #f0f7ff;
-  --nav-link-hover-color: var(--brand-500);
-  --nav-link-active-bg: rgba(21, 101, 192, 0.08);
-  --nav-link-active-border: rgba(21, 101, 192, 0.15);
-  --nav-input-bg: #f1f5fb;
-  --nav-icon-bg: #f8faff;
-  --nav-icon-hover: #f0f7ff;
-  --nav-drop-bg: #ffffff;
-  --nav-drop-border: #e8eef8;
-  --nav-drop-item-hover: #f0f7ff;
-  --nav-drop-div: #f1f5fb;
-  --nav-notif-hover: #f8faff;
-  --nav-period-bg: #f0f7ff;
-  --nav-period-hover: #dbeafe;
+  /* nav / shell */
+  --nav-bg: var(--surface);
+  --nav-border: var(--border);
+  --nav-shadow: 0 1px 0 var(--border), 0 4px 20px rgba(13, 34, 71, 0.04);
+  --nav-text: var(--text);
+  --nav-text-2: var(--text-muted);
+  --nav-text-3: var(--text-subtle);
+  --nav-link-hover-bg: var(--brand-weak);
+  --nav-link-hover-color: var(--brand);
+  --nav-link-active-bg: var(--brand-weak);
+  --nav-link-active-border: color-mix(in srgb, var(--brand) 20%, transparent);
+  --nav-input-bg: var(--sunken);
+  --nav-icon-bg: var(--sunken);
+  --nav-icon-hover: var(--brand-weak);
+  --nav-drop-bg: var(--surface);
+  --nav-drop-border: var(--border);
+  --nav-drop-item-hover: var(--brand-weak);
+  --nav-drop-div: var(--sunken);
+  --nav-notif-hover: var(--sunken);
+  --nav-period-bg: var(--brand-weak);
+  --nav-period-hover: color-mix(in srgb, var(--brand) 15%, transparent);
   --nav-sidebar-width: 260px;
 
-  /* ── Success/Entrada ── */
-  --entrada-bg: #ecfdf5;
-  --entrada-border: #a7f3d0;
-  --entrada-text: #065f46;
-  --entrada-icon: #10b981;
+  /* entrada / saída */
+  --entrada-bg: var(--pos-weak);
+  --entrada-border: color-mix(in srgb, var(--pos) 35%, transparent);
+  --entrada-text: var(--pos);
+  --entrada-icon: var(--pos);
   --entrada-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
-
-  /* ── Danger/Saida ── */
-  --saida-bg: #fef2f2;
-  --saida-border: #fecaca;
-  --saida-text: #7f1d1d;
-  --saida-icon: #ef4444;
+  --saida-bg: var(--neg-weak);
+  --saida-border: color-mix(in srgb, var(--neg) 35%, transparent);
+  --saida-text: var(--neg);
+  --saida-icon: var(--neg);
   --saida-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
 
