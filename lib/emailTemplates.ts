@@ -287,3 +287,105 @@ export function feedbackResolvedEmail(opts: {
 
   return { subject, html, text };
 }
+
+/**
+ * E-mail enviado após o pagamento confirmado, com a via do contrato de
+ * prestação de serviços EM ANEXO (PDF). Vai para o responsável que assinou e
+ * para o titular da conta.
+ */
+export function contractCopyEmail(opts: {
+  planLabel: string;
+  priceCents: number;
+  contratanteRazao: string;
+  signatarioNome: string;
+  appUrl: string;
+  logoUrl?: string;
+}) {
+  const { planLabel, priceCents, contratanteRazao, signatarioNome, appUrl, logoUrl } = opts;
+  const subject = "Sua via do contrato — NexusFi";
+  const valor = (priceCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const logoHtml = logoUrl
+    ? `<img src="${logoUrl}" width="120" height="34" alt="NexusFi" style="display:block;width:120px;height:auto;border:0;outline:none;text-decoration:none;" />`
+    : `<span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:-0.02em;">NexusFi</span>`;
+
+  const html = `
+<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:0;background:#f5f7fa;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fa;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+            <tr>
+              <td style="background:linear-gradient(135deg,#0a1628,#1565c0);padding:24px 32px;">
+                ${logoHtml}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h1 style="margin:0 0 12px;color:#0d2247;font-size:20px;">Contratação confirmada ✅</h1>
+                <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.6;">
+                  Olá, ${escapeHtml(signatarioNome)}. Recebemos o pagamento e a contratação do
+                  <strong>Plano ${escapeHtml(planLabel)}</strong> está ativa. Segue em anexo a via em
+                  PDF do contrato de prestação de serviços que você assinou eletronicamente.
+                </p>
+
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
+                  <p style="margin:0 0 8px;color:#475569;font-size:13px;line-height:1.6;">
+                    <strong style="color:#0d2247;">Contratante:</strong><br/>${escapeHtml(contratanteRazao)}
+                  </p>
+                  <p style="margin:0 0 8px;color:#475569;font-size:13px;line-height:1.6;">
+                    <strong style="color:#0d2247;">Plano:</strong> ${escapeHtml(planLabel)}
+                  </p>
+                  <p style="margin:0;color:#475569;font-size:13px;line-height:1.6;">
+                    <strong style="color:#0d2247;">Valor por período:</strong> ${valor}
+                  </p>
+                </div>
+
+                <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.6;">
+                  Você pode baixar o contrato a qualquer momento na tela de Assinatura.
+                </p>
+
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="border-radius:10px;background:linear-gradient(135deg,#1565c0,#0d47a1);">
+                      <a href="${appUrl}/assinatura"
+                        style="display:inline-block;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">
+                        Abrir a NexusFi
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
+                <p style="margin:0;color:#94a3b8;font-size:11px;">
+                  NexusFi — CNPJ 68.919.873/0001-36. Este é um e-mail automático; guarde o PDF em anexo para seus registros.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`.trim();
+
+  const text = [
+    subject,
+    "",
+    `Olá, ${signatarioNome}.`,
+    `Recebemos o pagamento e a contratação do Plano ${planLabel} está ativa.`,
+    "A via em PDF do contrato assinado eletronicamente segue em anexo.",
+    "",
+    `Contratante: ${contratanteRazao}`,
+    `Plano: ${planLabel}`,
+    `Valor por período: ${valor}`,
+    "",
+    `Baixe o contrato quando quiser em: ${appUrl}/assinatura`,
+  ].join("\n");
+
+  return { subject, html, text };
+}

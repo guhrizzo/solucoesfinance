@@ -22,9 +22,38 @@ function Retorno() {
   const slug = params.get("slug") || params.get("invoice_slug") || "";
   const receiptUrl = params.get("receipt_url") || "";
 
+  // order_nsu = owner__plan__[contractId]__ts  → contrato quando há 4+ segmentos.
+  const contractId = (() => {
+    const parts = orderNsu.split("__");
+    return parts.length >= 4 ? parts[2] : "";
+  })();
+
   const [phase, setPhase] = useState<Phase>("confirming");
   const [msg, setMsg] = useState<string>("");
+  const [downloading, setDownloading] = useState(false);
   const tries = useRef(0);
+
+  const baixarContrato = async () => {
+    if (!contractId || downloading) return;
+    setDownloading(true);
+    try {
+      const res = await authedFetch(`/api/billing/contract?id=${encodeURIComponent(contractId)}`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `contrato-nexusfi-${contractId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* silencioso — a cópia também vai por e-mail */
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -96,6 +125,22 @@ function Retorno() {
                 ? `Acesso liberado até ${new Date(sub.accessUntil).toLocaleDateString("pt-BR")}.`
                 : "Seu acesso foi liberado."}
             </p>
+            {contractId && (
+              <>
+                <p className="mt-2 text-xs" style={{ color: "var(--db-text-4)" }}>
+                  Enviamos uma cópia do contrato para o seu e-mail.
+                </p>
+                <button
+                  onClick={baixarContrato}
+                  disabled={downloading}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                  style={{ color: "var(--brand-500)" }}
+                >
+                  {downloading ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
+                  Baixar contrato (PDF)
+                </button>
+              </>
+            )}
             <a
               href="/dashboard"
               className="mt-6 inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-xl"

@@ -10,6 +10,7 @@
 import { getPlan } from "./billingPlans";
 import { verifyPayment, parseOrderNsu } from "./infinitepay";
 import { extendPeriod, freshBillingDoc, type BillingDoc } from "./billing";
+import { finalizeContract } from "./contractFinalize";
 
 export interface ApplyInput {
   orderNsu: string;
@@ -92,6 +93,18 @@ export async function applyPaidOrder(db: any, input: ApplyInput): Promise<ApplyR
 
   if (currentPeriodEnd === null) {
     return { applied: false, reason: "já processado", alreadyProcessed: true };
+  }
+
+  // Contrato aceito no checkout (4º segmento do order_nsu): marca como assinado
+  // e envia a via em PDF por e-mail. Fora da transação (gera PDF / rede) e
+  // blindado — nunca derruba um pagamento já aplicado.
+  if (parsed.contractId) {
+    await finalizeContract(db, parsed.ownerUid, parsed.contractId, {
+      transactionNsu: input.transactionNsu,
+      orderNsu: input.orderNsu,
+      paidAt: now,
+      periodEnd: currentPeriodEnd,
+    }).catch((e) => console.error("finalizeContract falhou:", e));
   }
 
   return { applied: true, ownerUid: parsed.ownerUid, planId: plan.id, currentPeriodEnd };

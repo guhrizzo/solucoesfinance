@@ -140,18 +140,29 @@ export async function verifyPayment(input: PaymentCheckInput): Promise<PaymentCh
   };
 }
 
-// ─── order_nsu: carrega ownerUid + plano entre o checkout e o webhook ────────
+// ─── order_nsu: carrega ownerUid + plano (+ contrato) entre o checkout e o webhook ──
 // A InfinitePay devolve o `order_nsu` intacto no redirect e no webhook, então
-// é onde guardamos de quem é a assinatura e qual plano foi comprado.
+// é onde guardamos de quem é a assinatura, qual plano foi comprado e qual
+// contrato foi aceito.
+//
+// Formato:  ownerUid__planId__<ts base36>                 (legado, sem contrato)
+//           ownerUid__planId__contractId__<ts base36>      (com contrato)
 
 const NSU_SEP = "__";
 
-export function buildOrderNsu(ownerUid: string, planId: string): string {
-  return [ownerUid, planId, Date.now().toString(36)].join(NSU_SEP);
+export function buildOrderNsu(ownerUid: string, planId: string, contractId?: string): string {
+  const parts = [ownerUid, planId];
+  if (contractId) parts.push(contractId);
+  parts.push(Date.now().toString(36));
+  return parts.join(NSU_SEP);
 }
 
-export function parseOrderNsu(nsu: string): { ownerUid: string; planId: string } | null {
+export function parseOrderNsu(
+  nsu: string
+): { ownerUid: string; planId: string; contractId: string | null } | null {
   const parts = (nsu || "").split(NSU_SEP);
   if (parts.length < 2 || !parts[0] || !parts[1]) return null;
-  return { ownerUid: parts[0], planId: parts[1] };
+  // 3 segmentos → [owner, plan, ts]; 4+ → [owner, plan, contractId, ts].
+  const contractId = parts.length >= 4 ? parts[2] : null;
+  return { ownerUid: parts[0], planId: parts[1], contractId };
 }

@@ -3,24 +3,25 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useSubscription } from "../hooks/useSubscription";
 import { PageLoader } from "../components/ui";
 import Paywall from "../components/Paywall";
-import { isPlanId, startCheckout } from "@/lib/startCheckout";
+import { isPlanId } from "@/lib/startCheckout";
 
 export default function AssinaturaPage() {
+  const router = useRouter();
   const { loading: authLoading } = useAuth();
   const sub = useSubscription();
 
-  // ?checkout=<plano> → dispara o pagamento direto (vindo da landing / do
-  // cadastro). Não faz nada se a assinatura já está ativa.
+  // ?checkout=<plano> → vindo da landing / do cadastro: leva direto pra tela de
+  // contrato (e de lá pro pagamento). Não faz nada se a assinatura já está ativa.
   const [autoPlan] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("checkout");
   });
-  const [autoError, setAutoError] = useState<string | null>(null);
   const fired = useRef(false);
 
   useEffect(() => {
@@ -31,15 +32,13 @@ export default function AssinaturaPage() {
     if (sub.status === "active") return;
 
     fired.current = true;
-    startCheckout(autoPlan).catch((e) => {
-      setAutoError(e instanceof Error ? e.message : "Erro ao iniciar o pagamento.");
-    });
-  }, [authLoading, sub.loading, sub.isOwner, sub.status, autoPlan]);
+    router.replace(`/assinatura/contrato?plano=${encodeURIComponent(autoPlan)}`);
+  }, [authLoading, sub.loading, sub.isOwner, sub.status, autoPlan, router]);
 
   if (authLoading || sub.loading) return <PageLoader label="Carregando assinatura…" />;
 
   const redirecting =
-    !!autoPlan && isPlanId(autoPlan) && sub.isOwner && sub.status !== "active" && !autoError;
+    !!autoPlan && isPlanId(autoPlan) && sub.isOwner && sub.status !== "active";
 
   if (redirecting) {
     return (
@@ -49,11 +48,11 @@ export default function AssinaturaPage() {
       >
         <Loader2 size={28} className="animate-spin" style={{ color: "var(--brand-500)" }} />
         <p className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>
-          Redirecionando para o pagamento seguro…
+          Abrindo o contrato…
         </p>
       </div>
     );
   }
 
-  return <Paywall state={sub} initialError={autoError} />;
+  return <Paywall state={sub} />;
 }

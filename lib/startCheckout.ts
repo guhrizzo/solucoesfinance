@@ -12,13 +12,17 @@ export function isPlanId(v: unknown): v is string {
 /**
  * Pede o link de pagamento e navega pra lá. Não retorna em caso de sucesso
  * (a página é substituída). Lança com mensagem em PT-BR se falhar.
+ *
+ * `contractId` é obrigatório do ponto de vista do servidor (o checkout recusa
+ * sem um contrato aceito) — a página /assinatura/contrato o obtém antes de
+ * chamar aqui.
  */
-export async function startCheckout(planId: string): Promise<void> {
+export async function startCheckout(planId: string, contractId?: string): Promise<void> {
   const { authedFetch } = await import("./authedFetch");
   const res = await authedFetch("/api/billing/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan: planId }),
+    body: JSON.stringify({ plan: planId, ...(contractId ? { contractId } : {}) }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.url) {

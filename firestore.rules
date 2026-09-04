@@ -68,6 +68,14 @@ service cloud.firestore {
         allow read, write: if doc != 'access' && doc != 'billing' && inAccount(userId);
       }
 
+      // contracts — contrato de prestação de serviços aceito no checkout.
+      // Igual a `billing`: a conta LÊ (pra baixar/conferir) mas NUNCA escreve
+      // pelo client — só o Admin SDK (rotas /api/billing/*).
+      match /contracts/{contractId} {
+        allow read: if inAccount(userId);
+        allow write: if false;
+      }
+
       // Histórico de pagamentos (idempotência do webhook) — leitura pela
       // conta, escrita só pelo Admin SDK.
       match /billingEvents/{eventId} {
@@ -86,6 +94,7 @@ service cloud.firestore {
         allow read, write: if collection != 'profile'
           && collection != 'team'
           && collection != 'billingEvents'
+          && collection != 'contracts'
           && inAccount(userId);
       }
     }

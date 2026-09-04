@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Check, ShieldCheck, LogOut, Sparkles } from "lucide-react";
 import { BILLING_PLANS, formatBRLFromCents } from "@/lib/billingPlans";
-import { startCheckout } from "@/lib/startCheckout";
 import type { SubscriptionState } from "@/lib/billing";
 
 // Tela de assinatura / paywall. Usada tanto pelo <SubscriptionGate> (quando o
@@ -18,18 +18,15 @@ interface Props {
 }
 
 export default function Paywall({ state, blocking = false, initialError = null }: Props) {
+  const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(initialError);
 
-  const assinar = async (planId: string) => {
+  // Antes do pagamento, a pessoa passa pela tela de contrato.
+  const assinar = (planId: string) => {
     setError(null);
     setLoadingPlan(planId);
-    try {
-      await startCheckout(planId);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao iniciar o pagamento.");
-      setLoadingPlan(null);
-    }
+    router.push(`/assinatura/contrato?plano=${encodeURIComponent(planId)}`);
   };
 
   const logout = async () => {
