@@ -76,14 +76,17 @@ export default function RegisterPage() {
   const confirmOk = password === confirm && confirm.length > 0;
   const formOk = name.trim() && email && passOk && confirmOk && agreed;
 
-  // Se veio da landing com um plano escolhido (?plano=mensal|anual), manda pro
-  // checkout logo após criar a conta; senão, direto pro dashboard (trial).
+  // Se veio da landing com um plano escolhido (?plano=basico-mensal|…), manda
+  // pro aceite do contrato + pagamento logo após criar a conta; senão, direto
+  // pro dashboard (trial).
   const goAfterSignup = () => {
     const plano =
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("plano")
         : null;
-    router.push(plano ? `/assinatura?checkout=${encodeURIComponent(plano)}` : "/dashboard");
+    router.push(
+      plano ? `/assinatura/contrato?plano=${encodeURIComponent(plano)}` : "/dashboard",
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -563,7 +566,7 @@ export default function RegisterPage() {
                   Ao criar sua conta, você concorda com os{" "}
                   <a href="#" className="text-blue-600 font-semibold hover:underline">Termos de Uso</a>
                   {" "}e a{" "}
-                  <a href="#" className="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>{" "}
+                  <a href="/privacidade" className="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>{" "}
                   da NexusFi.
                 </p>
               </div>

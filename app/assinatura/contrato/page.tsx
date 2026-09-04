@@ -2,8 +2,8 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ShieldCheck, FileText, ArrowRight, ArrowLeft } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSubscription } from "../../hooks/useSubscription";
@@ -31,14 +31,20 @@ interface Company {
 const EMPTY: Company = { razaoSocial: "", cnpj: "", endereco: "" };
 
 export default function ContratoPage() {
+  return (
+    <Suspense fallback={<PageLoader label="Carregando contrato…" />}>
+      <Contrato />
+    </Suspense>
+  );
+}
+
+function Contrato() {
   const router = useRouter();
+  const params = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const sub = useSubscription();
 
-  const [plano] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return new URLSearchParams(window.location.search).get("plano");
-  });
+  const plano = params.get("plano");
   const plan = plano && isPlanId(plano) ? getPlan(plano)! : null;
 
   // ── Formulário ──
@@ -58,11 +64,11 @@ export default function ContratoPage() {
 
   // Plano inválido → volta pra assinatura.
   useEffect(() => {
+    if (redirected.current) return;
     if (!plano || !isPlanId(plano)) {
-      if (!redirected.current) {
-        redirected.current = true;
-        router.replace("/assinatura");
-      }
+      redirected.current = true;
+      console.warn("[contrato] redirecionando → /assinatura: plano ausente ou inválido:", plano);
+      router.replace("/assinatura");
     }
   }, [plano, router]);
 
@@ -70,13 +76,21 @@ export default function ContratoPage() {
   useEffect(() => {
     if (authLoading || sub.loading) return;
     if (redirected.current) return;
-    if (!sub.isOwner || sub.comped) {
+    if (!sub.isOwner) {
       redirected.current = true;
+      console.warn("[contrato] redirecionando → /assinatura: conta não é titular (membro de equipe)");
+      router.replace("/assinatura");
+      return;
+    }
+    if (sub.comped) {
+      redirected.current = true;
+      console.warn("[contrato] redirecionando → /assinatura: conta cortesia (não contrata)");
       router.replace("/assinatura");
       return;
     }
     if (sub.status === "active") {
       redirected.current = true;
+      console.warn("[contrato] redirecionando → /dashboard: assinatura já ativa");
       router.replace("/dashboard");
     }
   }, [authLoading, sub.loading, sub.isOwner, sub.comped, sub.status, router]);

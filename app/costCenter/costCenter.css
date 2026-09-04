@@ -1,0 +1,57 @@
+/* Centro de custos — estilos locais.
+   Estas classes viviam num <style>{`...`}> inline que a Fase 5-6 do redesign
+   removeu sem re-homar; sem elas os KPIs e as tabelas ficaram "sem caixa".
+   Só tokens do design system. Redesign 2026-09. */
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  animation: slideUp 0.5s ease both;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  animation: slideUp 0.5s 0.2s ease both;
+}
+
+.expense-row {
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--border);
+}
+.expense-row:last-child {
+  border-bottom: none;
+}
+.expense-row:hover {
+  background: var(--sunken);
+}
+
+/* Selo "sincroniza / lançado no fluxo de caixa" */
+.cf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--pos-weak);
+  color: var(--pos);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Selos de status de despesa (badge-${exp.status}) */
+.badge-pago {
+  background: var(--pos-weak);
+  color: var(--pos);
+}
+.badge-pendente {
+  background: var(--warn-weak);
+  color: var(--warn);
+}
+.badge-agendado {
+  background: var(--brand-weak);
+  color: var(--brand);
+}

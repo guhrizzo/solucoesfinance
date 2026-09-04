@@ -8,7 +8,7 @@
 // Precisa de revisão jurídica antes de produção. Ao mudar o texto de forma
 // relevante, incremente CONTRACT_VERSION em lib/contract.ts.
 
-import { formatBRLFromCents, type PlanId } from "./billingPlans";
+import { formatBRLFromCents, getPlan, type PlanId } from "./billingPlans";
 import { REGIME_LABEL, type ContractContratante, type ContractSignatario } from "./contract";
 
 // ─── Parte CONTRATADA (NexusFi) ─────────────────────────────────────────────
@@ -65,7 +65,7 @@ export interface RenderedContract {
 }
 
 function prazoDias(planId: PlanId): number {
-  return planId === "anual" ? 365 : 30;
+  return getPlan(planId)?.months === 12 ? 365 : 30;
 }
 
 /** Monta o texto completo do contrato a partir dos dados das partes. */
@@ -110,7 +110,7 @@ export function renderContractText(p: ContractParties): RenderedContract {
       body: [
         `2.1. Este Contrato entra em vigor na data da confirmação do pagamento e ` +
           `vigora pelo período correspondente ao Plano contratado: ${dias} (${
-            p.planId === "anual" ? "trezentos e sessenta e cinco" : "trinta"
+            dias === 365 ? "trezentos e sessenta e cinco" : "trinta"
           }) dias corridos.`,
         `2.2. O modelo de contratação é pré-pago, SEM renovação automática e SEM ` +
           `prazo de fidelidade. Cada novo pagamento estende o período de acesso ` +

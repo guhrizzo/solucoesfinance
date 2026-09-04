@@ -27,6 +27,7 @@ import { syncExpenseCashflow } from "@/lib/costCenterSync";
 import { resolveAccountScope, hasPermission } from "@/lib/accountScope";
 import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
+import "./costCenter.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

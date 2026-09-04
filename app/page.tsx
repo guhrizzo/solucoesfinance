@@ -1,6 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+
+// true só no client — sem setState em effect (lint: react-hooks/set-state-in-effect).
+const emptySubscribe = () => () => {};
+function useMounted() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+}
 import {
   TrendingUp,
   TrendingDown,
@@ -19,22 +30,20 @@ import {
   Users,
   CreditCard,
   CheckCircle,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import Footer from "./components/Footer";
 import Link from "next/link";
-import { BILLING_PLANS, formatBRLFromCents } from "@/lib/billingPlans";
-
-// Benefícios exibidos nos dois cards de plano (mesmo produto, o que muda é o
-// período de cobrança).
-const PLAN_FEATURES = [
-  "Fluxo de caixa em tempo real",
-  "Contas a pagar e receber",
-  "Relatórios automáticos (DRE)",
-  "Centro de custos ilimitado",
-  "Integração Mercado Livre e Shopee",
-  "Multi-usuário com permissões",
-  "Suporte prioritário",
-];
+import {
+  PLAN_TIERS,
+  BILLING_PERIODS,
+  planFor,
+  monthlyEquivalentCents,
+  annualSavingsCents,
+  formatBRLFromCents,
+  type BillingPeriod,
+} from "@/lib/billingPlans";
 
 const stats = [
   { label: "Empresas atendidas", value: "12.4K", change: "+18.2%", up: true },
@@ -119,6 +128,13 @@ export default function FinanceHome() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
+
+  // Planos e preços: período de cobrança escolhido via modal (Mensal | Anual).
+  const [period, setPeriod] = useState<BillingPeriod>("anual");
+  const [periodModalOpen, setPeriodModalOpen] = useState(false);
+  const mounted = useMounted();
+  const periodLabel =
+    BILLING_PERIODS.find((p) => p.id === period)?.label ?? "Anual";
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -581,23 +597,41 @@ export default function FinanceHome() {
             </p>
           </div>
 
+          {/* Seletor de período — abre o modal Mensal | Anual */}
+          <div className="flex justify-center mb-10">
+            <button
+              type="button"
+              onClick={() => setPeriodModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-blue-950 shadow-sm transition-colors hover:border-blue-300 cursor-pointer"
+            >
+              Cobrança: <span className="text-blue-600">{periodLabel}</span>
+              {period === "anual" && (
+                <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-600">
+                  2 meses de desconto
+                </span>
+              )}
+              <ChevronDown size={15} className="text-slate-400" />
+            </button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
-            {BILLING_PLANS.map((plan, i) => {
-              const destaque = i === BILLING_PLANS.length - 1; // Anual em destaque
-              const periodo = plan.months === 12 ? "/ano" : plan.months === 1 ? "/mês" : `/${plan.months} meses`;
+            {PLAN_TIERS.map((tier) => {
+              const plan = planFor(tier.id, period);
+              const destaque = !!tier.highlight;
+              const savings = annualSavingsCents(tier.id);
               return (
                 <div
-                  key={plan.id}
+                  key={tier.id}
                   className={`relative bg-white rounded-2xl p-8 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
                     destaque
                       ? "border-2 border-blue-500 shadow-lg shadow-blue-500/10 hover:shadow-xl hover:shadow-blue-500/15 z-10"
                       : "border border-slate-200 shadow-sm hover:shadow-md"
                   }`}
                 >
-                  {destaque && plan.badge && (
+                  {destaque && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="bg-linear-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md">
-                        {plan.badge}
+                      <span className="bg-linear-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                        Mais completo
                       </span>
                     </div>
                   )}
@@ -612,27 +646,46 @@ export default function FinanceHome() {
                       <Zap size={20} className="text-blue-600" />
                     )}
                   </div>
-                  <h3 className="text-blue-950 text-xl font-bold mb-1">Plano {plan.label}</h3>
-                  <p className="text-slate-400 text-sm mb-5">{plan.description}</p>
-                  <div className="mb-2">
+                  <h3 className="text-blue-950 text-xl font-bold mb-1">Plano {tier.label}</h3>
+                  <p className="text-slate-400 text-sm mb-5">{tier.blurb}</p>
+                  <div className="mb-1 flex items-end gap-1">
                     <span className="text-blue-950 text-4xl font-extrabold">
                       {formatBRLFromCents(plan.priceCents)}
                     </span>
-                    <span className="text-slate-400 text-sm font-medium">{periodo}</span>
+                    <span className="text-slate-400 text-sm font-medium mb-1">
+                      {period === "anual" ? "/ano" : "/mês"}
+                    </span>
                   </div>
-                  <p className="text-green-600 text-xs font-semibold mb-6 flex items-center gap-1.5">
+                  {period === "anual" ? (
+                    <p className="text-slate-500 text-xs mb-1">
+                      equivale a {formatBRLFromCents(monthlyEquivalentCents(plan))}/mês
+                    </p>
+                  ) : (
+                    <p className="text-slate-400 text-xs mb-1">
+                      {formatBRLFromCents(planFor(tier.id, "anual").priceCents)}/ano no plano anual
+                    </p>
+                  )}
+                  {period === "anual" && savings > 0 && (
+                    <p className="text-green-600 text-xs font-semibold mb-1">
+                      Economize {formatBRLFromCents(savings)} por ano
+                    </p>
+                  )}
+                  <p className="text-green-600 text-xs font-semibold mt-3 mb-6 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
                     7 dias grátis para testar
                   </p>
                   <ul className="space-y-3 mb-8 flex-1">
-                    {PLAN_FEATURES.map((item) => (
-                      <li key={item} className="flex items-center gap-2.5 text-slate-600 text-sm">
-                        <CheckCircle size={15} className="text-green-500 shrink-0" />
+                    {tier.featuresLead && (
+                      <li className="text-blue-950 text-sm font-semibold">{tier.featuresLead}</li>
+                    )}
+                    {tier.features.map((item) => (
+                      <li key={item} className="flex items-start gap-2.5 text-slate-600 text-sm">
+                        <CheckCircle size={15} className="text-green-500 shrink-0 mt-0.5" />
                         {item}
                       </li>
                     ))}
                   </ul>
-                  <Link href={`/register?plano=${plan.id}`} className="w-full">
+                  <Link href={`/register?plano=${plan.id}`} className="w-full mt-auto">
                     <button
                       className={`w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
                         destaque
@@ -640,13 +693,79 @@ export default function FinanceHome() {
                           : "border border-blue-200 text-blue-600 hover:bg-blue-50"
                       }`}
                     >
-                      Assinar plano {plan.label}
+                      Assinar plano {tier.label}
                     </button>
                   </Link>
                 </div>
               );
             })}
           </div>
+
+          {/* Modal: período de cobrança — em portal no <body> pra não herdar o
+              transform das seções animadas (quebraria o position: fixed). */}
+          {mounted &&
+            periodModalOpen &&
+            createPortal(
+            <div
+              className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+              style={{ background: "rgba(10, 22, 40, 0.55)", backdropFilter: "blur(2px)" }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setPeriodModalOpen(false);
+              }}
+            >
+              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+                <div className="flex items-start justify-between mb-1">
+                  <h3 className="text-lg font-bold text-blue-950">Período de cobrança</h3>
+                  <button
+                    type="button"
+                    onClick={() => setPeriodModalOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                    aria-label="Fechar"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <p className="text-slate-500 text-sm mb-5">
+                  Mensal ou anual — você escolhe como prefere pagar e pode mudar depois.
+                </p>
+                <div className="space-y-2.5">
+                  {BILLING_PERIODS.map((p) => {
+                    const active = p.id === period;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setPeriod(p.id);
+                          setPeriodModalOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors cursor-pointer ${
+                          active
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-slate-200 hover:border-blue-300"
+                        }`}
+                      >
+                        <span>
+                          <span className="block font-semibold text-blue-950">{p.label}</span>
+                          {p.note && (
+                            <span className="block text-xs font-medium text-green-600">{p.note}</span>
+                          )}
+                        </span>
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                            active ? "border-blue-500 bg-blue-500" : "border-slate-300"
+                          }`}
+                        >
+                          {active && <Check size={12} className="text-white" strokeWidth={3} />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
         </div>
       </section>
 

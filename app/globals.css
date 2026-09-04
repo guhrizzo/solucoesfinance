@@ -721,6 +721,26 @@ textarea {
 /* DARK MODE SPECIFIC ENHANCEMENTS */
 /* ────────────────────────────────────────────────────────────────── */
 
+/* Banner de cookies (CookieConsent.tsx): nas páginas públicas (landing, login,
+   cadastro, política) ele é SEMPRE claro, mesmo com o tema escuro ativo — essas
+   telas têm fundo claro. Reaplica no subtree do banner os tokens de :root.
+   Nas rotas do app autenticado a classe não é usada e o banner segue o tema. */
+[data-theme="dark"] .cookie-consent--light {
+  color-scheme: light;
+  --surface: #ffffff;
+  --sunken: #eef0f4;
+  --border: #e2e5ea;
+  --border-strong: #cfd4dc;
+  --text: #16202e;
+  --text-muted: #5a6675;
+  --text-subtle: #8a94a2;
+  --brand: #1f6feb;
+  --brand-hover: #1a5fd0;
+  --brand-weak: #e9f1fd;
+  --brand-on: #ffffff;
+  --shadow-pop: 0 8px 28px -8px rgba(16, 32, 46, 0.18), 0 2px 6px -2px rgba(16, 32, 46, 0.1);
+}
+
 [data-theme="dark"] .cf-card {
   box-shadow: var(--cf-shadow-sm);
 }

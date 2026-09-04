@@ -91,14 +91,17 @@ export default function LoginPage() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  // ?plano=mensal|anual (veio da landing) → depois do login vai pro checkout
-  // via /assinatura (que ignora se a assinatura já estiver ativa).
+  // ?plano=basico-mensal|… (veio da landing) → depois do login vai pro aceite
+  // do contrato + pagamento; a página redireciona sozinha se já houver
+  // assinatura ativa.
   const goAfterLogin = () => {
     const plano =
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("plano")
         : null;
-    router.push(plano ? `/assinatura?checkout=${encodeURIComponent(plano)}` : "/dashboard");
+    router.push(
+      plano ? `/assinatura/contrato?plano=${encodeURIComponent(plano)}` : "/dashboard",
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

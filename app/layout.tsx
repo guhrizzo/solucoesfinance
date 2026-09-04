@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeInitializer } from "./components/ThemeInitializer";
 import { ForceMotion } from "./components/ForceMotion";
 import { AppShell } from "./components/AppShell";
+import { CookieConsent } from "./components/CookieConsent";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -94,6 +95,7 @@ export default function RootLayout({
         <ThemeInitializer />
         <ForceMotion />
         <AppShell>{children}</AppShell>
+        <CookieConsent />
       </body>
     </html>
   );
