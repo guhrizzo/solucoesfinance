@@ -3,15 +3,18 @@
 // app/configuracoes/page.tsx
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
-import { User as UserIcon, Palette } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { User as UserIcon, Palette, MessageSquarePlus, Inbox } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { PageLoader } from "../components/ui";
 import { useToast } from "../components/useToast";
 import { ToastContainer } from "../components/ToastContainer";
 import { useAccountScope } from "../hooks/useAccountScope";
+import { isCompedEmail } from "@/lib/compAccounts";
 import PerfilTab from "./PerfilTab";
 import AparenciaTab from "./AparenciaTab";
+import FeedbackTab from "./FeedbackTab";
+import FeedbackAdminTab from "./FeedbackAdminTab";
 
 interface AuthUser {
   uid: string;
@@ -19,12 +22,15 @@ interface AuthUser {
   displayName: string | null;
 }
 
-type TabId = "perfil" | "aparencia";
+type TabId = "perfil" | "aparencia" | "feedback" | "feedbackAdmin";
 
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+const BASE_TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "perfil", label: "Perfil & Empresa", icon: UserIcon },
   { id: "aparencia", label: "Aparência", icon: Palette },
+  { id: "feedback", label: "Bugs & sugestões", icon: MessageSquarePlus },
 ];
+
+const ADMIN_TAB = { id: "feedbackAdmin" as TabId, label: "Chamados", icon: Inbox };
 
 export default function ConfiguracoesPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -33,6 +39,12 @@ export default function ConfiguracoesPage() {
 
   const scope = useAccountScope();
   const { toasts, show: showToast, remove: removeToast } = useToast();
+
+  const isAdmin = isCompedEmail(user?.email ?? null);
+  const tabs = useMemo(
+    () => (isAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS),
+    [isAdmin]
+  );
 
   const activePath = "/configuracoes";
 
@@ -90,7 +102,7 @@ export default function ConfiguracoesPage() {
             style={{ background: "var(--cf-input)", border: "1.5px solid var(--cf-border)" }}
             role="tablist"
           >
-            {TABS.map((t) => {
+            {tabs.map((t) => {
               const active = tab === t.id;
               return (
                 <button
@@ -116,6 +128,8 @@ export default function ConfiguracoesPage() {
             <PerfilTab user={user} scope={scope} showToast={showToast} onUserChange={setUser} />
           )}
           {tab === "aparencia" && <AparenciaTab showToast={showToast} />}
+          {tab === "feedback" && <FeedbackTab showToast={showToast} />}
+          {tab === "feedbackAdmin" && isAdmin && <FeedbackAdminTab showToast={showToast} />}
         </div>
       </main>
 

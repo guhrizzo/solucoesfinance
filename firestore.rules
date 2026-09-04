@@ -117,6 +117,12 @@ service cloud.firestore {
       allow update: if inAccount(resource.data.userId) && inAccount(request.resource.data.userId);
     }
 
+    // Bugs & sugestões (tela de Configurações) — lidos/escritos SOMENTE pelo
+    // Admin SDK (rotas app/api/feedback/*). O client nunca acessa direto.
+    match /feedback/{id} {
+      allow read, write: if false;
+    }
+
     // Fallback: nega o que não foi liberado acima.
     match /{document=**} {
       allow read, write: if false;
