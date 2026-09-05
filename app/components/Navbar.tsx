@@ -9,8 +9,10 @@ import {
   Calendar, Settings, LogOut, Menu, X, HelpCircle, UserCircle, Moon, Sun,
   Zap, PanelLeft, Landmark, Boxes, ShoppingCart,
 } from "lucide-react";
+import { Avatar } from "./ui";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
+import { useProfilePhoto } from "../hooks/useProfilePhoto";
 import { useToast } from "./useToast";
 import { ToastContainer } from "./ToastContainer";
 import { useBillBadges } from "./Usebillbadges";
@@ -152,8 +154,8 @@ export default function Navbar({
 
   // O recuo do conteúdo para o layout vertical é feito pelo AppShell (CSS, ver globals.css .app-shell)
 
-  const initial = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U";
   const firstName = user?.displayName?.split(" ")[0] ?? "Usuário";
+  const avatar = useProfilePhoto();
   const unreadCount = notifications.length;
 
   // Filtra itens com base no ramo (oculta estoque para serviços) e, pra
@@ -468,7 +470,7 @@ export default function Navbar({
               aria-haspopup="menu"
               aria-expanded={userOpen}
             >
-              <div className="nxfi-avatar">{initial}</div>
+              <Avatar src={avatar.src} initial={avatar.initial} size={34} radius={8} />
               <div className="nxfi-avatar-info">
                 <div className="nxfi-avatar-name">{firstName}</div>
                 <div className="nxfi-avatar-role">{scope.isOwner ? "Administrador" : "Membro de equipe"}</div>

@@ -9,6 +9,7 @@ import {
   UsersRound, UserPlus, Edit2, RotateCw, ShieldOff, ShieldCheck,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import { AvatarUploader } from "../components/AvatarUploader";
 import { Card, Button, Input, Modal, PageLoader } from "../components/ui";
 import { useToast } from "../components/useToast";
 import { ToastContainer } from "../components/ToastContainer";
@@ -445,8 +446,6 @@ export default function PerfilPage() {
 
   if (loading || !user) return <PageLoader label={null} />;
 
-  const initial = user.displayName?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? "U";
-
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
       <Navbar
@@ -466,12 +465,7 @@ export default function PerfilPage() {
 
           {/* ── Cabeçalho do perfil ── */}
           <Card padding="lg" className="flex items-center gap-4">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg shrink-0"
-              style={{ background: "linear-gradient(135deg, var(--brand-500), var(--brand-400))" }}
-            >
-              {initial}
-            </div>
+            <AvatarUploader showToast={showToast} />
             <div className="min-w-0">
               <p className="font-bold truncate" style={{ color: "var(--db-text)" }}>{user.displayName ?? "Usuário"}</p>
               <p className="text-sm truncate" style={{ color: "var(--db-text-2)" }}>{user.email}</p>
