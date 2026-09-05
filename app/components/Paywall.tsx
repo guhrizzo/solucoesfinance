@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-// true só no client — sem setState em effect (lint: react-hooks/set-state-in-effect).
-const emptySubscribe = () => () => {};
-import { Loader2, Check, ShieldCheck, LogOut, Sparkles, ChevronDown, X } from "lucide-react";
+import { Loader2, Check, ShieldCheck, LogOut, Sparkles } from "lucide-react";
 import {
   PLAN_TIERS,
   BILLING_PERIODS,
   getPlan,
   planFor,
-  monthlyEquivalentCents,
   annualSavingsCents,
   formatBRLFromCents,
   type BillingPeriod,
@@ -34,14 +30,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
   const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(initialError);
-  const [period, setPeriod] = useState<BillingPeriod>("anual");
-  const [periodModalOpen, setPeriodModalOpen] = useState(false);
-  const mounted = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
-  const periodLabel = BILLING_PERIODS.find((p) => p.id === period)?.label ?? "Anual";
+  const [period, setPeriod] = useState<BillingPeriod>("mensal");
 
   // Antes do pagamento, a pessoa passa pela tela de contrato.
   const assinar = (planId: string) => {
@@ -121,27 +110,33 @@ export default function Paywall({ state, blocking = false, initialError = null }
 
           {mostrarPlanos && (
             <>
-              <div className="mt-6 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setPeriodModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold cursor-pointer transition-colors"
-                  style={{ background: "var(--db-card-alt)", border: "1px solid var(--db-border)", color: "var(--db-text)" }}
-                >
-                  Cobrança: <span style={{ color: "var(--brand-500)" }}>{periodLabel}</span>
-                  {period === "anual" && (
-                    <span
-                      className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                      style={{ background: "rgba(21,101,192,0.12)", color: "var(--brand-500)" }}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold" style={{ color: "var(--db-text)" }}>Escolha como pagar</p>
+                  <p className="mt-1 text-xs" style={{ color: "var(--db-text-3)" }}>Comece pelo mensal e mude quando quiser.</p>
+                </div>
+                <div className="inline-flex rounded-xl p-1" style={{ background: "var(--db-card-alt)", border: "1px solid var(--db-border)" }} role="group" aria-label="Período de cobrança">
+                  {BILLING_PERIODS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPeriod(p.id)}
+                      aria-pressed={period === p.id}
+                      className="relative rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer"
+                      style={{
+                        background: period === p.id ? "var(--db-card)" : "transparent",
+                        color: period === p.id ? "var(--brand-500)" : "var(--db-text-3)",
+                        boxShadow: period === p.id ? "var(--db-shadow-sm)" : "none",
+                      }}
                     >
-                      2 meses de desconto
-                    </span>
-                  )}
-                  <ChevronDown size={13} style={{ color: "var(--db-text-3)" }} />
-                </button>
+                      {p.label}
+                      {p.id === "anual" && <span className="ml-1.5 text-[10px]" style={{ color: "var(--pos, #12854a)" }}>-2 meses</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4 mt-4">
+              <div className="grid items-stretch gap-4 mt-4 sm:grid-cols-2">
                 {PLAN_TIERS.map((tier) => {
                   const plan = planFor(tier.id, period);
                   const savings = annualSavingsCents(tier.id);
@@ -173,17 +168,24 @@ export default function Paywall({ state, blocking = false, initialError = null }
                           {period === "anual" ? "/ano" : "/mês"}
                         </span>
                       </p>
-                      <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>
-                        {period === "anual"
-                          ? `equivale a ${formatBRLFromCents(monthlyEquivalentCents(plan))}/mês`
-                          : tier.blurb}
+                      <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--db-text-3)" }}>
+                        {tier.blurb}
                       </p>
-                      {period === "anual" && savings > 0 && (
-                        <p className="text-xs mt-0.5 font-semibold" style={{ color: "var(--pos, #12854a)" }}>
-                          Economize {formatBRLFromCents(savings)} por ano
-                        </p>
-                      )}
-                      <div className="flex-1" />
+                      <div className="mt-4 flex flex-col gap-2.5">
+                        {tier.features.slice(0, 4).map((feature) => (
+                          <div key={feature} className="flex items-start gap-2 text-xs" style={{ color: "var(--db-text-2)" }}>
+                            <Check size={14} className="mt-0.5 shrink-0" style={{ color: "var(--brand-500)" }} />
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-5 flex-1">
+                        {period === "anual" && savings > 0 && (
+                          <p className="text-xs font-semibold" style={{ color: "var(--pos, #12854a)" }}>
+                            Economize {formatBRLFromCents(savings)} por ano
+                          </p>
+                        )}
+                      </div>
                       <button
                         onClick={() => assinar(plan.id)}
                         disabled={loadingPlan !== null}
@@ -221,85 +223,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
         </button>
       </div>
 
-      {mounted &&
-        periodModalOpen &&
-        createPortal(
-        <div
-          className="fixed inset-0 z-[999] flex items-center justify-center p-4"
-          style={{ background: "var(--db-overlay, rgba(10,22,40,0.55))" }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPeriodModalOpen(false);
-          }}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl p-6"
-            style={{
-              background: "var(--db-card)",
-              border: "1px solid var(--db-border)",
-              boxShadow: "var(--db-shadow-lg)",
-            }}
-          >
-            <div className="flex items-start justify-between mb-1">
-              <h3 className="text-base font-bold" style={{ color: "var(--db-text)" }}>
-                Período de cobrança
-              </h3>
-              <button
-                type="button"
-                onClick={() => setPeriodModalOpen(false)}
-                className="cursor-pointer"
-                style={{ color: "var(--db-text-3)" }}
-                aria-label="Fechar"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <p className="text-sm mb-5" style={{ color: "var(--db-text-3)" }}>
-              Mensal ou anual — você escolhe como prefere pagar.
-            </p>
-            <div className="space-y-2.5">
-              {BILLING_PERIODS.map((p) => {
-                const active = p.id === period;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setPeriod(p.id);
-                      setPeriodModalOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-colors cursor-pointer"
-                    style={{
-                      background: active ? "rgba(21,101,192,0.10)" : "var(--db-card-alt)",
-                      border: `1px solid ${active ? "var(--brand-500)" : "var(--db-border)"}`,
-                    }}
-                  >
-                    <span>
-                      <span className="block font-semibold text-sm" style={{ color: "var(--db-text)" }}>
-                        {p.label}
-                      </span>
-                      {p.note && (
-                        <span className="block text-xs font-medium" style={{ color: "var(--pos, #12854a)" }}>
-                          {p.note}
-                        </span>
-                      )}
-                    </span>
-                    <span
-                      className="flex h-5 w-5 items-center justify-center rounded-full"
-                      style={{
-                        border: `1px solid ${active ? "var(--brand-500)" : "var(--db-border-alt)"}`,
-                        background: active ? "var(--brand-500)" : "transparent",
-                      }}
-                    >
-                      {active && <Check size={12} color="#fff" strokeWidth={3} />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>,
-          document.body,
-        )}
+
     </div>
   );
 }
