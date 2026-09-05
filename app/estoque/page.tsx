@@ -1097,6 +1097,7 @@ export default function EstoquePage() {
                 onClick={() => handleSincronizarManual()}
                 disabled={syncing}
                 title="Sincronizar: empurra o estoque central pros canais"
+                aria-label="Sincronizar estoque com os canais"
                 className="p-2.5 rounded-xl cursor-pointer flex items-center justify-center border-none disabled:opacity-50"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1231,6 +1232,7 @@ export default function EstoquePage() {
                                 setModalVinculosOpen(true);
                               }}
                               title="Gerenciar Vínculos de Anúncio"
+                              aria-label={`Gerenciar vínculos de anúncio de ${p.name}`}
                               className="p-1.5 rounded-lg border-none cursor-pointer"
                               style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                             >
@@ -1248,6 +1250,7 @@ export default function EstoquePage() {
                                 setModalProdutoOpen(true);
                               }}
                               title="Editar Produto"
+                              aria-label={`Editar ${p.name}`}
                               className="p-1.5 rounded-lg border-none cursor-pointer"
                               style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                             >
@@ -1257,6 +1260,7 @@ export default function EstoquePage() {
                             <button
                               onClick={() => handleDeleteProduto(p.id, p.sku)}
                               title="Excluir Produto"
+                              aria-label={`Excluir ${p.name}`}
                               className="p-1.5 rounded-lg border-none cursor-pointer"
                               style={{ background: "var(--neg-weak)", color: "var(--neg)" }}
                             >
@@ -1287,6 +1291,7 @@ export default function EstoquePage() {
               </h3>
               <button
                 onClick={() => setModalProdutoOpen(false)}
+                aria-label="Fechar"
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1401,6 +1406,7 @@ export default function EstoquePage() {
               </h3>
               <button
                 onClick={() => setModalIntegracoesOpen(false)}
+                aria-label="Fechar"
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1540,6 +1546,7 @@ export default function EstoquePage() {
               </div>
               <button
                 onClick={() => setModalVinculosOpen(false)}
+                aria-label="Fechar"
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1575,6 +1582,7 @@ export default function EstoquePage() {
                           </span>
                           <button
                             onClick={() => handleRemoveVinculo(vin.id)}
+                            aria-label={`Remover vínculo com ${vin.platform === "mercadolivre" ? "Mercado Livre" : "Shopee"}`}
                             className="p-1 rounded cursor-pointer border-none text-red-500 hover:bg-red-500/10"
                             style={{ background: "transparent" }}
                           >
@@ -1700,6 +1708,7 @@ export default function EstoquePage() {
               </div>
               <button
                 onClick={() => setModalSimuladorOpen(false)}
+                aria-label="Fechar"
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >

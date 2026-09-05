@@ -325,6 +325,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                                 Excluir
                                             </button>
                                             <button onClick={() => setConfirmDel(null)}
+                                                aria-label="Cancelar exclusão"
                                                 className="p-1.5 rounded-lg cursor-pointer"
                                                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                                                 <X size={13} />
@@ -340,6 +341,7 @@ export function CadastroManager({ uid, kind, accent, onPick }: {
                                                 </button>
                                             )}
                                             <button onClick={() => setConfirmDel(c.id)}
+                                                aria-label={`Excluir ${c.name}`}
                                                 className="p-1.5 rounded-lg cursor-pointer"
                                                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                                                 <Trash2 size={13} />

@@ -1124,10 +1124,12 @@ export default function CostCenterPage() {
                       {/* Botões de ação */}
                       <div className="px-4 py-3 flex items-center gap-1.5 border-t" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
                         <button onClick={() => { setEditingCenter(center); setShowCenterModal(true); }}
+                          aria-label={`Editar ${center.name}`}
                           className="p-1.5 rounded hover:opacity-70 cursor-pointer transition-colors">
                           <Edit2 size={12} style={{ color: "var(--primary)" }} />
                         </button>
                         <button onClick={() => handleDeleteCenter(center.id)}
+                          aria-label={`Excluir ${center.name}`}
                           className="p-1.5 rounded hover:opacity-70 cursor-pointer transition-colors">
                           <Trash2 size={12} style={{ color: "var(--danger)" }} />
                         </button>
@@ -1204,16 +1206,21 @@ export default function CostCenterPage() {
                     <div className="flex flex-col gap-1 shrink-0">
                       {exp.status !== "pago" && (
                         <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
-                          title="Marcar como pago" className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors disabled:opacity-50">
+                          title="Marcar como pago" aria-label={`Marcar ${exp.description || "despesa"} como pago`}
+                          className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors disabled:opacity-50">
                           {payingExpenseId === exp.id
                             ? <Loader size={12} className="animate-spin" style={{ color: "var(--success)" }} />
                             : <Check size={12} style={{ color: "var(--success)" }} />}
                         </button>
                       )}
-                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }} className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors">
+                      <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
+                        aria-label={`Editar ${exp.description || "despesa"}`}
+                        className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors">
                         <Edit2 size={12} style={{ color: "var(--primary)" }} />
                       </button>
-                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors">
+                      <button onClick={() => handleDeleteExpense(exp.id)}
+                        aria-label={`Excluir ${exp.description || "despesa"}`}
+                        className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors">
                         <Trash2 size={12} style={{ color: "var(--danger)" }} />
                       </button>
                     </div>
@@ -1254,17 +1261,20 @@ export default function CostCenterPage() {
                           <div className="flex items-center gap-1.5">
                             {exp.status !== "pago" && (
                               <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
-                                title="Marcar como pago" className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors disabled:opacity-50">
+                                title="Marcar como pago" aria-label={`Marcar ${exp.description || "despesa"} como pago`}
+                                className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors disabled:opacity-50">
                                 {payingExpenseId === exp.id
                                   ? <Loader size={12} className="animate-spin" style={{ color: "var(--success)" }} />
                                   : <Check size={12} style={{ color: "var(--success)" }} />}
                               </button>
                             )}
                             <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
+                              aria-label={`Editar ${exp.description || "despesa"}`}
                               className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors">
                               <Edit2 size={12} style={{ color: "var(--primary)" }} />
                             </button>
                             <button onClick={() => handleDeleteExpense(exp.id)}
+                              aria-label={`Excluir ${exp.description || "despesa"}`}
                               className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors">
                               <Trash2 size={12} style={{ color: "var(--danger)" }} />
                             </button>
@@ -1290,7 +1300,7 @@ export default function CostCenterPage() {
               <h3 className="font-bold" style={{ color: "var(--db-text)" }}>
                 {editingCenter ? "Editar centro" : "Novo centro de custo"}
               </h3>
-              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} className="p-1.5 rounded-lg cursor-pointer hover:opacity-70 transition-opacity">
+              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} aria-label="Fechar" className="p-1.5 rounded-lg cursor-pointer hover:opacity-70 transition-opacity">
                 <X size={16} style={{ color: "var(--db-text-2)" }} />
               </button>
             </div>

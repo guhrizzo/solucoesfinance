@@ -355,6 +355,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         </p>
                     </div>
                     <button onClick={() => !saving && onClose()}
+                        aria-label="Fechar"
                         className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
@@ -891,7 +892,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Registrar recebimento</p>
                         <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{receivable.title} · {toBRL(receivable.amount)}</p>
                     </div>
-                    <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
+                    <button onClick={() => !saving && onClose()} aria-label="Fechar" className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -1628,7 +1629,8 @@ export default function ContasReceberPage() {
                         <button onClick={() => setSettingsOpen(true)}
                             className="relative p-2 rounded-xl cursor-pointer"
                             style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                            title={`Alertas: ${alertDays} dias`}>
+                            title={`Alertas: ${alertDays} dias`}
+                            aria-label={`Configurar alertas de prazo — hoje em ${alertDays} dias`}>
                             <Settings2 size={16} />
                             {/* Indicador do prazo configurado */}
                             <span className="absolute -top-1 -right-1 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
@@ -1772,6 +1774,7 @@ export default function ContasReceberPage() {
 
             {/* FAB mobile */}
             <button onClick={() => { setEditing(null); setModal(true); }}
+                aria-label="Nova conta a receber"
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                 style={{
                     bottom: 74, right: 16, width: 52, height: 52,

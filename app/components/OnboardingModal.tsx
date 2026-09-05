@@ -334,6 +334,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
               </div>
               <button
                 onClick={() => { setVisible(false); setTimeout(onClose, 300); }}
+                aria-label="Fechar"
                 style={{ background: t.closeBg, border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.closeColor }}
               >
                 <X size={16} />

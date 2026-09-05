@@ -1818,11 +1818,13 @@ export default function CashFlowPage() {
       {/* FAB mobile */}
       <div className="lg:hidden fixed z-20 flex flex-col gap-2" style={{ bottom: 74, right: 16 }}>
         <button onClick={() => setImportOpen(true)}
+          aria-label="Importar extrato"
           className="w-11 h-11 rounded-xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
           style={{ background: "var(--cf-card)", border: "1px solid var(--cf-border)", color: "var(--brand)" }}>
           <Sparkles size={17} />
         </button>
         <button onClick={() => { setEditing(null); setModal(true); }}
+          aria-label="Nova transação"
           className="rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
           style={{ width: 52, height: 52, background: "var(--pos)", color: "white", boxShadow: "0 8px 24px rgba(16, 185, 129, 0.35)" }}>
           <Plus size={22} />

@@ -507,6 +507,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                         </div>
                     </div>
                     <button onClick={() => !saving && onClose()}
+                        aria-label="Fechar"
                         className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
@@ -810,7 +811,7 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Confirmar pagamento</p>
                         <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{tax.name} · {toBRL(tax.amount)}</p>
                     </div>
-                    <button onClick={() => !saving && onClose()} className="p-1.5 rounded-lg cursor-pointer"
+                    <button onClick={() => !saving && onClose()} aria-label="Fechar" className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -1598,6 +1599,7 @@ export default function ImpostosPage() {
 
             {/* FAB mobile */}
             <button onClick={() => { setEditing(null); setModal(true); }}
+                aria-label="Novo imposto"
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                 style={{
                     bottom: 74, right: 16, width: 52, height: 52,
