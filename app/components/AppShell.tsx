@@ -47,7 +47,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <PeriodProvider>
-      <div className="app-shell">
+      {/* Alvo do skip link em layout.tsx ("Pular para o conteúdo") — cobre
+          toda rota de uma vez só, sem precisar de um <main id> em cada
+          page.tsx. tabIndex={-1} deixa o navegador focar aqui (não só
+          rolar) ao ativar o link. */}
+      <div id="conteudo-principal" tabIndex={-1} className="app-shell">
         <SubscriptionGate>{children}</SubscriptionGate>
       </div>
     </PeriodProvider>

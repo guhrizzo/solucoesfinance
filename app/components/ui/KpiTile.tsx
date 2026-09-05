@@ -36,10 +36,26 @@ export function KpiTile({
   onClick,
   className = "",
 }: KpiTileProps) {
+  const clickable = !!onClick;
+  const labelText = typeof label === "string" ? label : undefined;
+
   return (
     <div
       onClick={onClick}
-      className={`flex flex-col gap-1.5 p-4 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      tabIndex={clickable ? 0 : undefined}
+      role={clickable ? "button" : undefined}
+      aria-label={clickable ? (labelText ? `Ver detalhes de ${labelText}` : "Ver detalhes") : undefined}
+      className={`flex flex-col gap-1.5 p-4 ${clickable ? "cursor-pointer nxfi-clickable-focus" : ""} ${className}`}
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",

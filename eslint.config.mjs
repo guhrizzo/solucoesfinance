@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -13,6 +14,30 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+
+  // Acessibilidade (WCAG 2.1 AA) — ver docs/superpowers/specs/2026-09-04-
+  // acessibilidade-wcag-design.md. O `eslint-config-next` já registra o
+  // plugin `jsx-a11y` pro repo inteiro (6 regras básicas, todas em warn)
+  // — não redeclaramos o plugin aqui (o flat config não deixa duas
+  // configs registrarem o mesmo nome de plugin), só reaproveitamos o
+  // registro existente pra subir as regras do preset `recommended`
+  // completo pra erro, só nestes arquivos já auditados e corrigidos na
+  // Fase 1. Conforme cada página da Fase 3 é auditada, ela entra nesta
+  // lista de arquivos (mesma mecânica do bloco de cor-hex abaixo, só que
+  // como allowlist que cresce em vez de ignores que encolhe — mais
+  // seguro aqui: evita marcar como erro algo que ainda não foi auditado
+  // no resto do app).
+  {
+    files: [
+      "app/components/ui/**/*.tsx",
+      "app/components/Navbar.tsx",
+      "app/components/AppShell.tsx",
+      "app/register/**/*.tsx",
+      "app/login/**/*.tsx",
+      "app/layout.tsx",
+    ],
+    rules: jsxA11y.flatConfigs.recommended.rules,
+  },
 
   // Redesign 2026-09 — barra cor hex crua nas telas do app interno já migradas.
   // Ver docs/superpowers/specs/2026-09-03-redesign-ui-unificado-design.md

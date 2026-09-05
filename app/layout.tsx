@@ -92,6 +92,9 @@ export default function RootLayout({
         suppressHydrationWarning
         style={{ margin: 0, padding: 0 }}
       >
+        <a href="#conteudo-principal" className="skip-link">
+          Pular para o conteúdo
+        </a>
         <ThemeInitializer />
         <ForceMotion />
         <AppShell>{children}</AppShell>

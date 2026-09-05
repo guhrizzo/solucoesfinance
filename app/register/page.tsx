@@ -449,12 +449,13 @@ export default function RegisterPage() {
 
             {/* Nome */}
             <div className="fade-up-2 mb-4">
-              <label className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
+              <label htmlFor="reg-name" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
                 Nome completo
               </label>
               <div className="input-wrap">
                 <User size={15} className="input-icon" />
                 <input
+                  id="reg-name"
                   type="text"
                   className={`reg-input ${name && name.trim().length < 3 ? "has-error" : name.trim().length >= 3 ? "has-ok" : ""}`}
                   placeholder="Ricardo Almeida"
@@ -468,12 +469,13 @@ export default function RegisterPage() {
 
             {/* E-mail */}
             <div className="fade-up-2 mb-4">
-              <label className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
+              <label htmlFor="reg-email" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
                 E-mail corporativo
               </label>
               <div className="input-wrap">
                 <Mail size={15} className="input-icon" />
                 <input
+                  id="reg-email"
                   type="email"
                   className={`reg-input ${error?.includes("e-mail") ? "has-error" : ""}`}
                   placeholder="voce@empresa.com.br"
@@ -487,12 +489,13 @@ export default function RegisterPage() {
 
             {/* Senha */}
             <div className="fade-up-3 mb-2">
-              <label className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
+              <label htmlFor="reg-password" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
                 Senha
               </label>
               <div className="input-wrap">
                 <Lock size={15} className="input-icon" />
                 <input
+                  id="reg-password"
                   type={showPass ? "text" : "password"}
                   className={`reg-input pr-10 ${password && !passOk ? "has-error" : passOk ? "has-ok" : ""}`}
                   placeholder="Mínimo 12 caracteres"
@@ -503,7 +506,12 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   required
                 />
-                <button type="button" className="input-action" onClick={() => setShowPass(!showPass)}>
+                <button
+                  type="button"
+                  className="input-action"
+                  onClick={() => setShowPass(!showPass)}
+                  aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
+                >
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -528,12 +536,13 @@ export default function RegisterPage() {
 
             {/* Confirmar senha */}
             <div className="fade-up-3 mb-5">
-              <label className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
+              <label htmlFor="reg-confirm" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
                 Confirmar senha
               </label>
               <div className="input-wrap">
                 <Lock size={15} className="input-icon" />
                 <input
+                  id="reg-confirm"
                   type={showConfirm ? "text" : "password"}
                   className={`reg-input pr-10 ${confirm && !confirmOk ? "has-error" : confirmOk ? "has-ok" : ""}`}
                   placeholder="Repita a senha"
@@ -542,7 +551,12 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   required
                 />
-                <button type="button" className="input-action" onClick={() => setShowConfirm(!showConfirm)}>
+                <button
+                  type="button"
+                  className="input-action"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  aria-label={showConfirm ? "Ocultar senha" : "Mostrar senha"}
+                >
                   {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -557,13 +571,24 @@ export default function RegisterPage() {
             <div className="fade-up-4 mb-6">
               <div className="flex items-start gap-3">
                 <div
+                  role="checkbox"
+                  aria-checked={agreed}
+                  aria-labelledby="reg-terms-label"
+                  tabIndex={0}
                   className={`checkbox-custom mt-0.5 ${agreed ? "checked" : ""}`}
                   onClick={() => setAgreed(!agreed)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setAgreed(!agreed);
+                    }
+                  }}
                 >
                   {agreed && <Check size={10} color="white" strokeWidth={3} />}
                 </div>
-                <p className="text-slate-500 text-xs leading-relaxed">
+                <p id="reg-terms-label" className="text-slate-500 text-xs leading-relaxed">
                   Ao criar sua conta, você concorda com os{" "}
+                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid -- ainda não existe página de Termos de Uso; conteúdo jurídico é trabalho à parte, fora do escopo de acessibilidade */}
                   <a href="#" className="text-blue-600 font-semibold hover:underline">Termos de Uso</a>
                   {" "}e a{" "}
                   <a href="/privacidade" className="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>{" "}

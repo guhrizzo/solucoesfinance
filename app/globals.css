@@ -440,6 +440,35 @@ textarea:focus {
   outline: none !important;
 }
 
+/* Elementos não-nativos que viram clicáveis/focáveis por teclado (linha de
+   Table.tsx com onRowClick, KpiTile.tsx com onClick) — precisam de um
+   indicador de foco visível (WCAG 2.4.7). */
+.nxfi-clickable-focus:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+/* Skip link ("Pular para o conteúdo", layout.tsx) — invisível até ganhar
+   foco por Tab, pra quem navega por teclado pular a Navbar/sidebar
+   repetida em toda página (WCAG 2.4.1 Bypass Blocks). */
+.skip-link {
+  position: fixed;
+  top: -48px;
+  left: 8px;
+  z-index: 2000;
+  background: var(--brand);
+  color: var(--brand-on);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--text-subtle);

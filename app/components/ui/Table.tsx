@@ -60,28 +60,49 @@ export function Table<T>({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr
-              key={rowKey ? rowKey(row, i) : i}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`transition-colors hover:bg-[var(--sunken)] ${onRowClick ? "cursor-pointer" : ""}`}
-            >
-              {columns.map((c) => (
-                <td
-                  key={c.key}
-                  style={{
-                    textAlign: c.align ?? "left",
-                    borderBottom: "1px solid var(--border)",
-                    color: "var(--text)",
-                    fontVariantNumeric: c.align === "right" ? "tabular-nums" : undefined,
-                  }}
-                  className="px-3 py-3 text-[13px]"
-                >
-                  {renderCell(row, c.key)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row, i) => {
+            const clickable = !!onRowClick;
+            const cells = columns.map((c) => ({ ...c, node: renderCell(row, c.key) }));
+            const firstNode = cells[0]?.node;
+            const labelText =
+              typeof firstNode === "string" || typeof firstNode === "number" ? String(firstNode) : undefined;
+
+            return (
+              <tr
+                key={rowKey ? rowKey(row, i) : i}
+                onClick={clickable ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  clickable
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+                tabIndex={clickable ? 0 : undefined}
+                role={clickable ? "button" : undefined}
+                aria-label={clickable ? (labelText ? `Abrir detalhes de ${labelText}` : "Abrir detalhes da linha") : undefined}
+                className={`transition-colors hover:bg-[var(--sunken)] ${clickable ? "cursor-pointer nxfi-clickable-focus" : ""}`}
+              >
+                {cells.map((c) => (
+                  <td
+                    key={c.key}
+                    style={{
+                      textAlign: c.align ?? "left",
+                      borderBottom: "1px solid var(--border)",
+                      color: "var(--text)",
+                      fontVariantNumeric: c.align === "right" ? "tabular-nums" : undefined,
+                    }}
+                    className="px-3 py-3 text-[13px]"
+                  >
+                    {c.node}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

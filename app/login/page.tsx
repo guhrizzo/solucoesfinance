@@ -355,10 +355,11 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* E-mail */}
             <div className="fade-in-1">
-              <label className="block text-blue-950 text-sm font-semibold mb-1.5">E-mail corporativo</label>
+              <label htmlFor="login-email" className="block text-blue-950 text-sm font-semibold mb-1.5">E-mail corporativo</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
+                  id="login-email"
                   type="email"
                   placeholder="voce@empresa.com.br"
                   value={email}
@@ -373,7 +374,7 @@ export default function LoginPage() {
             {/* Senha */}
             <div className="fade-in-2">
               <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-blue-950 text-sm font-semibold">Senha</label>
+                <label htmlFor="login-password" className="block text-blue-950 text-sm font-semibold">Senha</label>
                 <button type="button" onClick={handleForgotPassword} disabled={resetLoading}
                   className="text-blue-500 text-xs font-medium hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {resetLoading ? "Enviando..." : "Esqueci a senha"}
@@ -382,6 +383,7 @@ export default function LoginPage() {
               <div className="relative">
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
+                  id="login-password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
@@ -390,8 +392,12 @@ export default function LoginPage() {
                   required
                   autoComplete="current-password"
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>

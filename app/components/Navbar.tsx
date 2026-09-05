@@ -78,6 +78,8 @@ export default function Navbar({
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+  const notifBtnRef = useRef<HTMLButtonElement>(null);
+  const userBtnRef = useRef<HTMLButtonElement>(null);
 
   // Fecha dropdowns ao clicar fora
   useEffect(() => {
@@ -88,6 +90,25 @@ export default function Navbar({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Esc fecha o dropdown aberto (notificação ou usuário) e devolve o foco
+  // pro botão que abriu.
+  useEffect(() => {
+    if (!notifOpen && !userOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (notifOpen) {
+        setNotifOpen(false);
+        notifBtnRef.current?.focus();
+      }
+      if (userOpen) {
+        setUserOpen(false);
+        userBtnRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [notifOpen, userOpen]);
 
   // Monitora o ramo do usuário (serviço ou outro)
   useEffect(() => {
@@ -251,6 +272,9 @@ export default function Navbar({
   // sidebar (horizontal ou vertical) some e essa navegação assume.
   const mobileDrawerJSX = mobileOpen && (
     <>
+      {/* Fechar no clique fora é conveniência de mouse — o drawer já tem um
+          botão "Fechar menu" com aria-label, totalmente operável por teclado. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div className="nxfi-sidebar-overlay" onClick={() => setMobileOpen(false)} />
       <aside className="nxfi-sidebar">
         <div className="nxfi-sidebar-logo">
@@ -362,7 +386,7 @@ export default function Navbar({
   return (
     <>
       <nav className="nxfi-nav">
-        <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)}>
+        <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
           <Menu size={18} />
         </button>
 
@@ -390,21 +414,28 @@ export default function Navbar({
 
           {periodControl()}
 
-          <button onClick={toggleLayout} className="nxfi-icon-btn" title="Alternar layout">
+          <button onClick={toggleLayout} className="nxfi-icon-btn" title="Alternar layout" aria-label="Alternar layout">
             <PanelLeft size={16} />
           </button>
 
-          <button onClick={toggle} className="nxfi-icon-btn">
+          <button onClick={toggle} className="nxfi-icon-btn" aria-label="Alternar tema">
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
           <div ref={notifRef} style={{ position: "relative" }}>
-            <button className="nxfi-icon-btn" onClick={() => { setNotifOpen(!notifOpen); setUserOpen(false); }}>
+            <button
+              ref={notifBtnRef}
+              className="nxfi-icon-btn"
+              onClick={() => { setNotifOpen(!notifOpen); setUserOpen(false); }}
+              aria-label="Notificações"
+              aria-haspopup="menu"
+              aria-expanded={notifOpen}
+            >
               <Bell size={16} />
               {unreadCount > 0 && <span className="nxfi-notif-dot" />}
             </button>
             {notifOpen && (
-              <div className="nxfi-dropdown nxfi-notif-drop">
+              <div className="nxfi-dropdown nxfi-notif-drop" role="menu">
                 <div className="nxfi-notif-header">
                   <h3>Notificações <span style={{ color: "var(--nav-text-3)", fontWeight: 400 }}>({unreadCount})</span></h3>
                   <button onClick={handleMarkAsRead}>Marcar como lido</button>
@@ -429,7 +460,14 @@ export default function Navbar({
           </div>
 
           <div ref={userRef} style={{ position: "relative" }}>
-            <button className="nxfi-avatar-btn" onClick={() => { setUserOpen(!userOpen); setNotifOpen(false); }}>
+            <button
+              ref={userBtnRef}
+              className="nxfi-avatar-btn"
+              onClick={() => { setUserOpen(!userOpen); setNotifOpen(false); }}
+              aria-label="Menu da conta"
+              aria-haspopup="menu"
+              aria-expanded={userOpen}
+            >
               <div className="nxfi-avatar">{initial}</div>
               <div className="nxfi-avatar-info">
                 <div className="nxfi-avatar-name">{firstName}</div>
@@ -438,7 +476,7 @@ export default function Navbar({
               <ChevronDown size={13} style={{ color: "var(--nav-text-3)", marginLeft: 2 }} />
             </button>
             {userOpen && (
-              <div className="nxfi-dropdown nxfi-user-drop">
+              <div className="nxfi-dropdown nxfi-user-drop" role="menu">
                 <div className="nxfi-user-drop-header">
                   <div className="nxfi-user-drop-name">{user?.displayName ?? "Usuário"}</div>
                   <div className="nxfi-user-drop-email">{user?.email}</div>

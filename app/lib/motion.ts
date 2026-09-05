@@ -187,6 +187,12 @@ export function installForcedSmoothScroll(): () => void {
       }
       history.pushState(null, "", url.hash);
       smoothScrollToElement(target);
+      // Navegação nativa por âncora move o foco pro alvo quando ele é
+      // focável (essencial pro skip link — sem isso a rolagem acontece
+      // mas quem usa teclado/leitor de tela continua "parado" no link).
+      // `e.preventDefault()` acima suprime esse comportamento padrão do
+      // navegador, então repomos aqui. Alvo sem tabindex/foco nativo: no-op.
+      target.focus({ preventScroll: true });
     } else {
       e.preventDefault();
       history.pushState(null, "", url.pathname + url.search);
