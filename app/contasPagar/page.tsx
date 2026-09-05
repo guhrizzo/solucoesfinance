@@ -202,6 +202,20 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const dueDateId = useId();
     const installmentsId = useId();
     const notesId = useId();
+    const billTitleId = useId();
+    const billDialogRef = useRef<HTMLDivElement>(null);
+    const billPreviouslyFocused = useRef<HTMLElement | null>(null);
+    const billPrevOpen = useRef(open);
+    // Captura quem tinha foco ANTES de abrir durante a própria renderização
+    // (não num efeito): o autoFocus nativo do primeiro campo do formulário
+    // dispara assim que ele é inserido no DOM, antes de qualquer useEffect
+    // deste componente rodar (React roda efeito de filho antes do pai) — se
+    // a captura fosse feita num efeito, pegaria o campo recém-focado em vez
+    // de quem realmente estava focado antes.
+    if (open && !billPrevOpen.current) {
+        billPreviouslyFocused.current = document.activeElement as HTMLElement | null;
+    }
+    billPrevOpen.current = open;
 
     useEffect(() => {
         if (!open) return;
@@ -228,6 +242,41 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     useEffect(() => {
         if (recurrence === "numeral") setStatus("pendente");
     }, [recurrence]);
+
+    // Esc fecha e devolve o foco; Tab fica preso no modal enquanto aberto.
+    // O primeiro campo (Título) já foca sozinho via autoFocus do
+    // CadastroField — só falta o resto do tratamento de dialog.
+    useEffect(() => {
+        if (!open) return;
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                if (!saving) onClose();
+                return;
+            }
+            if (e.key !== "Tab") return;
+            const node = billDialogRef.current;
+            if (!node) return;
+            const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+                (el) => el.offsetParent !== null
+            );
+            if (focusables.length === 0) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            document.removeEventListener("keydown", onKeyDown);
+            billPreviouslyFocused.current?.focus?.();
+        };
+    }, [open, onClose, saving]);
 
     if (!open) return null;
 
@@ -329,7 +378,13 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     return (
         <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
             style={{ background: "var(--overlay)", backdropFilter: "blur(8px)" }}>
-            <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
+            <div
+                ref={billDialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={billTitleId}
+                tabIndex={-1}
+                className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
                 style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
 
                 {/* drag handle mobile */}
@@ -340,7 +395,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4">
                     <div>
-                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
+                        <p id={billTitleId} className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {editing ? "Editar conta" : "Nova conta a pagar"}
                         </p>
                         <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--pos)" }}>

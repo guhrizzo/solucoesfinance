@@ -24,6 +24,9 @@ import { syncTaxCashflow } from "@/lib/billTaxSync";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "../components/AuditTrail";
 
+const FOCUSABLE_SELECTOR =
+    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type TaxStatus = "nao_pago" | "pago" | "atraso" | "agendado";
@@ -364,6 +367,17 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
     const amtId = useId();
     const estimatedAmtId = useId();
     const dueDateId = useId();
+    const taxTitleId = useId();
+    const taxDialogRef = useRef<HTMLDivElement>(null);
+    const taxPreviouslyFocused = useRef<HTMLElement | null>(null);
+    const taxPrevOpen = useRef(open);
+    // Captura quem tinha foco ANTES de abrir durante a própria renderização
+    // (não num efeito) — o autoFocus nativo do campo "Nome/Descrição"
+    // dispara antes de qualquer useEffect deste componente rodar.
+    if (open && !taxPrevOpen.current) {
+        taxPreviouslyFocused.current = document.activeElement as HTMLElement | null;
+    }
+    taxPrevOpen.current = open;
     const frequencyId = useId();
     const notesId = useId();
 
@@ -386,6 +400,39 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
         setSaving(false);
         setErr("");
     }, [open, editing]);
+
+    // Esc fecha e devolve o foco; Tab fica preso no modal enquanto aberto.
+    useEffect(() => {
+        if (!open) return;
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                if (!saving) onClose();
+                return;
+            }
+            if (e.key !== "Tab") return;
+            const node = taxDialogRef.current;
+            if (!node) return;
+            const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+                (el) => el.offsetParent !== null
+            );
+            if (focusables.length === 0) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            document.removeEventListener("keydown", onKeyDown);
+            taxPreviouslyFocused.current?.focus?.();
+        };
+    }, [open, onClose, saving]);
 
     if (!open) return null;
 
@@ -487,7 +534,13 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
     return (
         <div className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
             style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
-            <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
+            <div
+                ref={taxDialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={taxTitleId}
+                tabIndex={-1}
+                className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
                 style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
 
                 <div className="flex justify-center pt-3 pb-1 sm:hidden">
@@ -498,7 +551,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     <div className="flex items-center gap-2.5">
                         {editing && <typeMeta.icon size={16} style={{ color: typeMeta.color }} />}
                         <div>
-                            <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
+                            <p id={taxTitleId} className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                                 {editing ? "Editar imposto" : "Novo imposto"}
                             </p>
                             <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>

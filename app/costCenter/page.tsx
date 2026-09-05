@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import {
   TrendingUp,
   CreditCard,
@@ -28,6 +28,9 @@ import { resolveAccountScope, hasPermission } from "@/lib/accountScope";
 import AccessDenied from "../components/AccessDenied";
 import { PageLoader } from "../components/ui";
 import "./costCenter.css";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -374,6 +377,48 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
   const centerId = useId();
   const amountId = useId();
   const dateId = useId();
+  const expenseTitleId = useId();
+  const expenseDialogRef = useRef<HTMLDivElement>(null);
+  const expensePreviouslyFocused = useRef<HTMLElement | null>(null);
+
+  // Foco entra no modal ao abrir (não tem nenhum autoFocus próprio como os
+  // outros formulários), fica preso nele (Tab/Shift+Tab), Esc fecha e
+  // devolve o foco pra quem abriu.
+  useEffect(() => {
+    if (!open) return;
+    expensePreviouslyFocused.current = document.activeElement as HTMLElement | null;
+    const node = expenseDialogRef.current;
+    const first = node?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (first ?? node)?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (!saving) onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const node = expenseDialogRef.current;
+      if (!node) return;
+      const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null
+      );
+      if (focusables.length === 0) return;
+      const firstEl = focusables[0];
+      const lastEl = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === firstEl) {
+        e.preventDefault();
+        lastEl.focus();
+      } else if (!e.shiftKey && document.activeElement === lastEl) {
+        e.preventDefault();
+        firstEl.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      expensePreviouslyFocused.current?.focus?.();
+    };
+  }, [open, onClose, saving]);
 
   useEffect(() => {
     if (!open) return;
@@ -436,11 +481,17 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
       className="fixed inset-0 flex items-center justify-center p-4 z-999"
       style={{ background: "rgba(0,0,0,0.12)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
     >
-      <div className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
+      <div
+        ref={expenseDialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={expenseTitleId}
+        tabIndex={-1}
+        className="w-full max-w-md rounded-2xl border shadow-2xl" style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
           <div>
-            <h3 className="font-bold text-base" style={{ color: "var(--db-text)" }}>
+            <h3 id={expenseTitleId} className="font-bold text-base" style={{ color: "var(--db-text)" }}>
               {editing ? "Editar despesa" : "Nova despesa"}
             </h3>
             <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--success)" }}>

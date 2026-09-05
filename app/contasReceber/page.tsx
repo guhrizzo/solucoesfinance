@@ -213,6 +213,17 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     const dueDateId = useId();
     const installmentsId = useId();
     const notesId = useId();
+    const receivableTitleId = useId();
+    const receivableDialogRef = useRef<HTMLDivElement>(null);
+    const receivablePreviouslyFocused = useRef<HTMLElement | null>(null);
+    const receivablePrevOpen = useRef(open);
+    // Captura quem tinha foco ANTES de abrir durante a própria renderização
+    // (não num efeito) — o autoFocus nativo do primeiro campo dispara antes
+    // de qualquer useEffect deste componente rodar.
+    if (open && !receivablePrevOpen.current) {
+        receivablePreviouslyFocused.current = document.activeElement as HTMLElement | null;
+    }
+    receivablePrevOpen.current = open;
 
     useEffect(() => {
         if (!open) return;
@@ -239,6 +250,39 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     useEffect(() => {
         if (recurrence === "numeral") setStatus("pendente");
     }, [recurrence]);
+
+    // Esc fecha e devolve o foco; Tab fica preso no modal enquanto aberto.
+    useEffect(() => {
+        if (!open) return;
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                if (!saving) onClose();
+                return;
+            }
+            if (e.key !== "Tab") return;
+            const node = receivableDialogRef.current;
+            if (!node) return;
+            const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+                (el) => el.offsetParent !== null
+            );
+            if (focusables.length === 0) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            document.removeEventListener("keydown", onKeyDown);
+            receivablePreviouslyFocused.current?.focus?.();
+        };
+    }, [open, onClose, saving]);
 
     if (!open) return null;
 
@@ -336,7 +380,13 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     return (
         <div className="fixed inset-0 z-[990] flex items-end sm:items-center justify-center"
             style={{ background: "var(--overlay)", backdropFilter: "blur(8px)" }}>
-            <div className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
+            <div
+                ref={receivableDialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={receivableTitleId}
+                tabIndex={-1}
+                className="w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl overflow-hidden"
                 style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
 
                 {/* drag handle mobile */}
@@ -347,7 +397,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4">
                     <div>
-                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
+                        <p id={receivableTitleId} className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {editing ? "Editar cobrança" : "Nova cobrança"}
                         </p>
                         <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--pos)" }}>
