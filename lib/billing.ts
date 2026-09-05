@@ -47,6 +47,36 @@ export function trialEndFrom(startMs: number): number {
   return startMs + TRIAL_DAYS * 24 * 60 * 60 * 1000;
 }
 
+// Fuso de referência pro "dias restantes" exibido na UI (banner de trial e
+// paywall). Fixo em vez de usar o fuso da máquina porque esse cálculo roda
+// tanto no servidor (rota /api/billing/status, geralmente UTC) quanto no
+// navegador (listener do Firestore em useSubscription) — sem um fuso comum,
+// os dois lados podem discordar em 1 dia perto da virada.
+//
+// Isso é só de exibição: o bloqueio de acesso (`isActive`) continua sendo
+// decidido pelo milissegundo exato de `accessUntil`, então ninguém ganha
+// nem perde acesso por causa disso.
+const TRIAL_DISPLAY_TZ = "America/Sao_Paulo";
+
+/** "YYYY-MM-DD" de um instante, num fuso fixo — usado só pra comparar dias. */
+function calendarDateKey(ms: number, timeZone = TRIAL_DISPLAY_TZ): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(ms));
+}
+
+/** Diferença em dias de calendário (não em blocos de 24h) entre dois instantes. */
+function calendarDaysBetween(fromMs: number, toMs: number, timeZone = TRIAL_DISPLAY_TZ): number {
+  const [fy, fm, fd] = calendarDateKey(fromMs, timeZone).split("-").map(Number);
+  const [ty, tm, td] = calendarDateKey(toMs, timeZone).split("-").map(Number);
+  const fromUTC = Date.UTC(fy, fm - 1, fd);
+  const toUTC = Date.UTC(ty, tm - 1, td);
+  return Math.round((toUTC - fromUTC) / (24 * 60 * 60 * 1000));
+}
+
 /** Doc inicial de uma conta dona nova (trial começa agora). */
 export function freshBillingDoc(nowMs = Date.now()): BillingDoc {
   return {
@@ -93,7 +123,10 @@ export function resolveSubscriptionState(
   const inTrial = isActive && currentPeriodEnd <= nowMs;
 
   const status: BillingStatus = !isActive ? "past_due" : inTrial ? "trialing" : "active";
-  const daysLeft = isActive ? Math.ceil((accessUntil - nowMs) / (24 * 60 * 60 * 1000)) : 0;
+  // Dia de calendário, não bloco de 24h: decrementa na virada da meia-noite
+  // (fuso fixo acima), então "criei ontem" já mostra 1 dia a menos hoje —
+  // em vez de só decrementar 24h exatas depois da criação.
+  const daysLeft = isActive ? Math.max(0, calendarDaysBetween(nowMs, accessUntil)) : 0;
 
   return {
     status,

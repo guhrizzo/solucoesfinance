@@ -72,6 +72,11 @@ export function useSubscription(): State {
           }
 
           // 1. Bootstrap do trial + resolve ownerUid (a rota devolve isOwner).
+          // A resposta já vem com o estado calculado (status/daysLeft/etc) —
+          // usa direto aqui pra pintar o banner/paywall na hora, em vez de
+          // esperar o onSnapshot do Firestore conectar (esse round-trip a
+          // mais era o motivo de precisar dar F5 pra ver o aviso de trial
+          // logo que entra: os dados já estavam prontos, só não eram usados).
           let ownerUid = u.uid;
           let isOwner = true;
           try {
@@ -79,6 +84,20 @@ export function useSubscription(): State {
             if (res.ok) {
               const d = await res.json();
               isOwner = !!d.isOwner;
+              if (!cancelled) {
+                setState({
+                  status: d.status,
+                  isActive: d.isActive,
+                  accessUntil: d.accessUntil,
+                  daysLeft: d.daysLeft,
+                  plan: d.plan,
+                  inTrial: d.inTrial,
+                  comped: !!d.comped,
+                  loading: false,
+                  isOwner,
+                  signedOut: false,
+                });
+              }
             }
           } catch {
             /* segue pro snapshot mesmo assim */
