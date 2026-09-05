@@ -46,6 +46,10 @@ function showVLibras() {
   const existing = document.querySelector<HTMLElement>("[vw]");
   if (existing) {
     existing.style.display = "";
+    // Restaura também os filhos que podem ter sido escondidos individualmente
+    existing.querySelectorAll<HTMLElement>("[vw-plugin-wrapper], [vw-access-button]").forEach((el) => {
+      el.style.display = "";
+    });
     return;
   }
   const container = document.createElement("div");
@@ -67,8 +71,16 @@ function showVLibras() {
 }
 
 function hideVLibras() {
+  // Esconde o container principal que criamos
   const existing = document.querySelector<HTMLElement>("[vw]");
   if (existing) existing.style.display = "none";
+
+  // O VLibras também pode injetar elementos adicionais diretamente no <body>
+  // (ex.: o painel expandido e o avatar). Escondemos todos os nós com
+  // atributos vw-* para garantir limpeza total.
+  document.querySelectorAll<HTMLElement>("[vw-plugin-wrapper], [vw-access-button]").forEach((el) => {
+    el.style.display = "none";
+  });
 }
 
 function ToggleRow({
