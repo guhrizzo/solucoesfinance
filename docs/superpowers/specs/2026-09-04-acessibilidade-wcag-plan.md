@@ -6,57 +6,50 @@ Cada fase é um lote fechável e testável por si só (`npm run lint` +
 navegação por teclado) antes de passar pra próxima. Checkboxes marcam
 progresso conforme as fases forem executadas.
 
-## Fase 1 — Fundação (componentes compartilhados + porta de entrada)
+## Fase 1 — Fundação (componentes compartilhados + porta de entrada) ✅ concluída
 
-- [ ] **`app/components/ui/Table.tsx`** — linha com `onRowClick` ganha
-      `tabIndex={0}`, `role="button"`, `aria-label` (algo como "Abrir
-      detalhes de {descrição da linha}" — usar a primeira coluna como
-      fallback) e `onKeyDown` disparando em `Enter`/`Espaço`. Sem
-      `onRowClick`, a linha continua uma `<tr>` normal (não vira botão à
-      toa).
-- [ ] **`app/components/ui/Modal.tsx`** — `role="dialog"` + `aria-modal="true"`
-      no container; `aria-labelledby` apontando pro `id` do `<h2>` do
-      título (só quando `title` existe); foco move pro modal ao abrir
-      (primeiro elemento focável dentro dele, com fallback pro próprio
-      card) e volta pro elemento que tinha foco antes de abrir, ao fechar;
-      `Tab`/`Shift+Tab` ficam presos dentro do modal (focus trap) enquanto
-      `open`.
-- [ ] **`app/components/Navbar.tsx`** —
-  - `aria-label` nos botões só-com-ícone: hambúrguer (linhas ~330, ~364),
-    alternar tema no desktop (linha ~397 — falta hoje, o da versão mobile
-    em ~339 já tem), alternar layout (~393, trocar `title` solto por
-    `aria-label` também), sino de notificações (~402), avatar/menu do
-    usuário (~432).
-  - `aria-expanded={notifOpen}` + `aria-haspopup="menu"` no botão do sino;
-    `aria-expanded={userOpen}` + `aria-haspopup="menu"` no botão do avatar.
-  - `Esc` fecha o dropdown aberto (notificação ou usuário) e devolve o
-    foco pro botão que abriu.
-- [ ] **`app/register/page.tsx`** e **`app/login/page.tsx`** — cada
-      `<label>` ganha `htmlFor={id}` e o `<input>` correspondente ganha
-      esse `id` (usar `useId()` por campo, mesmo padrão de
-      `app/components/ui/Field.tsx`).
-- [ ] **Skip link** — novo link "Pular para o conteúdo" logo no início do
-      `<body>` em `app/layout.tsx`, visualmente oculto e só aparece ao
-      receber foco por Tab (`.sr-only` até `:focus`); aponta pro `id`
-      do `<main>` de cada página — conferir que toda rota top-level (`/`,
-      `/login`, `/register`, `/dashboard`, etc.) tem de fato um `<main
-      id="conteudo-principal">` alcançável; adicionar onde faltar.
-- [ ] **`eslint.config.mjs`** — adiciona `eslint-plugin-jsx-a11y` (já é
-      dependência transitiva do `eslint-config-next`; declarar
-      explicitamente como devDependency fixa no `package.json` pra não
-      depender de dependência transitiva) com o preset `recommended` em
-      `warn` para o repo inteiro, e um bloco adicional só pros arquivos
-      desta fase (`app/components/ui/**`, `app/components/Navbar.tsx`,
-      `app/register/**`, `app/login/**`, `app/layout.tsx`) subindo
-      `jsx-a11y/click-events-have-key-events`,
-      `jsx-a11y/no-static-element-interactions` e
-      `jsx-a11y/label-has-associated-control` para `error` — mesmo padrão
-      de rollout gradual já usado no bloco de cor-hex-crua do arquivo
-      (lista de arquivos que ainda não passaram vai encolhendo conforme
-      a Fase 3 avança).
-- [ ] `npm run lint` limpo + teste manual de teclado nesta fase (abrir um
-      modal, tabular por ele, Esc fecha; abrir um dropdown da Navbar,
-      Esc fecha; clicar uma linha de tabela só com teclado).
+- [x] **`app/components/ui/Table.tsx`** — linha com `onRowClick` ganha
+      `tabIndex={0}`, `role="button"`, `aria-label` (primeira coluna como
+      fallback) e `onKeyDown` disparando em `Enter`/`Espaço`.
+- [x] **`app/components/ui/KpiTile.tsx`** (achado durante a Fase 1, mesma
+      classe de bug do Table — `<div onClick>` sem teclado) — mesmo
+      tratamento.
+- [x] **`app/components/ui/Modal.tsx`** — `role="dialog"` + `aria-modal="true"`
+      + `aria-labelledby`; foco entra no modal ao abrir e volta pro
+      elemento que tinha foco antes, ao fechar; `Tab`/`Shift+Tab` presos
+      dentro do modal enquanto aberto.
+- [x] **`app/components/Navbar.tsx`** — `aria-label` em todo botão
+      só-com-ícone (hambúrguer, tema, layout, notificações, avatar);
+      `aria-expanded`/`aria-haspopup="menu"` nos dois dropdowns; `Esc`
+      fecha e devolve o foco pro botão que abriu.
+- [x] **`app/register/page.tsx`** e **`app/login/page.tsx`** — `<label>`
+      ligado ao `<input>` via `id`/`htmlFor`; toggle de mostrar/ocultar
+      senha ganha `aria-label`; achado extra: o checkbox de termos do
+      cadastro era uma `<div onClick>` sem teclado — virou
+      `role="checkbox"` com `aria-checked` e `onKeyDown` (Espaço/Enter).
+- [x] **Skip link** — implementado em `app/layout.tsx`, mas mirado no
+      wrapper do `AppShell` (`app/components/AppShell.tsx`, `id="conteudo-
+      principal"` + `tabIndex={-1}`) em vez de um `<main id>` por página —
+      cobre toda rota de uma vez, sem editar cada `page.tsx`.
+      **Achado extra durante o teste**: a rolagem suave forçada
+      (`app/lib/motion.ts`) intercepta o clique de qualquer link de âncora
+      interna e nunca movia o foco pro alvo (só rolava a tela) — o skip
+      link rolava mas o foco ficava parado no link. Corrigido: chama
+      `target.focus({ preventScroll: true })` depois de rolar.
+- [x] **`eslint.config.mjs`** — `eslint-plugin-jsx-a11y` declarado como
+      devDependency direta; preset `recommended` do plugin (reaproveitando
+      o registro do plugin que o `eslint-config-next` já faz — não dá pra
+      redeclarar o mesmo nome de plugin duas vezes no flat config) subido
+      pra `error` só nos arquivos desta fase — allowlist que cresce
+      conforme a Fase 3 audita o resto do app.
+- [x] `npm run lint` limpo (zero achados `jsx-a11y` nos arquivos da fase;
+      os erros/warnings restantes nesses arquivos são pré-existentes,
+      não relacionados a acessibilidade — `@typescript-eslint/no-
+      explicit-any`, `@next/next/no-img-element`) + `tsc --noEmit` limpo.
+      Testado no navegador: skip link foca `#conteudo-principal`,
+      checkbox de termos alterna por teclado (`aria-checked`).
+      Navbar/Table/KpiTile não foram testados ao vivo (ficam atrás de
+      login; não criei conta de teste em produção sem combinar antes).
 
 ## Fase 2 — Site público
 
