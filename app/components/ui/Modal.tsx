@@ -40,14 +40,14 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     document.body.classList.add("modal-open");
 
-    // Espera o portal montar antes de focar o primeiro elemento focável
-    // (ou o próprio diálogo, se não houver nenhum).
-    const raf = requestAnimationFrame(() => {
-      const node = dialogRef.current;
-      if (!node) return;
-      const first = node.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      (first ?? node).focus();
-    });
+    // O useEffect só roda depois que o React aplica todas as mudanças de
+    // DOM do commit — incluindo o conteúdo do portal — então dialogRef.current
+    // já está populado aqui, sem precisar esperar mais um frame
+    // (requestAnimationFrame nunca dispara em aba/janela em segundo plano,
+    // o que travaria esse foco justamente quando o modal abre por trás).
+    const node = dialogRef.current;
+    const first = node?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (first ?? node)?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -79,7 +79,6 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
     document.addEventListener("keydown", onKeyDown);
 
     return () => {
-      cancelAnimationFrame(raf);
       document.body.classList.remove("modal-open");
       document.removeEventListener("keydown", onKeyDown);
       previouslyFocused.current?.focus?.();

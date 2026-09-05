@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useSyncExternalStore } from "react";
+import { useState, useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+
+const MODAL_FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // true só no client — sem setState em effect (lint: react-hooks/set-state-in-effect).
 const emptySubscribe = () => () => {};
@@ -135,6 +138,59 @@ export default function FinanceHome() {
   const mounted = useMounted();
   const periodLabel =
     BILLING_PERIODS.find((p) => p.id === period)?.label ?? "Anual";
+
+  // Dialog acessível pro modal de período — mesma técnica de
+  // app/components/ui/Modal.tsx (role/foco/Esc/focus trap), só que inline:
+  // manter a estilização atual (light-only, cores fixas) em vez de puxar o
+  // Modal compartilhado, que usa tokens de tema e ficaria ilegível se o
+  // visitante tiver o modo escuro salvo de uma visita anterior ao app.
+  const periodModalTitleId = useId();
+  const periodModalRef = useRef<HTMLDivElement>(null);
+  const periodModalPreviouslyFocused = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!periodModalOpen) return;
+
+    periodModalPreviouslyFocused.current = document.activeElement as HTMLElement | null;
+    // O portal já está montado no DOM quando este efeito roda (useEffect
+    // dispara depois do commit inteiro) — sem requestAnimationFrame, que
+    // nunca dispara com a aba/janela em segundo plano.
+    const node = periodModalRef.current;
+    const first = node?.querySelector<HTMLElement>(MODAL_FOCUSABLE_SELECTOR);
+    (first ?? node)?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPeriodModalOpen(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const node = periodModalRef.current;
+      if (!node) return;
+      const focusables = Array.from(node.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null
+      );
+      if (focusables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      periodModalPreviouslyFocused.current?.focus?.();
+    };
+  }, [periodModalOpen]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -372,7 +428,7 @@ export default function FinanceHome() {
             <div>
               <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-6 fade-in">
                 <span className="w-2 h-2 rounded-full bg-green-400 pulse-dot" />
-                <span className="text-blue-300 text-xs font-medium mono">Novo · Integração com ERP e contabilidade</span>
+                <span className="text-blue-100 text-xs font-medium mono">Novo · Integração com ERP e contabilidade</span>
               </div>
 
               <h1 className="text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 fade-in-delay-1">
@@ -451,7 +507,7 @@ export default function FinanceHome() {
                     { label: "Inadimplência", val: "3.1%", up: false },
                   ].map((k) => (
                     <div key={k.label} className="bg-white/5 rounded-xl p-3">
-                      <p className="text-blue-300/50 text-xs mb-1">{k.label}</p>
+                      <p className="text-blue-300/75 text-xs mb-1">{k.label}</p>
                       <p className="text-white font-bold text-sm mono">{k.val}</p>
                       <span className={`text-xs flex items-center gap-0.5 mt-0.5 ${k.up ? "text-green-400" : "text-red-400"}`}>
                         {k.up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -470,7 +526,7 @@ export default function FinanceHome() {
           <div className="ticker-track">
             {[...tickers, ...tickers].map((t, i) => (
               <div key={i} className="flex items-center gap-2 shrink-0">
-                <span className="text-blue-300/50 text-xs mono">{t.label}</span>
+                <span className="text-blue-300/75 text-xs mono">{t.label}</span>
                 <span className="text-white text-xs font-semibold mono">{t.value}</span>
                 <span className={`text-xs mono ${t.up ? "text-green-400" : "text-red-400"}`}>
                   {t.up ? "▲" : "▼"}
@@ -488,11 +544,11 @@ export default function FinanceHome() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((s) => (
               <div key={s.label} className="stat-card bg-white rounded-2xl p-6 border border-blue-50 shadow-sm shadow-blue-50">
-                <p className="text-slate-400 text-xs font-medium mb-2">{s.label}</p>
+                <p className="text-slate-500 text-xs font-medium mb-2">{s.label}</p>
                 <p className="text-blue-900 text-3xl font-extrabold mb-1">{s.value}</p>
                 <span className={`text-xs font-semibold flex items-center gap-1 ${s.up ? "text-green-500" : "text-red-500"}`}>
                   {s.up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  {s.change} <span className="text-slate-400 font-normal">vs. ano anterior</span>
+                  {s.change} <span className="text-slate-500 font-normal">vs. ano anterior</span>
                 </span>
               </div>
             ))}
@@ -606,7 +662,7 @@ export default function FinanceHome() {
             >
               Cobrança: <span className="text-blue-600">{periodLabel}</span>
               {period === "anual" && (
-                <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-600">
+                <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-700">
                   2 meses de desconto
                 </span>
               )}
@@ -630,7 +686,7 @@ export default function FinanceHome() {
                 >
                   {destaque && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="bg-linear-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                      <span className="bg-linear-to-r from-blue-700 to-blue-600 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
                         Mais completo
                       </span>
                     </div>
@@ -647,12 +703,12 @@ export default function FinanceHome() {
                     )}
                   </div>
                   <h3 className="text-blue-950 text-xl font-bold mb-1">Plano {tier.label}</h3>
-                  <p className="text-slate-400 text-sm mb-5">{tier.blurb}</p>
+                  <p className="text-slate-500 text-sm mb-5">{tier.blurb}</p>
                   <div className="mb-1 flex items-end gap-1">
                     <span className="text-blue-950 text-4xl font-extrabold">
                       {formatBRLFromCents(plan.priceCents)}
                     </span>
-                    <span className="text-slate-400 text-sm font-medium mb-1">
+                    <span className="text-slate-500 text-sm font-medium mb-1">
                       {period === "anual" ? "/ano" : "/mês"}
                     </span>
                   </div>
@@ -661,16 +717,16 @@ export default function FinanceHome() {
                       equivale a {formatBRLFromCents(monthlyEquivalentCents(plan))}/mês
                     </p>
                   ) : (
-                    <p className="text-slate-400 text-xs mb-1">
+                    <p className="text-slate-500 text-xs mb-1">
                       {formatBRLFromCents(planFor(tier.id, "anual").priceCents)}/ano no plano anual
                     </p>
                   )}
                   {period === "anual" && savings > 0 && (
-                    <p className="text-green-600 text-xs font-semibold mb-1">
+                    <p className="text-green-700 text-xs font-semibold mb-1">
                       Economize {formatBRLFromCents(savings)} por ano
                     </p>
                   )}
-                  <p className="text-green-600 text-xs font-semibold mt-3 mb-6 flex items-center gap-1.5">
+                  <p className="text-green-700 text-xs font-semibold mt-3 mb-6 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
                     7 dias grátis para testar
                   </p>
@@ -689,7 +745,7 @@ export default function FinanceHome() {
                     <button
                       className={`w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
                         destaque
-                          ? "bg-linear-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg"
+                          ? "bg-linear-to-r from-blue-700 to-blue-600 text-white hover:from-blue-800 hover:to-blue-700 shadow-md hover:shadow-lg"
                           : "border border-blue-200 text-blue-600 hover:bg-blue-50"
                       }`}
                     >
@@ -709,13 +765,23 @@ export default function FinanceHome() {
             <div
               className="fixed inset-0 z-[999] flex items-center justify-center p-4"
               style={{ background: "rgba(10, 22, 40, 0.55)", backdropFilter: "blur(2px)" }}
+              // Fechar no clique do backdrop é conveniência de mouse — Esc
+              // (tratado no useEffect acima) e o botão "Fechar" (aria-label)
+              // já cobrem teclado.
               onClick={(e) => {
                 if (e.target === e.currentTarget) setPeriodModalOpen(false);
               }}
             >
-              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+              <div
+                ref={periodModalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={periodModalTitleId}
+                tabIndex={-1}
+                className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+              >
                 <div className="flex items-start justify-between mb-1">
-                  <h3 className="text-lg font-bold text-blue-950">Período de cobrança</h3>
+                  <h3 id={periodModalTitleId} className="text-lg font-bold text-blue-950">Período de cobrança</h3>
                   <button
                     type="button"
                     onClick={() => setPeriodModalOpen(false)}
@@ -748,7 +814,7 @@ export default function FinanceHome() {
                         <span>
                           <span className="block font-semibold text-blue-950">{p.label}</span>
                           {p.note && (
-                            <span className="block text-xs font-medium text-green-600">{p.note}</span>
+                            <span className="block text-xs font-medium text-green-700">{p.note}</span>
                           )}
                         </span>
                         <span
@@ -817,7 +883,7 @@ export default function FinanceHome() {
                   </div>
                   <div>
                     <p className="text-blue-950 font-semibold text-sm">{t.name}</p>
-                    <p className="text-slate-400 text-xs">{t.role}</p>
+                    <p className="text-slate-500 text-xs">{t.role}</p>
                   </div>
                 </div>
               </div>
