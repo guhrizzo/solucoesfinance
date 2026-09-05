@@ -307,8 +307,9 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--brand) 30%, transparent);
-  color: var(--text);
+  background: var(--brand);
+  color: var(--brand-on);
+  text-shadow: none;
 }
 
 /* ────────────────────────────────────────────────────────────────── */

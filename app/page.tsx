@@ -133,11 +133,11 @@ export default function FinanceHome() {
   const pageRef = useRef<HTMLDivElement>(null);
 
   // Planos e preços: período de cobrança escolhido via modal (Mensal | Anual).
-  const [period, setPeriod] = useState<BillingPeriod>("anual");
+  const [period, setPeriod] = useState<BillingPeriod>("mensal");
   const [periodModalOpen, setPeriodModalOpen] = useState(false);
   const mounted = useMounted();
   const periodLabel =
-    BILLING_PERIODS.find((p) => p.id === period)?.label ?? "Anual";
+    BILLING_PERIODS.find((p) => p.id === period)?.label ?? "Mensal";
 
   // Dialog acessível pro modal de período — mesma técnica de
   // app/components/ui/Modal.tsx (role/foco/Esc/focus trap), só que inline:
