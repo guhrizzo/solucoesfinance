@@ -25,11 +25,11 @@ export default function Footer() {
                 <img src="/nexus_fi_logo_branco.png" alt="NexusFi" className="h-9 w-auto" />
               </div>
               <p className="text-blue-300/75 text-sm leading-relaxed">
-                Plataforma de investimentos para o Brasil e o mundo.
+                Gestão financeira completa para empresas: fluxo de caixa, contas e relatórios em um só lugar.
               </p>
             </div>
             {[
-              { title: "Produto", links: ["Mercados", "Portfólio", "Análises", "API"] },
+              { title: "Produto", links: ["Fluxo de caixa", "Contas a pagar/receber", "Relatórios", "API"] },
               { title: "Empresa", links: ["Sobre", "Blog", "Carreiras", "Imprensa"] },
               {
                 title: "Suporte",
@@ -64,9 +64,9 @@ export default function Footer() {
             ))}
           </div>
           <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-blue-300/75 text-center text-xs">© {new Date().getFullYear()} NexusFi. Todos os direitos reservados. Investimentos sujeitos a riscos.</p>
+            <p className="text-blue-300/75 text-center text-xs">© {new Date().getFullYear()} NexusFi. Todos os direitos reservados.</p>
             <div className="flex items-center gap-1 text-blue-300/75 text-xs">
-              <Shield size={12} /> Regulado pelo Banco Central do Brasil
+              <Shield size={12} /> Em conformidade com a LGPD
             </div>
           </div>
         </div>
