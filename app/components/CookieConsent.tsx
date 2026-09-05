@@ -14,7 +14,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Cookie, ChevronDown } from "lucide-react";
+import { Cookie, ChevronDown, ExternalLink } from "lucide-react";
 import {
   getConsentSnapshot,
   subscribeConsent,
@@ -70,7 +70,11 @@ export function CookieConsent() {
   );
 
   const [forceOpen, setForceOpen] = useState(false);
-  const [details, setDetails] = useState(false);
+  // Mini: só o aviso curto + Aceitar/Recusar. "Saiba mais" aumenta pra este
+  // card completo (texto da LGPD + categorias). Quem prefere, pode abrir a
+  // Política de Privacidade completa numa aba nova em vez de expandir aqui.
+  const [expanded, setExpanded] = useState(false);
+  const [customize, setCustomize] = useState(false);
   const [choice, setChoice] = useState<Record<ConsentCategory, boolean>>({
     essential: true,
     preferences: true,
@@ -81,7 +85,8 @@ export function CookieConsent() {
     const reopen = () => {
       const cur = getConsentSnapshot();
       if (cur) setChoice(cur.categories);
-      setDetails(true);
+      setExpanded(true);
+      setCustomize(true);
       setForceOpen(true);
     };
     window.addEventListener("nexusfi-open-cookie-preferences", reopen);
@@ -96,7 +101,8 @@ export function CookieConsent() {
 
   const close = () => {
     setForceOpen(false);
-    setDetails(false);
+    setExpanded(false);
+    setCustomize(false);
   };
 
   const handleAcceptAll = () => {
@@ -112,15 +118,71 @@ export function CookieConsent() {
     close();
   };
 
+  const wrapperClass = `fixed inset-x-0 bottom-0 p-3 sm:p-4 ${
+    themed ? "" : "cookie-consent--light"
+  }`;
+
+  // ── Mini: aviso curto, cabe numa linha. "Saiba mais" aumenta o card;
+  // o link de política abre a página completa numa aba nova. ──────────────
+  if (!expanded) {
+    return (
+      <div
+        role="dialog"
+        aria-label="Aviso de cookies e privacidade"
+        aria-modal="false"
+        style={{ zIndex: 970 }}
+        className={wrapperClass}
+      >
+        <div className="mx-auto flex max-w-xl flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-pop)]">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ background: "var(--brand-weak)", color: "var(--brand)" }}
+          >
+            <Cookie size={16} />
+          </span>
+
+          <p className="min-w-[180px] flex-1 text-xs leading-snug text-[var(--text-muted)]">
+            Usamos cookies essenciais e, com sua permissão, de preferências e
+            análise.{" "}
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="font-semibold text-[var(--brand)] underline underline-offset-2"
+            >
+              Saiba mais
+            </button>
+          </p>
+
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleRejectOptional}
+              className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--sunken)]"
+            >
+              Recusar
+            </button>
+            <button
+              type="button"
+              onClick={handleAcceptAll}
+              className="rounded-lg border border-transparent bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-[var(--brand-on)] transition-colors hover:bg-[var(--brand-hover)]"
+            >
+              Aceitar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Expandida: texto completo (LGPD) + categorias, pra quem clicou em
+  // "Saiba mais" no card mini. ─────────────────────────────────────────────
   return (
     <div
       role="dialog"
       aria-label="Aviso de cookies e privacidade"
       aria-modal="false"
       style={{ zIndex: 970 }}
-      className={`fixed inset-x-0 bottom-0 p-3 sm:p-4 ${
-        themed ? "" : "cookie-consent--light"
-      }`}
+      className={wrapperClass}
     >
       <div className="mx-auto max-w-3xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-pop)] sm:p-5">
         <div className="flex items-start gap-3">
@@ -132,9 +194,20 @@ export function CookieConsent() {
           </span>
 
           <div className="min-w-0 flex-1">
-            <h2 className="font-heading text-sm font-semibold text-[var(--text)]">
-              Sua privacidade
-            </h2>
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="font-heading text-sm font-semibold text-[var(--text)]">
+                Sua privacidade
+              </h2>
+              {!forceOpen && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(false)}
+                  className="shrink-0 text-xs font-semibold text-[var(--text-subtle)] hover:text-[var(--text)]"
+                >
+                  Recolher
+                </button>
+              )}
+            </div>
             <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
               Usamos cookies e tecnologias semelhantes para{" "}
               <strong className="font-semibold text-[var(--text)]">
@@ -147,33 +220,36 @@ export function CookieConsent() {
                 Lei Geral de Proteção de Dados (Lei nº 13.709/2018)
               </strong>
               . Os cookies essenciais são sempre ativos; os demais dependem do
-              seu consentimento, que você pode retirar quando quiser. Saiba mais
-              na nossa{" "}
-              <Link
-                href="/privacidade"
-                className="font-semibold text-[var(--brand)] underline underline-offset-2"
-              >
-                Política de Privacidade
-              </Link>
-              .
+              seu consentimento, que você pode retirar quando quiser.
             </p>
 
-            <button
-              type="button"
-              onClick={() => setDetails((d) => !d)}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)]"
-            >
-              Personalizar
-              <ChevronDown
-                size={13}
-                style={{
-                  transform: details ? "rotate(180deg)" : "none",
-                  transition: "transform 0.2s",
-                }}
-              />
-            </button>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <button
+                type="button"
+                onClick={() => setCustomize((c) => !c)}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)]"
+              >
+                Personalizar
+                <ChevronDown
+                  size={13}
+                  style={{
+                    transform: customize ? "rotate(180deg)" : "none",
+                    transition: "transform 0.2s",
+                  }}
+                />
+              </button>
+              <Link
+                href="/privacidade"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] underline underline-offset-2"
+              >
+                Ver política completa
+                <ExternalLink size={12} />
+              </Link>
+            </div>
 
-            {details && (
+            {customize && (
               <div className="mt-3 space-y-2 border-t border-[var(--border)] pt-3">
                 {(["essential", ...OPTIONAL] as ConsentCategory[]).map((cat) => {
                   const info = CATEGORY_INFO[cat];
@@ -227,7 +303,7 @@ export function CookieConsent() {
               >
                 Recusar opcionais
               </button>
-              {details && (
+              {customize && (
                 <button
                   type="button"
                   onClick={handleSave}
