@@ -51,25 +51,34 @@ progresso conforme as fases forem executadas.
       Navbar/Table/KpiTile não foram testados ao vivo (ficam atrás de
       login; não criei conta de teste em produção sem combinar antes).
 
-## Fase 2 — Site público
+## Fase 2 — Site público ✅ concluída
 
-- [ ] **`app/page.tsx`** (landing) — `alt=""` em imagem puramente
-      decorativa, `alt` descritivo em imagem informativa (logo, ícones com
-      significado); conferir contraste dos textos sobre fundo
-      degradê/colorido (mínimo 4.5:1 pra texto normal, 3:1 pra texto
-      grande ≥18pt/14pt-bold) com o DevTools ou WebAIM Contrast Checker;
-      conferir que não pula nível de heading (h1→h2→h3, sem saltar).
-- [ ] **`app/components/Footer.tsx`** — troca os `href="#"` da coluna
-      "Suporte" por link real pra `/privacidade` e pro novo
-      `/acessibilidade`. Não mexe no resto do conteúdo (copy genérica de
-      "investimentos"/"Banco Central" é problema de conteúdo à parte).
-- [ ] **`app/acessibilidade/page.tsx`** (nova) — mesmo layout/componente
-      `Section` de `app/privacidade/page.tsx`: compromisso da NexusFi,
-      padrão seguido (WCAG 2.1 AA), o que foi feito nesta rodada,
-      limitações conhecidas (seção "Fora de escopo" da spec), contato via
-      `privacidade@nexusfi.com.br`. Adicionar `metadata` (title/description)
-      como a página de privacidade já faz.
-- [ ] `npm run lint` limpo + teste manual de teclado/contraste nesta fase.
+- [x] **`app/page.tsx`** (landing) — único `<img>` da página já tinha
+      `alt` descritivo (logo); heading order conferida, sem saltos
+      (h1→h2→h3). Contraste: rodei um script de varredura real no
+      navegador (canvas pra resolver as cores `lab()`/`oklch()` que o
+      Tailwind v4 usa, já que `getComputedStyle` não devolve mais
+      `rgb()` puro) — achou e corrigiu `text-slate-400` (~2.6:1),
+      `text-green-600` (~3.2:1), badge "Novo" e pílula/botão "Mais
+      completo"/"Assinar plano Pro" (gradiente claro demais, ~3.2–3.8:1).
+      Achado documentado, não corrigido: avatares de iniciais decorativos
+      (baixo impacto, cor por avatar teria que ser calculada uma a uma).
+      Achado extra: o modal de período de cobrança era um dialog
+      "hand-rolled" duplicando o `ui/Modal.tsx` sem nenhuma das
+      correções da Fase 1 — ganhou o mesmo tratamento (role/foco/Esc/
+      focus trap), mantendo a estilização própria (light-only) em vez de
+      trocar pelo Modal compartilhado (que usa tokens de tema e ficaria
+      ilegível com o modo escuro salvo de visita anterior ao app).
+- [x] **`app/components/Footer.tsx`** — links reais pra `/privacidade` e
+      `/acessibilidade` (o resto da coluna "Suporte" continua `href="#"`,
+      fora de escopo). Contraste do texto do rodapé (`text-blue-300/50`
+      e `/30`, ~3.1:1 e ~2.0:1) subido pra `/75` (~5.2:1).
+- [x] **`app/acessibilidade/page.tsx`** (nova) — mesmo layout/componente
+      `Section` de `app/privacidade/page.tsx`, com `metadata` própria.
+- [x] `npm run lint` limpo (só erros pré-existentes não relacionados) +
+      `tsc --noEmit` limpo. Testado no navegador: foco entra no modal de
+      período, Tab fica preso, Esc fecha e devolve o foco; links do
+      rodapé com `href` corretos.
 
 ## Fase 3 — Área logada
 
