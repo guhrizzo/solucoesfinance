@@ -469,6 +469,163 @@ textarea:focus {
   top: 8px;
 }
 
+/* Widget flutuante de acessibilidade (AccessibilityWidget.tsx) — botão +
+   painel com tamanho de texto, sublinhar links, reduzir animações e Libras.
+   Montado uma vez em layout.tsx, aparece em toda a plataforma. */
+.a11y-widget-btn {
+  position: fixed;
+  left: 20px;
+  z-index: 1500;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: none;
+  background: var(--brand);
+  color: var(--brand-on);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-pop);
+  transition: bottom 0.15s ease, background-color 0.15s ease;
+}
+.a11y-widget-btn:hover {
+  background: var(--brand-hover);
+}
+
+.a11y-widget-panel {
+  position: fixed;
+  left: 20px;
+  z-index: 1500;
+  width: 260px;
+  max-width: calc(100vw - 40px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-pop);
+  padding: 14px;
+  transition: bottom 0.15s ease;
+}
+
+.a11y-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.a11y-widget-close {
+  border: none;
+  background: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  display: flex;
+  padding: 2px;
+  border-radius: 6px;
+}
+.a11y-widget-close:hover {
+  color: var(--text);
+  background: var(--sunken);
+}
+
+.a11y-widget-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+}
+.a11y-widget-row-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.a11y-widget-steppers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.a11y-widget-steppers button {
+  min-width: 30px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--sunken);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.a11y-widget-steppers button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.a11y-widget-stepper-value {
+  font-variant-numeric: tabular-nums;
+  min-width: 44px !important;
+}
+
+.a11y-widget-switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--sunken);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.a11y-widget-switch[data-on] {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.a11y-widget-switch-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  transition: transform 0.15s ease;
+}
+.a11y-widget-switch[data-on] .a11y-widget-switch-thumb {
+  transform: translateX(14px);
+}
+
+.a11y-widget-reset {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-strong);
+  background: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.a11y-widget-reset:hover {
+  background: var(--sunken);
+  color: var(--text);
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--text-subtle);
@@ -726,6 +883,13 @@ html[data-reduced-motion="1"] *::after {
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
   scroll-behavior: auto !important;
+}
+
+/* "Sublinhar links" (widget de acessibilidade) — escolha manual do usuário,
+   ajuda a distinguir link de texto comum sem depender só da cor. */
+html[data-underline-links="1"] a[href] {
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
 }
 
 @media (prefers-color-scheme: dark) {

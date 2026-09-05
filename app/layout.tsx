@@ -5,6 +5,7 @@ import { ThemeInitializer } from "./components/ThemeInitializer";
 import { ForceMotion } from "./components/ForceMotion";
 import { AppShell } from "./components/AppShell";
 import { CookieConsent } from "./components/CookieConsent";
+import { AccessibilityWidget } from "./components/AccessibilityWidget";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -84,6 +85,15 @@ export default function RootLayout({
               var rm=localStorage.getItem('nexusfi-reduced-motion');
               if(rm==='1') document.documentElement.setAttribute('data-reduced-motion','1');
 
+              // Widget de acessibilidade (AccessibilityWidget.tsx): tamanho de
+              // texto e sublinhar links, aplicados antes da hidratação pra não
+              // piscar no recarregamento. Libras não entra aqui — o script do
+              // widget é carregado sob demanda pelo próprio componente.
+              var fs=localStorage.getItem('nexusfi-font-scale');
+              if(fs) document.documentElement.style.fontSize=fs+'%';
+              var ul=localStorage.getItem('nexusfi-underline-links');
+              if(ul==='1') document.documentElement.setAttribute('data-underline-links','1');
+
               // Keep in sync with AppShell.tsx's INTERNAL_PREFIXES list — this
               // is the pre-hydration value so the sidebar offset (globals.css)
               // never flashes on the first paint of a route change/hard load.
@@ -106,6 +116,7 @@ export default function RootLayout({
         <ForceMotion />
         <AppShell>{children}</AppShell>
         <CookieConsent />
+        <AccessibilityWidget />
       </body>
     </html>
   );
