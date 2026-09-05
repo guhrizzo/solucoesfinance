@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "Compromisso da NexusFi com a acessibilidade digital (WCAG 2.1 AA), o que já foi feito, o que está em andamento e como reportar uma barreira.",
 };
 
-const UPDATED = "4 de setembro de 2026";
+const UPDATED = "4 de setembro de 2026 (revisão pós-auditoria da área logada)";
 const CONTACT_EMAIL = "privacidade@nexusfi.com.br";
 
 function Section({
@@ -74,65 +74,96 @@ export default function AcessibilidadePage() {
 
       <Section title="O que já foi feito">
         <p>
-          Este trabalho está sendo entregue em fases; o que já está no ar:
+          Este trabalho foi entregue em fases, cobrindo o site público
+          (landing, cadastro, login, política de privacidade) e a área
+          logada inteira (dashboard, fluxo de caixa, contas a pagar/receber,
+          centro de custos, estoque, painel de vendas, impostos, relatórios
+          e configurações):
         </p>
         <ul className="list-disc space-y-1.5 pl-5">
           <li>
-            Navegação completa por teclado nas tabelas, cartões e menus que
-            antes só respondiam ao mouse, com indicador de foco visível.
+            Navegação completa por teclado em tabelas, cartões, menus e
+            filtros que antes só respondiam ao mouse, com indicador de foco
+            visível em toda a plataforma.
           </li>
           <li>
-            Janelas e diálogos (modais) anunciam seu papel e título pra
-            leitor de tela, prendem o foco enquanto abertos e devolvem o foco
-            pra quem os abriu ao fechar — incluindo fechar pela tecla Esc.
+            Janelas e diálogos (modais) — incluindo os quatro modais
+            principais de cadastro (contas a pagar, contas a receber,
+            impostos e centro de custos) — anunciam seu papel e título pra
+            leitor de tela, prendem o foco enquanto abertos e devolvem o
+            foco exatamente pra quem os abriu ao fechar, incluindo fechar
+            pela tecla Esc.
           </li>
           <li>
-            Menu de navegação com nome acessível em todo botão que só tem
-            ícone, e menus suspensos que informam se estão abertos ou
-            fechados.
+            Todo botão que só tem ícone (fechar, editar, excluir, navegar
+            entre fotos, alternar tema, menu da conta, etc.) tem um nome
+            acessível — mais de 30 corrigidos ao longo da auditoria — e
+            menus suspensos informam se estão abertos ou fechados.
           </li>
           <li>
-            Formulários de cadastro e login com rótulos ligados
-            corretamente aos campos.
+            Formulários de cadastro, login e das telas financeiras com
+            rótulos ligados corretamente aos campos (inclusive grupos de
+            opções, com <code>fieldset</code>/<code>legend</code>).
           </li>
           <li>
             Link de &ldquo;Pular para o conteúdo&rdquo;, visível ao navegar por teclado,
-            pra pular o menu repetido em toda página.
+            pra pular o menu repetido em toda página, com o foco realmente
+            indo pro conteúdo (não só a rolagem da página).
+          </li>
+          <li>
+            Ordem de títulos (H1 → H2 → H3) corrigida nas páginas onde
+            pulava um nível, sem mudar a aparência visual.
+          </li>
+          <li>
+            Os dois gráficos financeiros desenhados à mão no dashboard têm
+            uma alternativa em tabela (oculta visualmente, disponível pra
+            leitor de tela) com os mesmos valores mês a mês.
+          </li>
+          <li>
+            Redução de animações controlada por você — não pelo sistema
+            operacional —, em Configurações → Aparência, com opção
+            &ldquo;Reduzido&rdquo; que zera transições e desliga a rolagem suave.
           </li>
           <li>
             Aviso de cookies em versão compacta, com opção de expandir pra
             ver todas as categorias antes de decidir.
           </li>
           <li>
-            Checagem automática (lint) que passa a barrar, antes de ir pro
-            ar, os tipos de problema de acessibilidade encontrados nesta
-            auditoria.
+            Contraste de cor verificado com medição real (não só visual) em
+            todos os textos das telas revisadas, incluindo os tokens de cor
+            compartilhados por toda a plataforma — dois problemas de
+            contraste insuficiente encontrados nessa medição já foram
+            corrigidos.
+          </li>
+          <li>
+            Checagem automática (lint com <code>eslint-plugin-jsx-a11y</code>)
+            que passa a barrar, antes de ir pro ar, os tipos de problema de
+            acessibilidade encontrados nesta auditoria — hoje já cobrindo a
+            maior parte das páginas da área logada, com o restante do
+            repositório entrando aos poucos.
           </li>
         </ul>
-      </Section>
-
-      <Section title="O que está em andamento">
-        <p>
-          A auditoria da área logada (dashboard, fluxo de caixa, contas a
-          pagar/receber, estoque, vendas, impostos, relatórios) está em
-          progresso, tela por tela. Também está prevista uma opção pra
-          reduzir animações, controlada por você em Configurações, em vez de
-          depender da configuração do sistema operacional.
-        </p>
       </Section>
 
       <Section title="Limitações conhecidas">
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Relatórios exportados em PDF ainda não foram auditados.</li>
           <li>
-            Os gráficos financeiros (fluxo de caixa, indicadores do
-            dashboard) ainda não têm uma alternativa em texto/tabela
-            equivalente pra quem usa leitor de tela.
+            Dois modais secundários (edição de centro de custo dentro de
+            Centro de Custos, e os modais auxiliares de Estoque) ainda não
+            têm o mesmo tratamento completo de diálogo acessível dos quatro
+            modais principais — continuam utilizáveis por mouse e teclado,
+            mas sem a mesma prontidão para leitor de tela.
           </li>
           <li>
-            A verificação de contraste de cores foi feita visualmente nos
-            trechos revisados até agora, não por uma varredura automatizada
-            de toda a plataforma.
+            O teste com leitor de tela foi feito por inspeção da árvore de
+            acessibilidade e dos atributos ARIA, não com um leitor de tela
+            real (NVDA/Narrador) rodando ponta a ponta.
+          </li>
+          <li>
+            Algumas páginas fora do escopo desta rodada (Usuários, área de
+            desenvolvedor, assinatura, design system) ainda não foram
+            auditadas.
           </li>
         </ul>
       </Section>

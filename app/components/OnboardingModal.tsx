@@ -167,7 +167,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
     border:        "#2a3548",
     text:          "#e2e8f0",
     text2:         "#8899b4",
-    text3:         "#4a5568",
+    text3:         "#828fac", // WCAG AA: contraste ~4.95:1 sobre modal escuro #1c2230 (era #4a5568, ~2.11:1)
     optionBg:      "#1c2230",
     optionHoverBg: "#1e2a3a",
     optionHoverBorder: "#42a5f5",
@@ -185,7 +185,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
     ghostColor:    "#8899b4",
     ghostHoverBorder: "#4a5568",
     ghostHoverColor:  "#e2e8f0",
-    skipColor:     "#4a5568",
+    skipColor:     "#828fac", // WCAG AA: contraste ~4.95:1 sobre modal escuro #1c2230 (era #4a5568, ~2.11:1)
     scrollThumb:   "#2a3548",
     shadow:        "0 32px 80px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.3)",
   } : {
@@ -194,7 +194,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
     border:        "#e8eef8",
     text:          "#0d2247",
     text2:         "#64748b",
-    text3:         "#94a3b8",
+    text3:         "#64748b", // WCAG AA: contraste ~4.76:1 sobre modal claro #ffffff (era #94a3b8, ~2.56:1)
     optionBg:      "#ffffff",
     optionHoverBg: "#f0f8ff",
     optionHoverBorder: "#42a5f5",
@@ -212,7 +212,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
     ghostColor:    "#64748b",
     ghostHoverBorder: "#94a3b8",
     ghostHoverColor:  "#1e293b",
-    skipColor:     "#94a3b8",
+    skipColor:     "#64748b", // WCAG AA: contraste ~4.76:1 sobre modal claro #ffffff (era #94a3b8, ~2.56:1)
     scrollThumb:   "#d0daf0",
     shadow:        "0 32px 80px rgba(10,22,40,0.25), 0 8px 24px rgba(10,22,40,0.12)",
   };

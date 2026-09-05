@@ -21,7 +21,7 @@
   /* Texto */
   --text: #16202e;
   --text-muted: #5a6675;
-  --text-subtle: #8a94a2;
+  --text-subtle: #647485; /* WCAG AA: contraste ~4.8:1 sobre --surface branco (era #8a94a2, ~3.07:1) */
 
   /* Marca */
   --brand: #1f6feb;
@@ -221,7 +221,7 @@
 
   --text: #e6e9ee;
   --text-muted: #99a3b2;
-  --text-subtle: #67717e;
+  --text-subtle: #7d8798; /* WCAG AA: contraste ~4.8:1 sobre --surface escuro (era #67717e, ~3.52:1) */
 
   --brand: #4d92ff;
   --brand-hover: #6aa4ff;

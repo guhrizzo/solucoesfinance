@@ -103,13 +103,13 @@ progresso conforme as fases forem executadas.
         `app/relatorios/page.tsx`, `app/configuracoes/**` — auditados
         (grep por botão/link só-com-ícone e por `onClick` em elemento
         não-nativo); nenhum achado do mesmo tipo dos corrigidos acima.
-  - [ ] **Lacuna que ficou aberta**: ordem de heading pula nível em várias
-        páginas (ex.: `h1` direto pra `h3` nos cards de KPI, sem `h2` no
-        meio — `estoque/page.tsx`, `vendas/page.tsx`, `CashFlow.tsx` entre
-        outras). É só troca de nome de tag (o estilo vem de `className`,
-        não do tag), mas o volume em páginas grandes que não dá pra ver
-        rodando pediu mais cautela do que dava pra exercer só lendo
-        código — fica pra uma rodada futura, dedicada só a isso.
+  - [x] **Lacuna fechada na Fase 4**: ordem de heading corrigida em
+        `estoque/page.tsx`, `vendas/page.tsx`, `costCenter/page.tsx` (h1
+        adicionado), `relatorios/page.tsx`,
+        `configuracoes/AparenciaTab.tsx` e `configuracoes/FeedbackTab.tsx`.
+        Confirmado com `git stash` que não existe nenhum reset de CSS em
+        `h1`–`h6`/`p` no repo, então trocar o nome da tag não muda nada
+        visualmente.
 - [x] **Reduzir animações** (controle manual, não segue o SO):
   - [x] `app/layout.tsx` — script inline lê
         `localStorage['nexusfi-reduced-motion']` e aplica
@@ -134,15 +134,60 @@ progresso conforme as fases forem executadas.
       fechada (Fase 4 ou rodada futura), pra não travar o lint com um
       problema conhecido e ainda não corrigido.
 
-## Fase 4 — Fechamento
+## Fase 4 — Fechamento ✅ concluída (com lacunas documentadas)
 
-- [ ] Navegação 100% por teclado ponta a ponta: login → dashboard → abrir
-      um lançamento numa tabela → editar e salvar num modal.
-- [ ] Smoke test com leitor de tela (Narrador do Windows ou NVDA) nos
-      mesmos três fluxos.
-- [ ] Verificação de contraste nos textos tocados nas Fases 1–3.
-- [ ] `npm run lint` limpo no repo inteiro, sem nenhum arquivo restante na
-      lista de exceção do `jsx-a11y`.
-- [ ] Revisar o texto de `/acessibilidade` pra refletir o que de fato foi
-      entregue (atualizar "o que foi feito" e "limitações conhecidas" com
-      o resultado real, não a previsão da spec).
+- [x] Criada uma conta de teste descartável em produção
+      (`gustavorizzo159+a11ytest@gmail.com`) pra poder testar de verdade,
+      logado, em vez de só ler código — decisão combinada com o usuário no
+      início desta fase. **Pendente**: o usuário decidir se apaga essa
+      conta (não é algo que eu apago sozinho).
+- [x] Navegação por teclado testada ao vivo nos 4 modais principais de
+      cadastro (contas a pagar, contas a receber, impostos, centro de
+      custos): abre com foco dentro, Tab fica preso no diálogo, Esc fecha,
+      foco volta pro botão que abriu. Também testado: skip link (foco vai
+      pro conteúdo, não só rolagem), checkbox de aceite no cadastro, menu
+      da Navbar. Essa varredura ao vivo achou e corrigiu 3 categorias de
+      bug que a leitura de código sozinha não pegou: ~25 botões só-com-ícone
+      sem `aria-label` que um regex mal-formado tinha deixado passar, os 4
+      modais principais sem tratamento de diálogo completo, e uma corrida
+      entre `autofocus` nativo e o `useEffect` do próprio modal que fazia o
+      foco voltar pro campo errado ao fechar.
+      Não testado à parte (redundante com o acima, mesmo componente de
+      modal): abrir especificamente uma linha existente de uma tabela pra
+      editar — testado em vez disso pelo fluxo de criar uma conta nova, que
+      usa exatamente o mesmo modal/JSX/ARIA que o de editar.
+- [x] Smoke test de acessibilidade nos mesmos fluxos, por inspeção direta
+      da árvore de acessibilidade e dos atributos ARIA renderizados (não
+      há NVDA/Narrador disponível neste ambiente de teste automatizado) —
+      ver limitação registrada em `/acessibilidade`.
+- [x] Verificação de contraste nos textos tocados nas Fases 1–3, com
+      medição real (canvas, não estimativa visual) na landing (Fase 2) e,
+      nesta fase, na área logada autenticada (dashboard). Achados e
+      corrigidos:
+  - `app/components/OnboardingModal.tsx` — textos secundários do
+    onboarding (`text3`/`skipColor` no tema claro e escuro) em ~2.1:1 e
+    ~2.6:1; trocados por tons que passam de ~4.8:1.
+  - Token compartilhado `--text-subtle` (`globals.css`, usado como
+    `--nav-text-3`/`--cf-text-3`/`--db-text-3` em toda a plataforma) em
+    ~3.5:1 no tema escuro e ~3.1:1 no tema claro contra as superfícies
+    reais da aplicação; corrigido pra ~4.8:1 nos dois temas. Esse era o
+    token do "Administrador" no menu da Navbar e das mensagens
+    "Nenhuma X" (contas/transações/despesas) do dashboard.
+  - Uma primeira varredura automatizada apontou mais 8 falsos positivos
+    (textos coloridos sobre fundos com transparência, ex. os cartões de
+    "Saldo atual"/"Entradas previstas" da projeção de fluxo de caixa) —
+    causados por um bug no próprio script de auditoria que não fazia a
+    composição alfa do fundo translúcido sobre a cor real por trás; ao
+    corrigir o script, confirmado que esses textos já passavam
+    (4.7–6.8:1).
+- [x] `npm run lint` limpo nas páginas cobertas pelas Fases 1–4 (comparado
+      via `git stash`, zero achados novos). **Não** atingido: zerar por
+      completo a lista de exceção do `jsx-a11y` no repo inteiro — ficaram
+      de fora desta rodada `app/users/page.tsx`, `app/debug/**`,
+      `app/developer/**`, `app/assinatura/**` e `app/design-system/**`,
+      que não faziam parte do escopo original de 10 páginas + configurações.
+- [x] Revisado o texto de `/acessibilidade` pra refletir o que de fato foi
+      entregue nas 4 fases (não mais a previsão da spec), incluindo as
+      limitações conhecidas que ficaram em aberto (os 2 modais secundários
+      sem tratamento completo de diálogo, PDF não auditado, teste com
+      leitor de tela real não feito, páginas fora de escopo).
