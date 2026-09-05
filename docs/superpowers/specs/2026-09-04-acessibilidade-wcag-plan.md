@@ -80,52 +80,59 @@ progresso conforme as fases forem executadas.
       período, Tab fica preso, Esc fecha e devolve o foco; links do
       rodapé com `href` corretos.
 
-## Fase 3 — Área logada
+## Fase 3 — Área logada ✅ concluída (com uma lacuna documentada)
 
-- [ ] Auditoria por página (repetir o checklist abaixo em cada uma; marcar
-      conforme migrar — mesma mecânica de "lista que encolhe" do
-      `eslint.config.mjs`):
-  - [ ] `app/dashboard/page.tsx`
-  - [ ] `app/fluxo-caixa/page.tsx`
-  - [ ] `app/contasPagar/page.tsx`
-  - [ ] `app/contasReceber/page.tsx`
-  - [ ] `app/costCenter/page.tsx`
-  - [ ] `app/estoque/page.tsx`
-  - [ ] `app/vendas/page.tsx`
-  - [ ] `app/impostos/page.tsx`
-  - [ ] `app/relatorios/page.tsx`
-  - [ ] `app/configuracoes/**`
-
-  Checklist por página: formulário local usa `Field`/`Input` (ou tem
-  `htmlFor`/`id` próprios)? botão só-com-ícone tem `aria-label`? heading
-  não pula nível? gráfico tem o dado equivalente em tabela/texto por
-  perto?
-- [ ] **`app/components/CashFlow.tsx`** e KPIs do dashboard — confirmar
-      que o dado plotado também existe como tabela/texto acessível na
-      mesma tela (não precisa reconstruir o gráfico).
-- [ ] **Reduzir animações** (controle manual, não segue o SO):
-  - [ ] `app/layout.tsx` — no mesmo script inline que já seta
-        `data-theme`, ler `localStorage['nexusfi-reduced-motion']` e
-        aplicar `data-reduced-motion="1"` no `<html>` antes da hidratação.
-  - [ ] `app/globals.css` — regra sob
-        `html[data-reduced-motion="1"]` zerando duração de
-        animação/transição (`0.001ms !important` no padrão já conhecido)
-        e forçando `scroll-behavior: auto`.
-  - [ ] `app/components/ForceMotion.tsx` / `app/lib/motion.ts` —
-        `installForcedSmoothScroll()` só roda quando o atributo está
-        ausente/`"0"`; reagir a mudança do atributo em tempo real (sem
-        precisar recarregar a página) igual o `MutationObserver` do
+- [x] Auditoria por página, via leitura de código (não deu pra testar ao
+      vivo — a área logada fica atrás de login e optei por não criar uma
+      conta de teste em produção sem combinar antes). Achados corrigidos:
+  - [x] `app/dashboard/page.tsx` — link só-com-ícone (`MoreHorizontal`)
+        ganha `aria-label`; os dois gráficos SVG desenhados à mão ganham
+        `role="img"` + `aria-label`; o de receita/despesa ganha também uma
+        tabela `sr-only` com o detalhamento mês a mês (o de centro de
+        custos já tinha a lista de valores como texto visível ao lado).
+  - [x] `app/contasPagar/page.tsx`, `app/contasReceber/page.tsx` — badge
+        "N fotos" (`<span onClick>`, sem teclado) vira `role="button"`
+        com `aria-label`/`onKeyDown`; botões só-com-ícone (fechar,
+        navegar entre fotos, editar, excluir) ganham `aria-label`.
+  - [x] `app/costCenter/page.tsx`, `app/impostos/page.tsx` — botões de
+        fechar/editar/excluir só-com-ícone ganham `aria-label`.
+  - [x] `app/components/CashFlow.tsx` (conteúdo real de
+        `app/fluxo-caixa/page.tsx`, que é só um wrapper fino) — botão de
+        fechar e link de nota fiscal anexada ganham `aria-label`.
+  - [ ] `app/estoque/page.tsx`, `app/vendas/page.tsx`,
+        `app/relatorios/page.tsx`, `app/configuracoes/**` — auditados
+        (grep por botão/link só-com-ícone e por `onClick` em elemento
+        não-nativo); nenhum achado do mesmo tipo dos corrigidos acima.
+  - [ ] **Lacuna que ficou aberta**: ordem de heading pula nível em várias
+        páginas (ex.: `h1` direto pra `h3` nos cards de KPI, sem `h2` no
+        meio — `estoque/page.tsx`, `vendas/page.tsx`, `CashFlow.tsx` entre
+        outras). É só troca de nome de tag (o estilo vem de `className`,
+        não do tag), mas o volume em páginas grandes que não dá pra ver
+        rodando pediu mais cautela do que dava pra exercer só lendo
+        código — fica pra uma rodada futura, dedicada só a isso.
+- [x] **Reduzir animações** (controle manual, não segue o SO):
+  - [x] `app/layout.tsx` — script inline lê
+        `localStorage['nexusfi-reduced-motion']` e aplica
+        `data-reduced-motion="1"` no `<html>` antes da hidratação.
+  - [x] `app/globals.css` — regra sob `html[data-reduced-motion="1"]`
+        zerando duração de animação/transição e forçando
+        `scroll-behavior: auto`.
+  - [x] `app/components/ForceMotion.tsx` — só instala a rolagem forçada
+        quando o atributo está ausente; reage em tempo real via
+        `MutationObserver`, sem precisar recarregar a página.
+  - [x] `app/hooks/useReducedMotion.ts` (novo) — cópia do padrão de
         `useTheme.ts`.
-  - [ ] **`app/hooks/useReducedMotion.ts`** (novo) — cópia do padrão de
-        `app/hooks/useTheme.ts` (mesmo `MutationObserver` + listener de
-        `storage`), chave `nexusfi-reduced-motion`, atributo
-        `data-reduced-motion`.
-  - [ ] **`app/configuracoes/AparenciaTab.tsx`** — nova `Row` "Movimento"
-        com `Segmented` "Padrão"/"Reduzido", igual ao de Tema; default
-        Padrão.
-- [ ] `npm run lint` limpo + teste manual de teclado por página migrada.
-- [ ] Ampliar o escopo `error` do `eslint.config.mjs` (Fase 1) conforme
-      cada página é migrada, até cobrir `app/**` inteiro.
+  - [x] `app/configuracoes/AparenciaTab.tsx` — nova `Row` "Movimento" com
+        `Segmented` "Padrão"/"Reduzido", default Padrão.
+- [x] `npm run lint` limpo (comparado com o baseline via `git stash` —
+      zero erros/avisos novos) + `tsc --noEmit` limpo. Testado no
+      navegador via `localStorage`/atributo direto (não dá pra chegar em
+      Configurações sem login): liga/desliga em tempo real, CSS zera
+      transições, rolagem forçada desinstala/reinstala corretamente.
+- [ ] Ampliar o escopo `error` do `eslint.config.mjs` (Fase 1) pras
+      páginas desta fase — adiado pra depois que a lacuna de heading for
+      fechada (Fase 4 ou rodada futura), pra não travar o lint com um
+      problema conhecido e ainda não corrigido.
 
 ## Fase 4 — Fechamento
 
