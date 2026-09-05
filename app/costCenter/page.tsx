@@ -302,6 +302,7 @@ function ConfirmModal({
             onClick={onCancel}
             disabled={loading}
             className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
+            aria-label="Fechar"
           >
             <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
@@ -437,7 +438,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
               <Check size={11} /> Despesas "Pago" sincronizam com fluxo de caixa
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer" aria-label="Fechar">
             <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
         </div>

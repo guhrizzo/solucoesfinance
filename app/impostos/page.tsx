@@ -972,11 +972,11 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             <Check size={13} /> Imposto pago
                         </div>
                     )}
-                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer"
+                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label="Editar"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
-                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer"
+                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label="Excluir"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>

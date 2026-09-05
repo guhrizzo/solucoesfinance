@@ -341,7 +341,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {(nfPreview || nfUrl) && (
-                    <a href={nfPreview || nfUrl} target="_blank" rel="noreferrer"
+                    <a href={nfPreview || nfUrl} target="_blank" rel="noreferrer" aria-label="Ver nota fiscal anexada (abre em nova aba)"
                       className="p-1.5 rounded-lg hover:bg-opacity-70 cursor-pointer"
                       style={{ background: "var(--status-info-bg)", color: "var(--status-info-text)" }}>
                       <ExternalLink size={12} />
@@ -588,7 +588,7 @@ function ImportModal({ open, onClose, onImport }: {
             </div>
           </div>
           {step !== "saving" && (
-            <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer"
+            <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer" aria-label="Fechar"
               style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
               <X size={16} />
             </button>

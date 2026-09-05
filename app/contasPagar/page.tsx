@@ -615,7 +615,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                             Quantos dias antes do vencimento alertar?
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer"
+                    <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" aria-label="Fechar"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -702,12 +702,12 @@ function PhotoGalleryModal({ open, photos, onClose }: {
                 {/* Navegação */}
                 {photos.length > 1 && (
                     <>
-                        <button onClick={handlePrev}
+                        <button onClick={handlePrev} aria-label="Foto anterior"
                             className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
                             style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                             <ChevronLeft size={24} />
                         </button>
-                        <button onClick={handleNext}
+                        <button onClick={handleNext} aria-label="Próxima foto"
                             className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
                             style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                             <ChevronRight size={24} />
@@ -724,7 +724,7 @@ function PhotoGalleryModal({ open, photos, onClose }: {
                 </div>
 
                 {/* Botão fechar */}
-                <button onClick={onClose}
+                <button onClick={onClose} aria-label="Fechar"
                     className="absolute top-4 right-4 p-2 rounded-lg cursor-pointer transition-all hover:scale-110"
                     style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                     <X size={20} />
@@ -927,8 +927,18 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                         </span>
                                     )}
                                     {bill?.photos?.length > 0 && (
-                                        <span onClick={() => setShowPhotos(true)}
-                                            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full cursor-pointer transition-all hover:opacity-80"
+                                        <span
+                                            onClick={() => setShowPhotos(true)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    setShowPhotos(true);
+                                                }
+                                            }}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-label={`Ver ${bill?.photos?.length} foto${bill?.photos?.length !== 1 ? "s" : ""} anexada${bill?.photos?.length !== 1 ? "s" : ""}`}
+                                            className="nxfi-clickable-focus flex items-center gap-1 text-xs px-2 py-0.5 rounded-full cursor-pointer transition-all hover:opacity-80"
                                             style={{ background: "var(--brand-weak)", color: "var(--brand)" }}>
                                             <ImageIcon size={10} /> {bill?.photos?.length} foto{bill?.photos?.length !== 1 ? "s" : ""}
                                         </span>
@@ -998,11 +1008,11 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             <Check size={13} /> Conta paga
                         </div>
                     )}
-                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer"
+                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label="Editar"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
-                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer"
+                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label="Excluir"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>

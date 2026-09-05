@@ -706,11 +706,27 @@ textarea {
 /* ACCESSIBILITY */
 /* ────────────────────────────────────────────────────────────────── */
 
-/* Movimento forçado: o usuário pediu explicitamente para MANTER animações e rolagem
-   suave mesmo com "desempenho melhorado" / prefers-reduced-motion ligado.
-   Por isso NÃO zeramos as durations aqui. A suavização de scroll que o
-   navegador desliga nesse modo é reimposta via JS em
-   app/components/ForceMotion.tsx + app/lib/motion.ts. */
+/* Movimento forçado por padrão: o usuário pediu explicitamente para MANTER
+   animações e rolagem suave mesmo com "desempenho melhorado" /
+   prefers-reduced-motion ligado no SO — por isso NÃO seguimos essa media
+   query aqui. A suavização de scroll que o navegador desliga nesse modo é
+   reimposta via JS em app/components/ForceMotion.tsx + app/lib/motion.ts.
+
+   "Reduzir animações" (Configurações > Aparência, app/hooks/useReducedMotion.ts)
+   é a alternativa: uma escolha manual do usuário DENTRO do app, não ligada
+   ao SO. Quando ativa, o <html> ganha data-reduced-motion="1" e a regra
+   abaixo zera duração de animação/transição — mesmo reset que
+   prefers-reduced-motion normalmente faria, só que atrás de um controle
+   explícito em vez de automático. */
+html[data-reduced-motion="1"] *,
+html[data-reduced-motion="1"] *::before,
+html[data-reduced-motion="1"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: -0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
 
 @media (prefers-color-scheme: dark) {
   [data-theme] {

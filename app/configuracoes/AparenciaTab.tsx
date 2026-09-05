@@ -3,10 +3,11 @@
 // app/configuracoes/AparenciaTab.tsx
 
 import { useEffect, useState } from "react";
-import { Sun, Moon, PanelLeft, PanelTop, BarChart2, LineChart, PieChart } from "lucide-react";
+import { Sun, Moon, PanelLeft, PanelTop, BarChart2, LineChart, PieChart, Zap, ZapOff } from "lucide-react";
 import { Card } from "../components/ui";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
 
@@ -82,6 +83,7 @@ function Row({
 export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
   const { dark, setTheme } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
+  const { reduced, setReducedMotion } = useReducedMotion();
 
   const [chartType, setChartType] = useState<ChartType>("bar");
 
@@ -120,6 +122,16 @@ export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
     );
   };
 
+  const changeMotion = (next: "padrao" | "reduzido") => {
+    const nextReduced = next === "reduzido";
+    if (nextReduced === reduced) return;
+    setReducedMotion(nextReduced);
+    showToast(
+      nextReduced ? "Animações reduzidas." : "Animações no padrão.",
+      "success"
+    );
+  };
+
   return (
     <Card padding="lg" className="space-y-6">
       <Row title="Tema" desc="Vale para este dispositivo.">
@@ -142,6 +154,22 @@ export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
           options={[
             { value: "horizontal", label: "Topo", icon: PanelTop },
             { value: "vertical", label: "Lateral", icon: PanelLeft },
+          ]}
+        />
+      </Row>
+
+      <div style={{ height: 1, background: "var(--cf-border)" }} />
+
+      <Row
+        title="Movimento"
+        desc="Anima transições e efeitos de rolagem. Reduzir deixa a navegação mais direta, sem depender da configuração do sistema."
+      >
+        <Segmented
+          value={reduced ? "reduzido" : "padrao"}
+          onChange={changeMotion}
+          options={[
+            { value: "padrao", label: "Padrão", icon: Zap },
+            { value: "reduzido", label: "Reduzido", icon: ZapOff },
           ]}
         />
       </Row>

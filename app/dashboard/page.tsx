@@ -617,7 +617,11 @@ export default function Dashboard() {
                     );
                   };
                   return (
-                    <svg width="180" height="180" viewBox="0 0 180 180">
+                    <svg
+                      width="180" height="180" viewBox="0 0 180 180"
+                      role="img"
+                      aria-label={`Gráfico de pizza: receita ${Math.round(revFrac * 100)}% e despesa ${100 - Math.round(revFrac * 100)}% do total do ano — detalhamento mês a mês na tabela abaixo`}
+                    >
                       {slice(0, revFrac, "var(--brand-500)", "rev")}
                       {slice(revFrac, 1, "var(--brand-400)", "exp")}
                     </svg>
@@ -626,7 +630,11 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="relative">
-              <svg viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}>
+              <svg
+                viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}
+                role="img"
+                aria-label={`Gráfico de ${chartType === "line" ? "linha" : "barras"}: receita e despesa mensal de ${refDate.getFullYear()} — detalhamento mês a mês na tabela abaixo`}
+              >
                 {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
                   <g key={i}>
                     <line x1="40" y1={10 + (1 - t) * 160} x2="590" y2={10 + (1 - t) * 160} stroke="var(--db-border)" strokeWidth="1" />
@@ -718,6 +726,28 @@ export default function Dashboard() {
               )}
               </div>
             )}
+            {/* Alternativa em texto do gráfico acima, pra quem usa leitor de
+                tela — mesmos dados de chartData, mês a mês. Só visível pra
+                tecnologia assistiva (sr-only). */}
+            <table className="sr-only">
+              <caption>Receita e despesa mensal de {refDate.getFullYear()}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Mês</th>
+                  <th scope="col">Receita</th>
+                  <th scope="col">Despesa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {months.map((m, i) => (
+                  <tr key={m}>
+                    <th scope="row">{m}</th>
+                    <td>{toBRL(chartData.revenues[i])}</td>
+                    <td>{toBRL(chartData.expenses[i])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
               {[
                 { label:"Total receitas (ano)", val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-500)" },
@@ -848,12 +878,16 @@ export default function Dashboard() {
           <div className="side-card p-4 md:p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centro de custos</h2>
-              <a href="/costCenter" style={{ color: "var(--db-text-2)" }} className="transition-colors no-print"><MoreHorizontal size={16} /></a>
+              <a href="/costCenter" aria-label="Ver todos os centros de custo" style={{ color: "var(--db-text-2)" }} className="transition-colors no-print"><MoreHorizontal size={16} /></a>
             </div>
             <div className="flex justify-center mb-4 md:mb-5">
-              <svg width="130" height="130" viewBox="0 0 140 140">
+              <svg
+                width="130" height="130" viewBox="0 0 140 140"
+                role="img"
+                aria-label="Gráfico de rosca: despesas por centro de custo — detalhamento na lista abaixo"
+              >
                 {(() => {
-                  const circ = 2 * Math.PI * 52; 
+                  const circ = 2 * Math.PI * 52;
                   let offset = 0;
                   return costCenterData.centers.map((cc) => {
                     const dash = (cc.pct / 100) * circ;

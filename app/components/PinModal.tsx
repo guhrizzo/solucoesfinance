@@ -153,6 +153,7 @@ export default function PinModal({
                         onClick={onClose}
                         className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
+                        aria-label="Fechar"
                     >
                         <X size={15} />
                     </button>

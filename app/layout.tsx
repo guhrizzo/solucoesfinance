@@ -77,6 +77,13 @@ export default function RootLayout({
               var l=localStorage.getItem('nexusfi-navbar-layout')||'horizontal';
               document.documentElement.setAttribute('data-nav-layout',l);
 
+              // "Reduzir animações" (Configurações > Aparência) — escolha
+              // manual do usuário dentro do app, não segue prefers-reduced-
+              // motion do SO. Aplicado antes da hidratação pra não piscar
+              // animação enquanto o React ainda não montou.
+              var rm=localStorage.getItem('nexusfi-reduced-motion');
+              if(rm==='1') document.documentElement.setAttribute('data-reduced-motion','1');
+
               // Keep in sync with AppShell.tsx's INTERNAL_PREFIXES list — this
               // is the pre-hydration value so the sidebar offset (globals.css)
               // never flashes on the first paint of a route change/hard load.
