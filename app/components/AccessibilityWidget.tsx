@@ -39,48 +39,68 @@ function applyUnderline(on: boolean) {
   else document.documentElement.removeAttribute("data-underline-links");
 }
 
-// VLibras não tem uma API de "destruir" — uma vez injetado, mantemos o script
-// carregado pelo resto da sessão e só escondemos/mostramos o contêiner que
-// ele próprio gerencia (é onde a biblioteca desenha seu ícone e avatar).
+// VLibras não tem uma API de "destruir". A versão atual do plugin
+// (vlibras-plugin.js, v7.x) injeta o botão flutuante dentro de um
+// Shadow DOM, então NÃO adianta mirar os IDs internos
+// (#vlibras-access / #vlibras-button / #vlibras-popup) a partir de um
+// <style> global — o shadow boundary bloqueia esses seletores. Os únicos
+// elementos que ficam no light DOM (e portanto atingíveis) são:
+//   #vlibras-access-wrapper  — host do Shadow DOM = o botão flutuante
+//   #vlibras-app-root        — painel do avatar quando aberto
+// Também mantemos os seletores legados ([vw]*, #vlibras-access) por
+// segurança, caso o usuário esteja numa versão antiga do plugin.
+const VLIBRAS_HIDE_STYLE_ID = "vlibras-hide-style";
+
 function showVLibras() {
-  const existing = document.querySelector<HTMLElement>("[vw]");
-  if (existing) {
-    existing.style.display = "";
-    // Restaura também os filhos que podem ter sido escondidos individualmente
-    existing.querySelectorAll<HTMLElement>("[vw-plugin-wrapper], [vw-access-button]").forEach((el) => {
-      el.style.display = "";
-    });
+  // Remove a regra de ocultação para revelar elementos existentes
+  document.getElementById(VLIBRAS_HIDE_STYLE_ID)?.remove();
+
+  // Se o script já foi injetado e o widget já existe, não faz nada
+  // (evita empilhar vários hosts a cada vez que o usuário liga/desliga).
+  if (document.getElementById("vlibras-access-wrapper")) return;
+
+  // Remove container legado [vw] se existir de tentativas anteriores
+  document.querySelector("[vw]")?.remove();
+
+  // O plugin do governo não exige container HTML — o próprio script
+  // injeta #vlibras-access diretamente no body ao inicializar.
+  // Se o script já foi carregado (sessão anterior), chama o Widget novamente.
+  const w = window as typeof window & { VLibras?: { Widget: new (url: string) => unknown } };
+  if (w.VLibras) {
+    new w.VLibras.Widget("https://vlibras.gov.br/app");
     return;
   }
-  const container = document.createElement("div");
-  container.setAttribute("vw", "");
-  container.className = "enabled";
-  container.innerHTML =
-    '<div vw-access-button class="active"></div>' +
-    '<div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>';
-  document.body.appendChild(container);
 
   const script = document.createElement("script");
   script.id = "vlibras-script";
   script.src = "https://vlibras.gov.br/app/vlibras-plugin.js";
   script.onload = () => {
-    const w = window as typeof window & { VLibras?: { Widget: new (url: string) => unknown } };
-    if (w.VLibras) new w.VLibras.Widget("https://vlibras.gov.br/app");
+    const w2 = window as typeof window & { VLibras?: { Widget: new (url: string) => unknown } };
+    if (w2.VLibras) new w2.VLibras.Widget("https://vlibras.gov.br/app");
   };
   document.body.appendChild(script);
 }
 
 function hideVLibras() {
-  // Esconde o container principal que criamos
-  const existing = document.querySelector<HTMLElement>("[vw]");
-  if (existing) existing.style.display = "none";
-
-  // O VLibras também pode injetar elementos adicionais diretamente no <body>
-  // (ex.: o painel expandido e o avatar). Escondemos todos os nós com
-  // atributos vw-* para garantir limpeza total.
-  document.querySelectorAll<HTMLElement>("[vw-plugin-wrapper], [vw-access-button]").forEach((el) => {
-    el.style.display = "none";
-  });
+  // Injeta uma <style> com os IDs reais que o VLibras cria, mais iframe
+  // para cobrir o painel do avatar quando aberto.
+  if (!document.getElementById(VLIBRAS_HIDE_STYLE_ID)) {
+    const style = document.createElement("style");
+    style.id = VLIBRAS_HIDE_STYLE_ID;
+    style.textContent = [
+      // v7.x — elementos reais no light DOM
+      "#vlibras-access-wrapper,",
+      "#vlibras-app-root,",
+      // legado / versões antigas do plugin
+      "#vlibras-access,",
+      "#vlibras-button,",
+      "#vlibras-popup,",
+      "iframe[src*='vlibras.gov.br'],",
+      "[vw], [vw-access-button], [vw-plugin-wrapper]",
+      "{ display: none !important; }",
+    ].join(" ");
+    document.head.appendChild(style);
+  }
 }
 
 function ToggleRow({
