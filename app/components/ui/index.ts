@@ -1,3 +1,4 @@
+export { Avatar } from "./Avatar";
 export { Button } from "./Button";
 export { Badge, type BadgeStatus } from "./Badge";
 export { Pill, type PillTone } from "./Pill";

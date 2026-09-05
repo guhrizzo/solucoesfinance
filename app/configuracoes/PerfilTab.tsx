@@ -4,7 +4,8 @@
 
 import { useEffect, useId, useState } from "react";
 import { Check, Lock } from "lucide-react";
-import { Card, Button, Input } from "../components/ui";
+import { Avatar, Card, Button, Input } from "../components/ui";
+import { useProfilePhoto } from "../hooks/useProfilePhoto";
 import type { AccountScope } from "../hooks/useAccountScope";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
@@ -103,8 +104,7 @@ export default function PerfilTab({
     };
   }, [scope.loading, scope.ownerUid]);
 
-  const initial =
-    user.displayName?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? "U";
+  const photo = useProfilePhoto();
 
   async function handleSaveName() {
     if (!nameDirty || savingName) return;
@@ -157,12 +157,7 @@ export default function PerfilTab({
     <div className="space-y-5">
       {/* ── Cabeçalho do perfil ── */}
       <Card padding="lg" className="flex items-center gap-4">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg shrink-0"
-          style={{ background: "linear-gradient(135deg, var(--brand-500), var(--brand-400))" }}
-        >
-          {initial}
-        </div>
+        <Avatar src={photo.src} initial={photo.initial} size={56} radius={16} />
         <div className="min-w-0">
           <p className="font-bold truncate" style={{ color: "var(--db-text)" }}>
             {user.displayName ?? "Usuário"}
