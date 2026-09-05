@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useId, useRef } from "react";
 import {
     Plus, X, Check, Trash2, Edit3, AlertTriangle,
     CalendarClock, Loader2, Search, Filter,
@@ -25,6 +25,9 @@ import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "../components/AuditTrail";
 import SeriesScopeDialog, { type SeriesScope } from "../components/SeriesScopeDialog";
 import { addMonthsClamped, monthLabel } from "@/lib/dateSeries";
+
+const FOCUSABLE_SELECTOR =
+    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -195,6 +198,10 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const [err, setErr] = useState("");
     const [pinOpen, setPinOpen] = useState(false);
     const [pinErr, setPinErr] = useState("");
+    const amtId = useId();
+    const dueDateId = useId();
+    const installmentsId = useId();
+    const notesId = useId();
 
     useEffect(() => {
         if (!open) return;
@@ -399,32 +406,32 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
+                            <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                                 {isSeries ? "Valor por parcela (R$)" : "Valor (R$)"}
                             </label>
-                            <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
+                            <input id={amtId} inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
+                            <label htmlFor={dueDateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                                 {isSeries ? "1º vencimento" : "Vencimento"}
                             </label>
-                            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                            <input id={dueDateId} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                     </div>
 
                     {/* Categoria */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
+                    <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Categoria</legend>
                         <div className="grid grid-cols-3 gap-2">
                             {CATEGORIES.map(cat => {
                                 const sel = category === cat.label;
                                 return (
-                                    <button key={cat.label} onClick={() => setCategory(cat.label)}
+                                    <button key={cat.label} type="button" onClick={() => setCategory(cat.label)}
                                         className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all"
                                         style={sel
                                             ? { borderColor: cat.color, background: cat.color + "18", color: cat.color }
@@ -435,11 +442,11 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                 );
                             })}
                         </div>
-                    </div>
+                    </fieldset>
 
                     {/* Recorrência */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Recorrência</label>
+                    <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Recorrência</legend>
                         <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
                             {([["unica", "Única"], ["numeral", "Numeral"]] as [Recurrence, string][]).map(([r, label]) => {
                                 const disabled = r === "numeral" && !numeralAllowed;
@@ -461,10 +468,11 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         {isSeries && (
                             <div className="pt-1 space-y-2">
                                 <div className="flex items-center gap-3">
-                                    <label className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>
+                                    <label htmlFor={installmentsId} className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>
                                         Parcelas mensais
                                     </label>
                                     <input
+                                        id={installmentsId}
                                         type="number" min={2} max={60} value={installments}
                                         onChange={e => setInstallments(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
                                         disabled={!!editing}
@@ -485,11 +493,11 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                 ) : null}
                             </div>
                         )}
-                    </div>
+                    </fieldset>
 
                     {/* Status */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Status inicial</label>
+                    <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Status inicial</legend>
                         <div className="grid grid-cols-2 gap-2">
                             {(["pendente", "pago", "agendado", "vencido"] as BillStatus[]).map(s => {
                                 const meta = STATUS_META[s];
@@ -510,13 +518,15 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                 Toda série começa pendente. Baixe cada parcela ao pagá-la.
                             </p>
                         )}
-                    </div>
+                    </fieldset>
 
                     {/* Fotos */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
+                        {/* Não é <label> — não há um único campo associado (galeria +
+                            botão de upload logo abaixo). */}
+                        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                             Fotos (boleto, nota fiscal...) — {photos.length}
-                        </label>
+                        </p>
                         
                         {/* Gallery de fotos */}
                         {photos.length > 0 && (
@@ -526,6 +536,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                         <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                                         <button
                                             onClick={() => removePhoto(idx)}
+                                            aria-label={`Remover foto ${idx + 1}`}
                                             className="absolute top-1 right-1 p-1 rounded-lg cursor-pointer"
                                             style={{ background: "rgba(0,0,0,0.6)" }}>
                                             <Trash size={12} style={{ color: "white" }} />
@@ -560,8 +571,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Observação */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
-                        <input value={notes} onChange={e => setNotes(e.target.value)}
+                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
+                        <input id={notesId} value={notes} onChange={e => setNotes(e.target.value)}
                             placeholder="Número do boleto, fornecedor..."
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -676,10 +687,53 @@ function PhotoGalleryModal({ open, photos, onClose }: {
     onClose: () => void;
 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const previouslyFocused = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
         if (open) setCurrentIndex(0);
     }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        previouslyFocused.current = document.activeElement as HTMLElement | null;
+        const node = dialogRef.current;
+        const first = node?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+        (first ?? node)?.focus();
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                onClose();
+                return;
+            }
+            if (e.key !== "Tab") return;
+            const node = dialogRef.current;
+            if (!node) return;
+            const focusables = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+                (el) => el.offsetParent !== null
+            );
+            if (focusables.length === 0) {
+                e.preventDefault();
+                return;
+            }
+            const firstEl = focusables[0];
+            const lastEl = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === firstEl) {
+                e.preventDefault();
+                lastEl.focus();
+            } else if (!e.shiftKey && document.activeElement === lastEl) {
+                e.preventDefault();
+                firstEl.focus();
+            }
+        };
+        document.addEventListener("keydown", onKeyDown);
+
+        return () => {
+            document.removeEventListener("keydown", onKeyDown);
+            previouslyFocused.current?.focus?.();
+        };
+    }, [open, onClose]);
 
     if (!open || photos.length === 0) return null;
 
@@ -688,10 +742,22 @@ function PhotoGalleryModal({ open, photos, onClose }: {
     const handleNext = () => setCurrentIndex((prev) => (prev + 1) % photos.length);
 
     return (
+        // Fechar no clique do backdrop é conveniência de mouse — Esc (tratado
+        // acima) e o botão "Fechar" (aria-label) já cobrem teclado.
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <div className="fixed inset-0 z-[1000] flex items-center justify-center"
             style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
             onClick={onClose}>
-            <div className="relative w-full h-full flex items-center justify-center p-4"
+            {/* Só impede que o clique dentro do conteúdo se propague até o
+                backdrop (que fecharia o modal) — não é uma interação em si. */}
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
+            <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Foto ${currentIndex + 1} de ${photos.length}`}
+                tabIndex={-1}
+                className="relative w-full h-full flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}>
                 {/* Imagem principal */}
                 <div className="relative max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center">
@@ -748,6 +814,7 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
     const [pinOpen, setPinOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+    const paidAtId = useId();
 
     useEffect(() => {
         if (!open || !bill) return;
@@ -835,8 +902,8 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
 
                     {/* Data do pagamento */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data do pagamento</label>
-                        <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
+                        <label htmlFor={paidAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data do pagamento</label>
+                        <input id={paidAtId} type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -1671,7 +1738,7 @@ export default function ContasPagarPage() {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
-                            placeholder="Buscar título ou observação…"
+                            placeholder="Buscar título ou observação…" aria-label="Buscar título ou observação"
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>

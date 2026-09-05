@@ -196,9 +196,9 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
 
       {/* Meus envios */}
       <div className="space-y-2">
-        <h3 className="text-sm font-bold px-1" style={{ color: "var(--text)" }}>
+        <h2 className="text-sm font-bold px-1" style={{ color: "var(--text)" }}>
           Meus envios
-        </h3>
+        </h2>
         {mine === null ? (
           <p className="text-xs px-1" style={{ color: "var(--text-subtle)" }}>
             Carregando…

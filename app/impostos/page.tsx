@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, useId } from "react";
 import {
     Plus, X, Check, Trash2, Edit3, AlertTriangle,
     Calendar, Loader2, Search, Filter,
@@ -360,6 +360,12 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
     const [uploadingFile, setUploadingFile] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+    const nameId = useId();
+    const amtId = useId();
+    const estimatedAmtId = useId();
+    const dueDateId = useId();
+    const frequencyId = useId();
+    const notesId = useId();
 
     useEffect(() => {
         if (!open) return;
@@ -517,17 +523,21 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Nome */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Nome/Descrição</label>
-                        <input value={name} onChange={e => setName(e.target.value)}
-                            placeholder="Ex: IRPF 2024 - Período" autoFocus
+                        <label htmlFor={nameId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Nome/Descrição</label>
+                        <input id={nameId} value={name} onChange={e => setName(e.target.value)}
+                            placeholder="Ex: IRPF 2024 - Período"
+                            // Primeiro campo do modal — focar automaticamente ao abrir
+                            // é o padrão esperado ao abrir um formulário de criação.
+                            // eslint-disable-next-line jsx-a11y/no-autofocus
+                            autoFocus
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
 
                     {/* Tipo de imposto */}
-                    <div className="space-y-2.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Tipo de imposto</label>
-                        
+                    <fieldset className="space-y-2.5 border-0 p-0 m-0 min-w-0">
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Tipo de imposto</legend>
+
                         {/* Abas por Esfera Tributária */}
                         <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)" }}>
                             {(["federal", "estadual", "municipal", "outro"] as const).map(s => {
@@ -570,20 +580,20 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                 );
                             })}
                         </div>
-                    </div>
+                    </fieldset>
 
                     {/* Valor + Valor estimado */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
-                            <input inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
+                            <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
+                            <input id={amtId} inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Estimado (opcional)</label>
-                            <input inputMode="decimal" value={estimatedRawAmt} onChange={e => setEstimatedRawAmt(formatAmount(e.target.value))}
+                            <label htmlFor={estimatedAmtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Estimado (opcional)</label>
+                            <input id={estimatedAmtId} inputMode="decimal" value={estimatedRawAmt} onChange={e => setEstimatedRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -593,14 +603,14 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     {/* Vencimento + Frequência */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Vencimento</label>
-                            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                            <label htmlFor={dueDateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Vencimento</label>
+                            <input id={dueDateId} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Frequência</label>
-                            <select value={frequency} onChange={e => setFrequency(e.target.value as TaxFrequency)}
+                            <label htmlFor={frequencyId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Frequência</label>
+                            <select id={frequencyId} value={frequency} onChange={e => setFrequency(e.target.value as TaxFrequency)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
                                 {(["mensal", "trimestral", "semestral", "anual"] as TaxFrequency[]).map(f => (
@@ -611,13 +621,13 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     </div>
 
                     {/* Status */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Status inicial</label>
+                    <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Status inicial</legend>
                         <div className="grid grid-cols-2 gap-2">
                             {(["nao_pago", "pago", "agendado", "atraso"] as TaxStatus[]).map(s => {
                                 const meta = STATUS_META[s];
                                 return (
-                                    <button key={s} onClick={() => setStatus(s)}
+                                    <button key={s} type="button" onClick={() => setStatus(s)}
                                         className="py-2.5 rounded-xl text-xs font-bold border-2 cursor-pointer transition-all"
                                         style={status === s
                                             ? { background: meta.bg, borderColor: meta.border, color: meta.color }
@@ -627,7 +637,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                 );
                             })}
                         </div>
-                    </div>
+                    </fieldset>
 
                     {/* Forma de Pagamento */}
                     <PaymentMethodSelector
@@ -639,9 +649,11 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Documentos */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
+                        {/* Não é <label> — não há um único campo associado (lista +
+                            botão de upload logo abaixo). */}
+                        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                             Documentos (DARF, RPA...) — {attachments.length}
-                        </label>
+                        </p>
 
                         {attachments.length > 0 && (
                             <div className="space-y-1 mb-2">
@@ -657,6 +669,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                             </a>
                                         </div>
                                         <button onClick={() => removeAttachment(idx)}
+                                            aria-label={`Remover documento ${idx + 1}`}
                                             className="p-1 rounded-lg cursor-pointer"
                                             style={{ background: "var(--neg-weak)" }}>
                                             <Trash2 size={12} style={{ color: "var(--neg)" }} />
@@ -682,8 +695,8 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Observações */}
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observações</label>
-                        <input value={notes} onChange={e => setNotes(e.target.value)}
+                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observações</label>
+                        <input id={notesId} value={notes} onChange={e => setNotes(e.target.value)}
                             placeholder="Código, referência, observações..."
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -725,6 +738,7 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
     const [pinOpen, setPinOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+    const paidAtId = useId();
 
     useEffect(() => {
         if (!open || !tax) return;
@@ -811,8 +825,8 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                     )}
 
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data de pagamento</label>
-                        <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
+                        <label htmlFor={paidAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data de pagamento</label>
+                        <input id={paidAtId} type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -1437,7 +1451,7 @@ export default function ImpostosPage() {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
-                            placeholder="Buscar imposto ou observação…"
+                            placeholder="Buscar imposto ou observação…" aria-label="Buscar imposto ou observação"
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>

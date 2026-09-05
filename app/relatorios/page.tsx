@@ -74,6 +74,11 @@ function CategoryCell({ tx, busy, onSave }: { tx: Tx; busy: boolean; onSave: (va
         <input
           value={draft}
           disabled={busy}
+          // Campo só aparece depois que a própria pessoa escolhe "Descrição
+          // (especificar)…" no select acima — foco automático aqui é a
+          // continuação natural dessa ação, não um autofoco surpresa ao
+          // carregar a página.
+          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -843,9 +848,9 @@ export default function RelatoriosPage() {
           {/* Gráfico de Barras */}
           <div className="cf-card p-5 lg:col-span-2 space-y-4">
             <div>
-              <h3 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>
+              <h2 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>
                 {filterPeriod === "ano" ? "Histórico de Fluxo Mensal" : "Histórico de Fluxo Diário"}
-              </h3>
+              </h2>
               <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
                 {filterPeriod === "ano"
                   ? `Entradas vs Saídas mês a mês em ${refDate.getFullYear()}`
@@ -859,7 +864,11 @@ export default function RelatoriosPage() {
                 Nenhum lançamento no período.
               </div>
             ) : (
-            <div className="h-64 w-full flex items-end justify-between pt-6 px-4 relative">
+            <div
+              className="h-64 w-full flex items-end justify-between pt-6 px-4 relative"
+              role="img"
+              aria-label="Gráfico de barras: entradas e saídas por período — detalhamento na tabela abaixo"
+            >
               <div className="absolute inset-x-0 top-1/2 border-t border-dashed" style={{ borderColor: "var(--db-border)" }} />
               {svgChartData.map((data, i) => {
                 const max = Math.max(...svgChartData.map(d => Math.max(d.entrada, d.saida))) || 1;
@@ -887,12 +896,33 @@ export default function RelatoriosPage() {
               })}
             </div>
             )}
+            {svgChartData.length > 0 && (
+              <table className="sr-only">
+                <caption>Entradas e saídas por período</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Período</th>
+                    <th scope="col">Entradas</th>
+                    <th scope="col">Saídas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {svgChartData.map((data, i) => (
+                    <tr key={i}>
+                      <th scope="row">{data.label}</th>
+                      <td>{toBRL(data.entrada)}</td>
+                      <td>{toBRL(data.saida)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Distribuição por Categoria */}
           <div className="cf-card p-5 space-y-4">
             <div>
-              <h3 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>Gastos e Receitas por Categoria</h3>
+              <h2 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>Gastos e Receitas por Categoria</h2>
               <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Maiores agrupamentos do período</p>
             </div>
 
@@ -972,7 +1002,7 @@ export default function RelatoriosPage() {
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
                 <Landmark size={22} />
               </div>
-              <h4 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum lançamento no período</h4>
+              <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum lançamento no período</p>
               <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
                 Assim que houver lançamentos no fluxo de caixa em {periodLabel}, eles aparecem aqui agrupados para conferência.
               </p>
@@ -1133,6 +1163,7 @@ export default function RelatoriosPage() {
               <input
                 type="text"
                 placeholder="Buscar por nome ou categoria..."
+                aria-label="Buscar por nome ou categoria"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full sm:w-64 pl-8 pr-4 py-1.5 rounded-lg text-xs outline-none transition-colors border"
@@ -1198,7 +1229,7 @@ export default function RelatoriosPage() {
                 <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: "var(--db-card-hover)", color: "var(--db-text-3)" }}>
                   <BarChart3 size={22} />
                 </div>
-                <h4 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum faturamento no período</h4>
+                <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum faturamento no período</p>
                 <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
                   As entradas do fluxo de caixa em {periodLabel} aparecem aqui agrupadas por categoria, do maior pro menor.
                 </p>
@@ -1401,7 +1432,7 @@ export default function RelatoriosPage() {
                 <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: "var(--db-card-hover)", color: "var(--db-text-3)" }}>
                   <TrendingDown size={22} />
                 </div>
-                <h4 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum gasto no período</h4>
+                <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum gasto no período</p>
                 <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
                   As saídas do fluxo de caixa em {periodLabel} aparecem aqui agrupadas por categoria, do maior pro menor.
                 </p>

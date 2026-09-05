@@ -68,9 +68,9 @@ function Row({
   return (
     <div className="space-y-2">
       <div>
-        <h3 className="text-sm font-bold" style={{ color: "var(--db-text)" }}>
+        <h2 className="text-sm font-bold" style={{ color: "var(--db-text)" }}>
           {title}
-        </h3>
+        </h2>
         <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-3)" }}>
           {desc}
         </p>

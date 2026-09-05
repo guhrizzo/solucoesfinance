@@ -434,7 +434,7 @@ export default function VendasPage() {
 
           {/* Por canal */}
           <div className="cf-card p-5 space-y-4">
-            <h3 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Vendas por canal</h3>
+            <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Vendas por canal</h2>
             {(["mercadolivre", "shopee"] as Canal[]).map((c) => {
               const d = c === "mercadolivre" ? kpis.ml : kpis.shopee;
               const pct = kpis.total > 0 ? (d.total / kpis.total) * 100 : 0;
@@ -479,9 +479,9 @@ export default function VendasPage() {
           {/* Gráfico temporal */}
           <div className="cf-card p-5 lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>
+              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>
                 Evolução das vendas
-              </h3>
+              </h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.mercadolivre.solid }} /> ML</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.shopee.solid }} /> Shopee</span>
@@ -492,7 +492,11 @@ export default function VendasPage() {
                 Sem vendas no período.
               </div>
             ) : (
-              <svg viewBox="0 0 600 180" className="w-full" style={{ height: 160 }}>
+              <svg
+                viewBox="0 0 600 180" className="w-full" style={{ height: 160 }}
+                role="img"
+                aria-label="Gráfico de barras: vendas do Mercado Livre e Shopee por período — detalhamento na tabela abaixo"
+              >
                 {serie.buckets.map((b, i) => {
                   const n = serie.buckets.length;
                   const bw = Math.max(3, (560 / n) - 3);
@@ -511,6 +515,27 @@ export default function VendasPage() {
                 })}
               </svg>
             )}
+            {vendas.length > 0 && (
+              <table className="sr-only">
+                <caption>Vendas do Mercado Livre e Shopee por período</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Período</th>
+                    <th scope="col">Mercado Livre</th>
+                    <th scope="col">Shopee</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {serie.buckets.map((b) => (
+                    <tr key={b.key}>
+                      <th scope="row">{b.label}</th>
+                      <td>{toBRL(b.ml)}</td>
+                      <td>{toBRL(b.shopee)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -520,7 +545,7 @@ export default function VendasPage() {
           {/* Top produtos */}
           <div className="cf-card lg:col-span-2 overflow-hidden">
             <div className="p-5" style={{ borderBottom: "1px solid var(--cf-border)" }}>
-              <h3 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Produtos mais vendidos</h3>
+              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Produtos mais vendidos</h2>
               <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>Receita no período × estoque atual</p>
             </div>
             <div className="overflow-x-auto">
@@ -574,7 +599,7 @@ export default function VendasPage() {
           {/* Controle de estoque */}
           <div className="cf-card p-5 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Controle de estoque</h3>
+              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Controle de estoque</h2>
               <a href="/estoque" className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--primary)" }}>
                 Gerenciar <ArrowRight size={12} />
               </a>
@@ -605,7 +630,7 @@ export default function VendasPage() {
         <div className="cf-card overflow-hidden">
           <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--cf-border)" }}>
             <div>
-              <h3 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Vendas recentes</h3>
+              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Vendas recentes</h2>
               <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>Últimos pedidos recebidos dos marketplaces</p>
             </div>
             <span className="text-[11px] font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: "rgba(16,185,129,0.1)", color: "var(--success)" }}>
@@ -829,8 +854,8 @@ function Kpi({ label, value, hint, icon, tone }: {
   return (
     <div className="cf-kpi p-5 flex items-center justify-between">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{label}</p>
-        <h3 className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>{value}</h3>
+        <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{label}</h2>
+        <p className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>{value}</p>
         <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>{hint}</p>
       </div>
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: toneMap.bg, color: toneMap.fg }}>

@@ -21,20 +21,34 @@ const eslintConfig = defineConfig([
   // — não redeclaramos o plugin aqui (o flat config não deixa duas
   // configs registrarem o mesmo nome de plugin), só reaproveitamos o
   // registro existente pra subir as regras do preset `recommended`
-  // completo pra erro, só nestes arquivos já auditados e corrigidos na
-  // Fase 1. Conforme cada página da Fase 3 é auditada, ela entra nesta
-  // lista de arquivos (mesma mecânica do bloco de cor-hex abaixo, só que
-  // como allowlist que cresce em vez de ignores que encolhe — mais
-  // seguro aqui: evita marcar como erro algo que ainda não foi auditado
-  // no resto do app).
+  // completo pra erro, só nestes arquivos já auditados e corrigidos
+  // (Fases 1-4). Conforme mais páginas forem auditadas, elas entram
+  // nesta lista (mesma mecânica do bloco de cor-hex abaixo, só que como
+  // allowlist que cresce em vez de ignores que encolhe — mais seguro
+  // aqui: evita marcar como erro algo que ainda não foi auditado no
+  // resto do app).
   {
     files: [
       "app/components/ui/**/*.tsx",
       "app/components/Navbar.tsx",
       "app/components/AppShell.tsx",
+      "app/components/CashFlow.tsx",
+      "app/components/PinModal.tsx",
+      "app/components/ConfirmModal.tsx",
       "app/register/**/*.tsx",
       "app/login/**/*.tsx",
       "app/layout.tsx",
+      "app/dashboard/page.tsx",
+      "app/fluxo-caixa/page.tsx",
+      "app/contasPagar/page.tsx",
+      "app/contasReceber/page.tsx",
+      "app/costCenter/page.tsx",
+      "app/estoque/page.tsx",
+      "app/vendas/page.tsx",
+      "app/impostos/page.tsx",
+      "app/relatorios/page.tsx",
+      "app/configuracoes/**/*.tsx",
+      "app/acessibilidade/page.tsx",
     ],
     rules: jsxA11y.flatConfigs.recommended.rules,
   },

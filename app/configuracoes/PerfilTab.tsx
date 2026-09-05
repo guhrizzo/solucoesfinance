@@ -2,7 +2,7 @@
 
 // app/configuracoes/PerfilTab.tsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Check, Lock } from "lucide-react";
 import { Card, Button, Input } from "../components/ui";
 import type { AccountScope } from "../hooks/useAccountScope";
@@ -147,6 +147,11 @@ export default function PerfilTab({
 
   const labelCls = "text-xs font-semibold mb-1.5 block";
   const labelStyle = { color: "var(--cf-text-2)" };
+  const nameId = useId();
+  const emailId = useId();
+  const nomeFantasiaId = useId();
+  const razaoSocialId = useId();
+  const cnpjId = useId();
 
   return (
     <div className="space-y-5">
@@ -183,10 +188,11 @@ export default function PerfilTab({
         </div>
 
         <div>
-          <label className={labelCls} style={labelStyle}>
+          <label htmlFor={nameId} className={labelCls} style={labelStyle}>
             Nome de exibição
           </label>
           <Input
+            id={nameId}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Seu nome"
@@ -195,11 +201,11 @@ export default function PerfilTab({
         </div>
 
         <div>
-          <label className={labelCls} style={labelStyle}>
+          <label htmlFor={emailId} className={labelCls} style={labelStyle}>
             E-mail
           </label>
           <div className="flex items-center gap-2">
-            <Input value={user.email ?? ""} disabled style={{ opacity: 0.7 }} />
+            <Input id={emailId} value={user.email ?? ""} disabled style={{ opacity: 0.7 }} />
             <span
               className="flex items-center gap-1 text-xs whitespace-nowrap"
               style={{ color: "var(--cf-text-3)" }}
@@ -243,10 +249,11 @@ export default function PerfilTab({
         </div>
 
         <div>
-          <label className={labelCls} style={labelStyle}>
+          <label htmlFor={nomeFantasiaId} className={labelCls} style={labelStyle}>
             Nome fantasia
           </label>
           <Input
+            id={nomeFantasiaId}
             value={company.nomeFantasia}
             onChange={(e) => setCompany((c) => ({ ...c, nomeFantasia: e.target.value }))}
             disabled={!canEditCompany}
@@ -256,10 +263,11 @@ export default function PerfilTab({
         </div>
 
         <div>
-          <label className={labelCls} style={labelStyle}>
+          <label htmlFor={razaoSocialId} className={labelCls} style={labelStyle}>
             Razão social
           </label>
           <Input
+            id={razaoSocialId}
             value={company.razaoSocial}
             onChange={(e) => setCompany((c) => ({ ...c, razaoSocial: e.target.value }))}
             disabled={!canEditCompany}
@@ -269,10 +277,11 @@ export default function PerfilTab({
         </div>
 
         <div>
-          <label className={labelCls} style={labelStyle}>
+          <label htmlFor={cnpjId} className={labelCls} style={labelStyle}>
             CNPJ
           </label>
           <Input
+            id={cnpjId}
             value={company.cnpj}
             onChange={(e) => setCompany((c) => ({ ...c, cnpj: maskCnpj(e.target.value) }))}
             disabled={!canEditCompany}
@@ -283,9 +292,10 @@ export default function PerfilTab({
         </div>
 
         <div>
-          <label className={labelCls} style={labelStyle}>
+          {/* Não é <label> — não há campo editável associado, é só exibição. */}
+          <p className={labelCls} style={labelStyle}>
             Ramo de atuação
-          </label>
+          </p>
           <div
             className="rounded-xl px-3.5 py-2.5 text-sm"
             style={{

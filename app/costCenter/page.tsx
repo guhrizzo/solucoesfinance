@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import {
   TrendingUp,
   CreditCard,
@@ -220,7 +220,11 @@ function BarChart({ centers }: { centers: ChartCenter[] }) {
 
   return (
     <div style={{ overflowX: "auto" }}>
-      <svg viewBox={`0 0 ${W} 180`} style={{ width: "100%", minWidth: W, height: 180 }}>
+      <svg
+        viewBox={`0 0 ${W} 180`} style={{ width: "100%", minWidth: W, height: 180 }}
+        role="img"
+        aria-label="Gráfico de barras: orçamento vs. gasto real por centro de custo — detalhamento na lista abaixo"
+      >
         {[0, 0.5, 1].map(pct => {
           const y = 20 + (1 - pct) * 120;
           const val = Math.round(maxVal * pct);
@@ -365,6 +369,11 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
   const [status, setStatus] = useState<"pago" | "pendente" | "agendado">("pago");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const descriptionId = useId();
+  const categoryId = useId();
+  const centerId = useId();
+  const amountId = useId();
+  const dateId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -454,10 +463,10 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 
           {/* Descrição */}
           <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
+            <label htmlFor={descriptionId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
               Descrição <span style={{ color: "var(--db-text-3)" }}>(opcional)</span>
             </label>
-            <input type="text" value={description} onChange={e => setDescription(e.target.value)}
+            <input id={descriptionId} type="text" value={description} onChange={e => setDescription(e.target.value)}
               placeholder="Ex: Almoço com cliente"
               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
@@ -465,10 +474,10 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 
           {/* Categoria */}
           <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
+            <label htmlFor={categoryId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
               Categoria <span style={{ color: "var(--danger)" }}>*</span>
             </label>
-            <select value={category} onChange={e => setCategory(e.target.value)} required
+            <select id={categoryId} value={category} onChange={e => setCategory(e.target.value)} required
               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
               <option value="">— Selecione uma categoria —</option>
@@ -484,7 +493,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 
           {/* Centro de custo */}
           <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
+            <label htmlFor={centerId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
               Centro de custo <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             {centers.length === 0 ? (
@@ -493,7 +502,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
                 Crie um centro de custo primeiro.
               </p>
             ) : (
-              <select value={center} onChange={e => setCenter(e.target.value)} required
+              <select id={centerId} value={center} onChange={e => setCenter(e.target.value)} required
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="">— Selecione um centro —</option>
@@ -505,29 +514,29 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
+              <label htmlFor={amountId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
                 Valor (R$) <span style={{ color: "var(--danger)" }}>*</span>
               </label>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+              <input id={amountId} type="number" value={amount} onChange={e => setAmount(e.target.value)}
                 placeholder="0,00" required min="0.01" step="0.01"
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
             </div>
             <div>
-              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
+              <label htmlFor={dateId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
                 Data <span style={{ color: "var(--danger)" }}>*</span>
               </label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+              <input id={dateId} type="date" value={date} onChange={e => setDate(e.target.value)} required
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
             </div>
           </div>
 
           {/* Status */}
-          <div>
-            <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text-2)" }}>
+          <fieldset className="border-0 p-0 m-0 min-w-0">
+            <legend className="text-xs font-semibold block mb-2 p-0" style={{ color: "var(--db-text-2)" }}>
               Status <span style={{ color: "var(--danger)" }}>*</span>
-            </label>
+            </legend>
             <div className="grid grid-cols-3 gap-2">
               {(["pago", "pendente", "agendado"] as const).map(s => (
                 <button key={s} type="button" onClick={() => setStatus(s)}
@@ -549,7 +558,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
                 <ArrowDownRight size={11} /> Lançado como saída no fluxo de caixa
               </p>
             )}
-          </div>
+          </fieldset>
 
           {/* Ações */}
           <div className="flex gap-2 pt-1">
@@ -924,6 +933,11 @@ export default function CostCenterPage() {
 
       <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
 
+        {/* Título da página não aparece visualmente aqui (só via item ativo
+            da Navbar) — h1 sr-only pra dar um ponto de partida de navegação
+            por heading pra quem usa leitor de tela, sem mudar o layout. */}
+        <h1 className="sr-only">Centro de custos</h1>
+
         {/* KPIs */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
           {kpis.map((kpi, i) => {
@@ -1139,7 +1153,7 @@ export default function CostCenterPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative hidden sm:flex">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--db-text-2)" }} />
-                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                <input type="text" placeholder="Buscar..." aria-label="Buscar despesas" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                   className="pl-9 pr-3 py-1.5 text-xs rounded-lg border"
                   style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
               </div>

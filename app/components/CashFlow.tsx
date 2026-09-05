@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useId } from "react";
 import {
   TrendingUp, Plus, X, Check, ArrowUpRight, ArrowDownRight,
   Search, Calendar, ChevronDown, Trash2, Edit3, ClipboardList,
@@ -198,6 +198,12 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
   const [nfName, setNfName] = useState("");
   const [scanning, setScanning] = useState(false);
   const nfRef = useRef<HTMLInputElement>(null);
+  const descId = useId();
+  const catId = useId();
+  const costCenterFieldId = useId();
+  const amtId = useId();
+  const dateId = useId();
+  const noteId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -327,9 +333,12 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           )}
           {/* NF */}
           <div className="space-y-2.5">
-            <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--cf-text-2)" }}>
+            {/* Não é <label> — a UI de anexo abaixo é condicional (arquivo já
+                anexado x área de upload), sem um único controle fixo pra
+                associar. */}
+            <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--cf-text-2)" }}>
               <Paperclip size={12} /> Anexar nota fiscal
-            </label>
+            </p>
             {hasNf ? (
               <div className="flex items-center gap-3 p-3.5 rounded-xl" style={{ background: "var(--status-info-bg)", border: "1px solid var(--status-info-border)" }}>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--status-info-bg)" }}>
@@ -392,16 +401,17 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           </div>
           {/* Descrição */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Descrição</label>
-            <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Cliente XYZ, Aluguel…"
+            <label htmlFor={descId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Descrição</label>
+            <input id={descId} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Cliente XYZ, Aluguel…"
               className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
           {/* Categoria */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
+            <label htmlFor={catId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
             <div className="relative">
               <select
+                id={catId}
                 value={catMode === "custom" ? CUSTOM_CATEGORY : cat}
                 onChange={(e) => {
                   if (e.target.value === CUSTOM_CATEGORY) { setCatMode("custom"); setCat(""); }
@@ -426,11 +436,11 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
               orçamento (ver lib/costCenterSync). */}
           {type === "saida" && costCenters.length > 0 && (
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
+              <label htmlFor={costCenterFieldId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                 Centro de custo <span className="normal-case font-normal">(opcional)</span>
               </label>
               <div className="relative">
-                <select value={costCenterId} onChange={(e) => setCostCenterId(e.target.value)}
+                <select id={costCenterFieldId} value={costCenterId} onChange={(e) => setCostCenterId(e.target.value)}
                   className="w-full appearance-none rounded-xl px-4 py-3 pr-9 text-sm outline-none cursor-pointer transition-colors"
                   style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
                   <option value="">— Nenhum —</option>
@@ -448,20 +458,20 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
-              <MoneyInput value={rawAmt} onValueChange={setRawAmt} />
+              <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
+              <MoneyInput id={amtId} value={rawAmt} onValueChange={setRawAmt} />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              <label htmlFor={dateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data</label>
+              <input id={dateId} type="date" value={date} onChange={(e) => setDate(e.target.value)}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer transition-colors"
                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
             </div>
           </div>
           {/* Observação */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="NF nº 123, parcela 1/5…"
+            <label htmlFor={noteId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
+            <input id={noteId} value={note} onChange={(e) => setNote(e.target.value)} placeholder="NF nº 123, parcela 1/5…"
               className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
@@ -495,6 +505,7 @@ function ImportModal({ open, onClose, onImport }: {
   const [errMsg, setErrMsg] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+  const extractTextId = useId();
 
   useEffect(() => {
     if (!open) { setStep("input"); setText(""); setPreview([]); setErrMsg(""); setSelected(new Set()); }
@@ -619,8 +630,8 @@ function ImportModal({ open, onClose, onImport }: {
                 <div className="flex-1 h-px" style={{ background: "var(--cf-border)" }} />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Extrato bancário</label>
-                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8}
+                <label htmlFor={extractTextId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Extrato bancário</label>
+                <textarea id={extractTextId} value={text} onChange={(e) => setText(e.target.value)} rows={8}
                   placeholder={`01/03/2026  PIX RECEBIDO ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA         DB  R$ 2.200,00`}
                   className="w-full rounded-xl px-4 py-3 text-xs font-mono outline-none resize-none cursor-text"
                   style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -1557,7 +1568,7 @@ export default function CashFlowPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-3)" }} />
             <input className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}
-              placeholder="Buscar descrição ou categoria…" value={search} onChange={(e) => setSearch(e.target.value)} />
+              placeholder="Buscar descrição ou categoria…" aria-label="Buscar descrição ou categoria" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {([

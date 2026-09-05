@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useId } from "react";
 import { useAuth } from "../hooks/useAuth";
 import Navbar from "../components/Navbar";
 import AccessDenied from "../components/AccessDenied";
@@ -127,6 +127,21 @@ export default function EstoquePage() {
   const [formPrice, setFormPrice] = useState("");
   const [formQuantity, setFormQuantity] = useState("");
   const [formMinQuantity, setFormMinQuantity] = useState("10");
+  // ids dos campos dos formulários desta página (rótulos ↔ controles) —
+  // gerados uma vez aqui, não a cada abertura de modal.
+  const formSkuId = useId();
+  const formNameId = useId();
+  const formPriceId = useId();
+  const formQuantityId = useId();
+  const formMinQuantityId = useId();
+  const vinculoPlatformId = useId();
+  const vinculoAdIdId = useId();
+  const vinculoTitleId = useId();
+  const vinculoPriceId = useId();
+  const vinculoQuantityId = useId();
+  const simSkuId = useId();
+  const simQuantityId = useId();
+  const simUnitPriceId = useId();
   const [formSaving, setFormSaving] = useState(false);
 
   // Formulário Vínculo Manual
@@ -886,10 +901,10 @@ export default function EstoquePage() {
           {/* KPI 1 */}
           <div className="cf-kpi p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Total em Estoque</p>
-              <h3 className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Total em Estoque</h2>
+              <p className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>
                 {kpis.totalItens}
-              </h3>
+              </p>
               <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Unidades físicas</p>
             </div>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-500/10 text-primary">
@@ -900,10 +915,10 @@ export default function EstoquePage() {
           {/* KPI 2 */}
           <div className="cf-kpi p-5 flex items-center justify-between" style={{ borderColor: kpis.baixoEstoque > 0 ? "rgba(239, 68, 68, 0.4)" : "" }}>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Estoque Baixo</p>
-              <h3 className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: kpis.baixoEstoque > 0 ? "var(--danger)" : "var(--cf-text)" }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Estoque Baixo</h2>
+              <p className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: kpis.baixoEstoque > 0 ? "var(--danger)" : "var(--cf-text)" }}>
                 {kpis.baixoEstoque}
-              </h3>
+              </p>
               <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Produtos precisando reposição</p>
             </div>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${kpis.baixoEstoque > 0 ? "bg-red-500/10 text-danger" : "bg-gray-500/10 text-gray-400"}`}>
@@ -914,10 +929,10 @@ export default function EstoquePage() {
           {/* KPI 3 */}
           <div className="cf-kpi p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Anúncios Vinculados</p>
-              <h3 className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Anúncios Vinculados</h2>
+              <p className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>
                 {kpis.totalAnuncios}
-              </h3>
+              </p>
               <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Nas plataformas ativas</p>
             </div>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-purple-500/10 text-purple-500">
@@ -928,15 +943,15 @@ export default function EstoquePage() {
           {/* KPI 4 */}
           <div className="cf-kpi p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Canais Ativos</p>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Canais Ativos</h2>
               <div className="flex items-center gap-1.5 mt-1.5">
                 <span className="flex h-2.5 w-2.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
-                <h3 className="font-heading text-xl font-bold mono" style={{ color: "var(--cf-text)" }}>
+                <p className="font-heading text-xl font-bold mono" style={{ color: "var(--cf-text)" }}>
                   {integracoes.length > 0 ? `${integracoes.length} Conectados` : "Nenhum"}
-                </h3>
+                </p>
               </div>
               <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Mercado Livre & Shopee</p>
             </div>
@@ -952,9 +967,9 @@ export default function EstoquePage() {
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
                 <img src="/Shopee.svg" alt="Shopee" style={{ height: "22px", objectFit: "contain" }} />
-                <h3 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>
+                <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>
                   Shopee — estoque e repasse
-                </h3>
+                </h2>
                 {shopeeResumo?.mock && (
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--cf-input)", color: "var(--cf-text-3)" }}>
                     SIMULADO
@@ -1025,8 +1040,8 @@ export default function EstoquePage() {
             <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
               {[
                 { id: "todos", label: "Todos", icon: null },
-                { id: "mercadolivre", label: "", image: "/Logotipo_MercadoLivre.png" },
-                { id: "shopee", label: "", image: "/Shopee.svg" },
+                { id: "mercadolivre", label: "", ariaLabel: "Filtrar por Mercado Livre", image: "/Logotipo_MercadoLivre.png" },
+                { id: "shopee", label: "", ariaLabel: "Filtrar por Shopee", image: "/Shopee.svg" },
                 { id: "local", label: "Apenas Local", icon: null },
                 { id: "baixo", label: "Estoque Baixo", icon: AlertTriangle }
               ].map((tab) => {
@@ -1035,13 +1050,14 @@ export default function EstoquePage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
+                    aria-label={tab.label ? undefined : tab.ariaLabel}
                     className="px-3.5 py-1.5 rounded-lg text-xs font-bold border-none transition-all cursor-pointer whitespace-nowrap flex items-center gap-2"
                     style={activeTab === tab.id
                       ? { background: "var(--primary)", color: "white" }
                       : { background: "var(--cf-input)", color: "var(--cf-text-2)" }
                     }
                   >
-                    {tab.image && <img src={tab.image} alt={tab.label} style={{ height: "16px", objectFit: "contain" }} />}
+                    {tab.image && <img src={tab.image} alt="" style={{ height: "16px", objectFit: "contain" }} />}
                     {IconComponent && <IconComponent size={14} />}
                     {tab.label}
                   </button>
@@ -1056,6 +1072,7 @@ export default function EstoquePage() {
                 <input
                   type="text"
                   placeholder="Buscar por SKU ou Nome..."
+                  aria-label="Buscar por SKU ou nome"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs outline-none"
@@ -1279,8 +1296,9 @@ export default function EstoquePage() {
 
             <form onSubmit={handleSaveProduto} className="p-5 space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Código / SKU</label>
+                <label htmlFor={formSkuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Código / SKU</label>
                 <input
+                  id={formSkuId}
                   type="text"
                   value={formSku}
                   onChange={(e) => setFormSku(e.target.value)}
@@ -1293,8 +1311,9 @@ export default function EstoquePage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Nome do Produto</label>
+                <label htmlFor={formNameId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Nome do Produto</label>
                 <input
+                  id={formNameId}
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -1307,8 +1326,9 @@ export default function EstoquePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço Base (R$)</label>
+                  <label htmlFor={formPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço Base (R$)</label>
                   <input
+                    id={formPriceId}
                     type="text"
                     value={formPrice}
                     onChange={(e) => setFormPrice(e.target.value)}
@@ -1320,8 +1340,9 @@ export default function EstoquePage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade Física</label>
+                  <label htmlFor={formQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade Física</label>
                   <input
+                    id={formQuantityId}
                     type="number"
                     value={formQuantity}
                     onChange={(e) => setFormQuantity(e.target.value)}
@@ -1334,8 +1355,9 @@ export default function EstoquePage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Alerta de Estoque Baixo (Quantidade Mínima)</label>
+                <label htmlFor={formMinQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Alerta de Estoque Baixo (Quantidade Mínima)</label>
                 <input
+                  id={formMinQuantityId}
                   type="number"
                   value={formMinQuantity}
                   onChange={(e) => setFormMinQuantity(e.target.value)}
@@ -1578,8 +1600,9 @@ export default function EstoquePage() {
 
                 <form onSubmit={handleAddVinculo} className="space-y-3.5">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Plataforma</label>
+                    <label htmlFor={vinculoPlatformId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Plataforma</label>
                     <select
+                      id={vinculoPlatformId}
                       value={formVinculoPlatform}
                       onChange={(e) => setFormVinculoPlatform(e.target.value as any)}
                       className="w-full px-3 py-2 rounded-xl text-xs outline-none cursor-pointer"
@@ -1591,8 +1614,9 @@ export default function EstoquePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>ID do Anúncio</label>
+                    <label htmlFor={vinculoAdIdId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>ID do Anúncio</label>
                     <input
+                      id={vinculoAdIdId}
                       type="text"
                       value={formVinculoAdId}
                       onChange={(e) => setFormVinculoAdId(e.target.value)}
@@ -1604,8 +1628,9 @@ export default function EstoquePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Título do Anúncio</label>
+                    <label htmlFor={vinculoTitleId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Título do Anúncio</label>
                     <input
+                      id={vinculoTitleId}
                       type="text"
                       value={formVinculoTitle}
                       onChange={(e) => setFormVinculoTitle(e.target.value)}
@@ -1618,8 +1643,9 @@ export default function EstoquePage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço no Canal (R$)</label>
+                      <label htmlFor={vinculoPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço no Canal (R$)</label>
                       <input
+                        id={vinculoPriceId}
                         type="text"
                         value={formVinculoPrice}
                         onChange={(e) => setFormVinculoPrice(e.target.value)}
@@ -1631,8 +1657,9 @@ export default function EstoquePage() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Estoque Atual</label>
+                      <label htmlFor={vinculoQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Estoque Atual</label>
                       <input
+                        id={vinculoQuantityId}
                         type="number"
                         value={formVinculoQuantity}
                         onChange={(e) => setFormVinculoQuantity(e.target.value)}
@@ -1690,8 +1717,9 @@ export default function EstoquePage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Produto vendido</label>
+                <label htmlFor={simSkuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Produto vendido</label>
                 <select
+                  id={simSkuId}
                   value={simSku}
                   onChange={(e) => onSimSkuChange(e.target.value)}
                   required
@@ -1707,8 +1735,8 @@ export default function EstoquePage() {
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Canal da venda</label>
+              <fieldset className="space-y-1 border-0 p-0 m-0 min-w-0">
+                <legend className="text-[10px] font-bold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-3)" }}>Canal da venda</legend>
                 <div className="grid grid-cols-2 gap-2">
                   {(["mercadolivre", "shopee"] as const).map((c) => (
                     <button
@@ -1724,12 +1752,13 @@ export default function EstoquePage() {
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade</label>
+                  <label htmlFor={simQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade</label>
                   <input
+                    id={simQuantityId}
                     type="number"
                     value={simQuantity}
                     onChange={(e) => setSimQuantity(e.target.value)}
@@ -1740,8 +1769,9 @@ export default function EstoquePage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço unitário (R$)</label>
+                  <label htmlFor={simUnitPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço unitário (R$)</label>
                   <input
+                    id={simUnitPriceId}
                     type="text"
                     inputMode="decimal"
                     value={simUnitPrice}
