@@ -45,10 +45,10 @@ function applyUnderline(on: boolean) {
 function showVLibras() {
   const existing = document.querySelector<HTMLElement>("[vw]");
   if (existing) {
-    existing.style.display = "";
+    existing.style.removeProperty("display");
     // Restaura também os filhos que podem ter sido escondidos individualmente
     existing.querySelectorAll<HTMLElement>("[vw-plugin-wrapper], [vw-access-button]").forEach((el) => {
-      el.style.display = "";
+      el.style.removeProperty("display");
     });
     return;
   }
@@ -71,16 +71,20 @@ function showVLibras() {
 }
 
 function hideVLibras() {
+  // O CSS que o próprio script do VLibras injeta usa `display: ... !important`
+  // (ex.: `[vw-access-button].active`), então um `style.display = "none"`
+  // comum perde para esse !important e o botão/avatar continuam visíveis.
+  // Por isso setamos com prioridade "important" também.
+  const hide = (el: HTMLElement) => el.style.setProperty("display", "none", "important");
+
   // Esconde o container principal que criamos
   const existing = document.querySelector<HTMLElement>("[vw]");
-  if (existing) existing.style.display = "none";
+  if (existing) hide(existing);
 
   // O VLibras também pode injetar elementos adicionais diretamente no <body>
   // (ex.: o painel expandido e o avatar). Escondemos todos os nós com
   // atributos vw-* para garantir limpeza total.
-  document.querySelectorAll<HTMLElement>("[vw-plugin-wrapper], [vw-access-button]").forEach((el) => {
-    el.style.display = "none";
-  });
+  document.querySelectorAll<HTMLElement>("[vw-plugin-wrapper], [vw-access-button]").forEach(hide);
 }
 
 function ToggleRow({
