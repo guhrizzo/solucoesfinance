@@ -12,8 +12,7 @@
 //   window.dispatchEvent(new Event("nexusfi-open-cookie-preferences"))
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
+import { Link, usePathname } from "@/i18n/navigation";
 import { Cookie, ChevronDown, ExternalLink } from "lucide-react";
 import {
   getConsentSnapshot,

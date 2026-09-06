@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, ChevronLeft, ChevronRight,

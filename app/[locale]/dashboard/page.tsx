@@ -1,0 +1,989 @@
+"use client";
+
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, useMemo } from "react";
+import {
+  TrendingUp, TrendingDown, DollarSign, CreditCard,
+  AlertCircle, Clock, Wallet, ChevronRight, ChevronLeft, ArrowUpRight,
+  ArrowDownRight, MoreHorizontal, Filter, Download, Printer,
+  RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart
+} from "lucide-react";
+import OnboardingModal, { type OnboardingAnswers } from "@/app/components/OnboardingModal";
+import CreatePasswordGate from "@/app/components/CreatePasswordGate";
+import Navbar from "@/app/components/Navbar";
+import { Badge, PageLoader, Sensitive } from "@/app/components/ui";
+import AccessDenied from "@/app/components/AccessDenied";
+import { usePeriod } from "@/app/hooks/usePeriod";
+import "./dashboard.css";
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+type TxType = "entrada" | "saida";
+
+interface Tx {
+  id: string;
+  type: TxType;
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+  note: string;
+  createdAt: number;
+  reconciled?: boolean;
+}
+
+interface Bill {
+  id: string;
+  name: string;
+  dueDate: string;
+  amount: number;
+  status: string;
+}
+
+interface Receivable {
+  id: string;
+  clientName?: string;
+  description?: string;
+  dueDate: string;
+  amount: number;
+  status: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const toBRL = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const fmt = (n: number) =>
+  n < 0 ? `- R$ ${Math.abs(n).toLocaleString("pt-BR")}` : `R$ ${n.toLocaleString("pt-BR")}`;
+
+const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+// Cor semântica por KPI — resolvida via tokens do design system (nunca hex).
+const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
+  blue:    { bg: "var(--brand-weak)", text: "var(--brand)", icon: "var(--brand-weak)" },
+  rose:    { bg: "var(--neg-weak)",   text: "var(--neg)",   icon: "var(--neg-weak)"   },
+  emerald: { bg: "var(--pos-weak)",   text: "var(--pos)",   icon: "var(--pos-weak)"   },
+  amber:   { bg: "var(--warn-weak)",  text: "var(--warn)",  icon: "var(--warn-weak)"  },
+};
+
+export default function Dashboard() {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  // Gate bloqueante pra contas que entraram só pelo Google e nunca definiram senha.
+  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+  const [user, setUser] = useState<{ displayName: string | null; email: string | null; uid: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  // true quando o usuário logado é um membro de equipe sem "Dashboard"
+  // liberado — ver lib/accountScope.ts.
+  const [blocked, setBlocked] = useState(false);
+  const [hideValues, setHideValues] = useState(false);
+  // Estilo do gráfico "Receita vs. Despesas" escolhido pelo usuário — persistido no localStorage.
+  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+  // Mês sob o cursor no gráfico Receita vs. Despesas (índice 0-11) — controla o tooltip.
+  const [hoverMonth, setHoverMonth] = useState<number | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("dashboard_chart_type");
+      if (saved === "bar" || saved === "line" || saved === "pie") setChartType(saved);
+    } catch { /* ignora ambientes sem localStorage */ }
+  }, []);
+
+  const changeChartType = (t: "bar" | "line" | "pie") => {
+    setChartType(t);
+    try { localStorage.setItem("dashboard_chart_type", t); } catch { /* noop */ }
+  };
+
+  // Firestore Data States
+  const [txs, setTxs] = useState<Tx[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [receivables, setReceivables] = useState<Receivable[]>([]);
+
+  const activePath = "/dashboard";
+
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  async function handleLogout() {
+    const { getFirebase } = await import("@/lib/firebase");
+    const { signOut } = await import("firebase/auth");
+    const { auth } = await getFirebase();
+    await signOut(auth);
+    window.location.href = "/login";
+  }
+
+  // Mês de referência — agora é o mês global compartilhado (usePeriod), o
+  // mesmo que a Navbar e as demais telas usam. Ver app/hooks/usePeriod.tsx.
+  const { refDate, label: periodLabel, isCurrentMonth, goPrevMonth, goNextMonth } = usePeriod();
+
+  // ── Impressão do relatório do mês ──
+  const [printedAt, setPrintedAt] = useState("");
+  const handlePrint = () => {
+    setPrintedAt(new Date().toLocaleString("pt-BR"));
+    // deixa o React pintar o cabeçalho de impressão antes de abrir o diálogo
+    setTimeout(() => window.print(), 60);
+  };
+
+  // Inicialização e Listeners em tempo real do Firestore
+  useEffect(() => {
+    let unsubAuth: (() => void) | undefined;
+    let unsubTxs: (() => void) | undefined;
+    let unsubBills: (() => void) | undefined;
+    let unsubReceivables: (() => void) | undefined;
+
+    (async () => {
+      try {
+        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, doc, getDoc }] = await Promise.all([
+          import("@/lib/firebase"),
+          import("firebase/auth"),
+          import("firebase/firestore"),
+        ]);
+        const { auth, db } = await getFirebase();
+
+        unsubAuth = onAuthStateChanged(auth, async (u) => {
+          if (!u) {
+            window.location.href = "/login";
+            return;
+          }
+
+          // Resolve de quem são os dados que este login deve ver: o próprio
+          // uid (dono) ou o do dono da conta (membro convidado) — ver
+          // lib/accountScope.ts. Membro sem "dashboard" liberado nem chega
+          // a assinar as coleções abaixo. `user.uid` continua sendo a
+          // identidade real de quem logou (Navbar, PIN, etc.) — só os dados
+          // do negócio (fluxo de caixa, contas, onboarding) usam `ownerUid`.
+          const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
+          const scope = await resolveAccountScope(db, u.uid);
+          if (!hasPermission(scope, "dashboard")) {
+            setBlocked(true);
+            setLoading(false);
+            return;
+          }
+          const ownerUid = scope.ownerUid;
+
+          setUser({ displayName: u.displayName, email: u.email, uid: u.uid });
+          setNeedsPasswordSetup(!u.providerData.some((p) => p.providerId === "password"));
+
+          getDoc(doc(db, "users", ownerUid, "profile", "onboarding"))
+            .then((snap) => {
+              const completed = snap.exists() && snap.data()?.completed;
+              setShowOnboarding(!completed && scope.isOwner); // só o dono conclui o onboarding do negócio
+              if (completed && typeof window !== "undefined") {
+                localStorage.setItem(`onboarding_ramo_${ownerUid}`, JSON.stringify(snap.data()?.answers?.ramo || []));
+              }
+            })
+            .catch((err) => console.error("Erro ao carregar onboarding:", err));
+
+          // Listener de Lançamentos de Fluxo de Caixa
+          const txsRef = collection(db, "users", ownerUid, "cashflow");
+          const qTxs = query(txsRef, orderBy("date", "desc"));
+          unsubTxs = onSnapshot(qTxs, (snap) => {
+            setTxs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tx)));
+            setLoading(false);
+          }, (err) => console.error("Erro Txs:", err));
+
+          // Listener de Contas a Pagar
+          const billsRef = collection(db, "users", ownerUid, "bills");
+          unsubBills = onSnapshot(billsRef, (snap) => {
+            setBills(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bill)));
+          }, (err) => console.error("Erro Contas a Pagar:", err));
+
+          // Listener de Contas a Receber
+          const receivablesRef = collection(db, "users", ownerUid, "receivables");
+          unsubReceivables = onSnapshot(receivablesRef, (snap) => {
+            setReceivables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Receivable)));
+          }, (err) => console.error("Erro Receivables:", err));
+
+        });
+      } catch (err) {
+        console.error("Erro ao inicializar listeners:", err);
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      unsubAuth?.();
+      unsubTxs?.();
+      unsubBills?.();
+      unsubReceivables?.();
+    };
+  }, []);
+
+  // 1. Cálculos de KPI com base nos dados reais do mês atual
+  const kpiData = useMemo(() => {
+    const currentYear = refDate.getFullYear();
+    const currentMonth = refDate.getMonth(); // 0 a 11
+
+    // Transações do mês atual
+    const currentMonthTxs = txs.filter(tx => {
+      const txDate = new Date(tx.date + "T12:00:00");
+      return txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth;
+    });
+
+    let receitaMes = 0;
+    let despesaMes = 0;
+
+    currentMonthTxs.forEach(tx => {
+      if (tx.type === "entrada") receitaMes += tx.amount;
+      else despesaMes += tx.amount;
+    });
+
+    // Transações do mês anterior (para comparar variação)
+    const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+    const prevMonthTxs = txs.filter(tx => {
+      const txDate = new Date(tx.date + "T12:00:00");
+      return txDate.getFullYear() === prevMonthDate.getFullYear() && txDate.getMonth() === prevMonthDate.getMonth();
+    });
+
+    let receitaPrev = 0;
+    let despesaPrev = 0;
+
+    prevMonthTxs.forEach(tx => {
+      if (tx.type === "entrada") receitaPrev += tx.amount;
+      else despesaPrev += tx.amount;
+    });
+
+    const calcVar = (curr: number, prev: number) => {
+      if (prev === 0) return curr > 0 ? "+100%" : "0%";
+      const diff = ((curr - prev) / prev) * 100;
+      return `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}%`;
+    };
+
+    const varReceita = calcVar(receitaMes, receitaPrev);
+    const varDespesa = calcVar(despesaMes, despesaPrev);
+
+    const lucroMes = receitaMes - despesaMes;
+    const lucroPrev = receitaPrev - despesaPrev;
+    const varLucro = calcVar(lucroMes, lucroPrev);
+
+    // Inadimplência: Contas a receber vencidas vs total de contas a receber pendentes
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const pendingReceivables = receivables.filter(r => r.status !== "recebido");
+    const totalPendingVal = pendingReceivables.reduce((sum, r) => sum + r.amount, 0);
+    const overdueVal = pendingReceivables.filter(r => {
+      const due = new Date(r.dueDate + "T00:00:00");
+      due.setHours(0, 0, 0, 0);
+      return due < today;
+    }).reduce((sum, r) => sum + r.amount, 0);
+
+    const taxaInadimplencia = totalPendingVal > 0 ? (overdueVal / totalPendingVal) * 100 : 0;
+
+    return [
+      { label: "Receita bruta",   value: <Sensitive hidden={hideValues}>{toBRL(receitaMes)}</Sensitive>, change: varReceita, up: parseFloat(varReceita) >= 0, sub: "vs. mês anterior", icon: TrendingUp,  color: "blue"    },
+      { label: "Despesas totais", value: <Sensitive hidden={hideValues}>{toBRL(despesaMes)}</Sensitive>, change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: "vs. mês anterior", icon: CreditCard,  color: "rose"    },
+      { label: "Lucro líquido",   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: "vs. mês anterior", icon: Wallet,      color: "emerald" },
+      { label: "Inadimplência",   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? "Atrasadas" : "Em dia",  up: taxaInadimplencia === 0,  sub: `${toBRL(overdueVal)} pendente`, icon: AlertCircle, color: "amber"   },
+    ];
+  }, [txs, receivables, hideValues, refDate]);
+
+  // 2. Gráfico Receita vs. Despesas agrupado por mês do ano selecionado
+  const chartData = useMemo(() => {
+    const currentYear = refDate.getFullYear();
+
+    const revenues = new Array(12).fill(0);
+    const expenses = new Array(12).fill(0);
+
+    txs.forEach(tx => {
+      const txDate = new Date(tx.date + "T12:00:00");
+      if (txDate.getFullYear() === currentYear) {
+        const monthIdx = txDate.getMonth();
+        if (tx.type === "entrada") {
+          revenues[monthIdx] += tx.amount;
+        } else {
+          expenses[monthIdx] += tx.amount;
+        }
+      }
+    });
+
+    const maxVal = Math.max(...revenues, ...expenses) || 1000;
+
+    return { revenues, expenses, maxVal };
+  }, [txs, refDate]);
+
+  // 3. Vencimentos próximos (Contas a Pagar pendentes)
+  const upcomingBillsData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return bills
+      .filter(b => b.status !== "pago")
+      .map(b => {
+        const due = new Date(b.dueDate + "T00:00:00");
+        due.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+        return {
+          ...b,
+          urgent: diffDays <= 3,
+          dueFormatted: due.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+        };
+      })
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+      .slice(0, 4);
+  }, [bills]);
+
+  // 4. Últimas transações do mês selecionado (máximo 6 reais)
+  const recentTransactions = useMemo(() => {
+    const y = refDate.getFullYear();
+    const m = refDate.getMonth();
+    return txs
+      .filter((tx) => {
+        const d = new Date(tx.date + "T12:00:00");
+        return d.getFullYear() === y && d.getMonth() === m;
+      })
+      .slice(0, 6);
+  }, [txs, refDate]);
+
+  // 5. Centro de Custos do mês selecionado (Despesas por categoria — Donut)
+  const costCenterData = useMemo(() => {
+    const categoryTotals: Record<string, number> = {};
+    let totalExpenses = 0;
+    const y = refDate.getFullYear();
+    const m = refDate.getMonth();
+
+    txs.forEach(tx => {
+      const d = new Date(tx.date + "T12:00:00");
+      if (tx.type === "saida" && d.getFullYear() === y && d.getMonth() === m) {
+        categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
+        totalExpenses += tx.amount;
+      }
+    });
+
+    // Rampa derivada da marca — clareia em direção à superfície.
+    const colors = [
+      "var(--brand)",
+      "color-mix(in srgb, var(--brand) 78%, var(--surface))",
+      "color-mix(in srgb, var(--brand) 56%, var(--surface))",
+      "color-mix(in srgb, var(--brand) 38%, var(--surface))",
+      "color-mix(in srgb, var(--brand) 22%, var(--surface))",
+      "var(--border-strong)",
+    ];
+
+    const sortedCenters = Object.entries(categoryTotals)
+      .map(([name, amount], idx) => ({
+        name,
+        amount,
+        pct: totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
+        color: colors[idx % colors.length]
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    return {
+      centers: sortedCenters.slice(0, 5),
+      totalExpenses
+    };
+  }, [txs, refDate]);
+
+  // 6. Projeção de fluxo de caixa a 30 dias (Saldo em conta + Recebíveis 30d - Contas a Pagar 30d)
+  const projection = useMemo(() => {
+    // Saldo atual consolidado histórico
+    let saldoAtual = 0;
+    txs.forEach(t => {
+      if (t.type === "entrada") saldoAtual += t.amount;
+      else saldoAtual -= t.amount;
+    });
+
+    // 30 dias a partir de hoje
+    const today = new Date();
+    const futureLimit = new Date();
+    futureLimit.setDate(futureLimit.getDate() + 30);
+
+    const filter30Days = (dueDateStr: string) => {
+      const d = new Date(dueDateStr + "T00:00:00");
+      return d >= today && d <= futureLimit;
+    };
+
+    // Entradas previstas nos próximos 30 dias (Recebíveis pendentes)
+    const entradasPrevistas = receivables
+      .filter(r => r.status !== "recebido" && filter30Days(r.dueDate))
+      .reduce((sum, r) => sum + r.amount, 0);
+
+    // Saídas previstas nos próximos 30 dias (Contas a pagar pendentes)
+    const saidasAgendadas = bills
+      .filter(b => b.status !== "pago" && filter30Days(b.dueDate))
+      .reduce((sum, b) => sum + b.amount, 0);
+
+    const saldoProjetado = saldoAtual + entradasPrevistas - saidasAgendadas;
+    const variacaoPct = saldoAtual !== 0 ? ((saldoProjetado - saldoAtual) / Math.abs(saldoAtual)) * 100 : 0;
+
+    return {
+      saldoAtual,
+      entradasPrevistas,
+      saidasAgendadas,
+      saldoProjetado,
+      variacaoPct
+    };
+  }, [txs, bills, receivables]);
+
+  if (blocked) return <AccessDenied category="Dashboard" />;
+
+  if (loading) return <PageLoader />;
+
+  return (
+    <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
+
+
+      {/* Senha primeiro, ramo do negócio depois — nunca os dois sobrepostos */}
+      <CreatePasswordGate
+        open={needsPasswordSetup}
+        email={user?.email ?? null}
+        suggestedName={user?.displayName ?? null}
+        onComplete={() => setNeedsPasswordSetup(false)}
+      />
+
+      <OnboardingModal
+        open={showOnboarding && !needsPasswordSetup}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={async (answers: OnboardingAnswers) => {
+          if (!user) return;
+          try {
+            const { getFirebase } = await import("@/lib/firebase");
+            const { doc, setDoc } = await import("firebase/firestore");
+            const { db } = await getFirebase();
+            await setDoc(doc(db, "users", user.uid, "profile", "onboarding"), {
+              completed: true,
+              answers,
+              completedAt: Date.now(),
+            });
+            if (typeof window !== "undefined") {
+              localStorage.setItem(`onboarding_ramo_${user.uid}`, JSON.stringify(answers.ramo || []));
+            }
+          } catch (err) {
+            console.error("Erro ao salvar onboarding:", err);
+          }
+        }}
+      />
+
+      <Navbar
+        user={user}
+        activePath={activePath}
+        onLogout={handleLogout}
+      />
+
+      <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
+
+        {/* ── Cabeçalho que só aparece na impressão / PDF ── */}
+        <div className="print-only" style={{ marginBottom: 20, borderBottom: "2px solid var(--text)", paddingBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+            <div>
+              <p style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>Relatório financeiro — {periodLabel}</p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{user?.displayName || user?.email || ""}</p>
+            </div>
+            {printedAt && <p style={{ fontSize: 11, color: "var(--text-subtle)", whiteSpace: "nowrap" }}>Gerado em {printedAt}</p>}
+          </div>
+        </div>
+
+        {/* ── Seletor de mês — cada mês mostra o seu próprio resultado ── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-base md:text-lg font-extrabold leading-tight" style={{ color: "var(--db-text)" }}>
+              Resultado de {periodLabel}
+            </h1>
+            <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>
+              KPIs, transações e centro de custos do mês selecionado
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 no-print">
+            <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
+              <button
+                onClick={goPrevMonth}
+                aria-label="Mês anterior"
+                className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer"
+                style={{ color: "var(--brand)" }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="px-3 text-xs font-bold mono select-none" style={{ color: "var(--db-text)" }}>{periodLabel}</span>
+              <button
+                onClick={goNextMonth}
+                disabled={isCurrentMonth}
+                aria-label="Próximo mês"
+                className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ color: "var(--brand)" }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors hover:bg-[var(--sunken)] cursor-pointer"
+              style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "var(--db-card)" }}
+              title="Imprimir / salvar em PDF o relatório deste mês"
+            >
+              <Printer size={14} />
+              <span className="hidden sm:inline">Imprimir relatório</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── KPIs ── */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+          {kpiData.map((kpi, i) => {
+            const c = colorMap[kpi.color];
+            return (
+              <div key={kpi.label} className="kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3 md:gap-4" style={{ animationDelay: `${i * 80}ms` }}>
+                <div className="flex items-start justify-between">
+                  <p className="text-xs font-medium" style={{ color: "var(--db-text-2)" }}>{kpi.label}</p>
+                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
+                    <kpi.icon size={16} style={{ color: c.text }} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xl md:text-2xl font-extrabold leading-tight mb-1" style={{ color: "var(--db-text)" }}>{kpi.value}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: c.bg, color: c.text }}>
+                      {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                      {kpi.change}
+                    </span>
+                    <span className="text-xs" style={{ color: "var(--db-text-2)" }}>{kpi.sub}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Chart + Bills ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+
+          <div className="chart-card xl:col-span-2 p-4 md:p-6">
+            <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2">
+              <div>
+                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Receita vs. Despesas</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Ano de {refDate.getFullYear()} — mensal</p>
+              </div>
+              <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                <div className="flex items-center rounded-lg border overflow-hidden no-print" style={{ borderColor: "var(--db-border)" }}>
+                  {([
+                    { t: "bar" as const,  icon: BarChart3, label: "Barra" },
+                    { t: "line" as const, icon: LineChart, label: "Linha" },
+                    { t: "pie" as const,  icon: PieChart,  label: "Pizza" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.t}
+                      onClick={() => changeChartType(opt.t)}
+                      title={opt.label}
+                      aria-pressed={chartType === opt.t}
+                      className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                      style={{
+                        background: chartType === opt.t ? "var(--db-hover)" : "transparent",
+                        color: chartType === opt.t ? "var(--brand)" : "var(--db-text-2)",
+                      }}
+                    >
+                      <opt.icon size={13} />
+                      <span className="hidden lg:inline">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-500)" }} /> Receita
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-400)" }} /> Despesa
+                </div>
+                <button
+                  onClick={() => setHideValues(!hideValues)}
+                  className="flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer no-print" style={{ color: "var(--brand)" }}
+                >
+                  <Download size={12} /><span className="hidden sm:inline">{hideValues ? "Mostrar Valores" : "Ocultar Valores"}</span>
+                </button>
+              </div>
+            </div>
+            {chartType === "pie" ? (
+              <div className="flex justify-center items-center" style={{ height: 160 }}>
+                {(() => {
+                  const totRev = chartData.revenues.reduce((a, b) => a + b, 0);
+                  const totExp = chartData.expenses.reduce((a, b) => a + b, 0);
+                  const total = totRev + totExp;
+                  if (total === 0) {
+                    return <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Sem dados no período.</p>;
+                  }
+                  const cx = 90, cy = 90, r = 78;
+                  const revFrac = totRev / total;
+                  const slice = (from: number, to: number, color: string, key: string) => {
+                    const a0 = from * 2 * Math.PI - Math.PI / 2;
+                    const a1 = to * 2 * Math.PI - Math.PI / 2;
+                    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+                    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+                    const large = to - from > 0.5 ? 1 : 0;
+                    const mid = (a0 + a1) / 2;
+                    const lx = cx + r * 0.6 * Math.cos(mid), ly = cy + r * 0.6 * Math.sin(mid);
+                    const pct = Math.round((to - from) * 100);
+                    return (
+                      <g key={key}>
+                        <path d={`M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`} fill={color} />
+                        {pct >= 6 && (
+                          <text x={lx} y={ly + 3} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--brand-on)" fontFamily="Sora, sans-serif">{pct}%</text>
+                        )}
+                      </g>
+                    );
+                  };
+                  return (
+                    <svg
+                      width="180" height="180" viewBox="0 0 180 180"
+                      role="img"
+                      aria-label={`Gráfico de pizza: receita ${Math.round(revFrac * 100)}% e despesa ${100 - Math.round(revFrac * 100)}% do total do ano — detalhamento mês a mês na tabela abaixo`}
+                    >
+                      {slice(0, revFrac, "var(--brand-500)", "rev")}
+                      {slice(revFrac, 1, "var(--brand-400)", "exp")}
+                    </svg>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="relative">
+              <svg
+                viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}
+                role="img"
+                aria-label={`Gráfico de ${chartType === "line" ? "linha" : "barras"}: receita e despesa mensal de ${refDate.getFullYear()} — detalhamento mês a mês na tabela abaixo`}
+              >
+                {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
+                  <g key={i}>
+                    <line x1="40" y1={10 + (1 - t) * 160} x2="590" y2={10 + (1 - t) * 160} stroke="var(--db-border)" strokeWidth="1" />
+                    <text x="32" y={10 + (1 - t) * 160 + 4} fontSize="9" fill="var(--db-text-3)" textAnchor="end" fontFamily="JetBrains Mono, monospace">
+                      {Math.round(t * chartData.maxVal / 100) * 100 === 0 ? "0" : `${Math.round(t * chartData.maxVal / 1000)}k`}
+                    </text>
+                  </g>
+                ))}
+                {hoverMonth !== null && (
+                  <rect x={49 + hoverMonth * 44} y={10} width={44} height={160} rx={4} fill="var(--brand-500)" opacity={0.07} />
+                )}
+                {chartType === "line" ? (
+                  (() => {
+                    const px = (i: number) => 48 + i * 44 + 11;
+                    const py = (v: number) => 170 - (v / chartData.maxVal) * 160;
+                    const pts = (arr: number[]) => arr.map((v, i) => `${px(i)},${py(v)}`).join(" ");
+                    const dim = (i: number) => (hoverMonth === null || hoverMonth === i ? 1 : 0.3);
+                    return (
+                      <>
+                        <polyline className="bar-rev-anim" fill="none" stroke="var(--brand-500)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
+                        <polyline className="bar-exp-anim" fill="none" stroke="var(--brand-400)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
+                        {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r={hoverMonth === i ? 3.5 : 2.5} fill="var(--brand-500)" opacity={dim(i)} style={{ transition: "opacity .15s" }} />)}
+                        {chartData.expenses.map((v, i) => <circle key={`e${i}`} cx={px(i)} cy={py(v)} r={hoverMonth === i ? 3.5 : 2.5} fill="var(--brand-400)" opacity={dim(i)} style={{ transition: "opacity .15s" }} />)}
+                        {months.map((m, i) => (
+                          <text key={m} x={px(i)} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                        ))}
+                      </>
+                    );
+                  })()
+                ) : (
+                  months.map((m, i) => {
+                    const rev = chartData.revenues[i];
+                    const exp = chartData.expenses[i];
+                    const bw = 22, gap = 44, x = 48 + i * gap;
+                    const dim = hoverMonth === null || hoverMonth === i ? 1 : 0.3;
+                    return (
+                      <g key={m}>
+                        <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60}ms` }} />
+                        <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60 + 30}ms` }} />
+                        <text x={x + bw} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                      </g>
+                    );
+                  })
+                )}
+                {months.map((_, i) => (
+                  <rect
+                    key={`hit${i}`}
+                    x={49 + i * 44}
+                    y={10}
+                    width={44}
+                    height={160}
+                    fill="transparent"
+                    onMouseEnter={() => setHoverMonth(i)}
+                    onMouseLeave={() => setHoverMonth(null)}
+                    onClick={() => setHoverMonth((m) => (m === i ? null : i))}
+                  />
+                ))}
+              </svg>
+              {hoverMonth !== null && (
+                <div
+                  className="pointer-events-none absolute z-20 rounded-lg shadow-lg px-2.5 py-2"
+                  style={{
+                    top: 0,
+                    left: `${(((chartType === "line" ? 59 : 71) + hoverMonth * 44) / 600) * 100}%`,
+                    transform: `translateX(${hoverMonth <= 1 ? "-12%" : hoverMonth >= 10 ? "-88%" : "-50%"})`,
+                    background: "var(--db-card)",
+                    border: "1px solid var(--db-border)",
+                    minWidth: 168,
+                  }}
+                >
+                  <p className="text-xs font-bold mb-1" style={{ color: "var(--db-text)" }}>
+                    {months[hoverMonth]} / {refDate.getFullYear()}
+                  </p>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-500)" }} />
+                    <span style={{ color: "var(--db-text-2)" }}>Receita</span>
+                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
+                      <Sensitive hidden={hideValues}>{toBRL(chartData.revenues[hoverMonth])}</Sensitive>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs mt-1">
+                    <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-400)" }} />
+                    <span style={{ color: "var(--db-text-2)" }}>Despesa</span>
+                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
+                      <Sensitive hidden={hideValues}>{toBRL(chartData.expenses[hoverMonth])}</Sensitive>
+                    </span>
+                  </div>
+                </div>
+              )}
+              </div>
+            )}
+            {/* Alternativa em texto do gráfico acima, pra quem usa leitor de
+                tela — mesmos dados de chartData, mês a mês. Só visível pra
+                tecnologia assistiva (sr-only). */}
+            <table className="sr-only">
+              <caption>Receita e despesa mensal de {refDate.getFullYear()}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Mês</th>
+                  <th scope="col">Receita</th>
+                  <th scope="col">Despesa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {months.map((m, i) => (
+                  <tr key={m}>
+                    <th scope="row">{m}</th>
+                    <td>{toBRL(chartData.revenues[i])}</td>
+                    <td>{toBRL(chartData.expenses[i])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
+              {[
+                { label:"Total receitas (ano)", val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-500)" },
+                { label:"Total despesas (ano)", val: <Sensitive hidden={hideValues}>{toBRL(chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-400)" },
+                { label:"Saldo acumulado", val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color: (chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)) >= 0 ? "var(--success)" : "var(--danger)" },
+              ].map((s) => (
+                <div key={s.label}>
+                  <p className="text-xs mb-0.5 leading-tight" style={{ color: "var(--db-text-2)" }}>{s.label}</p>
+                  <p className="font-bold text-xs md:text-sm mono" style={{ color: s.color }}>{s.val}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Vencimentos Próximos */}
+          <div className="side-card p-4 md:p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4 md:mb-5">
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Vencimentos próximos</h2>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "var(--neg-weak)", color: "var(--neg)" }}>
+                {upcomingBillsData.filter(b => b.urgent).length} urgente
+              </span>
+            </div>
+            <div className="space-y-1 md:space-y-2 flex-1 overflow-y-auto">
+              {upcomingBillsData.length === 0 ? (
+                <div className="text-center py-8 text-xs" style={{ color: "var(--db-text-3)" }}>
+                  Nenhuma conta pendente vencendo em breve!
+                </div>
+              ) : (
+                upcomingBillsData.map((bill) => (
+                  <div key={bill.id} className="bill-row flex items-center justify-between p-2.5 md:p-3">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: bill.urgent ? "var(--neg-weak)" : "var(--brand-weak)" }}>
+                        {bill.urgent
+                          ? <AlertCircle size={14} style={{ color: "var(--neg)" }} />
+                          : <Clock       size={14} style={{ color: "var(--brand)" }} />
+                        }
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold leading-tight truncate" style={{ color: "var(--db-text)" }}>{bill.name}</p>
+                        <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>vence {bill.dueFormatted}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs font-bold mono shrink-0 ml-2" style={{ color: bill.urgent ? "var(--neg)" : "var(--db-text)" }}>
+                      <Sensitive hidden={hideValues}>{toBRL(bill.amount)}</Sensitive>
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+            <a href="/contasPagar" className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 transition-colors hover:bg-[var(--sunken)] text-center no-print"
+              style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "transparent" }}>
+              Ver todas <ChevronRight size={13} />
+            </a>
+          </div>
+        </div>
+
+        {/* ── Transactions + Cost Centers ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+
+          <div className="chart-card xl:col-span-2 p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4 md:mb-5">
+              <div>
+                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Últimas transações</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Movimentações de {periodLabel}</p>
+              </div>
+              <div className="flex items-center gap-2 no-print">
+                <a href="/fluxo-caixa" className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors" style={{ background: "var(--brand)", color: "var(--brand-on)" }}>
+                  Ver todas
+                </a>
+              </div>
+            </div>
+
+            <div className="md:hidden space-y-2">
+              {recentTransactions.length === 0 ? (
+                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>Nenhum lançamento registrado.</div>
+              ) : (
+                recentTransactions.map((tx) => (
+                  <div key={tx.id} className="tx-row flex items-center justify-between p-3 rounded-xl" style={{ border: `1px solid var(--db-border)` }}>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{tx.description}</p>
+                      <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 ml-3 shrink-0">
+                      <span className={`mono text-xs font-bold ${""}`} style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
+                        <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
+                      </span>
+                      <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
+                        {tx.reconciled ? "Conciliado" : "Pendente"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b db-divider">
+                    {["Descrição","Tipo","Valor","Data","Status"].map((h) => (
+                      <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap" style={{ color: "var(--db-text)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-xs" style={{ color: "var(--db-text-3)" }}>Nenhuma transação registrada.</td>
+                    </tr>
+                  ) : (
+                    recentTransactions.map((tx) => (
+                      <tr key={tx.id} className="tx-row">
+                        <td className="py-3 pr-4"><p className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>{tx.description}</p></td>
+                        <td className="py-3 pr-4"><span className="text-xs font-medium" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>{tx.type === "entrada" ? "Entrada" : "Saída"}</span></td>
+                        <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}><Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive></span></td>
+                        <td className="py-3 pr-4"><span className="text-xs whitespace-nowrap" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span></td>
+                        <td className="py-3"><Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">{tx.reconciled ? "Conciliado" : "Pendente"}</Badge></td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Centros de Custo (Donut Chart) */}
+          <div className="side-card p-4 md:p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4 md:mb-5">
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centro de custos</h2>
+              <a href="/costCenter" aria-label="Ver todos os centros de custo" style={{ color: "var(--db-text-2)" }} className="transition-colors no-print"><MoreHorizontal size={16} /></a>
+            </div>
+            <div className="flex justify-center mb-4 md:mb-5">
+              <svg
+                width="130" height="130" viewBox="0 0 140 140"
+                role="img"
+                aria-label="Gráfico de rosca: despesas por centro de custo — detalhamento na lista abaixo"
+              >
+                {(() => {
+                  const circ = 2 * Math.PI * 52;
+                  let offset = 0;
+                  return costCenterData.centers.map((cc) => {
+                    const dash = (cc.pct / 100) * circ;
+                    const el = (
+                      <circle key={cc.name} cx={70} cy={70} r={52} fill="none" stroke={cc.color}
+                        strokeWidth={22} strokeDasharray={`${dash} ${circ - dash}`}
+                        strokeDashoffset={-offset} transform="rotate(-90 70 70)" className="donut-ring" />
+                    );
+                    offset += dash; 
+                    return el;
+                  });
+                })()}
+                {hideValues ? (
+                  <rect x="42" y="57" width="56" height="12" rx="3" fill="var(--db-text-3)" />
+                ) : (
+                  <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
+                    {toBRL(costCenterData.totalExpenses)}
+                  </text>
+                )}
+                <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text-3)" fontFamily="Sora">total despesas</text>
+              </svg>
+            </div>
+            <div className="space-y-2.5 flex-1 overflow-y-auto">
+              {costCenterData.centers.length === 0 ? (
+                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>Nenhuma despesa no período.</div>
+              ) : (
+                costCenterData.centers.map((cc) => (
+                  <div key={cc.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cc.color }} />
+                      <span className="text-xs truncate max-w-[80px]" style={{ color: "var(--db-text-2)" }} title={cc.name}>{cc.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className="w-16 md:w-20 h-1.5 rounded-full overflow-hidden db-progress-bg">
+                        <div className="h-full rounded-full" style={{ width: `${cc.pct}%`, background: cc.color }} />
+                      </div>
+                      <span className="mono text-xs font-semibold w-7 text-right" style={{ color: "var(--db-text)" }}>{cc.pct}%</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Projeção fluxo de caixa ── */}
+        <div className="chart-card p-4 md:p-6">
+          <div className="flex items-start md:items-center justify-between mb-4 gap-2">
+            <div>
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Projeção de fluxo de caixa (Próximos 30 dias)</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Baseado em saldo atual e recebimentos/contas agendadas para os próximos 30 dias</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
+            {[
+              { label:"Saldo atual",        val: <Sensitive hidden={hideValues}>{toBRL(projection.saldoAtual)}</Sensitive>, icon:Wallet,       color:"blue",    note:"consolidado histórico" },
+              { label:"Entradas previstas", val: <Sensitive hidden={hideValues}>{`+ ${toBRL(projection.entradasPrevistas)}`}</Sensitive>, icon:TrendingUp,   color:"emerald", note:"recebíveis próximos 30 dias"  },
+              { label:"Saídas agendadas",   val: <Sensitive hidden={hideValues}>{`- ${toBRL(projection.saidasAgendadas)}`}</Sensitive>, icon:TrendingDown, color:"rose",    note:"compromissos próximos 30 dias"  },
+            ].map((item) => {
+              const cMap: Record<string, { bg: string; text: string; icon: string }> = {
+                blue:    { bg:"var(--brand-weak)", text:"var(--brand)", icon:"var(--brand-weak)" },
+                emerald: { bg:"var(--pos-weak)",   text:"var(--pos)",   icon:"var(--pos-weak)" },
+                rose:    { bg:"var(--neg-weak)",    text:"var(--neg)",   icon:"var(--neg-weak)" },
+              };
+              const c = cMap[item.color];
+              return (
+                <div key={item.label} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl" style={{ background: c.bg }}>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
+                    <item.icon size={18} style={{ color: c.text }} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium mb-0.5" style={{ color: c.text }}>{item.label}</p>
+                    <p className="font-extrabold text-base md:text-lg mono truncate" style={{ color: c.text }}>{item.val}</p>
+                    <p className="text-xs opacity-60 truncate" style={{ color: c.text }} title={item.note}>{item.note}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 md:mt-5">
+            <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--db-text-2)" }}>
+              <span>Saldo projetado final</span>
+              <span className="mono font-semibold" style={{ color: "var(--pos)" }}>
+                <Sensitive hidden={hideValues}>{toBRL(projection.saldoProjetado)}</Sensitive>{" "}
+                <span className="font-normal text-xs ml-1" style={{ color: "var(--db-text-2)" }}>
+                  ({projection.variacaoPct >= 0 ? "+" : ""}{projection.variacaoPct.toFixed(1)}%)
+                </span>
+              </span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden db-progress-bg">
+              <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max((projection.saldoProjetado / (projection.saldoAtual || 1)) * 50, 10), 100)}%`, background: "var(--brand)" }} />
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  );
+}

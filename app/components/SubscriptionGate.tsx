@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { Sparkles, X } from "lucide-react";
 import { useSubscription } from "../hooks/useSubscription";
 import Paywall from "./Paywall";

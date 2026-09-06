@@ -3,6 +3,11 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
+// NOTA sobre os globs: as rotas moram em app/[locale]/**. Nos globs do ESLint
+// (minimatch) os colchetes de "[locale]" seriam lidos como classe de
+// caractere, então usamos "app/*/..." — o "*" casa o segmento "[locale]"
+// literalmente. Ver docs/superpowers/specs/2026-09-06-i18n-multi-idioma-*.
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -35,20 +40,21 @@ const eslintConfig = defineConfig([
       "app/components/CashFlow.tsx",
       "app/components/PinModal.tsx",
       "app/components/ConfirmModal.tsx",
-      "app/register/**/*.tsx",
-      "app/login/**/*.tsx",
+      "app/*/register/**/*.tsx",
+      "app/*/login/**/*.tsx",
       "app/layout.tsx",
-      "app/dashboard/page.tsx",
-      "app/fluxo-caixa/page.tsx",
-      "app/contasPagar/page.tsx",
-      "app/contasReceber/page.tsx",
-      "app/costCenter/page.tsx",
-      "app/estoque/page.tsx",
-      "app/vendas/page.tsx",
-      "app/impostos/page.tsx",
-      "app/relatorios/page.tsx",
-      "app/configuracoes/**/*.tsx",
-      "app/acessibilidade/page.tsx",
+      "app/*/layout.tsx",
+      "app/*/dashboard/page.tsx",
+      "app/*/fluxo-caixa/page.tsx",
+      "app/*/contasPagar/page.tsx",
+      "app/*/contasReceber/page.tsx",
+      "app/*/costCenter/page.tsx",
+      "app/*/estoque/page.tsx",
+      "app/*/vendas/page.tsx",
+      "app/*/impostos/page.tsx",
+      "app/*/relatorios/page.tsx",
+      "app/*/configuracoes/**/*.tsx",
+      "app/*/acessibilidade/page.tsx",
     ],
     rules: jsxA11y.flatConfigs.recommended.rules,
   },
@@ -61,14 +67,15 @@ const eslintConfig = defineConfig([
     files: ["app/**/*.tsx"],
     ignores: [
       "app/components/ui/**",
-      "app/design-system/**",
-      "app/page.tsx",
+      "app/*/design-system/**",
+      "app/*/page.tsx",
       "app/not-found.tsx",
-      "app/login/**",
-      "app/register/**",
-      "app/debug/**",
-      "app/developer/**",
-      "app/assinatura/**",
+      "app/*/not-found.tsx",
+      "app/*/login/**",
+      "app/*/register/**",
+      "app/*/debug/**",
+      "app/*/developer/**",
+      "app/*/assinatura/**",
       "app/components/OnboardingModal.tsx",
       "app/components/CreatePasswordGate.tsx",
       "app/components/Paywall.tsx",
@@ -87,6 +94,30 @@ const eslintConfig = defineConfig([
             "Cor hex crua em template string. Use um token do design system ou um componente de app/components/ui/.",
         },
       ],
+    },
+  },
+
+  // i18n Fase 1 — depois que as rotas foram pra app/[locale]/, a regra
+  // @next/next/no-html-link-for-pages passou a acusar os <a href="/rota">
+  // pré-existentes (links internos que já deviam ser <Link>). Cada fase da
+  // migração de i18n troca esses <a> pelo <Link> do wrapper
+  // (@/i18n/navigation) e remove a entrada correspondente daqui — lista que
+  // encolhe. Ver docs/superpowers/specs/2026-09-06-i18n-multi-idioma-plan.md.
+  {
+    files: [
+      "app/*/assinatura/**/*.tsx",
+      "app/*/configuracoes/**/*.tsx",
+      "app/*/dashboard/page.tsx",
+      "app/*/not-found.tsx",
+      "app/*/register/page.tsx",
+      "app/*/vendas/page.tsx",
+      "app/components/AccessDenied.tsx",
+      "app/components/CashFlow.tsx",
+      "app/components/Navbar.tsx",
+      "app/components/SubscriptionGate.tsx",
+    ],
+    rules: {
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
 ]);

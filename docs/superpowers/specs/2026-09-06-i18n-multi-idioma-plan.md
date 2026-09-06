@@ -21,6 +21,28 @@ Checkboxes marcam progresso.
 
 Objetivo: app 100% funcional e 100% em pt-BR, mas já rodando sobre o next-intl.
 
+> **Status (commit inicial da branch `feat/i18n-multi-idioma`):** 1.1–1.5,
+> 1.6 (só o `lib/format.ts`), 1.7 (só o hook cookie-only), 1.8, 1.9 e o build
+> de 1.10 concluídos e verificados (build de produção limpo, 71 páginas;
+> `tsc` limpo; `eslint app/` idêntico ao master: 164/94). Desvios do plano
+> original:
+> - `middleware.ts` → **`proxy.ts`** (nome novo do Next 16).
+> - `next-intl` v4 não valida locale com `notFound()` em `request.ts`; a
+>   validação fica no `LocaleLayout` (`hasLocale` + `notFound()`), e o
+>   fallback de chave é feito por **deep-merge com pt-BR** em vez de
+>   `getMessageFallback`.
+> - Mensagens importadas **estaticamente** via `messages/<locale>/index.ts`
+>   (o `import()` dinâmico com template string corria com o Turbopack em dev).
+> - Nova rota **`app/[locale]/[...rest]/page.tsx`** (`notFound()`) pro 404
+>   estilizado dentro do locale + **`app/not-found.tsx`** mínimo na raiz.
+> - Swap dos `toBRL`/`toLocale*` das páginas: **adiado** pras fases de cada
+>   área (o locale vira dinâmico lá). Persistência do idioma no Firestore:
+>   **movida pra Fase 3** (junto da UI de "Idioma").
+> - Quirk conhecido, só em dev (Turbopack): o **primeiro** request a cada
+>   rota `/[locale]` durante o cold-compile loga `SyntaxError: Unexpected end
+>   of JSON input` e responde 500; o retry imediato responde 200. Não ocorre
+>   em produção (`next build` + `next start` limpos).
+
 ### 1.1 Dependências e config
 
 - [ ] `npm i next-intl`
@@ -131,57 +153,60 @@ Objetivo: app 100% funcional e 100% em pt-BR, mas já rodando sobre o next-intl.
 
 ### 1.6 `lib/format.ts`
 
-- [ ] Criar com: `formatMoney`, `formatMoneyFromCents`, `formatNumber`,
+- [x] Criar com: `formatMoney`, `formatMoneyFromCents`, `formatNumber`,
       `formatDate`, `formatDateLong`, `formatDateTime` — todas
-      `(value, locale: string)`.
+      `(value, locale = 'pt-BR')`.
   - Moeda: `Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL' })`.
   - Cache dos formatadores por `locale` (Map) — `Intl.*` é caro de instanciar.
-- [ ] Substituir as 12 cópias locais de `formatBRL`
-      (`app/components/CashFlow.tsx`, `app/[locale]/dashboard/page.tsx`,
-      `contasPagar`, `contasReceber`, `estoque`, `impostos`, `relatorios`,
-      `vendas`, `costCenter` + `lib/billingPlans.ts`, `lib/emailTemplates.ts`,
-      `lib/reportPdf.ts`) por import de `lib/format.ts`.
-      Nesta fase o `locale` passado é `'pt-BR'` fixo — as fases seguintes
-      trocam pelo locale real quando migrarem cada tela.
-- [ ] Padronizar as ~44 chamadas soltas de `toLocale*Date*/toLocaleString`
-      pra passar por `lib/format.ts` (também com `'pt-BR'` fixo por enquanto).
-- [ ] `lib/billingPlans.ts` `formatBRLFromCents` → delega pra `lib/format.ts`
-      (usado no contrato/e-mail).
+- [ ] **Adiado pras fases de cada área (4–7):** substituir as 12 cópias
+      locais de `toBRL`/`BRL`/`fmt` (`CashFlow.tsx`, `dashboard`, `contasPagar`,
+      `contasReceber`, `estoque`, `impostos`, `relatorios`, `vendas`,
+      `costCenter`) e as ~44 chamadas soltas de `toLocale*` por `lib/format.ts`.
+      Fazer agora, com `'pt-BR'` fixo, seria só churn que a fase da área
+      reescreve de novo quando o locale vira dinâmico — então o swap acontece
+      junto da migração de string de cada tela.
+- [ ] **Fase 8:** `lib/billingPlans.ts` `formatBRLFromCents`,
+      `lib/reportPdf.ts`, `lib/emailTemplates.ts` → delegam pra `lib/format.ts`.
 
 ### 1.7 Preferência de idioma do usuário
 
-- [ ] Levantar onde ficam as preferências do membro no Firestore (a partir
-      de `app/hooks/useAccountScope.ts` / `useAuth.ts` / doc do membro em
-      `teamAuth.ts`). Definir o caminho exato do campo `locale`.
-- [ ] `app/hooks/useLocalePreference.ts` (novo):
-  - `locale` atual via `useLocale()`;
-  - `setLocale(next)`: grava cookie `NEXT_LOCALE`, grava `locale` no doc do
-    membro (best-effort, não bloqueia), `router.replace(pathname, {locale: next})`.
-- [ ] Sincronização Firestore → cookie no bootstrap de auth
-      (`useAuth.ts` ou efeito adjacente): se doc do membro tem `locale` ≠
-      cookie atual → seta cookie e `router.replace` uma vez.
-- [ ] **Sem** UI de troca ainda (entra na Fase 2/3) — só o encanamento.
+- [x] `app/hooks/useLocalePreference.ts` (novo) — **só cookie nesta fase**.
+      `locale` via `useLocale()`; `setLocale(next)` faz
+      `router.replace(pathname, { locale: next })` (o next-intl grava o cookie
+      NEXT_LOCALE). Nenhuma tela consome ainda — é base pros seletores das
+      Fases 2 e 3.
+- [ ] **Movido pra Fase 3** (junto da UI de "Idioma" em Configurações, que já
+      mexe no doc do membro): persistir `locale` no doc do membro no Firestore
+      + sincronização Firestore→cookie no bootstrap de auth. Levantar o caminho
+      exato do doc a partir de `useAccountScope.ts` / `teamAuth.ts`.
 
 ### 1.8 Estrutura de mensagens vazia
 
-- [ ] Criar `messages/pt-BR/`, `messages/en/`, `messages/es/` com os 17
-      namespaces do spec, cada um `{}` (ou só `common.json` populado se algo
-      da Fase 1 precisar — idealmente nada).
-- [ ] `i18n/request.ts` já deve carregar todos sem quebrar com `{}`.
+- [x] Criar `messages/{pt-BR,en,es}/` com os 17 namespaces, cada um `{}`.
+- [x] `i18n/request.ts` carrega todos e faz deep-merge com pt-BR como base
+      (fallback automático de chave não traduzida).
 
 ### 1.9 Teste de paridade de chaves
 
-- [ ] `scripts/i18n-check.mjs` (ou `messages/__tests__/parity.test.ts`):
-  - todos os namespaces existem nos 3 locales;
-  - conjunto de chaves (flatten) idêntico entre `pt-BR`, `en`, `es`;
-  - toda mensagem parseia como ICU válido
-    (`@formatjs/icu-messageformat-parser`);
-  - falha com diff legível.
-- [ ] Adicionar ao `package.json` como `"i18n:check"` e rodar no fim de cada fase.
+- [x] `scripts/i18n-check.mjs`: namespaces presentes nos 3 locales; conjunto
+      de chaves (flatten) idêntico entre `pt-BR`/`en`/`es`; toda mensagem
+      parseia como ICU válido (`@formatjs/icu-messageformat-parser`, agora
+      devDependency explícita).
+- [x] `package.json` → script `"i18n:check"`. Rodar no fim de cada fase.
 
 ### 1.10 Fechamento da fase
 
-- [ ] `npm run build` passa (o move de pastas é o maior risco de quebra).
+- [x] `npm run build` passa (move de pastas + rota pega-tudo
+      `app/[locale]/[...rest]/page.tsx` pro 404 estilizado dentro do locale).
+- [ ] `tsc --noEmit` limpo.
+- [ ] `npm run lint` sem erros novos vs. baseline (164 erros / 94 avisos em
+      `app/`, iguais ao master — `@next/next/no-html-link-for-pages` neutralizado
+      por override em `eslint.config.mjs`, lista que encolhe por fase).
+- [x] Navegador: `/` e rotas internas em pt-BR sem prefixo; `/en`, `/es` com
+      prefixo servindo as MESMAS telas ainda em português; `<html lang>`
+      dinâmico + cookie `NEXT_LOCALE`; redirect de não-logado
+      (`/dashboard` → `/en/login` ou `/login`); 404 estilizado em
+      `/en/rota-inexistente`; `data-has-nav` correto com prefixo de idioma.
 - [ ] `tsc --noEmit` limpo.
 - [ ] `npm run lint` sem erros novos vs. baseline (`git stash`).
 - [ ] Navegador: `/` e `/dashboard` (logado) carregam em pt-BR sem prefixo;
