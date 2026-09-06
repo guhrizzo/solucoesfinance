@@ -19,6 +19,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Accessibility, Type, Underline, Zap, ZapOff, Hand, X, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useAccessibilityWidget } from "../hooks/useAccessibilityWidget";
 import { getConsentSnapshot, subscribeConsent } from "@/lib/consent";
 
 const FONT_SCALE_KEY = "nexusfi-font-scale";
@@ -141,6 +142,7 @@ export function AccessibilityWidget() {
   const [underline, setUnderline] = useState(false);
   const [vlibras, setVlibras] = useState(false);
   const { reduced, setReducedMotion } = useReducedMotion();
+  const { enabled } = useAccessibilityWidget();
 
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -196,6 +198,15 @@ export function AccessibilityWidget() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  // Se o usuário desliga o widget em Configurações com o Libras ativo, o botão
+  // do VLibras (injetado no body, fora do React) ficaria órfão — some junto.
+  // Ao religar, ele volta se a preferência de Libras continuava marcada.
+  useEffect(() => {
+    if (!vlibras) return;
+    if (enabled) showVLibras();
+    else hideVLibras();
+  }, [enabled, vlibras]);
+
   const changeFontScale = (next: number) => {
     const clamped = Math.min(FONT_MAX, Math.max(FONT_MIN, next));
     setFontScale(clamped);
@@ -237,6 +248,14 @@ export function AccessibilityWidget() {
     if (vlibras) toggleVlibras();
   };
 
+  // Desligado em Configurações > Aparência. O globals.css já esconde na
+  // hidratação (data-a11y-widget="off"); aqui evitamos rodar o resto.
+  if (!enabled) return null;
+
+  // O plugin do VLibras injeta o próprio botão no mesmo canto inferior
+  // direito — quando o Libras está ligado, subimos o widget pra não cobrir.
+  const vlibrasGap = vlibras ? 64 : 0;
+
   return (
     <>
       <button
@@ -247,7 +266,7 @@ export function AccessibilityWidget() {
         aria-label="Opções de acessibilidade"
         onClick={() => setOpen((v) => !v)}
         className="a11y-widget-btn"
-        style={{ bottom: cookieBarVisible ? 88 : 20 }}
+        style={{ bottom: (cookieBarVisible ? 88 : 20) + vlibrasGap }}
       >
         <Accessibility size={22} aria-hidden="true" />
       </button>
@@ -258,7 +277,7 @@ export function AccessibilityWidget() {
           role="dialog"
           aria-label="Opções de acessibilidade"
           className="a11y-widget-panel"
-          style={{ bottom: cookieBarVisible ? 136 : 68 }}
+          style={{ bottom: (cookieBarVisible ? 136 : 68) + vlibrasGap }}
         >
           <div className="a11y-widget-header">
             <strong>Acessibilidade</strong>
