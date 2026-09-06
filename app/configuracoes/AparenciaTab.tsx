@@ -3,11 +3,12 @@
 // app/configuracoes/AparenciaTab.tsx
 
 import { useEffect, useState } from "react";
-import { Sun, Moon, PanelLeft, PanelTop, BarChart2, LineChart, PieChart, Zap, ZapOff } from "lucide-react";
+import { Sun, Moon, PanelLeft, PanelTop, BarChart2, LineChart, PieChart, Zap, ZapOff, Eye, EyeOff } from "lucide-react";
 import { Card } from "../components/ui";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useAccessibilityWidget } from "../hooks/useAccessibilityWidget";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
 
@@ -84,6 +85,7 @@ export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
   const { dark, setTheme } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
   const { reduced, setReducedMotion } = useReducedMotion();
+  const { enabled: a11yWidget, setEnabled: setA11yWidget } = useAccessibilityWidget();
 
   const [chartType, setChartType] = useState<ChartType>("bar");
 
@@ -132,6 +134,16 @@ export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
     );
   };
 
+  const changeA11yWidget = (next: "ativado" | "desativado") => {
+    const on = next === "ativado";
+    if (on === a11yWidget) return;
+    setA11yWidget(on);
+    showToast(
+      on ? "Widget de acessibilidade ativado." : "Widget de acessibilidade desativado.",
+      "success"
+    );
+  };
+
   return (
     <Card padding="lg" className="space-y-6">
       <Row title="Tema" desc="Vale para este dispositivo.">
@@ -170,6 +182,22 @@ export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
           options={[
             { value: "padrao", label: "Padrão", icon: Zap },
             { value: "reduzido", label: "Reduzido", icon: ZapOff },
+          ]}
+        />
+      </Row>
+
+      <div style={{ height: 1, background: "var(--cf-border)" }} />
+
+      <Row
+        title="Widget de acessibilidade"
+        desc="Botão flutuante no canto inferior direito com tamanho do texto, sublinhado de links, redução de animações e Libras. Vale para este dispositivo."
+      >
+        <Segmented
+          value={a11yWidget ? "ativado" : "desativado"}
+          onChange={changeA11yWidget}
+          options={[
+            { value: "ativado", label: "Ativado", icon: Eye },
+            { value: "desativado", label: "Desativado", icon: EyeOff },
           ]}
         />
       </Row>

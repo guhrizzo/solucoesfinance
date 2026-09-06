@@ -93,6 +93,10 @@ export default function RootLayout({
               if(fs) document.documentElement.style.fontSize=fs+'%';
               var ul=localStorage.getItem('nexusfi-underline-links');
               if(ul==='1') document.documentElement.setAttribute('data-underline-links','1');
+              // Widget de acessibilidade desligado em Configurações > Aparência
+              // (globals.css esconde o botão/painel na hora, sem flash).
+              if(localStorage.getItem('nexusfi-a11y-widget')==='0')
+                document.documentElement.setAttribute('data-a11y-widget','off');
 
               // Keep in sync with AppShell.tsx's INTERNAL_PREFIXES list — this
               // is the pre-hydration value so the sidebar offset (globals.css)
