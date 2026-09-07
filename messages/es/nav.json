@@ -1,1 +1,64 @@
-{}
+{
+  "menuMain": "Menú principal",
+  "items": {
+    "dashboard": "Panel",
+    "fluxoCaixa": "Flujo de caja",
+    "relatorios": "Informes",
+    "contasPagar": "Cuentas por pagar",
+    "impostos": "Impuestos",
+    "contasReceber": "Cuentas por cobrar",
+    "centroCustos": "Centros de costo",
+    "estoque": "Inventario",
+    "vendas": "Panel de ventas",
+    "usuarios": "Usuarios"
+  },
+  "search": "Buscar transacciones...",
+  "toggleLayout": "Cambiar diseño",
+  "toggleTheme": "Cambiar tema",
+  "openMenu": "Abrir menú",
+  "closeMenu": "Cerrar menú",
+  "layoutHorizontal": "Diseño horizontal",
+  "layoutVertical": "Diseño vertical",
+  "lightMode": "Modo claro",
+  "darkMode": "Modo oscuro",
+  "settings": "Configuración",
+  "logout": "Salir",
+  "logoutAccount": "Cerrar sesión",
+  "loggingOut": "Cerrando sesión...",
+  "period": {
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "chooseMonth": "Elegir mes"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "label": "Notificaciones",
+    "markRead": "Marcar como leído",
+    "markedRead": "Notificaciones marcadas como leídas",
+    "seeAll": "Ver todas las notificaciones",
+    "items": [
+      { "title": "Vence pronto", "desc": "Simples Nacional vence en 2 días", "time": "hace 10 min" },
+      { "title": "Nueva transacción", "desc": "Cobro de Delta Tecnologia — R$ 134.000", "time": "hace 35 min" },
+      { "title": "Meta alcanzada", "desc": "La utilidad neta superó la proyección de octubre", "time": "hace 2 h" }
+    ]
+  },
+  "userMenu": {
+    "label": "Menú de la cuenta",
+    "fallbackUser": "Usuario",
+    "roleOwner": "Administrador",
+    "roleMember": "Miembro del equipo",
+    "profile": "Mi perfil",
+    "billing": "Plan y facturación",
+    "billingOpening": "Abriendo plan...",
+    "help": "Ayuda y soporte",
+    "helpOpening": "Redirigiendo a la ayuda...",
+    "settings": "Configuración"
+  },
+  "monthPicker": {
+    "title": "Elegir mes",
+    "prevYear": "Año anterior",
+    "nextYear": "Año siguiente",
+    "currentMonth": "Mes actual",
+    "months": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+  }
+}

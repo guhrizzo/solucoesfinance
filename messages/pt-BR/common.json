@@ -1,1 +1,15 @@
-{}
+{
+  "loading": "Carregando…",
+  "save": "Salvar",
+  "cancel": "Cancelar",
+  "close": "Fechar",
+  "confirm": "Confirmar",
+  "delete": "Excluir",
+  "edit": "Editar",
+  "back": "Voltar",
+  "yes": "Sim",
+  "no": "Não",
+  "search": "Buscar",
+  "showPassword": "Mostrar senha",
+  "hidePassword": "Ocultar senha"
+}

@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Modal } from "./ui";
-
-const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 interface Props {
   open: boolean;
@@ -18,6 +17,8 @@ interface Props {
 /** Modal pra pular pra qualquer mês — stepper de ano + grade de 12 meses.
  *  Ligado ao mês global via a prop onSelect (ver app/hooks/usePeriod.tsx). */
 export function MonthPickerModal({ open, onClose, value, onSelect }: Props) {
+  const t = useTranslations("nav.monthPicker");
+  const meses = t.raw("months") as string[];
   const [year, setYear] = useState(value.getFullYear());
 
   // Ao abrir, parte sempre do ano do mês atualmente selecionado.
@@ -36,11 +37,11 @@ export function MonthPickerModal({ open, onClose, value, onSelect }: Props) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Escolher mês" size="sm">
+    <Modal open={open} onClose={onClose} title={t("title")} size="sm">
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between">
           <button
-            type="button" onClick={() => setYear(y => y - 1)} aria-label="Ano anterior"
+            type="button" onClick={() => setYear(y => y - 1)} aria-label={t("prevYear")}
             className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
             style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
           >
@@ -48,7 +49,7 @@ export function MonthPickerModal({ open, onClose, value, onSelect }: Props) {
           </button>
           <span className="font-bold text-base" style={{ color: "var(--cf-text)" }}>{year}</span>
           <button
-            type="button" onClick={() => setYear(y => y + 1)} aria-label="Próximo ano"
+            type="button" onClick={() => setYear(y => y + 1)} aria-label={t("nextYear")}
             className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer"
             style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
           >
@@ -57,7 +58,7 @@ export function MonthPickerModal({ open, onClose, value, onSelect }: Props) {
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          {MESES.map((label, m) => {
+          {meses.map((label, m) => {
             const isSelected = m === selMonth && year === selYear;
             const isCurrent = m === now.getMonth() && year === now.getFullYear();
             return (
@@ -82,7 +83,7 @@ export function MonthPickerModal({ open, onClose, value, onSelect }: Props) {
           className="w-full py-2 rounded-lg text-xs font-bold cursor-pointer"
           style={{ background: "var(--cf-input)", color: "var(--primary)" }}
         >
-          Mês atual
+          {t("currentMonth")}
         </button>
       </div>
     </Modal>

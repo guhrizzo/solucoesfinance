@@ -1,1 +1,64 @@
-{}
+{
+  "menuMain": "Main menu",
+  "items": {
+    "dashboard": "Dashboard",
+    "fluxoCaixa": "Cash flow",
+    "relatorios": "Reports",
+    "contasPagar": "Payables",
+    "impostos": "Taxes",
+    "contasReceber": "Receivables",
+    "centroCustos": "Cost centers",
+    "estoque": "Inventory",
+    "vendas": "Sales dashboard",
+    "usuarios": "Users"
+  },
+  "search": "Search transactions...",
+  "toggleLayout": "Toggle layout",
+  "toggleTheme": "Toggle theme",
+  "openMenu": "Open menu",
+  "closeMenu": "Close menu",
+  "layoutHorizontal": "Horizontal layout",
+  "layoutVertical": "Vertical layout",
+  "lightMode": "Light mode",
+  "darkMode": "Dark mode",
+  "settings": "Settings",
+  "logout": "Log out",
+  "logoutAccount": "Log out",
+  "loggingOut": "Signing out...",
+  "period": {
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "chooseMonth": "Choose month"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "label": "Notifications",
+    "markRead": "Mark as read",
+    "markedRead": "Notifications marked as read",
+    "seeAll": "See all notifications",
+    "items": [
+      { "title": "Due soon", "desc": "Simples Nacional is due in 2 days", "time": "10 min ago" },
+      { "title": "New transaction", "desc": "Payment from Delta Tecnologia — R$ 134,000", "time": "35 min ago" },
+      { "title": "Target hit", "desc": "Net profit beat the October projection", "time": "2h ago" }
+    ]
+  },
+  "userMenu": {
+    "label": "Account menu",
+    "fallbackUser": "User",
+    "roleOwner": "Administrator",
+    "roleMember": "Team member",
+    "profile": "My profile",
+    "billing": "Plan & billing",
+    "billingOpening": "Opening plan...",
+    "help": "Help & support",
+    "helpOpening": "Redirecting to help...",
+    "settings": "Settings"
+  },
+  "monthPicker": {
+    "title": "Choose month",
+    "prevYear": "Previous year",
+    "nextYear": "Next year",
+    "currentMonth": "Current month",
+    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  }
+}

@@ -1,1 +1,64 @@
-{}
+{
+  "menuMain": "Menu principal",
+  "items": {
+    "dashboard": "Dashboard",
+    "fluxoCaixa": "Fluxo de caixa",
+    "relatorios": "Relatórios",
+    "contasPagar": "Contas a pagar",
+    "impostos": "Impostos",
+    "contasReceber": "Contas a receber",
+    "centroCustos": "Centro de custos",
+    "estoque": "Estoque",
+    "vendas": "Painel de vendas",
+    "usuarios": "Usuários"
+  },
+  "search": "Buscar transações...",
+  "toggleLayout": "Alternar layout",
+  "toggleTheme": "Alternar tema",
+  "openMenu": "Abrir menu",
+  "closeMenu": "Fechar menu",
+  "layoutHorizontal": "Layout horizontal",
+  "layoutVertical": "Layout vertical",
+  "lightMode": "Modo claro",
+  "darkMode": "Modo escuro",
+  "settings": "Configurações",
+  "logout": "Sair",
+  "logoutAccount": "Sair da conta",
+  "loggingOut": "Desconectando...",
+  "period": {
+    "prevMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "chooseMonth": "Escolher mês"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "label": "Notificações",
+    "markRead": "Marcar como lido",
+    "markedRead": "Notificações marcadas como lidas",
+    "seeAll": "Ver todas as notificações",
+    "items": [
+      { "title": "Vencimento próximo", "desc": "Simples Nacional vence em 2 dias", "time": "há 10 min" },
+      { "title": "Nova transação", "desc": "Recebimento de Delta Tecnologia — R$ 134.000", "time": "há 35 min" },
+      { "title": "Meta atingida", "desc": "Lucro líquido superou projeção de outubro", "time": "há 2h" }
+    ]
+  },
+  "userMenu": {
+    "label": "Menu da conta",
+    "fallbackUser": "Usuário",
+    "roleOwner": "Administrador",
+    "roleMember": "Membro de equipe",
+    "profile": "Meu perfil",
+    "billing": "Plano & faturamento",
+    "billingOpening": "Abrindo plano...",
+    "help": "Ajuda & suporte",
+    "helpOpening": "Redirecionando para ajuda...",
+    "settings": "Configurações"
+  },
+  "monthPicker": {
+    "title": "Escolher mês",
+    "prevYear": "Ano anterior",
+    "nextYear": "Próximo ano",
+    "currentMonth": "Mês atual",
+    "months": ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+  }
+}

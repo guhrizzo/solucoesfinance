@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
@@ -23,7 +24,7 @@ import { MonthPickerModal } from "./MonthPickerModal";
 import type { PermissionKey } from "@/lib/accountScope";
 import "./Navbar.css";
 
-interface NavItem { icon: React.ElementType; label: string; href: string; badge?: number; permKey?: PermissionKey; }
+interface NavItem { key: string; icon: React.ElementType; href: string; badge?: number; permKey?: PermissionKey; }
 interface NavbarProps {
   user?: { displayName: string | null; email: string | null; uid?: string | null } | null;
   activePath?: string;
@@ -37,24 +38,28 @@ interface NavbarProps {
 // `permKey` liga cada item à categoria de app/lib/accountScope.ts — item sem
 // `permKey` (só "Usuários", a própria conta) fica sempre visível pra
 // qualquer um, dono ou membro.
+// `key` é o id estável: liga o item ao rótulo em messages/*/nav.json
+// (nav.items.<key>), à lógica de filtro/badge abaixo e ao `permKey` de
+// app/lib/accountScope.ts. NUNCA comparar pelo texto exibido (traduzido).
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", permKey: "dashboard" },
-  { icon: TrendingUp, label: "Fluxo de caixa", href: "/fluxo-caixa", permKey: "fluxoCaixa" },
-  { icon: FileText, label: "Relatórios", href: "/relatorios", permKey: "relatorios" },
-  { icon: CreditCard, label: "Contas a pagar", href: "/contasPagar", permKey: "contasPagar" },
-  { icon: Landmark, label: "Impostos", href:"/impostos", permKey: "impostos" },
-  { icon: DollarSign, label: "Contas a receber", href: "/contasReceber", permKey: "contasReceber" },
-  { icon: BarChart2, label: "Centro de custos", href: "/costCenter", permKey: "centroCustos" },
-  { icon: Boxes, label: "Estoque", href: "/estoque", permKey: "estoque" },
-  { icon: ShoppingCart, label: "Painel de vendas", href: "/vendas", permKey: "vendas" },
-  { icon: Users, label: "Usuários", href: "/users" },
-
+  { key: "dashboard", icon: LayoutDashboard, href: "/dashboard", permKey: "dashboard" },
+  { key: "fluxoCaixa", icon: TrendingUp, href: "/fluxo-caixa", permKey: "fluxoCaixa" },
+  { key: "relatorios", icon: FileText, href: "/relatorios", permKey: "relatorios" },
+  { key: "contasPagar", icon: CreditCard, href: "/contasPagar", permKey: "contasPagar" },
+  { key: "impostos", icon: Landmark, href: "/impostos", permKey: "impostos" },
+  { key: "contasReceber", icon: DollarSign, href: "/contasReceber", permKey: "contasReceber" },
+  { key: "centroCustos", icon: BarChart2, href: "/costCenter", permKey: "centroCustos" },
+  { key: "estoque", icon: Boxes, href: "/estoque", permKey: "estoque" },
+  { key: "vendas", icon: ShoppingCart, href: "/vendas", permKey: "vendas" },
+  { key: "usuarios", icon: Users, href: "/users" },
 ];
 
-const notifications = [
-  { id: 1, title: "Vencimento próximo", desc: "Simples Nacional vence em 2 dias", time: "há 10 min", urgent: true },
-  { id: 2, title: "Nova transação", desc: "Recebimento de Delta Tecnologia — R$ 134.000", time: "há 35 min", urgent: false },
-  { id: 3, title: "Meta atingida", desc: "Lucro líquido superou projeção de outubro", time: "há 2h", urgent: false },
+// Notificações de demonstração — id/urgent ficam no código; texto vem de
+// nav.notifications.items (mesma ordem).
+const NOTIF_META = [
+  { id: 1, urgent: true },
+  { id: 2, urgent: false },
+  { id: 3, urgent: false },
 ];
 
 export default function Navbar({
@@ -69,6 +74,8 @@ export default function Navbar({
   const [isServico, setIsServico] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
 
+  const t = useTranslations("nav");
+  const notifItems = t.raw("notifications.items") as { title: string; desc: string; time: string }[];
   const router = useRouter();
   const { dark, toggle } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
@@ -154,26 +161,26 @@ export default function Navbar({
 
   // O recuo do conteúdo para o layout vertical é feito pelo AppShell (CSS, ver globals.css .app-shell)
 
-  const firstName = user?.displayName?.split(" ")[0] ?? "Usuário";
+  const firstName = user?.displayName?.split(" ")[0] ?? t("userMenu.fallbackUser");
   const avatar = useProfilePhoto();
-  const unreadCount = notifications.length;
+  const unreadCount = NOTIF_META.length;
 
   // Filtra itens com base no ramo (oculta estoque para serviços) e, pra
   // membros de equipe convidados (não o dono da conta), com base na
   // permissão por categoria — "Usuários" (permKey ausente) fica sempre
   // visível, é a própria conta de quem está logado.
   const filteredNavItems = navItems.filter(item => {
-    if ((item.label === "Estoque" || item.label === "Painel de vendas") && isServico) return false;
+    if ((item.key === "estoque" || item.key === "vendas") && isServico) return false;
     if (item.permKey && !scope.loading && !hasPermission(scope, item.permKey)) return false;
     return true;
   });
 
   // Cria dinamicamente os navItems com badges reais
   const navItemsWithBadges = filteredNavItems.map(item => {
-    if (item.label === "Contas a pagar") {
+    if (item.key === "contasPagar") {
       return { ...item, badge: billSummary.totalPending };
     }
-    if (item.label === "Contas a receber") {
+    if (item.key === "contasReceber") {
       return { ...item, badge: receivableSummary.totalPending };
     }
     return item;
@@ -181,7 +188,7 @@ export default function Navbar({
 
   // Handler para logout com toast
   const handleLogout = async () => {
-    showToast("Desconectando...", "info");
+    showToast(t("loggingOut"), "info");
     setTimeout(() => {
       onLogout?.();
     }, 1500);
@@ -189,7 +196,7 @@ export default function Navbar({
 
   // Handler para marcar como lido com toast
   const handleMarkAsRead = () => {
-    showToast("Notificações marcadas como lidas", "success");
+    showToast(t("notifications.markedRead"), "success");
     setNotifOpen(false);
   };
 
@@ -200,19 +207,19 @@ export default function Navbar({
     if (hidePeriod) return null;
     const stepper = (
       <div className="nxfi-period-stepper">
-        <button onClick={periodCtx.goPrevMonth} aria-label="Mês anterior" type="button">
+        <button onClick={periodCtx.goPrevMonth} aria-label={t("period.prevMonth")} type="button">
           <ChevronLeft size={15} />
         </button>
         <button
           className="nxfi-period-current"
           onClick={() => setMonthPickerOpen(true)}
           type="button"
-          aria-label="Escolher mês"
+          aria-label={t("period.chooseMonth")}
         >
           <Calendar size={12} />
           {periodCtx.label}
         </button>
-        <button onClick={periodCtx.goNextMonth} aria-label="Próximo mês" type="button">
+        <button onClick={periodCtx.goNextMonth} aria-label={t("period.nextMonth")} type="button">
           <ChevronRight size={15} />
         </button>
       </div>
@@ -229,17 +236,17 @@ export default function Navbar({
         </a>
         {periodControl(true)}
         <nav className="nxfi-vertical-nav">
-          <div className="nxfi-vertical-section">Menu Principal</div>
+          <div className="nxfi-vertical-section">{t("menuMain")}</div>
           {navItemsWithBadges.map((item) => (
             <a
-              key={item.label}
+              key={item.key}
               href={item.href}
               className={`nxfi-vertical-link ${activePath === item.href ? "active" : ""}`}
             >
               <item.icon size={16} />
-              <span style={{ flex: 1 }}>{item.label}</span>
+              <span style={{ flex: 1 }}>{t(`items.${item.key}`)}</span>
               {item.badge !== undefined && item.badge > 0 && (
-                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+                <span className={`badge ${item.key === "contasReceber" ? "green" : ""}`}>{item.badge}</span>
               )}
             </a>
           ))}
@@ -247,22 +254,22 @@ export default function Navbar({
         <div className="nxfi-vertical-footer">
           <button onClick={toggleLayout} className="nxfi-vertical-footer-btn">
             <PanelLeft size={16} />
-            <span>Layout Horizontal</span>
+            <span>{t("layoutHorizontal")}</span>
           </button>
           <button onClick={toggle} className="nxfi-vertical-footer-btn">
             {dark ? <Sun size={16} /> : <Moon size={16} />}
-            <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
+            <span>{dark ? t("lightMode") : t("darkMode")}</span>
           </button>
           <button
             className="nxfi-vertical-footer-btn"
             onClick={() => router.push("/configuracoes")}
           >
             <Settings size={16} />
-            <span>Configurações</span>
+            <span>{t("settings")}</span>
           </button>
           <button className="nxfi-vertical-footer-btn danger" onClick={handleLogout}>
             <LogOut size={16} />
-            <span>Sair</span>
+            <span>{t("logout")}</span>
           </button>
         </div>
       </aside>
@@ -283,24 +290,24 @@ export default function Navbar({
           <div className="nxfi-sidebar-logo-inner">
             <img src="/nexus_fi_logo_branco.png" alt="NexusFi" style={{ height: 30, width: "auto" }} />
           </div>
-          <button className="nxfi-sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Fechar menu">
+          <button className="nxfi-sidebar-close" onClick={() => setMobileOpen(false)} aria-label={t("closeMenu")}>
             <X size={15} />
           </button>
         </div>
         <nav className="nxfi-sidebar-nav">
-          <div className="nxfi-sidebar-section">Menu principal</div>
+          <div className="nxfi-sidebar-section">{t("menuMain")}</div>
           {navItemsWithBadges.map((item) => (
             <a
-              key={item.label}
+              key={item.key}
               href={item.href}
               className={`nxfi-sidebar-link ${activePath === item.href ? "active" : ""}`}
               onClick={() => setMobileOpen(false)}
             >
               <item.icon size={16} />
-              {item.label}
+              {t(`items.${item.key}`)}
               {activePath === item.href && <span className="dot" />}
               {item.badge !== undefined && item.badge > 0 && (
-                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+                <span className={`badge ${item.key === "contasReceber" ? "green" : ""}`}>{item.badge}</span>
               )}
             </a>
           ))}
@@ -308,22 +315,22 @@ export default function Navbar({
         <div className="nxfi-sidebar-footer">
           <button onClick={toggleLayout} className="nxfi-sidebar-footer-btn">
             <PanelLeft size={16} />
-            <span>{layout === "vertical" ? "Layout Horizontal" : "Layout Vertical"}</span>
+            <span>{layout === "vertical" ? t("layoutHorizontal") : t("layoutVertical")}</span>
           </button>
           <button className="nxfi-sidebar-footer-btn" onClick={toggle}>
             {dark ? <Sun size={16} /> : <Moon size={16} />}
-            <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
+            <span>{dark ? t("lightMode") : t("darkMode")}</span>
           </button>
           <button
             className="nxfi-sidebar-footer-btn"
             onClick={() => { setMobileOpen(false); router.push("/configuracoes"); }}
           >
             <Settings size={16} />
-            Configurações
+            {t("settings")}
           </button>
           <button className="nxfi-sidebar-footer-btn danger" onClick={handleLogout}>
             <LogOut size={16} />
-            Sair da conta
+            {t("logoutAccount")}
           </button>
         </div>
       </aside>
@@ -333,14 +340,14 @@ export default function Navbar({
   const mobileBottomNavJSX = (
     <nav className="nxfi-mobile-nav">
       {navItemsWithBadges.map((item) => (
-        <a key={item.label} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
+        <a key={item.key} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
           <div style={{ position: "relative" }}>
             <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />
             {item.badge !== undefined && item.badge > 0 && (
-              <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+              <span className={`badge ${item.key === "contasReceber" ? "green" : ""}`}>{item.badge}</span>
             )}
           </div>
-          {item.label}
+          {t(`items.${item.key}`)}
         </a>
       ))}
     </nav>
@@ -354,7 +361,7 @@ export default function Navbar({
         {/* ≤1024px: a sidebar vertical fica oculta, então mostra a barra
             superior com o botão de menu + o drawer + a barra inferior. */}
         <div className="nxfi-mobile-topbar">
-          <button className="nxfi-icon-btn" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
+          <button className="nxfi-icon-btn" onClick={() => setMobileOpen(true)} aria-label={t("openMenu")}>
             <Menu size={18} />
           </button>
           <a href="/dashboard" className="nxfi-logo">
@@ -362,7 +369,7 @@ export default function Navbar({
           </a>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
             {periodControl()}
-            <button onClick={toggle} className="nxfi-icon-btn" aria-label="Alternar tema">
+            <button onClick={toggle} className="nxfi-icon-btn" aria-label={t("toggleTheme")}>
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           </div>
@@ -388,7 +395,7 @@ export default function Navbar({
   return (
     <>
       <nav className="nxfi-nav">
-        <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
+        <button className="nxfi-icon-btn nxfi-hamburger" onClick={() => setMobileOpen(true)} aria-label={t("openMenu")}>
           <Menu size={18} />
         </button>
 
@@ -398,11 +405,11 @@ export default function Navbar({
 
         <div className="nxfi-nav-links">
           {navItemsWithBadges.map((item) => (
-            <a key={item.label} href={item.href} className={`nxfi-nav-link ${activePath === item.href ? "active" : ""}`}>
+            <a key={item.key} href={item.href} className={`nxfi-nav-link ${activePath === item.href ? "active" : ""}`}>
               <item.icon size={14} />
-              {item.label}
+              {t(`items.${item.key}`)}
               {item.badge !== undefined && item.badge > 0 && (
-                <span className={`badge ${item.label === "Contas a receber" ? "green" : ""}`}>{item.badge}</span>
+                <span className={`badge ${item.key === "contasReceber" ? "green" : ""}`}>{item.badge}</span>
               )}
             </a>
           ))}
@@ -411,16 +418,16 @@ export default function Navbar({
         <div className="nxfi-actions">
           <div className="nxfi-search-wrap">
             <Search size={13} className="nxfi-search-icon" />
-            <input className="nxfi-search" placeholder="Buscar transações..." />
+            <input className="nxfi-search" placeholder={t("search")} />
           </div>
 
           {periodControl()}
 
-          <button onClick={toggleLayout} className="nxfi-icon-btn" title="Alternar layout" aria-label="Alternar layout">
+          <button onClick={toggleLayout} className="nxfi-icon-btn" title={t("toggleLayout")} aria-label={t("toggleLayout")}>
             <PanelLeft size={16} />
           </button>
 
-          <button onClick={toggle} className="nxfi-icon-btn" aria-label="Alternar tema">
+          <button onClick={toggle} className="nxfi-icon-btn" aria-label={t("toggleTheme")}>
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
@@ -429,7 +436,7 @@ export default function Navbar({
               ref={notifBtnRef}
               className="nxfi-icon-btn"
               onClick={() => { setNotifOpen(!notifOpen); setUserOpen(false); }}
-              aria-label="Notificações"
+              aria-label={t("notifications.label")}
               aria-haspopup="menu"
               aria-expanded={notifOpen}
             >
@@ -439,22 +446,22 @@ export default function Navbar({
             {notifOpen && (
               <div className="nxfi-dropdown nxfi-notif-drop" role="menu">
                 <div className="nxfi-notif-header">
-                  <h3>Notificações <span style={{ color: "var(--nav-text-3)", fontWeight: 400 }}>({unreadCount})</span></h3>
-                  <button onClick={handleMarkAsRead}>Marcar como lido</button>
+                  <h3>{t("notifications.title")} <span style={{ color: "var(--nav-text-3)", fontWeight: 400 }}>({unreadCount})</span></h3>
+                  <button onClick={handleMarkAsRead}>{t("notifications.markRead")}</button>
                 </div>
-                {notifications.map((n) => (
+                {NOTIF_META.map((n, i) => (
                   <div key={n.id} className="nxfi-notif-item">
                     <span className="nxfi-notif-dot2" style={{ background: n.urgent ? "var(--neg)" : "var(--brand)" }} />
                     <div>
-                      <div className="nxfi-notif-title">{n.title}</div>
-                      <div className="nxfi-notif-desc">{n.desc}</div>
-                      <div className="nxfi-notif-time">{n.time}</div>
+                      <div className="nxfi-notif-title">{notifItems[i]?.title}</div>
+                      <div className="nxfi-notif-desc">{notifItems[i]?.desc}</div>
+                      <div className="nxfi-notif-time">{notifItems[i]?.time}</div>
                     </div>
                   </div>
                 ))}
                 <div style={{ padding: "10px 16px", borderTop: "1px solid var(--nav-drop-div)" }}>
                   <button style={{ width: "100%", background: "var(--nav-period-bg)", border: "none", borderRadius: 8, padding: "7px 0", fontSize: "0.78rem", fontWeight: 600, color: "var(--brand-500)", cursor: "pointer", fontFamily: "Sora, sans-serif" }}>
-                    Ver todas as notificações
+                    {t("notifications.seeAll")}
                   </button>
                 </div>
               </div>
@@ -466,39 +473,39 @@ export default function Navbar({
               ref={userBtnRef}
               className="nxfi-avatar-btn"
               onClick={() => { setUserOpen(!userOpen); setNotifOpen(false); }}
-              aria-label="Menu da conta"
+              aria-label={t("userMenu.label")}
               aria-haspopup="menu"
               aria-expanded={userOpen}
             >
               <Avatar src={avatar.src} initial={avatar.initial} size={34} radius={8} />
               <div className="nxfi-avatar-info">
                 <div className="nxfi-avatar-name">{firstName}</div>
-                <div className="nxfi-avatar-role">{scope.isOwner ? "Administrador" : "Membro de equipe"}</div>
+                <div className="nxfi-avatar-role">{scope.isOwner ? t("userMenu.roleOwner") : t("userMenu.roleMember")}</div>
               </div>
               <ChevronDown size={13} style={{ color: "var(--nav-text-3)", marginLeft: 2 }} />
             </button>
             {userOpen && (
               <div className="nxfi-dropdown nxfi-user-drop" role="menu">
                 <div className="nxfi-user-drop-header">
-                  <div className="nxfi-user-drop-name">{user?.displayName ?? "Usuário"}</div>
+                  <div className="nxfi-user-drop-name">{user?.displayName ?? t("userMenu.fallbackUser")}</div>
                   <div className="nxfi-user-drop-email">{user?.email}</div>
                 </div>
                 <div style={{ padding: "6px 0" }}>
                   {[
-                    { icon: UserCircle, label: "Meu perfil", action: () => router.push("/users") },
-                    { icon: Zap, label: "Plano & faturamento", action: () => showToast("Abrindo plano...", "info") },
-                    { icon: HelpCircle, label: "Ajuda & suporte", action: () => showToast("Redirecionando para ajuda...", "info") },
-                    { icon: Settings, label: "Configurações", action: () => router.push("/configuracoes") },
+                    { key: "profile", icon: UserCircle, action: () => router.push("/users") },
+                    { key: "billing", icon: Zap, action: () => showToast(t("userMenu.billingOpening"), "info") },
+                    { key: "help", icon: HelpCircle, action: () => showToast(t("userMenu.helpOpening"), "info") },
+                    { key: "settings", icon: Settings, action: () => router.push("/configuracoes") },
                   ].map((item) => (
-                    <button key={item.label} className="nxfi-drop-item" onClick={item.action}>
+                    <button key={item.key} className="nxfi-drop-item" onClick={item.action}>
                       <item.icon size={14} />
-                      {item.label}
+                      {t(`userMenu.${item.key}`)}
                     </button>
                   ))}
                   <div className="nxfi-drop-divider" />
                   <button className="nxfi-drop-item danger" onClick={handleLogout}>
                     <LogOut size={14} />
-                    Sair da conta
+                    {t("logoutAccount")}
                   </button>
                 </div>
               </div>
