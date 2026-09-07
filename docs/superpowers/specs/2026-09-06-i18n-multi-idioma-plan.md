@@ -218,32 +218,43 @@ Objetivo: app 100% funcional e 100% em pt-BR, mas já rodando sobre o next-intl.
 
 ---
 
-## Fase 2 — Site público + autenticação
+## Fase 2 — Site público + autenticação ✅ concluída
 
-Namespaces: `landing`, `auth`, `legal`, `common` (parcial), `nav` (parcial p/ header público).
+Namespaces: `landing`, `plans` (novo, compartilhado), `auth`, `legal`.
+Commits: `703923c` (2a), `d9313cb` (2b), `7858cd2` (2c+2d).
 
-- [ ] **`app/[locale]/page.tsx`** (landing) — extrair todo texto pra
-      `landing.json`; `useTranslations('landing')`; formatação de números via
-      `useFormatter`. Gerar `en` + `es`.
-- [ ] **Seletor de idioma público** — componente `LocaleSwitcher`
-      (`PT / EN / ES`) no header da landing e em `app/components/Footer.tsx`.
-      Usa `usePathname` do wrapper + `<Link locale=...>`.
-- [ ] **`app/components/Footer.tsx`** — extrair pra `landing.json` (ou
-      `common`); traduzir.
-- [ ] **`app/[locale]/login/page.tsx`**, **`register/page.tsx`**, fluxo de
-      reset de senha (`app/api/auth/reset-password` só server; a tela) —
-      `auth.json`; traduzir. Cuidar de mensagens de erro do Firebase
-      (mapear códigos → chaves em `auth.json`/`errors.json`).
-- [ ] **`app/[locale]/privacidade/page.tsx`** e
-      **`app/[locale]/acessibilidade/page.tsx`** — `legal.json`; traduzir
-      corpo; adicionar linha "em caso de divergência prevalece a versão em
-      português". `generateMetadata` por locale.
-- [ ] **SEO**:
-  - `generateMetadata` com `locale` em layout + páginas públicas;
-  - `alternates.languages` (`pt-BR`/`en`/`es`/`x-default`) nas páginas públicas;
-  - `app/sitemap.ts` novo — 3 variantes de cada rota pública
-    (`/`, `/login`, `/register`, `/privacidade`, `/acessibilidade`).
-- [ ] `i18n:check` + `tsc` + `lint` limpos.
+- [x] **2a — `app/[locale]/page.tsx`** (landing) — todo texto em
+      `landing.json`; listas via `t.raw()`; preços via `lib/format`
+      (formatação segue o locale, moeda BRL). `messages/*/plans.json` novo:
+      rótulo/blurb/features de cada nível e período (`billingPlans.ts` segue
+      canônico p/ preço/id e o `label` usado em contrato/webhook).
+- [x] **2a — `LocaleSwitcher`** (`PT · EN · ES`) no header da landing e no
+      `Footer.tsx`. Hook `useLocalePreference` (`router.replace(pathname, {locale})`).
+- [x] **2a — `Footer.tsx`** — `useTranslations`; `<a>` internos → `<Link>`.
+- [x] **2b — `login/page.tsx` e `register/page.tsx`** — `auth.json` (login,
+      cadastro, regras de senha, mapa de erros Firebase por chave em
+      `auth.errors`). `<a>` → `<Link>`. `passwordRules` renderiza via
+      `tRules(rule.key)` (o `.label` do lib segue como fallback p/ o
+      `CreatePasswordGate`, que migra na Fase 3). Reset de senha: a tela usa
+      `auth.login.resetSent`/`resetNeedsEmail`; a msg de erro da API
+      (`/api/auth/reset-password`) fica pra Fase 8.
+- [x] **2c — `/acessibilidade`** traduzida por completo (pt-BR/en/es) + aviso
+      de tradução automática.
+- [x] **2c — `/privacidade`** — cabeçalho + `generateMetadata` traduzidos;
+      **corpo integral fica em pt-BR** por citar a LGPD (art. 7º/18), com
+      aviso explicando — mesmo racional do contrato, revisão jurídica é
+      trabalho à parte. `CATEGORY_INFO` de `lib/consent` idem (Fase 3, junto
+      do `CookieConsent`).
+- [x] **2d — SEO**: `lib/seo.ts` (`SITE_URL`, `localePath`, `alternatesFor`);
+      `generateMetadata` por locale no layout + páginas legais com canonical +
+      `hreflang` (`pt-BR`/`en`/`es`/`x-default`); `app/sitemap.ts` (5 rotas
+      públicas × 3 idiomas, hreflang recíproco); `app/robots.ts`.
+- [x] `i18n:check` + `tsc` + `build` limpos; `eslint app/` 162/79
+      (baixou de 164/94 — sem regressão, 2 erros a menos).
+- [ ] **Pendências arrastadas pra fases seguintes:** navbar pública é
+      inline em `page.tsx` (sem componente `Navbar` público separado — ok);
+      `login`/`register` sem `generateMetadata` próprio (são client + têm
+      `<title>` do layout; SEO de tela de login é baixa prioridade).
 - [ ] Navegador: landing em `/`, `/en`, `/es` com texto traduzido; seletor
       troca idioma e persiste (cookie); `hreflang` no `<head>`; login/cadastro
       traduzidos; erro de senha errada aparece traduzido.
