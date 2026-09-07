@@ -2,7 +2,15 @@
 //
 // Gera um PDF da aba ativa da página de Relatórios (Fluxo de Caixa, Faturamento
 // ou DRE) para o período selecionado. Usado só no cliente, via import() dinâmico
-// em app/relatorios/page.tsx — jspdf não entra no bundle inicial.
+// em app/[locale]/relatorios/page.tsx — jspdf não entra no bundle inicial.
+//
+// i18n: quem gera passa `locale` + `messages` (o objeto completo de mensagens,
+// de `useMessages()`); os rótulos saem de `relatorios.pdf` e os nomes de
+// categoria passam por `categoryLabel` (namespace `categories`). Moeda em BRL.
+
+import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { formatMoney } from "@/lib/format";
+import { categoryLabel } from "@/lib/cashflowCategories";
 
 export type ReportTab = "fluxo" | "faturamento" | "gastos" | "dre";
 
@@ -20,6 +28,8 @@ export interface ReportData {
   periodLabel: string;
   generatedAt: Date;
   userLabel?: string;
+  locale: string;
+  messages: Record<string, unknown>;
 
   metrics?: { entradas: number; saidas: number; saldo: number; taxaConciliacao: number; total: number };
   txs?: { date: string; description: string; category: string; type: "entrada" | "saida"; amount: number; reconciled?: boolean }[];
@@ -51,15 +61,7 @@ export interface ReportData {
   };
 }
 
-const BRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const shortDate = (d: string) => `${d.split("-")[2]}/${d.split("-")[1]}`;
-
-const TAB_LABEL: Record<ReportTab, string> = {
-  fluxo: "Fluxo de Caixa",
-  faturamento: "Faturamento",
-  gastos: "Relatório de Gastos",
-  dre: "Demonstração do Resultado (DRE)",
-};
 
 export async function exportReportPdf(data: ReportData): Promise<void> {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
@@ -67,13 +69,30 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
     import("jspdf-autotable"),
   ]);
 
+  const msgs = data.messages as AbstractIntlMessages;
+  // O augmentation global de `IntlMessages` tornaria os namespaces/chaves
+  // estritos aqui e o TS colapsaria para `never` (mensagens vêm soltas de
+  // `useMessages()`). Um alias solto resolve — o i18n:check garante as chaves.
+  type LooseT = (key: string, values?: Record<string, string | number>) => string;
+  const t = createTranslator({ locale: data.locale, messages: msgs, namespace: "relatorios.pdf" }) as unknown as LooseT;
+  const tCat = createTranslator({ locale: data.locale, messages: msgs, namespace: "categories" }) as unknown as (k: string) => string;
+  const catLabel = (name: string) => categoryLabel(name, tCat);
+  const BRL = (n: number) => formatMoney(n, data.locale);
+
+  const TAB_LABEL: Record<ReportTab, string> = {
+    fluxo: t("tabFluxo"),
+    faturamento: t("tabFaturamento"),
+    gastos: t("tabGastos"),
+    dre: t("tabDre"),
+  };
+
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const marginX = 40;
 
   // ── Cabeçalho ──
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text("Relatórios & Conciliação", marginX, 48);
+  doc.text(t("title"), marginX, 48);
 
   doc.setFontSize(11);
   doc.setTextColor(90);
@@ -82,17 +101,17 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(130);
-  const gen = data.generatedAt.toLocaleString("pt-BR");
-  doc.text(`Gerado em ${gen}${data.userLabel ? `  ·  ${data.userLabel}` : ""}`, marginX, 80);
+  const gen = data.generatedAt.toLocaleString(data.locale);
+  doc.text(`${t("generatedAt", { when: gen })}${data.userLabel ? `  ·  ${data.userLabel}` : ""}`, marginX, 80);
   doc.setTextColor(0);
 
   let y = 100;
 
-  const heading = (t: string) => {
+  const heading = (txt: string) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(30);
-    doc.text(t, marginX, y);
+    doc.text(txt, marginX, y);
     doc.setTextColor(0);
     y += 8;
   };
@@ -103,38 +122,38 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
   };
 
   if (data.tab === "fluxo" && data.metrics) {
-    heading("Resumo do período");
+    heading(t("periodSummary"));
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       theme: "plain",
       styles: { fontSize: 10 },
       body: [
-        ["Total de entradas", BRL(data.metrics.entradas)],
-        ["Total de saídas", BRL(data.metrics.saidas)],
-        ["Saldo líquido", BRL(data.metrics.saldo)],
-        ["Lançamentos", String(data.metrics.total)],
-        ["Conciliação", `${data.metrics.taxaConciliacao.toFixed(0)}%`],
+        [t("totalInflows"), BRL(data.metrics.entradas)],
+        [t("totalOutflows"), BRL(data.metrics.saidas)],
+        [t("netBalance"), BRL(data.metrics.saldo)],
+        [t("entries"), String(data.metrics.total)],
+        [t("reconciliation"), `${data.metrics.taxaConciliacao.toFixed(0)}%`],
       ],
       columnStyles: { 0: { textColor: 90 }, 1: { halign: "right", fontStyle: "bold" } },
     });
     afterTable();
 
     if (data.closings && data.closings.length) {
-      heading("Fechamento de caixa por período");
+      heading(t("closingByPeriod"));
       autoTable(doc, {
         startY: y,
         margin: { left: marginX, right: marginX },
         headStyles: { fillColor: [30, 41, 59] },
         styles: { fontSize: 9 },
-        head: [["Período", "Lançamentos", "Entradas", "Saídas", "Saldo", "Status"]],
+        head: [[t("colPeriod"), t("colEntries"), t("colInflows"), t("colOutflows"), t("colBalance"), t("colStatus")]],
         body: data.closings.map((c) => [
           c.label,
           String(c.count),
           BRL(c.entradas),
           BRL(c.saidas),
           BRL(c.saldo),
-          c.done ? "Conferido" : "Pendente",
+          c.done ? t("statusDone") : t("statusPending"),
         ]),
         columnStyles: {
           1: { halign: "center" },
@@ -146,19 +165,19 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
     }
 
     if (data.txs && data.txs.length) {
-      heading("Lançamentos");
+      heading(t("entriesHeading"));
       autoTable(doc, {
         startY: y,
         margin: { left: marginX, right: marginX },
         headStyles: { fillColor: [30, 41, 59] },
         styles: { fontSize: 8 },
-        head: [["Data", "Descrição", "Categoria", "Status", "Valor"]],
-        body: data.txs.map((t) => [
-          shortDate(t.date),
-          t.description,
-          t.category,
-          t.reconciled ? "Conciliado" : "Pendente",
-          `${t.type === "entrada" ? "+" : "-"}${BRL(t.amount)}`,
+        head: [[t("colDate"), t("colDescription"), t("colCategory"), t("colTxStatus"), t("colAmount")]],
+        body: data.txs.map((tx) => [
+          shortDate(tx.date),
+          tx.description,
+          catLabel(tx.category),
+          tx.reconciled ? t("reconciled") : t("pending"),
+          `${tx.type === "entrada" ? "+" : "-"}${BRL(tx.amount)}`,
         ]),
         columnStyles: { 4: { halign: "right" } },
       });
@@ -168,47 +187,47 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
 
   if (data.tab === "faturamento" && data.faturamento) {
     const f = data.faturamento;
-    heading("Resumo");
+    heading(t("summary"));
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       theme: "plain",
       styles: { fontSize: 10 },
       body: [
-        ["Receita bruta", BRL(f.total)],
-        ["Ticket médio estimado", BRL(f.ticketMedio)],
-        [`Média por ${f.granularity === "mes" ? "mês" : "dia"}`, BRL(f.average)],
-        ["Período", f.countLabel],
+        [t("grossRevenue"), BRL(f.total)],
+        [t("estTicket"), BRL(f.ticketMedio)],
+        [f.granularity === "mes" ? t("averagePerMonth") : t("averagePerDay"), BRL(f.average)],
+        [t("period"), f.countLabel],
       ],
       columnStyles: { 0: { textColor: 90 }, 1: { halign: "right", fontStyle: "bold" } },
     });
     afterTable();
 
-    heading(`Demonstrativo de faturamento — ${f.granularity === "mes" ? "mensal" : "diário"}`);
+    heading(f.granularity === "mes" ? t("revenueStatementMonthly") : t("revenueStatementDaily"));
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       headStyles: { fillColor: [30, 41, 59] },
       styles: { fontSize: 9 },
-      head: [[f.granularity === "mes" ? "Mês" : "Dia", "Faturamento"]],
+      head: [[f.granularity === "mes" ? t("colMonth") : t("colDay"), t("colRevenue")]],
       body: f.rows.map((r) => [r.label, BRL(r.total)]),
-      foot: [["Total", BRL(f.total)]],
+      foot: [[t("total"), BRL(f.total)]],
       columnStyles: { 1: { halign: "right" } },
       footStyles: { fillColor: [241, 245, 249], textColor: 20, fontStyle: "bold", halign: "right" },
     });
     afterTable();
 
     if (f.projection) {
-      heading("Projeção");
+      heading(t("projection"));
       autoTable(doc, {
         startY: y,
         margin: { left: marginX, right: marginX },
         theme: "plain",
         styles: { fontSize: 10 },
         body: [
-          ["Realizado até hoje", BRL(f.total)],
-          [`Projeção do restante (${f.projection.remainingLabel})`, BRL(f.projection.projectedRemaining)],
-          ["Projeção total", BRL(f.projection.projectedTotal)],
+          [t("realizedToday"), BRL(f.total)],
+          [t("projectedRemaining", { label: f.projection.remainingLabel }), BRL(f.projection.projectedRemaining)],
+          [t("projectedTotal"), BRL(f.projection.projectedTotal)],
         ],
         columnStyles: { 0: { textColor: 90 }, 1: { halign: "right", fontStyle: "bold" } },
       });
@@ -218,30 +237,30 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
 
   if (data.tab === "gastos" && data.gastos) {
     const g = data.gastos;
-    heading("Resumo");
+    heading(t("summary"));
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       theme: "plain",
       styles: { fontSize: 10 },
       body: [
-        ["Total de gastos", BRL(g.total)],
-        ["Categorias", String(g.categorias)],
-        ["Maior categoria", g.rows[0] ? `${g.rows[0].name} — ${BRL(g.rows[0].total)} (${g.rows[0].pct.toFixed(1)}%)` : "—"],
+        [t("totalExpenses"), BRL(g.total)],
+        [t("categories"), String(g.categorias)],
+        [t("topCategory"), g.rows[0] ? `${catLabel(g.rows[0].name)} — ${BRL(g.rows[0].total)} (${g.rows[0].pct.toFixed(1)}%)` : "—"],
       ],
       columnStyles: { 0: { textColor: 90 }, 1: { halign: "right", fontStyle: "bold" } },
     });
     afterTable();
 
-    heading("Gastos por categoria");
+    heading(t("expensesByCategory"));
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       headStyles: { fillColor: [30, 41, 59] },
       styles: { fontSize: 9 },
-      head: [["Categoria", "Valor", "%"]],
-      body: g.rows.map((r) => [r.name, BRL(r.total), `${r.pct.toFixed(1)}%`]),
-      foot: [["Total", BRL(g.total), "100%"]],
+      head: [[t("colCategory"), t("colValue"), "%"]],
+      body: g.rows.map((r) => [catLabel(r.name), BRL(r.total), `${r.pct.toFixed(1)}%`]),
+      foot: [[t("total"), BRL(g.total), "100%"]],
       columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
       footStyles: { fillColor: [241, 245, 249], textColor: 20, fontStyle: "bold", halign: "right" },
     });
@@ -250,39 +269,42 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
 
   if (data.tab === "dre" && data.dre) {
     const d = data.dre;
-    heading("Demonstração do Resultado do Exercício");
+    heading(t("dreHeading"));
 
     // Cada linha componente vem seguida das categorias que a compõem (o mesmo
     // detalhamento que fica recolhido na tela).
     const detail = (cats?: { name: string; total: number }[]) =>
-      (cats ?? []).map((c) => [`    ${c.name}`, BRL(c.total)]);
+      (cats ?? []).map((c) => [`    ${catLabel(c.name)}`, BRL(c.total)]);
+
+    const body = [
+      [t("dreGrossRevenue"), BRL(d.receita)],
+      ...detail(d.receitaCats),
+      [t("dreDeductions"), `-${BRL(d.impostos)}`],
+      ...detail(d.impostosCats),
+      [t("dreNetRevenue"), BRL(d.receitaLiquida)],
+      [t("dreCmv"), `-${BRL(d.cmv)}`],
+      ...detail(d.cmvCats),
+      [t("dreGrossProfit"), BRL(d.lucroBruto)],
+      [t("dreOpExpenses"), `-${BRL(d.despesas)}`],
+      ...detail(d.despesasCats),
+      [t("dreNetProfit"), BRL(d.lucroLiquido)],
+      [t("dreMargin"), `${d.margemLiquida.toFixed(1)}%`],
+    ];
+    const marginRowIndex = body.length - 1;
 
     autoTable(doc, {
       startY: y,
       margin: { left: marginX, right: marginX },
       styles: { fontSize: 10 },
       headStyles: { fillColor: [30, 41, 59] },
-      head: [["Linha", "Valor"]],
-      body: [
-        ["Receita Operacional Bruta", BRL(d.receita)],
-        ...detail(d.receitaCats),
-        ["(-) Deduções e Impostos", `-${BRL(d.impostos)}`],
-        ...detail(d.impostosCats),
-        ["= Receita Operacional Líquida", BRL(d.receitaLiquida)],
-        ["(-) Custo da Mercadoria Vendida (CMV)", `-${BRL(d.cmv)}`],
-        ...detail(d.cmvCats),
-        ["= Lucro Bruto", BRL(d.lucroBruto)],
-        ["(-) Despesas Operacionais", `-${BRL(d.despesas)}`],
-        ...detail(d.despesasCats),
-        ["= Lucro Líquido do Exercício", BRL(d.lucroLiquido)],
-        ["Margem Líquida", `${d.margemLiquida.toFixed(1)}%`],
-      ],
+      head: [[t("colLine"), t("colValue")]],
+      body,
       columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
       didParseCell: (h) => {
         const raw = h.row.raw as unknown;
         const label = Array.isArray(raw) ? String(raw[0] ?? "") : "";
         if (h.section !== "body") return;
-        if (label.startsWith("=") || label.startsWith("Margem")) {
+        if (label.trimStart().startsWith("=") || h.row.index === marginRowIndex) {
           h.cell.styles.fillColor = [241, 245, 249];
         } else if (label.startsWith("    ")) {
           h.cell.styles.textColor = 120;
@@ -295,5 +317,5 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
   }
 
   const slugPeriod = data.periodLabel.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
-  doc.save(`relatorio-${data.tab}-${slugPeriod}.pdf`);
+  doc.save(`${t("fileSlug")}-${data.tab}-${slugPeriod}.pdf`);
 }

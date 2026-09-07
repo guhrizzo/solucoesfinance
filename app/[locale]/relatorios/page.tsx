@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, Fragment } from "react";
+import { useLocale, useTranslations, useMessages } from "next-intl";
 import {
   TrendingUp, DollarSign, Landmark,
   FileText, Search, RefreshCw, ShieldCheck, Download,
@@ -10,7 +11,8 @@ import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, Badge, Sensitive } from "@/app/components/ui";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
+import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -28,18 +30,16 @@ interface Tx {
   reconciled?: boolean;
 }
 
-// Helper para formatação
-const toBRL = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+// Helper de formatação — moeda travada em BRL, agrupamento pelo locale.
+const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
 // Célula de categoria da conciliação linha a linha: <select> com as categorias
 // do tipo + opção "Descrição (especificar)", que troca por um input livre.
-// Grava só ao confirmar (blur/Enter no input, ou escolha direta no select).
-// O pai passa key={`${tx.id}:${tx.category}`}, então o estado local re-inicia
-// sozinho quando o snapshot traz outro valor — sem efeito de sincronização.
+// O VALOR gravado (`tx.category`) segue o nome canônico pt-BR — só a exibição
+// traduz, via categoryLabel.
 function CategoryCell({ tx, busy, onSave }: { tx: Tx; busy: boolean; onSave: (value: string) => void }) {
+  const tcc = useTranslations("relatorios.categoryCell");
+  const tCat = useTranslations("categories");
   const opts = CASHFLOW_CATEGORIES[tx.type] ?? [];
   const startCustom = isCustomCategory(tx.category, tx.type);
   const [mode, setMode] = useState<"list" | "custom">(startCustom ? "custom" : "list");
@@ -64,11 +64,11 @@ function CategoryCell({ tx, busy, onSave }: { tx: Tx; busy: boolean; onSave: (va
         className="w-full max-w-[200px] px-2 py-1 rounded-lg text-xs outline-none border cursor-pointer disabled:opacity-60"
         style={selectStyle}
       >
-        {opts.map((c) => <option key={c} value={c}>{c}</option>)}
+        {opts.map((c) => <option key={c} value={c}>{categoryLabel(c, tCat)}</option>)}
         {mode !== "custom" && tx.category && !opts.includes(tx.category) && (
-          <option value={tx.category}>{tx.category}</option>
+          <option value={tx.category}>{categoryLabel(tx.category, tCat)}</option>
         )}
-        <option value={CUSTOM_CATEGORY}>Descrição (especificar)…</option>
+        <option value={CUSTOM_CATEGORY}>{tcc("customOption")}</option>
       </select>
       {mode === "custom" && (
         <input
@@ -83,7 +83,7 @@ function CategoryCell({ tx, busy, onSave }: { tx: Tx; busy: boolean; onSave: (va
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }}
-          placeholder="Descreva a categoria"
+          placeholder={tcc("customPlaceholder")}
           className="w-full max-w-[200px] px-2 py-1 rounded-lg text-xs outline-none border disabled:opacity-60"
           style={selectStyle}
         />
@@ -93,11 +93,10 @@ function CategoryCell({ tx, busy, onSave }: { tx: Tx; busy: boolean; onSave: (va
 }
 
 // Linha componente da DRE (Receita Bruta, Deduções, CMV, Despesas). Clicável
-// quando tem categorias; expande o detalhamento `categoria → valor`. Só usa
-// tokens var(--db-*) — nada de classes `dark:`, que seguem o modo do SO e não
-// o tema do app.
-function DreLine({ label, amount, cats, open, onToggle, hideValues, variant }: {
+// quando tem categorias; expande o detalhamento `categoria → valor`.
+function DreLine({ label, prefix, amount, cats, open, onToggle, hideValues, variant }: {
   label: string;
+  prefix: string;
   amount: number;
   cats: { name: string; total: number }[];
   open: boolean;
@@ -105,8 +104,10 @@ function DreLine({ label, amount, cats, open, onToggle, hideValues, variant }: {
   hideValues: boolean;
   variant: "receita" | "deducao";
 }) {
+  const locale = useLocale();
+  const tCat = useTranslations("categories");
   const canExpand = cats.length > 0;
-  const money = (n: number) => <Sensitive hidden={hideValues}>{toBRL(n)}</Sensitive>;
+  const money = (n: number) => <Sensitive hidden={hideValues}>{toBRL(n, locale)}</Sensitive>;
   const isReceita = variant === "receita";
   return (
     <div style={{ borderTop: "1px solid var(--db-border)" }}>
@@ -121,7 +122,7 @@ function DreLine({ label, amount, cats, open, onToggle, hideValues, variant }: {
           {canExpand
             ? <ChevronDown size={14} className="transition-transform shrink-0" style={{ transform: open ? "rotate(180deg)" : "none", color: "var(--db-text-3)" }} />
             : <span className="w-3.5 shrink-0" />}
-          {isReceita ? label : `(-) ${label}`}
+          {isReceita ? label : `${prefix} ${label}`}
         </span>
         <span className={`font-mono shrink-0 text-sm ${isReceita ? "font-bold" : ""}`} style={{ color: isReceita ? "var(--success)" : "var(--danger)" }}>
           {isReceita ? "" : "−"}{money(amount)}
@@ -131,7 +132,7 @@ function DreLine({ label, amount, cats, open, onToggle, hideValues, variant }: {
         <div className="pb-2" style={{ background: "var(--db-bg-alt)" }}>
           {cats.map((c) => (
             <div key={c.name} className="flex items-center justify-between gap-3 pl-11 pr-4 sm:pr-5 py-1.5 text-xs">
-              <span style={{ color: "var(--db-text-3)" }}>{c.name}</span>
+              <span style={{ color: "var(--db-text-3)" }}>{categoryLabel(c.name, tCat)}</span>
               <span className="font-mono" style={{ color: "var(--db-text-2)" }}>{money(c.total)}</span>
             </div>
           ))}
@@ -142,6 +143,22 @@ function DreLine({ label, amount, cats, open, onToggle, hideValues, variant }: {
 }
 
 export default function RelatoriosPage() {
+  const t = useTranslations("relatorios");
+  const tCat = useTranslations("categories");
+  const tNav = useTranslations("nav");
+  const locale = useLocale();
+  const messages = useMessages();
+
+  const monthsShort = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(locale, { month: "short" }).replace(/\./g, "")),
+    [locale]
+  );
+  const monthsLong = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(locale, { month: "long" }).replace(/^\w/, (c) => c.toUpperCase())),
+    [locale]
+  );
+  const noCategory = t("dre.noCategory");
+
   const [uid, setUid] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   // true quando o usuário logado é um membro de equipe sem "Relatórios"
@@ -158,12 +175,8 @@ export default function RelatoriosPage() {
   }
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
-  // Mês âncora — vem do seletor global da Navbar (‹ Ago 2026 ›, com modal de
-  // escolha). "Mensal" mostra esse mês; "Anual" mostra o ano dele.
+  // Mês âncora — vem do seletor global da Navbar.
   const { refDate } = usePeriod();
-  // Período gerencial/contábil, uniforme em todas as abas — só Mensal ou
-  // Anual (recortes operacionais como 7D/30D saíram junto com o antigo
-  // seletor; ver histórico de commits pra essa transição).
   const [filterPeriod, setFilterPeriod] = useState<"mes" | "ano">("mes");
   const [searchQuery, setSearchQuery] = useState("");
   const [hideValues, setHideValues] = useState(false);
@@ -171,28 +184,22 @@ export default function RelatoriosPage() {
   type TabType = "fluxo" | "faturamento" | "gastos" | "dre";
   const [activeTab, setActiveTab] = useState<TabType>("fluxo");
 
-  // Fechamento de caixa: qual período está sendo conferido/reaberto agora
   const [closingBusy, setClosingBusy] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
-  // Conciliação linha a linha: qual dia/mês está expandido e qual lançamento
-  // está gravando agora (tag `${txId}:cat` ou `${txId}:rec`).
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [lineBusy, setLineBusy] = useState<string | null>(null);
-  // DRE: quais linhas componentes estão com o detalhamento por categoria aberto.
   const [dreOpen, setDreOpen] = useState<Set<string>>(new Set());
   const toggleDre = (k: string) => setDreOpen(prev => {
     const next = new Set(prev);
     if (next.has(k)) next.delete(k); else next.add(k);
     return next;
   });
-  // Relatório de Gastos: quais categorias estão com os lançamentos abertos.
   const [gastosOpen, setGastosOpen] = useState<Set<string>>(new Set());
   const toggleGastos = (k: string) => setGastosOpen(prev => {
     const next = new Set(prev);
     if (next.has(k)) next.delete(k); else next.add(k);
     return next;
   });
-  // Relatório de Faturamento: quais categorias estão com os lançamentos abertos.
   const [faturamentoOpen, setFaturamentoOpen] = useState<Set<string>>(new Set());
   const toggleFaturamento = (k: string) => setFaturamentoOpen(prev => {
     const next = new Set(prev);
@@ -236,7 +243,6 @@ export default function RelatoriosPage() {
           setUid(ownerUid);
           setUser(u);
 
-          // Buscar transações de fluxo de caixa
           const q = query(collection(db, "users", ownerUid, "cashflow"), orderBy("date", "desc"));
           snapUnsub = onSnapshot(q, (snap) => {
             setTxs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tx)));
@@ -263,12 +269,9 @@ export default function RelatoriosPage() {
     const refYear = refDate.getFullYear();
     const refMonth = refDate.getMonth();
     return txs.filter(tx => {
-      // Filtro de Busca
       if (searchQuery && !tx.description.toLowerCase().includes(searchQuery.toLowerCase()) && !tx.category.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-
-      // Filtro de Data — mês/ano âncora do seletor global
       const txDate = new Date(tx.date + "T12:00:00");
       if (filterPeriod === "mes") {
         return txDate.getMonth() === refMonth && txDate.getFullYear() === refYear;
@@ -295,15 +298,14 @@ export default function RelatoriosPage() {
     return { entradas, saidas, saldo, taxaConciliacao, total: filteredTxs.length };
   }, [filteredTxs]);
 
-  // Cálculos do DRE — além dos totais, guarda o detalhamento por categoria de
-  // cada linha componente pra alimentar as linhas expansíveis.
+  // Cálculos do DRE
   const dreData = useMemo(() => {
     const bucket = { receita: new Map<string, number>(), impostos: new Map<string, number>(), cmv: new Map<string, number>(), despesas: new Map<string, number>() };
     const add = (m: Map<string, number>, name: string, v: number) => m.set(name, (m.get(name) ?? 0) + v);
 
     filteredTxs.forEach(tx => {
       const catLower = tx.category.toLowerCase();
-      const name = tx.category || "Sem categoria";
+      const name = tx.category || noCategory;
       if (tx.type === "entrada") {
         add(bucket.receita, name, tx.amount);
       } else if (catLower.includes("imposto") || catLower.includes("taxa") || catLower.includes("tributo")) {
@@ -334,18 +336,16 @@ export default function RelatoriosPage() {
       cmvCats: toRows(bucket.cmv),
       despesasCats: toRows(bucket.despesas),
     };
-  }, [filteredTxs]);
+  }, [filteredTxs, noCategory]);
 
-  // Relatório de Gastos (aba Gastos) — só saídas, agrupadas por categoria, com
-  // valor, % do total de gastos e os lançamentos de cada uma. Do maior pro
-  // menor. Segue o período Mensal/Anual via filteredTxs.
+  // Relatório de Gastos (aba Gastos)
   const gastosReport = useMemo(() => {
     const map = new Map<string, { total: number; txs: Tx[] }>();
     let total = 0;
     filteredTxs.forEach(tx => {
       if (tx.type !== "saida") return;
       total += tx.amount;
-      const name = tx.category || "Sem categoria";
+      const name = tx.category || noCategory;
       const g = map.get(name) ?? { total: 0, txs: [] };
       g.total += tx.amount;
       g.txs.push(tx);
@@ -360,18 +360,16 @@ export default function RelatoriosPage() {
       }))
       .sort((a, b) => b.total - a.total);
     return { rows, total, categorias: rows.length, maior: rows[0] ?? null };
-  }, [filteredTxs]);
+  }, [filteredTxs, noCategory]);
 
-  // Relatório de Faturamento (aba Faturamento) — espelha o gastosReport, mas
-  // só entradas: valor, % do total faturado, ticket médio e os lançamentos de
-  // cada categoria, do maior pro menor. Segue o período Mensal/Anual.
+  // Relatório de Faturamento (aba Faturamento)
   const faturamentoReport = useMemo(() => {
     const map = new Map<string, { total: number; txs: Tx[] }>();
     let total = 0;
     filteredTxs.forEach(tx => {
       if (tx.type !== "entrada") return;
       total += tx.amount;
-      const name = tx.category || "Sem categoria";
+      const name = tx.category || noCategory;
       const g = map.get(name) ?? { total: 0, txs: [] };
       g.total += tx.amount;
       g.txs.push(tx);
@@ -390,27 +388,25 @@ export default function RelatoriosPage() {
       rows, total, categorias: rows.length, maior: rows[0] ?? null,
       ticketMedio: lancamentos > 0 ? total / lancamentos : 0,
     };
-  }, [filteredTxs]);
+  }, [filteredTxs, noCategory]);
 
   // Categorias de Entrada e Saída agrupadas
   const categoryBreakdown = useMemo(() => {
     const breakdown: Record<string, { total: number; type: TxType }> = {};
     filteredTxs.forEach(tx => {
-      if (!breakdown[tx.category]) {
-        breakdown[tx.category] = { total: 0, type: tx.type };
+      const name = tx.category || noCategory;
+      if (!breakdown[name]) {
+        breakdown[name] = { total: 0, type: tx.type };
       }
-      breakdown[tx.category].total += tx.amount;
+      breakdown[name].total += tx.amount;
     });
 
     return Object.entries(breakdown)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredTxs]);
+  }, [filteredTxs, noCategory]);
 
-  // Demonstrativo de Faturamento (aba Faturamento) — formato gerencial e
-  // contábil no estilo de uma Declaração de Faturamento: agrupa as entradas
-  // do fluxo de caixa por mês (visão "Anual", ano corrente) ou por dia
-  // (visão "Mensal", mês corrente), com total e média do período.
+  // Demonstrativo de Faturamento (aba Faturamento)
   const faturamentoLedger = useMemo(() => {
     const now = new Date();
     const refYear = refDate.getFullYear();
@@ -422,30 +418,28 @@ export default function RelatoriosPage() {
     const isPastYear = refYear < now.getFullYear();
 
     if (filterPeriod === "ano") {
-      const byMonth = MONTH_LABELS.map((label, i) => ({ label, total: 0, key: i }));
+      const byMonth = monthsShort.map((label, i) => ({ label, total: 0, key: i }));
       filteredTxs.forEach(tx => {
         if (tx.type !== "entrada") return;
         const m = Number(tx.date.split("-")[1]) - 1;
         if (byMonth[m]) byMonth[m].total += tx.amount;
       });
-      // Ano corrente: meses decorridos até hoje. Ano passado: 12 (fechado).
-      // Ano futuro: 0 (sem projeção).
       const elapsedMonths = isCurYear ? now.getMonth() + 1 : (isPastYear ? 12 : 0);
       const total = byMonth.reduce((s, m) => s + m.total, 0);
       const average = elapsedMonths ? total / elapsedMonths : 0;
       const remainingUnits = elapsedMonths > 0 ? 12 - elapsedMonths : 0;
       return {
         granularity: "mes" as const,
-        periodLabel: `Ano de ${refYear}`,
+        periodLabel: t("periodLabel.year", { year: refYear }),
         rows: byMonth.map(m => ({ label: `${m.label}/${refYear}`, total: m.total })),
         total,
         countLabel: elapsedMonths
-          ? `${elapsedMonths} ${elapsedMonths === 1 ? "mês" : "meses"} ${isCurYear ? "decorridos" : "no ano"}`
-          : "ano ainda não iniciado",
+          ? (isCurYear ? t("countLabels.monthsElapsedCurrent", { count: elapsedMonths }) : t("countLabels.monthsElapsedOther", { count: elapsedMonths }))
+          : t("countLabels.yearNotStarted"),
         average,
         projection: {
           remainingUnits,
-          remainingLabel: `${remainingUnits} ${remainingUnits === 1 ? "mês restante" : "meses restantes"} do ano`,
+          remainingLabel: t("countLabels.monthsRemaining", { count: remainingUnits }),
           projectedRemaining: average * remainingUnits,
           projectedTotal: total + average * remainingUnits,
         },
@@ -459,51 +453,43 @@ export default function RelatoriosPage() {
       const d = Number(tx.date.split("-")[2]);
       if (byDay[d - 1]) byDay[d - 1].total += tx.amount;
     });
-    // Mês corrente: dias até hoje. Mês passado: mês inteiro (fechado).
-    // Mês futuro: 0 (sem projeção).
     const elapsedDays = isCurMonth ? now.getDate() : (isPastMonth ? daysInMonth : 0);
     const total = byDay.reduce((s, d) => s + d.total, 0);
     const average = elapsedDays ? total / elapsedDays : 0;
     const remainingUnits = elapsedDays > 0 ? daysInMonth - elapsedDays : 0;
     return {
       granularity: "dia" as const,
-      periodLabel: `${MONTH_LABELS[refMonth]} de ${refYear}`,
+      periodLabel: t("periodLabel.month", { month: monthsLong[refMonth], year: refYear }),
       rows: byDay.filter(d => d.total > 0).map(d => ({ label: `${String(d.day).padStart(2, "0")}/${String(refMonth + 1).padStart(2, "0")}`, total: d.total })),
       total,
       countLabel: elapsedDays
-        ? `${elapsedDays} ${elapsedDays === 1 ? "dia decorrido" : `dias ${isCurMonth ? "decorridos" : "no mês"}`}`
-        : "mês ainda não iniciado",
+        ? (isCurMonth ? t("countLabels.daysElapsedCurrent", { count: elapsedDays }) : t("countLabels.daysElapsedOther", { count: elapsedDays }))
+        : t("countLabels.monthNotStarted"),
       average,
       projection: {
         remainingUnits,
-        remainingLabel: `${remainingUnits} ${remainingUnits === 1 ? "dia restante" : "dias restantes"} no mês`,
+        remainingLabel: t("countLabels.daysRemaining", { count: remainingUnits }),
         projectedRemaining: average * remainingUnits,
         projectedTotal: total + average * remainingUnits,
       },
     };
-  }, [filteredTxs, filterPeriod, refDate]);
+  }, [filteredTxs, filterPeriod, refDate, t, monthsShort, monthsLong]);
 
   // Rótulo do período gerencial selecionado (para cabeçalhos e PDF).
   const periodLabel = useMemo(() => {
-    const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     return filterPeriod === "ano"
-      ? `Ano de ${refDate.getFullYear()}`
-      : `${meses[refDate.getMonth()]} de ${refDate.getFullYear()}`;
-  }, [filterPeriod, refDate]);
+      ? t("periodLabel.year", { year: refDate.getFullYear() })
+      : t("periodLabel.month", { month: monthsLong[refDate.getMonth()], year: refDate.getFullYear() });
+  }, [filterPeriod, refDate, t, monthsLong]);
 
   // ── Fechamento de Caixa por Período ──────────────────────────────────────────
-  // Modelo financeiro de conferência: os lançamentos do período são agrupados
-  // por dia (visão Mensal) ou por mês (visão Anual). O usuário fecha cada
-  // período um a um — "Marcar como conferido" grava reconciled=true em todos os
-  // lançamentos daquele dia/mês; "Reabrir" desfaz. Um período conta como
-  // conferido quando todos os seus lançamentos estão conciliados.
   const periodClosings = useMemo(() => {
     const map = new Map<string, { label: string; ids: string[]; txs: Tx[]; count: number; entradas: number; saidas: number; reconciledCount: number }>();
 
     filteredTxs.forEach(tx => {
       const key = filterPeriod === "ano" ? tx.date.slice(0, 7) : tx.date;
       const label = filterPeriod === "ano"
-        ? `${MONTH_LABELS[Number(tx.date.slice(5, 7)) - 1]}/${tx.date.slice(0, 4)}`
+        ? `${monthsShort[Number(tx.date.slice(5, 7)) - 1]}/${tx.date.slice(0, 4)}`
         : `${tx.date.slice(8, 10)}/${tx.date.slice(5, 7)}`;
       const g = map.get(key) ?? { label, ids: [], txs: [], count: 0, entradas: 0, saidas: 0, reconciledCount: 0 };
       g.ids.push(tx.id);
@@ -531,11 +517,8 @@ export default function RelatoriosPage() {
 
     const doneCount = rows.filter(r => r.done).length;
     return { rows, doneCount, total: rows.length };
-  }, [filteredTxs, filterPeriod]);
+  }, [filteredTxs, filterPeriod, monthsShort]);
 
-  // Total do que já foi efetivamente conciliado no período — só lançamentos
-  // com reconciled=true. Alimenta o rodapé "Total conciliado" e o contador
-  // de lançamentos conciliados no cabeçalho do card.
   const conciliado = useMemo(() => {
     let entradas = 0, saidas = 0, count = 0;
     filteredTxs.forEach(tx => {
@@ -547,11 +530,8 @@ export default function RelatoriosPage() {
     return { entradas, saidas, saldo: entradas - saidas, count, total: filteredTxs.length };
   }, [filteredTxs]);
 
-  // Um dia expandido pode deixar de existir ao trocar de período ou buscar —
-  // fecha a expansão pra não ficar apontando pra uma key fantasma.
   useEffect(() => { setExpandedKey(null); }, [filterPeriod, searchQuery]);
 
-  // Fecha ou reabre um período — grava em lote em todos os lançamentos dele.
   const handleToggleClosing = async (row: { key: string; ids: string[]; done: boolean }) => {
     if (!uid || closingBusy) return;
     setClosingBusy(row.key);
@@ -575,9 +555,6 @@ export default function RelatoriosPage() {
     }
   };
 
-  // Conciliação linha a linha — grava na hora (auto-save) num único lançamento
-  // do cashflow. Usado pela troca de categoria e pela checkbox "Conciliado".
-  // O onSnapshot de `txs` repinta a tabela; não há estado local otimista.
   const updateLine = async (txId: string, patch: Record<string, unknown>, busyTag: string) => {
     if (!uid || lineBusy) return;
     setLineBusy(busyTag);
@@ -604,6 +581,8 @@ export default function RelatoriosPage() {
         periodLabel,
         generatedAt: new Date(),
         userLabel: user?.email ?? undefined,
+        locale,
+        messages,
       };
       let payload: ReportData;
       if (activeTab === "fluxo") {
@@ -613,8 +592,8 @@ export default function RelatoriosPage() {
           closings: periodClosings.rows.map(r => ({
             label: r.label, count: r.count, entradas: r.entradas, saidas: r.saidas, saldo: r.saldo, done: r.done,
           })),
-          txs: filteredTxs.map(t => ({
-            date: t.date, description: t.description, category: t.category, type: t.type, amount: t.amount, reconciled: t.reconciled,
+          txs: filteredTxs.map(x => ({
+            date: x.date, description: x.description, category: x.category, type: x.type, amount: x.amount, reconciled: x.reconciled,
           })),
         };
       } else if (activeTab === "faturamento") {
@@ -654,12 +633,10 @@ export default function RelatoriosPage() {
     }
   };
 
-  // Renderização do gráfico SVG de colunas — acompanha o toggle Mensal/Anual:
-  // na visão Mensal, uma coluna por dia do mês corrente que teve movimento;
-  // na visão Anual, uma coluna por mês do ano corrente.
+  // Gráfico SVG de colunas.
   const svgChartData = useMemo(() => {
     if (filterPeriod === "ano") {
-      const months = MONTH_LABELS.map(label => ({ label, entrada: 0, saida: 0 }));
+      const months = monthsShort.map(label => ({ label, entrada: 0, saida: 0 }));
       filteredTxs.forEach(tx => {
         const m = Number(tx.date.split("-")[1]) - 1;
         if (months[m]) {
@@ -685,36 +662,38 @@ export default function RelatoriosPage() {
       }
     });
     return days.filter(d => d.entrada > 0 || d.saida > 0);
-  }, [filteredTxs, filterPeriod, refDate]);
+  }, [filteredTxs, filterPeriod, refDate, monthsShort]);
 
-  if (blocked) return <AccessDenied category="Relatórios" />;
+  if (blocked) return <AccessDenied category={tNav("items.relatorios")} />;
 
   if (loading) return <PageLoader />;
+
+  const isAnnual = filterPeriod === "ano";
 
   return (
     <>
       <Navbar activePath="/relatorios" user={user} onLogout={handleLogout} />
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
-        
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="font-heading text-2xl font-extrabold" style={{ color: "var(--db-text)" }}>
-              Relatórios & Conciliação
+              {t("meta.title")}
             </h1>
             <p className="text-xs mt-1" style={{ color: "var(--db-text-2)" }}>
-              Monitore a saúde do seu fluxo de caixa e feche cada período conferindo os lançamentos.
+              {t("meta.subtitle")}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
-              {[{ id: "mes", label: "Mensal" }, { id: "ano", label: "Anual" }].map(p => (
+              {[{ id: "mes", label: t("period.monthly") }, { id: "ano", label: t("period.annual") }].map(p => (
                 <button
                   key={p.id}
                   onClick={() => setFilterPeriod(p.id as any)}
                   className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer"
-                  style={filterPeriod === p.id 
+                  style={filterPeriod === p.id
                     ? { background: "var(--db-card)", color: "var(--primary)", boxShadow: "var(--db-shadow-sm)" }
                     : { background: "transparent", color: "var(--db-text-2)" }}
                 >
@@ -727,7 +706,7 @@ export default function RelatoriosPage() {
               onClick={() => setHideValues(!hideValues)}
               className="p-2.5 rounded-lg border cursor-pointer hover:bg-opacity-80 transition-colors"
               style={{ borderColor: "var(--db-border)", background: "var(--db-card)", color: "var(--db-text-2)" }}
-              title={hideValues ? "Mostrar valores" : "Ocultar valores"}
+              title={hideValues ? t("toggleValues.show") : t("toggleValues.hide")}
             >
               {hideValues ? <Eye size={15} /> : <EyeOff size={15} />}
             </button>
@@ -737,10 +716,10 @@ export default function RelatoriosPage() {
               disabled={exporting}
               className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors disabled:opacity-60"
               style={{ background: "var(--primary)", color: "var(--brand-on)" }}
-              title="Exportar a aba ativa em PDF"
+              title={t("exportPdfTitle")}
             >
               {exporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
-              Exportar PDF
+              {t("exportPdf")}
             </button>
           </div>
         </div>
@@ -748,10 +727,10 @@ export default function RelatoriosPage() {
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b scrollbar-hide" style={{ borderColor: "var(--db-border)" }}>
           {[
-            { id: "fluxo", label: "Fluxo de Caixa", icon: Activity },
-            { id: "faturamento", label: "Faturamento", icon: BarChart3 },
-            { id: "gastos", label: "Gastos", icon: TrendingDown },
-            { id: "dre", label: "DRE", icon: FileText },
+            { id: "fluxo", label: t("tabs.fluxo"), icon: Activity },
+            { id: "faturamento", label: t("tabs.faturamento"), icon: BarChart3 },
+            { id: "gastos", label: t("tabs.gastos"), icon: TrendingDown },
+            { id: "dre", label: t("tabs.dre"), icon: FileText },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -771,55 +750,50 @@ export default function RelatoriosPage() {
         {/* Aba: Fluxo de Caixa */}
         {activeTab === "fluxo" && (
           <div className="space-y-6 fade-in">
-            {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Card Entradas */}
+
           <div className="cf-card p-5 space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Total Entradas</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiInflows")}</span>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
                 <ArrowUpRight size={16} />
               </div>
             </div>
             <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-              {<Sensitive hidden={hideValues}>{toBRL(metrics.entradas)}</Sensitive>}
+              {<Sensitive hidden={hideValues}>{toBRL(metrics.entradas, locale)}</Sensitive>}
             </p>
-            <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Recebimentos no período</p>
+            <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("fluxo.kpiInflowsHint")}</p>
           </div>
 
-          {/* Card Saídas */}
           <div className="cf-card p-5 space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Total Saídas</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiOutflows")}</span>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
                 <ArrowDownRight size={16} />
               </div>
             </div>
             <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-              {<Sensitive hidden={hideValues}>{toBRL(metrics.saidas)}</Sensitive>}
+              {<Sensitive hidden={hideValues}>{toBRL(metrics.saidas, locale)}</Sensitive>}
             </p>
-            <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Pagamentos e despesas</p>
+            <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("fluxo.kpiOutflowsHint")}</p>
           </div>
 
-          {/* Card Saldo Líquido */}
           <div className="cf-card p-5 space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Saldo Líquido</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiBalance")}</span>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
                 <DollarSign size={16} />
               </div>
             </div>
             <p className="text-2xl font-extrabold mono" style={{ color: metrics.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
-              {<Sensitive hidden={hideValues}>{toBRL(metrics.saldo)}</Sensitive>}
+              {<Sensitive hidden={hideValues}>{toBRL(metrics.saldo, locale)}</Sensitive>}
             </p>
-            <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Resultado operacional</p>
+            <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("fluxo.kpiBalanceHint")}</p>
           </div>
 
-          {/* Card Conciliação */}
           <div className="cf-card p-5 space-y-2 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Conciliação</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiReconcile")}</span>
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
                 style={{ background: "var(--status-info-bg)", color: "var(--status-info-text)" }}
@@ -844,30 +818,28 @@ export default function RelatoriosPage() {
 
         {/* Gráfico SVG e Categorias */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Gráfico de Barras */}
+
           <div className="cf-card p-5 lg:col-span-2 space-y-4">
             <div>
               <h2 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>
-                {filterPeriod === "ano" ? "Histórico de Fluxo Mensal" : "Histórico de Fluxo Diário"}
+                {isAnnual ? t("fluxo.chartTitleAnnual") : t("fluxo.chartTitleMonthly")}
               </h2>
               <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
-                {filterPeriod === "ano"
-                  ? `Entradas vs Saídas mês a mês em ${refDate.getFullYear()}`
-                  : "Entradas vs Saídas nos dias ativos do mês"}
+                {isAnnual
+                  ? t("fluxo.chartSubAnnual", { year: refDate.getFullYear() })
+                  : t("fluxo.chartSubMonthly")}
               </p>
             </div>
 
-            {/* SVG Plot */}
             {svgChartData.length === 0 ? (
               <div className="h-64 w-full flex items-center justify-center text-center text-xs" style={{ color: "var(--db-text-3)" }}>
-                Nenhum lançamento no período.
+                {t("fluxo.chartEmpty")}
               </div>
             ) : (
             <div
               className="h-64 w-full flex items-end justify-between pt-6 px-4 relative"
               role="img"
-              aria-label="Gráfico de barras: entradas e saídas por período — detalhamento na tabela abaixo"
+              aria-label={t("fluxo.chartAria")}
             >
               <div className="absolute inset-x-0 top-1/2 border-t border-dashed" style={{ borderColor: "var(--db-border)" }} />
               {svgChartData.map((data, i) => {
@@ -877,16 +849,14 @@ export default function RelatoriosPage() {
                 return (
                   <div key={i} className="flex flex-col items-center gap-2 flex-1 group">
                     <div className="flex items-end gap-1.5 h-44">
-                      {/* Entrada Bar */}
                       <div className="w-2.5 sm:w-3.5 bg-emerald-500 rounded-t-md transition-all duration-300 relative" style={{ height: `${Math.max(entHeight, 4)}px` }}>
                         <span className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded text-white bg-slate-900 pointer-events-none transition-opacity whitespace-nowrap z-30">
-                          +{toBRL(data.entrada)}
+                          +{toBRL(data.entrada, locale)}
                         </span>
                       </div>
-                      {/* Saida Bar */}
                       <div className="w-2.5 sm:w-3.5 bg-rose-500 rounded-t-md transition-all duration-300 relative" style={{ height: `${Math.max(saiHeight, 4)}px` }}>
                         <span className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded text-white bg-slate-900 pointer-events-none transition-opacity whitespace-nowrap z-30">
-                          -{toBRL(data.saida)}
+                          -{toBRL(data.saida, locale)}
                         </span>
                       </div>
                     </div>
@@ -898,20 +868,20 @@ export default function RelatoriosPage() {
             )}
             {svgChartData.length > 0 && (
               <table className="sr-only">
-                <caption>Entradas e saídas por período</caption>
+                <caption>{t("fluxo.chartCaption")}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Período</th>
-                    <th scope="col">Entradas</th>
-                    <th scope="col">Saídas</th>
+                    <th scope="col">{t("fluxo.colPeriod")}</th>
+                    <th scope="col">{t("fluxo.colInflows")}</th>
+                    <th scope="col">{t("fluxo.colOutflows")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {svgChartData.map((data, i) => (
                     <tr key={i}>
                       <th scope="row">{data.label}</th>
-                      <td>{toBRL(data.entrada)}</td>
-                      <td>{toBRL(data.saida)}</td>
+                      <td>{toBRL(data.entrada, locale)}</td>
+                      <td>{toBRL(data.saida, locale)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -919,17 +889,16 @@ export default function RelatoriosPage() {
             )}
           </div>
 
-          {/* Distribuição por Categoria */}
           <div className="cf-card p-5 space-y-4">
             <div>
-              <h2 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>Gastos e Receitas por Categoria</h2>
-              <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Maiores agrupamentos do período</p>
+              <h2 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>{t("fluxo.categoryDistTitle")}</h2>
+              <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{t("fluxo.categoryDistSub")}</p>
             </div>
 
             <div className="space-y-4 max-h-[260px] overflow-y-auto pr-1">
               {categoryBreakdown.length === 0 ? (
                 <div className="text-center py-10" style={{ color: "var(--db-text-3)" }}>
-                  Nenhuma transação no período.
+                  {t("fluxo.categoryDistEmpty")}
                 </div>
               ) : (
                 categoryBreakdown.map((cat, i) => {
@@ -938,18 +907,18 @@ export default function RelatoriosPage() {
                   return (
                     <div key={i} className="space-y-1">
                       <div className="flex items-center justify-between text-xs font-semibold">
-                        <span style={{ color: "var(--db-text)" }}>{cat.name}</span>
+                        <span style={{ color: "var(--db-text)" }}>{categoryLabel(cat.name, tCat)}</span>
                         <span style={{ color: cat.type === "entrada" ? "var(--success)" : "var(--danger)" }}>
-                          {<Sensitive hidden={hideValues}>{toBRL(cat.total)}</Sensitive>}
+                          {<Sensitive hidden={hideValues}>{toBRL(cat.total, locale)}</Sensitive>}
                         </span>
                       </div>
                       <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all duration-500" 
-                          style={{ 
-                            width: `${pct}%`, 
-                            background: cat.type === "entrada" ? "var(--success)" : "var(--danger)" 
-                          }} 
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${pct}%`,
+                            background: cat.type === "entrada" ? "var(--success)" : "var(--danger)"
+                          }}
                         />
                       </div>
                     </div>
@@ -967,11 +936,13 @@ export default function RelatoriosPage() {
               <div className="flex items-center gap-2">
                 <Landmark className="text-primary" size={20} />
                 <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>
-                  Fechamento de Caixa por {filterPeriod === "ano" ? "Mês" : "Dia"}
+                  {isAnnual ? t("fluxo.closingTitleMonth") : t("fluxo.closingTitleDay")}
                 </h2>
               </div>
               <p className="text-xs mt-1" style={{ color: "var(--db-text-2)" }}>
-                Confira os lançamentos do fluxo de caixa {filterPeriod === "ano" ? "mês a mês" : "dia a dia"} e feche cada período — {periodLabel}.
+                {isAnnual
+                  ? t("fluxo.closingSubAnnual", { period: periodLabel })
+                  : t("fluxo.closingSubMonthly", { period: periodLabel })}
               </p>
             </div>
 
@@ -980,11 +951,11 @@ export default function RelatoriosPage() {
                 {periodClosings.doneCount}/{periodClosings.total}
               </p>
               <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
-                Períodos conferidos
+                {t("fluxo.periodsChecked")}
               </p>
               {conciliado.total > 0 && (
                 <p className="text-[10px] font-semibold mt-1" style={{ color: "var(--db-text-3)" }}>
-                  {conciliado.count} de {conciliado.total} lançamentos conciliados
+                  {t("fluxo.reconciledCount", { count: conciliado.count, total: conciliado.total })}
                 </p>
               )}
             </div>
@@ -1002,9 +973,9 @@ export default function RelatoriosPage() {
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
                 <Landmark size={22} />
               </div>
-              <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum lançamento no período</p>
+              <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>{t("fluxo.closingEmptyTitle")}</p>
               <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
-                Assim que houver lançamentos no fluxo de caixa em {periodLabel}, eles aparecem aqui agrupados para conferência.
+                {t("fluxo.closingEmptyBody", { period: periodLabel })}
               </p>
             </div>
           ) : (
@@ -1012,13 +983,13 @@ export default function RelatoriosPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
-                    <th className="py-2.5 font-bold">{filterPeriod === "ano" ? "Mês" : "Dia"}</th>
-                    <th className="py-2.5 font-bold text-center">Lançamentos</th>
-                    <th className="py-2.5 font-bold text-right">Entradas</th>
-                    <th className="py-2.5 font-bold text-right">Saídas</th>
-                    <th className="py-2.5 font-bold text-right">Saldo</th>
-                    <th className="py-2.5 font-bold text-center">Status</th>
-                    <th className="py-2.5 font-bold text-right">Ação</th>
+                    <th className="py-2.5 font-bold">{isAnnual ? t("fluxo.colMonth") : t("fluxo.colDay")}</th>
+                    <th className="py-2.5 font-bold text-center">{t("fluxo.colEntries")}</th>
+                    <th className="py-2.5 font-bold text-right">{t("fluxo.colInflows")}</th>
+                    <th className="py-2.5 font-bold text-right">{t("fluxo.colOutflows")}</th>
+                    <th className="py-2.5 font-bold text-right">{t("fluxo.colBalance")}</th>
+                    <th className="py-2.5 font-bold text-center">{t("fluxo.colStatus")}</th>
+                    <th className="py-2.5 font-bold text-right">{t("fluxo.colAction")}</th>
                   </tr>
                 </thead>
                 <tbody style={{ color: "var(--db-text)" }}>
@@ -1034,24 +1005,24 @@ export default function RelatoriosPage() {
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
                           style={{ background: "var(--cf-input)", color: "var(--db-text-2)" }}
                           aria-expanded={open}
-                          title={open ? "Recolher lançamentos" : "Ver lançamentos"}
+                          title={open ? t("fluxo.collapseEntries") : t("fluxo.viewEntries")}
                         >
                           {row.count}
                           <ChevronDown size={12} className="transition-transform" style={{ transform: open ? "rotate(180deg)" : "none" }} />
                         </button>
                       </td>
                       <td className="py-3 text-right font-mono text-emerald-500">
-                        {<Sensitive hidden={hideValues}>{toBRL(row.entradas)}</Sensitive>}
+                        {<Sensitive hidden={hideValues}>{toBRL(row.entradas, locale)}</Sensitive>}
                       </td>
                       <td className="py-3 text-right font-mono text-rose-500">
-                        {<Sensitive hidden={hideValues}>{toBRL(row.saidas)}</Sensitive>}
+                        {<Sensitive hidden={hideValues}>{toBRL(row.saidas, locale)}</Sensitive>}
                       </td>
                       <td className="py-3 text-right font-mono font-bold" style={{ color: row.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
-                        {<Sensitive hidden={hideValues}>{toBRL(row.saldo)}</Sensitive>}
+                        {<Sensitive hidden={hideValues}>{toBRL(row.saldo, locale)}</Sensitive>}
                       </td>
                       <td className="py-3 text-center">
                         <Badge status={row.done ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">
-                          {row.done ? "Conferido" : "Pendente"}
+                          {row.done ? t("fluxo.statusDone") : t("fluxo.statusPending")}
                         </Badge>
                       </td>
                       <td className="py-3 text-right">
@@ -1065,7 +1036,7 @@ export default function RelatoriosPage() {
                         >
                           {closingBusy === row.key
                             ? <RefreshCw size={11} className="animate-spin" />
-                            : row.done ? <><Unlock size={11} /> Reabrir</> : <><Lock size={11} /> Conferir</>}
+                            : row.done ? <><Unlock size={11} /> {t("fluxo.reopen")}</> : <><Lock size={11} /> {t("fluxo.check")}</>}
                         </button>
                       </td>
                     </tr>
@@ -1076,11 +1047,11 @@ export default function RelatoriosPage() {
                             <table className="w-full text-left text-xs">
                               <thead>
                                 <tr style={{ color: "var(--db-text-3)" }}>
-                                  <th className="py-1.5 font-bold">Descrição</th>
-                                  <th className="py-1.5 font-bold text-center">Tipo</th>
-                                  <th className="py-1.5 font-bold">Categoria</th>
-                                  <th className="py-1.5 font-bold text-right">Valor</th>
-                                  <th className="py-1.5 font-bold text-center">Conciliado</th>
+                                  <th className="py-1.5 font-bold">{t("fluxo.detailColDescription")}</th>
+                                  <th className="py-1.5 font-bold text-center">{t("fluxo.detailColType")}</th>
+                                  <th className="py-1.5 font-bold">{t("fluxo.detailColCategory")}</th>
+                                  <th className="py-1.5 font-bold text-right">{t("fluxo.detailColAmount")}</th>
+                                  <th className="py-1.5 font-bold text-center">{t("fluxo.detailColReconciled")}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1105,7 +1076,7 @@ export default function RelatoriosPage() {
                                         />
                                       </td>
                                       <td className={`py-2 text-right font-mono font-bold ${tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"}`}>
-                                        {tx.type === "entrada" ? "+" : "-"}{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}
+                                        {tx.type === "entrada" ? "+" : "-"}{<Sensitive hidden={hideValues}>{toBRL(tx.amount, locale)}</Sensitive>}
                                       </td>
                                       <td className="py-2 text-center">
                                         <input
@@ -1131,16 +1102,16 @@ export default function RelatoriosPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
-                    <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total conciliado</td>
+                    <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>{t("fluxo.totalReconciled")}</td>
                     <td className="py-3 text-center font-mono" style={{ color: "var(--db-text-2)" }}>{conciliado.count}</td>
                     <td className="py-3 text-right font-mono font-bold text-emerald-500">
-                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.entradas)}</Sensitive>}
+                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.entradas, locale)}</Sensitive>}
                     </td>
                     <td className="py-3 text-right font-mono font-bold text-rose-500">
-                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.saidas)}</Sensitive>}
+                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.saidas, locale)}</Sensitive>}
                     </td>
                     <td className="py-3 text-right font-mono font-extrabold" style={{ color: conciliado.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
-                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.saldo)}</Sensitive>}
+                      {<Sensitive hidden={hideValues}>{toBRL(conciliado.saldo, locale)}</Sensitive>}
                     </td>
                     <td colSpan={2} />
                   </tr>
@@ -1154,16 +1125,16 @@ export default function RelatoriosPage() {
         <div className="cf-card p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>Lançamentos Filtrados</h3>
-              <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Visualizando {filteredTxs.length} transações no período</p>
+              <h3 className="font-heading text-sm font-bold" style={{ color: "var(--db-text)" }}>{t("fluxo.filteredTitle")}</h3>
+              <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{t("fluxo.filteredSub", { count: filteredTxs.length })}</p>
             </div>
-            
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
               <input
                 type="text"
-                placeholder="Buscar por nome ou categoria..."
-                aria-label="Buscar por nome ou categoria"
+                placeholder={t("fluxo.searchPlaceholder")}
+                aria-label={t("fluxo.searchAria")}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full sm:w-64 pl-8 pr-4 py-1.5 rounded-lg text-xs outline-none transition-colors border"
@@ -1176,18 +1147,18 @@ export default function RelatoriosPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
-                  <th className="py-2.5 font-bold">Data</th>
-                  <th className="py-2.5 font-bold">Descrição</th>
-                  <th className="py-2.5 font-bold">Categoria</th>
-                  <th className="py-2.5 font-bold">Status</th>
-                  <th className="py-2.5 font-bold text-right">Valor</th>
+                  <th className="py-2.5 font-bold">{t("fluxo.colDate")}</th>
+                  <th className="py-2.5 font-bold">{t("fluxo.colDescription")}</th>
+                  <th className="py-2.5 font-bold">{t("fluxo.colCategory")}</th>
+                  <th className="py-2.5 font-bold">{t("fluxo.colStatus")}</th>
+                  <th className="py-2.5 font-bold text-right">{t("fluxo.colAmount")}</th>
                 </tr>
               </thead>
               <tbody style={{ color: "var(--db-text)" }}>
                 {filteredTxs.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-8 text-center" style={{ color: "var(--db-text-3)" }}>
-                      Nenhum lançamento corresponde ao filtro.
+                      {t("fluxo.filteredEmpty")}
                     </td>
                   </tr>
                 ) : (
@@ -1201,14 +1172,14 @@ export default function RelatoriosPage() {
                     >
                       <td className="py-3 font-semibold">{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</td>
                       <td className="py-3 font-semibold max-w-[200px] truncate">{tx.description}</td>
-                      <td className="py-3">{tx.category}</td>
+                      <td className="py-3">{categoryLabel(tx.category, tCat)}</td>
                       <td className="py-3">
                         <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">
-                          {tx.reconciled ? "Conciliado" : "Não Conciliado"}
+                          {tx.reconciled ? t("fluxo.reconciled") : t("fluxo.notReconciled")}
                         </Badge>
                       </td>
                       <td className={`py-3 text-right font-mono font-bold ${tx.type === "entrada" ? "text-emerald-500" : "text-rose-500"}`}>
-                        {tx.type === "entrada" ? "+" : "-"}{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}
+                        {tx.type === "entrada" ? "+" : "-"}{<Sensitive hidden={hideValues}>{toBRL(tx.amount, locale)}</Sensitive>}
                       </td>
                     </tr>
                   ))
@@ -1229,70 +1200,67 @@ export default function RelatoriosPage() {
                 <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: "var(--db-card-hover)", color: "var(--db-text-3)" }}>
                   <BarChart3 size={22} />
                 </div>
-                <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum faturamento no período</p>
+                <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>{t("faturamento.emptyTitle")}</p>
                 <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
-                  As entradas do fluxo de caixa em {periodLabel} aparecem aqui agrupadas por categoria, do maior pro menor.
+                  {t("faturamento.emptyBody", { period: periodLabel })}
                 </p>
               </div>
             ) : (
               <>
-                {/* Cards de resumo */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="cf-card p-5 space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Total de Faturamento</span>
-                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--success)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.total)}</Sensitive>}</p>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("faturamento.kpiTotal")}</span>
+                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--success)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.total, locale)}</Sensitive>}</p>
                     <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{periodLabel}</p>
                   </div>
                   <div className="cf-card p-5 space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Categorias</span>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("faturamento.kpiCategories")}</span>
                     <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>{faturamentoReport.categorias}</p>
-                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>com faturamento no período</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("faturamento.kpiCategoriesHint")}</p>
                   </div>
                   <div className="cf-card p-5 space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Maior Fonte</span>
-                    <p className="text-lg font-extrabold truncate" style={{ color: "var(--db-text)" }}>{faturamentoReport.maior?.name ?? "—"}</p>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("faturamento.kpiTopSource")}</span>
+                    <p className="text-lg font-extrabold truncate" style={{ color: "var(--db-text)" }}>{faturamentoReport.maior ? categoryLabel(faturamentoReport.maior.name, tCat) : "—"}</p>
                     <p className="text-xs" style={{ color: "var(--db-text-3)" }}>
-                      {faturamentoReport.maior ? <><Sensitive hidden={hideValues}>{toBRL(faturamentoReport.maior.total)}</Sensitive> · {faturamentoReport.maior.pct.toFixed(1)}%</> : ""}
+                      {faturamentoReport.maior ? <><Sensitive hidden={hideValues}>{toBRL(faturamentoReport.maior.total, locale)}</Sensitive> · {faturamentoReport.maior.pct.toFixed(1)}%</> : ""}
                     </p>
                   </div>
                 </div>
 
-                {/* Demonstrativo de Faturamento — entradas do Fluxo de Caixa
-                    agrupadas por dia (Mensal) ou por mês (Anual). */}
                 <div className="cf-card p-6 space-y-4">
                   <div className="flex items-center gap-2">
                     <FileText className="text-primary" size={20} />
                     <div>
                       <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>
-                        Demonstrativo de Faturamento {filterPeriod === "ano" ? "— Mensal" : "— Diário"}
+                        {isAnnual ? t("faturamento.ledgerTitleAnnual") : t("faturamento.ledgerTitleMonthly")}
                       </h2>
-                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.periodLabel} · Vinculado às entradas do Fluxo de Caixa</p>
+                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{t("faturamento.ledgerSub", { period: faturamentoLedger.periodLabel })}</p>
                     </div>
                   </div>
 
                   {faturamentoLedger.rows.length === 0 ? (
-                    <p className="text-sm text-center py-8" style={{ color: "var(--db-text-3)" }}>Nenhum faturamento registrado no período.</p>
+                    <p className="text-sm text-center py-8" style={{ color: "var(--db-text-3)" }}>{t("faturamento.ledgerEmpty")}</p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
                           <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
-                            <th className="py-2.5 font-bold">{faturamentoLedger.granularity === "mes" ? "Mês" : "Dia"}</th>
-                            <th className="py-2.5 font-bold text-right">Faturamento</th>
+                            <th className="py-2.5 font-bold">{faturamentoLedger.granularity === "mes" ? t("faturamento.colMonth") : t("faturamento.colDay")}</th>
+                            <th className="py-2.5 font-bold text-right">{t("faturamento.colRevenue")}</th>
                           </tr>
                         </thead>
                         <tbody style={{ color: "var(--db-text)" }}>
                           {faturamentoLedger.rows.map((row, i) => (
                             <tr key={i} className="border-b" style={{ borderColor: "var(--db-border)" }}>
                               <td className="py-3 font-semibold">{row.label}</td>
-                              <td className="py-3 text-right font-mono font-semibold">{<Sensitive hidden={hideValues}>{toBRL(row.total)}</Sensitive>}</td>
+                              <td className="py-3 text-right font-mono font-semibold">{<Sensitive hidden={hideValues}>{toBRL(row.total, locale)}</Sensitive>}</td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
                           <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
-                            <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total</td>
-                            <td className="py-3 text-right font-mono font-extrabold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.total)}</Sensitive>}</td>
+                            <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>{t("faturamento.total")}</td>
+                            <td className="py-3 text-right font-mono font-extrabold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.total, locale)}</Sensitive>}</td>
                           </tr>
                         </tfoot>
                       </table>
@@ -1300,60 +1268,58 @@ export default function RelatoriosPage() {
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-4 px-1">
                         <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>{faturamentoLedger.countLabel}</p>
                         <p className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>
-                          Média: <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.average)}</Sensitive>}</span>
+                          {t("faturamento.average")} <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}><Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.average, locale)}</Sensitive></span>
                           <span className="mx-1.5" style={{ color: "var(--db-text-3)" }}>·</span>
-                          Ticket médio: <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.ticketMedio)}</Sensitive>}</span>
+                          {t("faturamento.ticketMedio")} <span className="font-mono font-bold" style={{ color: "var(--db-text)" }}><Sensitive hidden={hideValues}>{toBRL(faturamentoReport.ticketMedio, locale)}</Sensitive></span>
                         </p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Projeção de Faturamento — estimativa linear pela média já
-                    observada, extrapolada pro que falta. Borda tracejada marca
-                    que é estimativa, não fato realizado. */}
                 {faturamentoLedger.rows.length > 0 && faturamentoLedger.projection.remainingUnits > 0 && (
                   <div className="cf-card p-6 space-y-4" style={{ border: "1px dashed var(--db-border)" }}>
                     <div className="flex items-center gap-2">
                       <TrendingUp className="text-primary" size={20} />
                       <div>
-                        <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>Projeção de Faturamento</h2>
+                        <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>{t("faturamento.projTitle")}</h2>
                         <p className="text-xs" style={{ color: "var(--db-text-2)" }}>
-                          Estimativa pela média {faturamentoLedger.granularity === "mes" ? "mensal" : "diária"} observada · {faturamentoLedger.projection.remainingLabel}
+                          {faturamentoLedger.granularity === "mes"
+                            ? t("faturamento.projSubAnnual", { remaining: faturamentoLedger.projection.remainingLabel })
+                            : t("faturamento.projSubMonthly", { remaining: faturamentoLedger.projection.remainingLabel })}
                         </p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1">
-                        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Realizado até hoje</p>
-                        <p className="text-xl font-extrabold mono" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.total)}</Sensitive>}</p>
+                        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("faturamento.projRealized")}</p>
+                        <p className="text-xl font-extrabold mono" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.total, locale)}</Sensitive>}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Projeção do restante</p>
-                        <p className="text-xl font-extrabold mono" style={{ color: "var(--primary)" }}>+{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.projection.projectedRemaining)}</Sensitive>}</p>
+                        <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("faturamento.projRemaining")}</p>
+                        <p className="text-xl font-extrabold mono" style={{ color: "var(--primary)" }}>+{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.projection.projectedRemaining, locale)}</Sensitive>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>
-                          {faturamentoLedger.granularity === "mes" ? "Projeção do ano" : "Projeção do mês"}
+                          {faturamentoLedger.granularity === "mes" ? t("faturamento.projTotalYear") : t("faturamento.projTotalMonth")}
                         </p>
-                        <p className="text-xl font-extrabold mono" style={{ color: "var(--success)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.projection.projectedTotal)}</Sensitive>}</p>
+                        <p className="text-xl font-extrabold mono" style={{ color: "var(--success)" }}>{<Sensitive hidden={hideValues}>{toBRL(faturamentoLedger.projection.projectedTotal, locale)}</Sensitive>}</p>
                       </div>
                     </div>
 
                     <p className="text-[10px]" style={{ color: "var(--db-text-3)" }}>
-                      Estimativa linear a partir do ritmo de faturamento já registrado no período — não considera sazonalidade nem contratos futuros.
+                      {t("faturamento.projNote")}
                     </p>
                   </div>
                 )}
 
-                {/* Faturamento por Categoria — espelha "Gastos por Categoria" */}
                 <div className="cf-card p-6 space-y-4">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="text-primary" size={20} />
                     <div>
-                      <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>Faturamento por Categoria</h2>
-                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Do maior pro menor · {filterPeriod === "ano" ? "Anual" : "Mensal"} — {periodLabel}</p>
+                      <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>{t("faturamento.byCategoryTitle")}</h2>
+                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{isAnnual ? t("faturamento.byCategorySubAnnual", { period: periodLabel }) : t("faturamento.byCategorySubMonthly", { period: periodLabel })}</p>
                     </div>
                   </div>
 
@@ -1361,10 +1327,10 @@ export default function RelatoriosPage() {
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
-                          <th className="py-2.5 font-bold">Categoria</th>
-                          <th className="py-2.5 font-bold text-right">Valor</th>
+                          <th className="py-2.5 font-bold">{t("faturamento.colCategory")}</th>
+                          <th className="py-2.5 font-bold text-right">{t("faturamento.colValue")}</th>
                           <th className="py-2.5 font-bold text-right">%</th>
-                          <th className="py-2.5 font-bold pl-4 w-[34%]">Participação</th>
+                          <th className="py-2.5 font-bold pl-4 w-[34%]">{t("faturamento.colShare")}</th>
                         </tr>
                       </thead>
                       <tbody style={{ color: "var(--db-text)" }}>
@@ -1376,11 +1342,11 @@ export default function RelatoriosPage() {
                                 <td className="py-3 font-semibold">
                                   <span className="inline-flex items-center gap-1.5">
                                     <ChevronDown size={12} className="transition-transform shrink-0" style={{ transform: open ? "rotate(180deg)" : "none", color: "var(--db-text-3)" }} />
-                                    {row.name}
+                                    {categoryLabel(row.name, tCat)}
                                     <span style={{ color: "var(--db-text-3)" }}>({row.txs.length})</span>
                                   </span>
                                 </td>
-                                <td className="py-3 text-right font-mono font-bold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(row.total)}</Sensitive>}</td>
+                                <td className="py-3 text-right font-mono font-bold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(row.total, locale)}</Sensitive>}</td>
                                 <td className="py-3 text-right font-mono" style={{ color: "var(--db-text-2)" }}>{row.pct.toFixed(1)}%</td>
                                 <td className="py-3 pl-4">
                                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
@@ -1397,7 +1363,7 @@ export default function RelatoriosPage() {
                                           <span className="truncate" style={{ color: "var(--db-text-2)" }}>
                                             {tx.description} <span style={{ color: "var(--db-text-3)" }}>· {tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span>
                                           </span>
-                                          <span className="font-mono shrink-0 text-emerald-500">+{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}</span>
+                                          <span className="font-mono shrink-0 text-emerald-500">+{<Sensitive hidden={hideValues}>{toBRL(tx.amount, locale)}</Sensitive>}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1410,8 +1376,8 @@ export default function RelatoriosPage() {
                       </tbody>
                       <tfoot>
                         <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
-                          <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total</td>
-                          <td className="py-3 text-right font-mono font-extrabold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.total)}</Sensitive>}</td>
+                          <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>{t("faturamento.total")}</td>
+                          <td className="py-3 text-right font-mono font-extrabold text-emerald-500">{<Sensitive hidden={hideValues}>{toBRL(faturamentoReport.total, locale)}</Sensitive>}</td>
                           <td className="py-3 text-right font-mono font-extrabold" style={{ color: "var(--db-text-2)" }}>100%</td>
                           <td className="pl-4" />
                         </tr>
@@ -1432,41 +1398,39 @@ export default function RelatoriosPage() {
                 <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: "var(--db-card-hover)", color: "var(--db-text-3)" }}>
                   <TrendingDown size={22} />
                 </div>
-                <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Nenhum gasto no período</p>
+                <p className="font-bold text-sm" style={{ color: "var(--db-text)" }}>{t("gastos.emptyTitle")}</p>
                 <p className="text-xs max-w-sm mx-auto" style={{ color: "var(--db-text-2)" }}>
-                  As saídas do fluxo de caixa em {periodLabel} aparecem aqui agrupadas por categoria, do maior pro menor.
+                  {t("gastos.emptyBody", { period: periodLabel })}
                 </p>
               </div>
             ) : (
               <>
-                {/* Cards de resumo */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="cf-card p-5 space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Total de Gastos</span>
-                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--danger)" }}>{<Sensitive hidden={hideValues}>{toBRL(gastosReport.total)}</Sensitive>}</p>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("gastos.kpiTotal")}</span>
+                    <p className="text-2xl font-extrabold mono" style={{ color: "var(--danger)" }}>{<Sensitive hidden={hideValues}>{toBRL(gastosReport.total, locale)}</Sensitive>}</p>
                     <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{periodLabel}</p>
                   </div>
                   <div className="cf-card p-5 space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Categorias</span>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("gastos.kpiCategories")}</span>
                     <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>{gastosReport.categorias}</p>
-                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>com gastos no período</p>
+                    <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("gastos.kpiCategoriesHint")}</p>
                   </div>
                   <div className="cf-card p-5 space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>Maior Categoria</span>
-                    <p className="text-lg font-extrabold truncate" style={{ color: "var(--db-text)" }}>{gastosReport.maior?.name ?? "—"}</p>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("gastos.kpiTopCategory")}</span>
+                    <p className="text-lg font-extrabold truncate" style={{ color: "var(--db-text)" }}>{gastosReport.maior ? categoryLabel(gastosReport.maior.name, tCat) : "—"}</p>
                     <p className="text-xs" style={{ color: "var(--db-text-3)" }}>
-                      {gastosReport.maior ? <><Sensitive hidden={hideValues}>{toBRL(gastosReport.maior.total)}</Sensitive> · {gastosReport.maior.pct.toFixed(1)}%</> : ""}
+                      {gastosReport.maior ? <><Sensitive hidden={hideValues}>{toBRL(gastosReport.maior.total, locale)}</Sensitive> · {gastosReport.maior.pct.toFixed(1)}%</> : ""}
                     </p>
                   </div>
                 </div>
 
-                {/* Tabela por categoria */}
                 <div className="cf-card p-6 space-y-4">
                   <div className="flex items-center gap-2">
                     <TrendingDown className="text-primary" size={20} />
                     <div>
-                      <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>Gastos por Categoria</h2>
-                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Do maior pro menor · {filterPeriod === "ano" ? "Anual" : "Mensal"} — {periodLabel}</p>
+                      <h2 className="font-heading text-lg font-bold" style={{ color: "var(--db-text)" }}>{t("gastos.byCategoryTitle")}</h2>
+                      <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{isAnnual ? t("gastos.byCategorySubAnnual", { period: periodLabel }) : t("gastos.byCategorySubMonthly", { period: periodLabel })}</p>
                     </div>
                   </div>
 
@@ -1474,10 +1438,10 @@ export default function RelatoriosPage() {
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b" style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
-                          <th className="py-2.5 font-bold">Categoria</th>
-                          <th className="py-2.5 font-bold text-right">Valor</th>
+                          <th className="py-2.5 font-bold">{t("gastos.colCategory")}</th>
+                          <th className="py-2.5 font-bold text-right">{t("gastos.colValue")}</th>
                           <th className="py-2.5 font-bold text-right">%</th>
-                          <th className="py-2.5 font-bold pl-4 w-[34%]">Participação</th>
+                          <th className="py-2.5 font-bold pl-4 w-[34%]">{t("gastos.colShare")}</th>
                         </tr>
                       </thead>
                       <tbody style={{ color: "var(--db-text)" }}>
@@ -1489,11 +1453,11 @@ export default function RelatoriosPage() {
                                 <td className="py-3 font-semibold">
                                   <span className="inline-flex items-center gap-1.5">
                                     <ChevronDown size={12} className="transition-transform shrink-0" style={{ transform: open ? "rotate(180deg)" : "none", color: "var(--db-text-3)" }} />
-                                    {row.name}
+                                    {categoryLabel(row.name, tCat)}
                                     <span style={{ color: "var(--db-text-3)" }}>({row.txs.length})</span>
                                   </span>
                                 </td>
-                                <td className="py-3 text-right font-mono font-bold text-rose-500">{<Sensitive hidden={hideValues}>{toBRL(row.total)}</Sensitive>}</td>
+                                <td className="py-3 text-right font-mono font-bold text-rose-500">{<Sensitive hidden={hideValues}>{toBRL(row.total, locale)}</Sensitive>}</td>
                                 <td className="py-3 text-right font-mono" style={{ color: "var(--db-text-2)" }}>{row.pct.toFixed(1)}%</td>
                                 <td className="py-3 pl-4">
                                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
@@ -1510,7 +1474,7 @@ export default function RelatoriosPage() {
                                           <span className="truncate" style={{ color: "var(--db-text-2)" }}>
                                             {tx.description} <span style={{ color: "var(--db-text-3)" }}>· {tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span>
                                           </span>
-                                          <span className="font-mono shrink-0 text-rose-500">-{<Sensitive hidden={hideValues}>{toBRL(tx.amount)}</Sensitive>}</span>
+                                          <span className="font-mono shrink-0 text-rose-500">-{<Sensitive hidden={hideValues}>{toBRL(tx.amount, locale)}</Sensitive>}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1523,8 +1487,8 @@ export default function RelatoriosPage() {
                       </tbody>
                       <tfoot>
                         <tr className="border-t-2" style={{ borderColor: "var(--db-border)" }}>
-                          <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>Total</td>
-                          <td className="py-3 text-right font-mono font-extrabold text-rose-500">{<Sensitive hidden={hideValues}>{toBRL(gastosReport.total)}</Sensitive>}</td>
+                          <td className="py-3 font-extrabold uppercase tracking-wider text-[10px]" style={{ color: "var(--db-text)" }}>{t("gastos.total")}</td>
+                          <td className="py-3 text-right font-mono font-extrabold text-rose-500">{<Sensitive hidden={hideValues}>{toBRL(gastosReport.total, locale)}</Sensitive>}</td>
                           <td className="py-3 text-right font-mono font-extrabold" style={{ color: "var(--db-text-2)" }}>100%</td>
                           <td className="pl-4" />
                         </tr>
@@ -1545,68 +1509,61 @@ export default function RelatoriosPage() {
                 <FileText className="text-primary" size={24} />
                 <div>
                   <h2 className="font-heading text-xl font-bold" style={{ color: "var(--db-text)" }}>
-                    Demonstração do Resultado do Exercício
+                    {t("dre.title")}
                   </h2>
-                  <p className="text-xs" style={{ color: "var(--db-text-2)" }}>Visão simplificada baseada nas categorias de fluxo de caixa</p>
+                  <p className="text-xs" style={{ color: "var(--db-text-2)" }}>{t("dre.subtitle")}</p>
                 </div>
               </div>
 
               <div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--db-border)" }}>
-                {/* Receita Operacional Bruta — expansível */}
                 <DreLine
-                  label="Receita Operacional Bruta" amount={dreData.receita} cats={dreData.receitaCats}
+                  label={t("dre.grossRevenue")} prefix="(-)" amount={dreData.receita} cats={dreData.receitaCats}
                   open={dreOpen.has("receita")} onToggle={() => toggleDre("receita")}
                   hideValues={hideValues} variant="receita"
                 />
-                {/* (-) Deduções e Impostos — expansível */}
                 <DreLine
-                  label="Deduções e Impostos" amount={dreData.impostos} cats={dreData.impostosCats}
+                  label={t("dre.deductions")} prefix="(-)" amount={dreData.impostos} cats={dreData.impostosCats}
                   open={dreOpen.has("impostos")} onToggle={() => toggleDre("impostos")}
                   hideValues={hideValues} variant="deducao"
                 />
-                {/* = Receita Operacional Líquida — subtotal */}
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
-                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>= Receita Operacional Líquida</span>
-                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.receitaLiquida)}</Sensitive>}</span>
+                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>{t("dre.netRevenue")}</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.receitaLiquida, locale)}</Sensitive>}</span>
                 </div>
-                {/* (-) CMV — expansível */}
                 <DreLine
-                  label="Custo da Mercadoria Vendida (CMV)" amount={dreData.cmv} cats={dreData.cmvCats}
+                  label={t("dre.cmv")} prefix="(-)" amount={dreData.cmv} cats={dreData.cmvCats}
                   open={dreOpen.has("cmv")} onToggle={() => toggleDre("cmv")}
                   hideValues={hideValues} variant="deducao"
                 />
-                {/* = Lucro Bruto — subtotal */}
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
-                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>= Lucro Bruto</span>
-                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.lucroBruto)}</Sensitive>}</span>
+                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>{t("dre.grossProfit")}</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.lucroBruto, locale)}</Sensitive>}</span>
                 </div>
-                {/* (-) Despesas Operacionais — expansível */}
                 <DreLine
-                  label="Despesas Operacionais" amount={dreData.despesas} cats={dreData.despesasCats}
+                  label={t("dre.opExpenses")} prefix="(-)" amount={dreData.despesas} cats={dreData.despesasCats}
                   open={dreOpen.has("despesas")} onToggle={() => toggleDre("despesas")}
                   hideValues={hideValues} variant="deducao"
                 />
-                {/* = Lucro Líquido do Exercício — destaque */}
                 <div
                   className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 sm:px-5 py-4"
                   style={{ borderTop: "2px solid var(--db-border)", background: "var(--db-bg-alt)" }}
                 >
                   <span className="text-sm font-extrabold uppercase tracking-wide" style={{ color: "var(--db-text)" }}>
-                    = Lucro Líquido do Exercício
+                    {t("dre.netProfit")}
                   </span>
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono font-extrabold text-xl" style={{ color: dreData.lucroLiquido >= 0 ? "var(--success)" : "var(--danger)" }}>
-                      {<Sensitive hidden={hideValues}>{toBRL(dreData.lucroLiquido)}</Sensitive>}
+                      {<Sensitive hidden={hideValues}>{toBRL(dreData.lucroLiquido, locale)}</Sensitive>}
                     </span>
                     <span className="text-xs font-semibold" style={{ color: "var(--db-text-2)" }}>
-                      margem {dreData.margemLiquida.toFixed(1)}%
+                      {t("dre.margin", { value: dreData.margemLiquida.toFixed(1) })}
                     </span>
                   </div>
                 </div>
               </div>
 
               <p className="text-[11px] mt-3" style={{ color: "var(--db-text-3)" }}>
-                Clique nas linhas com seta para ver as categorias que compõem cada valor. Período: {filterPeriod === "ano" ? "Anual" : "Mensal"}.
+                {isAnnual ? t("dre.footnoteAnnual") : t("dre.footnoteMonthly")}
               </p>
             </div>
           </div>
