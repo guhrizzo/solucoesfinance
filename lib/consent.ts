@@ -123,9 +123,3 @@ export function writeConsent(
 
 export const acceptAll = () => writeConsent(GRANTED);
 export const rejectOptional = () => writeConsent(DENIED);
-
-/** `true` se o usuário permitiu aquela categoria (essential é sempre `true`). */
-export function hasConsent(category: ConsentCategory): boolean {
-  if (category === "essential") return true;
-  return readConsent()?.categories[category] ?? false;
-}

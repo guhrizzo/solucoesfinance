@@ -74,17 +74,6 @@ export async function savePinHash(uid: string, pin: string): Promise<void> {
     resetAttempts();
 }
 
-// ─── Remover PIN do Firestore ─────────────────────────────────────────────────
-export async function deletePinHash(uid: string): Promise<void> {
-    const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([
-        import("@/lib/firebase"),
-        import("firebase/firestore"),
-    ]);
-    const { db } = await getFirebase();
-    await deleteDoc(doc(db, "users", uid, "profile", "pin"));
-    resetAttempts();
-}
-
 // ─── Verificar PIN ────────────────────────────────────────────────────────────
 export async function verifyPin(uid: string, pin: string): Promise<"ok" | "wrong" | "locked" | "no_pin"> {
     const { locked } = getPinLockStatus();

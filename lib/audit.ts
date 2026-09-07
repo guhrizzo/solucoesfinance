@@ -27,12 +27,3 @@ export function stampUpdate(actor: Actor) {
 export function stampSettle(actor: Actor) {
     return { settledBy: actor.uid, settledByName: actor.name, settledAt: Date.now() };
 }
-
-/** Formata um epoch em ms como "27/08/2026 14:30" (pt-BR). */
-export function fmtDateTime(ts?: number): string {
-    if (!ts || !Number.isFinite(ts)) return "";
-    return new Date(ts).toLocaleString("pt-BR", {
-        day: "2-digit", month: "2-digit", year: "numeric",
-        hour: "2-digit", minute: "2-digit",
-    });
-}

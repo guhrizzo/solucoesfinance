@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useState, useEffect, useMemo, useRef, useCallback, useId } from "react";
 import {
   TrendingUp, Plus, X, Check, ArrowUpRight, ArrowDownRight,

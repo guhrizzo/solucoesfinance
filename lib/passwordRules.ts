@@ -18,7 +18,3 @@ export const passwordRules: PasswordRule[] = [
   { key: "number", label: "Número", test: (p) => /\d/.test(p) },
   { key: "special", label: "Caractere especial (!@#$%...)", test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
-
-export function isStrongPassword(password: string): boolean {
-  return passwordRules.every((rule) => rule.test(password));
-}
