@@ -16,22 +16,20 @@ import {
   Building2,
   Sparkles,
 } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { extractPendingGoogleLink } from "@/lib/authLink";
 import { passwordRules } from "@/lib/passwordRules";
 
-// ── Erros Firebase → PT-BR ────────────────────────────────────────────────────
-const firebaseErrorMap: Record<string, string> = {
-  "auth/email-already-in-use": "Este e-mail já está cadastrado. Tente fazer login.",
-  "auth/invalid-email": "E-mail inválido. Verifique e tente novamente.",
-  "auth/weak-password": "Senha fraca. Siga os requisitos indicados abaixo do campo de senha.",
-  "auth/password-does-not-meet-requirements": "Senha não atende aos requisitos mínimos de segurança.",
-  "auth/network-request-failed": "Falha de rede. Verifique sua conexão.",
-  "auth/popup-closed-by-user": "Login cancelado. Tente novamente.",
-  "auth/cancelled-popup-request": "Login cancelado. Tente novamente.",
-};
-const getErrorMessage = (code: string) =>
-  firebaseErrorMap[code] ?? "Ocorreu um erro inesperado. Tente novamente.";
+const KNOWN_ERROR_CODES = new Set([
+  "auth/email-already-in-use",
+  "auth/invalid-email",
+  "auth/weak-password",
+  "auth/password-does-not-meet-requirements",
+  "auth/network-request-failed",
+  "auth/popup-closed-by-user",
+  "auth/cancelled-popup-request",
+]);
 
 // ── Firebase lazy helpers ─────────────────────────────────────────────────────
 async function registerWithEmail(name: string, email: string, password: string) {
@@ -53,6 +51,12 @@ async function registerWithGoogle() {
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useTranslations("auth.register");
+  const tErr = useTranslations("auth.errors");
+  const tRules = useTranslations("auth.passwordRules");
+
+  const getErrorMessage = (code: string) =>
+    KNOWN_ERROR_CODES.has(code) ? tErr(code) : tErr("unexpected");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -115,9 +119,7 @@ export default function RegisterPage() {
       if (pending) {
         // Já existe conta com senha para esse e-mail — não cria um 2º
         // usuário. O vínculo é concluído na tela de login, digitando a senha.
-        setError(
-          `Este e-mail (${pending.email}) já tem conta cadastrada com senha. Faça login com sua senha — o Google será vinculado automaticamente à mesma conta.`
-        );
+        setError(t("googleAlreadyRegistered", { email: pending.email }));
       } else {
         setError(getErrorMessage(err.code));
       }
@@ -319,59 +321,47 @@ export default function RegisterPage() {
         <div className="relative">
           <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-8">
             <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot" />
-            <span className="text-blue-300 text-xs font-medium mono">7 dias grátis · sem cartão</span>
+            <span className="text-blue-300 text-xs font-medium mono">{t("sidebar.badge")}</span>
           </div>
 
           <h2 className="text-4xl font-extrabold text-white leading-[1.15] mb-5">
-            Sua empresa merece<br />
+            {t("sidebar.titleLine1")}<br />
             <span className="text-transparent bg-clip-text"
               style={{ backgroundImage: "linear-gradient(90deg, #42a5f5, #90caf9)" }}>
-              clareza financeira.
+              {t("sidebar.titleLine2")}
             </span>
           </h2>
 
           <p className="text-blue-200/55 text-sm leading-relaxed mb-10 max-w-xs">
-            Configure em minutos e tenha uma visão completa do dinheiro da sua empresa — receitas, despesas, projeções e muito mais.
+            {t("sidebar.body")}
           </p>
 
           {/* Feature cards */}
           <div className="space-y-3 max-w-xs">
             {[
-              {
-                icon: <TrendingUpIcon />,
-                bg: "rgba(21,101,192,0.2)",
-                title: "Fluxo de caixa em tempo real",
-                desc: "Saiba exatamente onde está cada real da empresa.",
-              },
-              {
-                icon: <BarIcon />,
-                bg: "rgba(16,185,129,0.18)",
-                title: "Relatórios automáticos",
-                desc: "DRE, balanço e muito mais sem precisar montar planilha.",
-              },
-              {
-                icon: <ShieldIcon />,
-                bg: "rgba(245,158,11,0.18)",
-                title: "Segurança bancária",
-                desc: "Criptografia AES-256 e autenticação em dois fatores.",
-              },
-            ].map((f) => (
-              <div key={f.title} className="feature-card">
-                <div className="feature-icon" style={{ background: f.bg }}>
-                  {f.icon}
+              { icon: <TrendingUpIcon />, bg: "rgba(21,101,192,0.2)" },
+              { icon: <BarIcon />, bg: "rgba(16,185,129,0.18)" },
+              { icon: <ShieldIcon />, bg: "rgba(245,158,11,0.18)" },
+            ].map((f, i) => {
+              const feat = (t.raw("sidebar.features") as { title: string; desc: string }[])[i];
+              return (
+                <div key={i} className="feature-card">
+                  <div className="feature-icon" style={{ background: f.bg }}>
+                    {f.icon}
+                  </div>
+                  <div>
+                    <p className="text-white text-xs font-semibold mb-0.5">{feat.title}</p>
+                    <p className="text-blue-200/50 text-xs leading-relaxed">{feat.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white text-xs font-semibold mb-0.5">{f.title}</p>
-                  <p className="text-blue-200/50 text-xs leading-relaxed">{f.desc}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         {/* Rodapé */}
         <div className="relative flex items-center gap-3 flex-wrap">
-          {["Sem fidelidade", "Cancele quando quiser", "Suporte 7 dias"].map((tag) => (
+          {(t.raw("sidebar.tags") as string[]).map((tag) => (
             <div key={tag} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
               <Check size={10} className="text-emerald-400" strokeWidth={3} />
               <span className="text-blue-300/60 text-xs">{tag}</span>
@@ -395,16 +385,16 @@ export default function RegisterPage() {
           <div className="fade-up mb-7">
             <div className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-full px-3 py-1 mb-4">
               <Sparkles size={11} className="text-blue-500" />
-              <span className="text-blue-600 text-xs font-semibold">7 dias grátis, sem cartão</span>
+              <span className="text-blue-600 text-xs font-semibold">{t("badge")}</span>
             </div>
             <h1 className="text-[28px] font-extrabold text-blue-950 leading-tight mb-1.5">
-              Criar conta gratuita
+              {t("title")}
             </h1>
             <p className="text-slate-400 text-sm">
-              Já tem conta?{" "}
-              <a href={loginHref} className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
-                Fazer login
-              </a>
+              {t("hasAccount")}{" "}
+              <Link href={loginHref} className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
+                {t("hasAccountCta")}
+              </Link>
             </p>
           </div>
 
@@ -433,14 +423,14 @@ export default function RegisterPage() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
-              Cadastrar com Google
+              {t("googleCta")}
             </button>
           </div>
 
           {/* Divisor */}
           <div className="fade-up-1 flex items-center gap-3 mb-5">
             <span className="divider" />
-            <span className="text-slate-400 text-xs whitespace-nowrap">ou preencha o formulário</span>
+            <span className="text-slate-400 text-xs whitespace-nowrap">{t("orFillForm")}</span>
             <span className="divider" />
           </div>
 
@@ -450,7 +440,7 @@ export default function RegisterPage() {
             {/* Nome */}
             <div className="fade-up-2 mb-4">
               <label htmlFor="reg-name" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
-                Nome completo
+                {t("nameLabel")}
               </label>
               <div className="input-wrap">
                 <User size={15} className="input-icon" />
@@ -458,7 +448,7 @@ export default function RegisterPage() {
                   id="reg-name"
                   type="text"
                   className={`reg-input ${name && name.trim().length < 3 ? "has-error" : name.trim().length >= 3 ? "has-ok" : ""}`}
-                  placeholder="Ricardo Almeida"
+                  placeholder={t("namePlaceholder")}
                   value={name}
                   onChange={(e) => { setName(e.target.value); setError(null); }}
                   autoComplete="name"
@@ -470,15 +460,15 @@ export default function RegisterPage() {
             {/* E-mail */}
             <div className="fade-up-2 mb-4">
               <label htmlFor="reg-email" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
-                E-mail corporativo
+                {t("emailLabel")}
               </label>
               <div className="input-wrap">
                 <Mail size={15} className="input-icon" />
                 <input
                   id="reg-email"
                   type="email"
-                  className={`reg-input ${error?.includes("e-mail") ? "has-error" : ""}`}
-                  placeholder="voce@empresa.com.br"
+                  className={`reg-input ${/e-?mail|correo/i.test(error ?? "") ? "has-error" : ""}`}
+                  placeholder={t("emailPlaceholder")}
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(null); }}
                   autoComplete="email"
@@ -490,7 +480,7 @@ export default function RegisterPage() {
             {/* Senha */}
             <div className="fade-up-3 mb-2">
               <label htmlFor="reg-password" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
-                Senha
+                {t("passwordLabel")}
               </label>
               <div className="input-wrap">
                 <Lock size={15} className="input-icon" />
@@ -498,7 +488,7 @@ export default function RegisterPage() {
                   id="reg-password"
                   type={showPass ? "text" : "password"}
                   className={`reg-input pr-10 ${password && !passOk ? "has-error" : passOk ? "has-ok" : ""}`}
-                  placeholder="Mínimo 12 caracteres"
+                  placeholder={t("passwordPlaceholder")}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(null); }}
                   onFocus={() => setPasswordFocused(true)}
@@ -510,7 +500,7 @@ export default function RegisterPage() {
                   type="button"
                   className="input-action"
                   onClick={() => setShowPass(!showPass)}
-                  aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
+                  aria-label={showPass ? t("hidePassword") : t("showPassword")}
                 >
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -523,11 +513,11 @@ export default function RegisterPage() {
                 {passwordRules.map((rule) => {
                   const ok = rule.test(password);
                   return (
-                    <div key={rule.label} className={`pass-rule ${ok ? "ok" : "nok"}`}>
+                    <div key={rule.key} className={`pass-rule ${ok ? "ok" : "nok"}`}>
                       <div className={`rule-dot ${ok ? "ok" : "nok"}`}>
                         {ok && <Check size={8} color="white" strokeWidth={3} />}
                       </div>
-                      {rule.label}
+                      {tRules(rule.key)}
                     </div>
                   );
                 })}
@@ -537,7 +527,7 @@ export default function RegisterPage() {
             {/* Confirmar senha */}
             <div className="fade-up-3 mb-5">
               <label htmlFor="reg-confirm" className="block text-blue-950 text-xs font-semibold mb-1.5 tracking-wide uppercase">
-                Confirmar senha
+                {t("confirmLabel")}
               </label>
               <div className="input-wrap">
                 <Lock size={15} className="input-icon" />
@@ -545,7 +535,7 @@ export default function RegisterPage() {
                   id="reg-confirm"
                   type={showConfirm ? "text" : "password"}
                   className={`reg-input pr-10 ${confirm && !confirmOk ? "has-error" : confirmOk ? "has-ok" : ""}`}
-                  placeholder="Repita a senha"
+                  placeholder={t("confirmPlaceholder")}
                   value={confirm}
                   onChange={(e) => { setConfirm(e.target.value); setError(null); }}
                   autoComplete="new-password"
@@ -555,14 +545,14 @@ export default function RegisterPage() {
                   type="button"
                   className="input-action"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  aria-label={showConfirm ? "Ocultar senha" : "Mostrar senha"}
+                  aria-label={showConfirm ? t("hidePassword") : t("showPassword")}
                 >
                   {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
               {confirm && !confirmOk && (
                 <p className="text-rose-500 text-xs mt-1.5 flex items-center gap-1">
-                  <AlertCircle size={11} /> As senhas não coincidem.
+                  <AlertCircle size={11} /> {t("passwordsDontMatch")}
                 </p>
               )}
             </div>
@@ -587,12 +577,11 @@ export default function RegisterPage() {
                   {agreed && <Check size={10} color="white" strokeWidth={3} />}
                 </div>
                 <p id="reg-terms-label" className="text-slate-500 text-xs leading-relaxed">
-                  Ao criar sua conta, você concorda com os{" "}
-                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid -- ainda não existe página de Termos de Uso; conteúdo jurídico é trabalho à parte, fora do escopo de acessibilidade */}
-                  <a href="#" className="text-blue-600 font-semibold hover:underline">Termos de Uso</a>
-                  {" "}e a{" "}
-                  <a href="/privacidade" className="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>{" "}
-                  da NexusFi.
+                  {t.rich("terms", {
+                    // eslint-disable-next-line jsx-a11y/anchor-is-valid -- ainda não existe página de Termos de Uso; conteúdo jurídico é trabalho à parte
+                    terms: (c) => <a href="#" className="text-blue-600 font-semibold hover:underline">{c}</a>,
+                    privacy: (c) => <Link href="/privacidade" className="text-blue-600 font-semibold hover:underline">{c}</Link>,
+                  })}
                 </p>
               </div>
             </div>
@@ -605,9 +594,9 @@ export default function RegisterPage() {
                 className="btn-primary"
               >
                 {loading ? (
-                  <><span className="spinner" /> Criando conta...</>
+                  <><span className="spinner" /> {t("submitting")}</>
                 ) : (
-                  <>Criar conta gratuita <ArrowRight size={16} /></>
+                  <>{t("submit")} <ArrowRight size={16} /></>
                 )}
               </button>
             </div>
@@ -616,7 +605,7 @@ export default function RegisterPage() {
           {/* Rodapé de segurança */}
           <div className="fade-up-5 mt-6 flex items-center justify-center gap-2">
             <Shield size={11} className="text-slate-400" />
-            <span className="text-slate-400 text-xs">Dados protegidos com criptografia AES-256</span>
+            <span className="text-slate-400 text-xs">{t("dataProtected")}</span>
           </div>
 
           {/* Avaliações */}
@@ -630,7 +619,9 @@ export default function RegisterPage() {
               ))}
             </div>
             <p className="text-slate-400 text-xs">
-              <span className="font-semibold text-blue-950">+12.400 empresas</span> já usam a NexusFi
+              {t.rich("socialProof", {
+                strong: (c) => <span className="font-semibold text-blue-950">{c}</span>,
+              })}
             </p>
           </div>
 

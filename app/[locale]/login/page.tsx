@@ -8,27 +8,21 @@ import {
   Eye, EyeOff, ArrowRight,
   Shield, TrendingUp, Lock, Mail, AlertCircle, Link2,
 } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { extractPendingGoogleLink, completeGoogleLink, type PendingGoogleLink } from "@/lib/authLink";
 
-// ── Mensagens de erro Firebase → PT-BR ───────────────────────────────────────
-const firebaseErrorMap: Record<string, string> = {
-  "auth/invalid-credential": "E-mail ou senha incorretos.",
-  "auth/user-not-found": "Nenhuma conta encontrada com este e-mail.",
-  "auth/wrong-password": "Senha incorreta. Tente novamente.",
-  "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos.",
-  "auth/user-disabled": "Esta conta foi desativada.",
-  "auth/network-request-failed": "Falha de rede. Verifique sua conexão.",
-  "auth/popup-closed-by-user": "Login cancelado. Tente novamente.",
-  "auth/cancelled-popup-request": "Login cancelado. Tente novamente.",
-};
-
-const getErrorMessage = (code: string, raw?: string) => {
-  if (firebaseErrorMap[code]) return firebaseErrorMap[code];
-  // Erros da nossa própria API (ex.: reset de senha) já vêm com mensagem pronta em PT-BR.
-  if (code === "auth/reset-request-failed" && raw) return raw;
-  return `Erro: ${code ?? "desconhecido"}${raw ? " — " + raw : ""}`;
-};
+// Códigos de erro Firebase reconhecidos → chave em auth.errors.
+const KNOWN_ERROR_CODES = new Set([
+  "auth/invalid-credential",
+  "auth/user-not-found",
+  "auth/wrong-password",
+  "auth/too-many-requests",
+  "auth/user-disabled",
+  "auth/network-request-failed",
+  "auth/popup-closed-by-user",
+  "auth/cancelled-popup-request",
+]);
 
 // ── Helpers Firebase (lazy) ───────────────────────────────────────────────────
 // Toda interação com o Firebase acontece DENTRO de event handlers,
@@ -70,6 +64,16 @@ async function resetPassword(email: string) {
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations("auth.login");
+  const tErr = useTranslations("auth.errors");
+
+  // code → mensagem localizada. Erros da nossa própria API (ex.: reset de
+  // senha) já trazem `raw` pronto; códigos Firebase conhecidos viram chave.
+  const getErrorMessage = (code: string, raw?: string) => {
+    if (KNOWN_ERROR_CODES.has(code)) return tErr(code);
+    if (code === "auth/reset-request-failed" && raw) return raw;
+    return raw || tErr("generic", { code: code ?? "?" });
+  };
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -149,7 +153,7 @@ export default function LoginPage() {
   const handleForgotPassword = async () => {
     if (resetLoading) return; // evita disparos duplicados em cliques sequenciais
     if (!email) {
-      setError("Digite seu e-mail acima para receber o link de recuperação.");
+      setError(t("resetNeedsEmail"));
       return;
     }
     setError(null);
@@ -262,26 +266,26 @@ export default function LoginPage() {
         <div className="relative">
           <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-8">
             <span className="w-2 h-2 rounded-full bg-green-400 pulse-dot" />
-            <span className="text-blue-300 text-xs font-medium mono">Sistema operacional · Dados seguros</span>
+            <span className="text-blue-300 text-xs font-medium mono">{t("sidebar.badge")}</span>
           </div>
           <h2 className="text-4xl font-extrabold text-white leading-tight mb-4">
-            Bem-vindo de<br />
+            {t("sidebar.titleLine1")}<br />
             <span className="text-transparent bg-clip-text"
               style={{ backgroundImage: "linear-gradient(90deg,#42a5f5,#90caf9)" }}>
-              volta ao controle.
+              {t("sidebar.titleLine2")}
             </span>
           </h2>
           <p className="text-blue-200/60 leading-relaxed max-w-sm">
-            Acesse o painel financeiro da sua empresa e tenha visibilidade total em tempo real.
+            {t("sidebar.body")}
           </p>
 
           <div className="card-glass rounded-2xl p-5 mt-10 max-w-sm">
-            <p className="text-blue-300/50 text-xs mono uppercase tracking-widest mb-3">Resumo do dia</p>
+            <p className="text-blue-300/50 text-xs mono uppercase tracking-widest mb-3">{t("sidebar.summaryTitle")}</p>
             <div className="space-y-3">
               {[
-                { label: "Entradas previstas", val: "R$ 84.200", color: "bg-green-400" },
-                { label: "Saídas agendadas", val: "R$ 31.500", color: "bg-red-400" },
-                { label: "Saldo projetado", val: "R$ 52.700", color: "bg-blue-400" },
+                { label: t("sidebar.summaryExpectedIn"), val: "R$ 84.200", color: "bg-green-400" },
+                { label: t("sidebar.summaryScheduledOut"), val: "R$ 31.500", color: "bg-red-400" },
+                { label: t("sidebar.summaryProjectedBalance"), val: "R$ 52.700", color: "bg-blue-400" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -294,7 +298,7 @@ export default function LoginPage() {
             </div>
             <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-2">
               <TrendingUp size={13} className="text-green-400" />
-              <span className="text-green-400 text-xs font-medium">Fluxo positivo hoje</span>
+              <span className="text-green-400 text-xs font-medium">{t("sidebar.positiveFlow")}</span>
             </div>
           </div>
         </div>
@@ -303,11 +307,11 @@ export default function LoginPage() {
         <div className="relative flex items-center gap-4">
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
             <Shield size={12} className="text-blue-400" />
-            <span className="text-blue-300/60 text-xs">Criptografia AES-256</span>
+            <span className="text-blue-300/60 text-xs">{t("sidebar.badgeEncryption")}</span>
           </div>
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
             <Lock size={12} className="text-blue-400" />
-            <span className="text-blue-300/60 text-xs">Autenticação segura</span>
+            <span className="text-blue-300/60 text-xs">{t("sidebar.badgeSecureAuth")}</span>
           </div>
         </div>
       </div>
@@ -322,8 +326,8 @@ export default function LoginPage() {
           </div>
 
           <div className="fade-in">
-            <h1 className="text-3xl font-extrabold text-blue-950 mb-1">Entrar na conta</h1>
-            <p className="text-slate-400 text-sm mb-8">Digite suas credenciais para acessar o painel.</p>
+            <h1 className="text-3xl font-extrabold text-blue-950 mb-1">{t("title")}</h1>
+            <p className="text-slate-400 text-sm mb-8">{t("subtitle")}</p>
           </div>
 
           {error && (
@@ -337,8 +341,10 @@ export default function LoginPage() {
             <div className="link-box flex items-start gap-3 px-4 py-3 mb-5">
               <Link2 size={16} className="text-blue-500 shrink-0 mt-0.5" />
               <p className="text-blue-700 text-sm">
-                Já existe uma conta com senha para <strong>{pendingGoogleLink.email}</strong>.
-                Digite sua senha abaixo e clique em <strong>Acessar painel</strong> para entrar e vincular o Google a essa mesma conta.
+                {t.rich("pendingGoogleLink", {
+                  email: pendingGoogleLink.email,
+                  strong: (c) => <strong>{c}</strong>,
+                })}
               </p>
             </div>
           )}
@@ -347,7 +353,7 @@ export default function LoginPage() {
             <div className="success-box flex items-start gap-3 px-4 py-3 mb-5">
               <Shield size={16} className="text-emerald-500 shrink-0 mt-0.5" />
               <p className="text-emerald-700 text-sm">
-                Link enviado para <strong>{email}</strong>. Verifique sua caixa de entrada.
+                {t.rich("resetSent", { email, strong: (c) => <strong>{c}</strong> })}
               </p>
             </div>
           )}
@@ -355,13 +361,13 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* E-mail */}
             <div className="fade-in-1">
-              <label htmlFor="login-email" className="block text-blue-950 text-sm font-semibold mb-1.5">E-mail corporativo</label>
+              <label htmlFor="login-email" className="block text-blue-950 text-sm font-semibold mb-1.5">{t("emailLabel")}</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   id="login-email"
                   type="email"
-                  placeholder="voce@empresa.com.br"
+                  placeholder={t("emailPlaceholder")}
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(null); setResetSent(false); setPendingGoogleLink(null); }}
                   className={`input-field w-full rounded-xl pl-10 pr-4 py-3 text-blue-950 text-sm placeholder-slate-400 ${error ? "error" : ""}`}
@@ -374,10 +380,10 @@ export default function LoginPage() {
             {/* Senha */}
             <div className="fade-in-2">
               <div className="flex justify-between items-center mb-1.5">
-                <label htmlFor="login-password" className="block text-blue-950 text-sm font-semibold">Senha</label>
+                <label htmlFor="login-password" className="block text-blue-950 text-sm font-semibold">{t("passwordLabel")}</label>
                 <button type="button" onClick={handleForgotPassword} disabled={resetLoading}
                   className="text-blue-500 text-xs font-medium hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {resetLoading ? "Enviando..." : "Esqueci a senha"}
+                  {resetLoading ? t("sendingReset") : t("forgotPassword")}
                 </button>
               </div>
               <div className="relative">
@@ -385,7 +391,7 @@ export default function LoginPage() {
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder={t("passwordPlaceholder")}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(null); }}
                   className={`input-field w-full rounded-xl pl-10 pr-11 py-3 text-blue-950 text-sm placeholder-slate-400 ${error ? "error" : ""}`}
@@ -396,7 +402,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -407,7 +413,7 @@ export default function LoginPage() {
             <div className="fade-in-2 flex items-center gap-2">
               <input type="checkbox" id="remember" className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
               <label htmlFor="remember" className="text-slate-500 text-sm cursor-pointer select-none">
-                Manter conectado por 30 dias
+                {t("keepConnected")}
               </label>
             </div>
 
@@ -415,7 +421,7 @@ export default function LoginPage() {
             <div className="fade-in-3">
               <button type="submit" disabled={loading || googleLoading}
                 className="btn-primary w-full text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm cursor-pointer">
-                {loading ? <><span className="spinner" /> Entrando...</> : <>Acessar painel <ArrowRight size={16} /></>}
+                {loading ? <><span className="spinner" /> {t("submitting")}</> : <>{t("submit")} <ArrowRight size={16} /></>}
               </button>
             </div>
           </form>
@@ -423,7 +429,7 @@ export default function LoginPage() {
           {/* Divisor */}
           <div className="fade-in-3 flex items-center gap-3 my-6">
             <span className="divider-line" />
-            <span className="text-slate-400 text-xs whitespace-nowrap">ou entre com</span>
+            <span className="text-slate-400 text-xs whitespace-nowrap">{t("orContinueWith")}</span>
             <span className="divider-line" />
           </div>
 
@@ -439,7 +445,7 @@ export default function LoginPage() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
-              Google
+              {t("google")}
             </button>
             <button disabled
               className="social-btn rounded-xl py-2.5 flex items-center justify-center gap-2 text-slate-400 text-sm font-medium opacity-50 cursor-not-allowed">
@@ -449,20 +455,20 @@ export default function LoginPage() {
                 <path fill="#00A4EF" d="M1 13h10v10H1z" />
                 <path fill="#FFB900" d="M13 13h10v10H13z" />
               </svg>
-              Microsoft
+              {t("microsoft")}
             </button>
           </div>
 
           <p className="fade-in-4 text-center text-slate-400 text-sm mt-8">
-            Ainda não tem conta?{" "}
-            <a href={registerHref} className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
-              Testar 7 dias grátis
-            </a>
+            {t("noAccount")}{" "}
+            <Link href={registerHref} className="text-blue-600 font-semibold hover:text-blue-800 transition-colors">
+              {t("noAccountCta")}
+            </Link>
           </p>
 
           <div className="fade-in-4 mt-6 flex items-center justify-center gap-2">
             <Shield size={12} className="text-slate-300" />
-            <span className="text-slate-300 text-xs">Conexão segura com criptografia AES-256</span>
+            <span className="text-slate-300 text-xs">{t("secureConnection")}</span>
           </div>
         </div>
       </div>
