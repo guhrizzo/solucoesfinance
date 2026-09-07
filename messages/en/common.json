@@ -17,6 +17,18 @@
     "body": "Your account doesn't have permission to access <b>{category}</b>. Ask the account administrator to grant it.",
     "goToAccount": "Go to My account"
   },
+  "pin": {
+    "confirm": "Confirm",
+    "close": "Close",
+    "enterDigits": "Enter the 4 digits",
+    "locked": "PIN locked",
+    "lockedBody": "Too many incorrect attempts. Wait <strong>{time}</strong>",
+    "defaultTitle": "Enter your PIN",
+    "defaultSubtitle": "Type the 4 digits to confirm",
+    "notConfigured": "Set up your 4-digit PIN on the Profile page before continuing.",
+    "lockedRetry": "PIN locked after too many attempts. Wait 5 minutes.",
+    "wrong": "Incorrect PIN. Try again."
+  },
   "a11yWidget": {
     "options": "Accessibility options",
     "close": "Close accessibility options",

@@ -17,6 +17,18 @@
     "body": "Tu cuenta no tiene permiso para acceder a <b>{category}</b>. Habla con el administrador de la cuenta para habilitarlo.",
     "goToAccount": "Ir a Mi cuenta"
   },
+  "pin": {
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "enterDigits": "Ingresa los 4 dígitos",
+    "locked": "PIN bloqueado",
+    "lockedBody": "Demasiados intentos incorrectos. Espera <strong>{time}</strong>",
+    "defaultTitle": "Ingresa tu PIN",
+    "defaultSubtitle": "Escribe los 4 dígitos para confirmar",
+    "notConfigured": "Configura tu PIN de 4 dígitos en la página de Perfil antes de continuar.",
+    "lockedRetry": "PIN bloqueado por demasiados intentos. Espera 5 minutos.",
+    "wrong": "PIN incorrecto. Inténtalo de nuevo."
+  },
   "a11yWidget": {
     "options": "Opciones de accesibilidad",
     "close": "Cerrar opciones de accesibilidad",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Shield, Lock, AlertTriangle, X } from "lucide-react";
 import { getPinLockStatus, usePinState } from "../hooks/usePin";
 
@@ -16,12 +17,13 @@ interface PinModalProps {
 
 export default function PinModal({
     open,
-    title = "Digite seu PIN",
-    subtitle = "Insira os 4 dígitos para confirmar",
+    title,
+    subtitle,
     onClose,
     onSuccess,
     collectOnly = false,
 }: PinModalProps) {
+    const t = useTranslations("common.pin");
     const [digits, setDigits] = useState(["", "", "", ""]);
     const [error, setError] = useState("");
     const [shake, setShake] = useState(false);
@@ -92,9 +94,9 @@ export default function PinModal({
 
     const handleSubmit = useCallback((pinOverride?: string) => {
         const pin = pinOverride ?? digits.join("");
-        if (pin.length < 4) { setError("Digite os 4 dígitos"); return; }
+        if (pin.length < 4) { setError(t("enterDigits")); return; }
         onSuccess(pin);
-    }, [digits, onSuccess]);
+    }, [digits, onSuccess, t]);
 
     const triggerShake = useCallback((msg: string) => {
         setError(msg);
@@ -145,15 +147,15 @@ export default function PinModal({
                             {isLocked ? <Lock size={18} color="white" /> : <Shield size={18} color="white" />}
                         </div>
                         <div>
-                            <p className="font-bold text-sm" style={{ color: "var(--cf-text)" }}>{title}</p>
-                            <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>{subtitle}</p>
+                            <p className="font-bold text-sm" style={{ color: "var(--cf-text)" }}>{title ?? t("defaultTitle")}</p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>{subtitle ?? t("defaultSubtitle")}</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
                         className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                        aria-label="Fechar"
+                        aria-label={t("close")}
                     >
                         <X size={15} />
                     </button>
@@ -168,10 +170,12 @@ export default function PinModal({
                             style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)" }}
                         >
                             <Lock size={24} className="mx-auto mb-2" style={{ color: "var(--neg)" }} />
-                            <p className="text-sm font-bold" style={{ color: "var(--neg)" }}>PIN bloqueado</p>
+                            <p className="text-sm font-bold" style={{ color: "var(--neg)" }}>{t("locked")}</p>
                             <p className="text-xs mt-1" style={{ color: "var(--neg)" }}>
-                                Muitas tentativas incorretas. Aguarde{" "}
-                                <strong>{minutes > 0 ? `${minutes}m ` : ""}{String(seconds).padStart(2, "0")}s</strong>
+                                {t.rich("lockedBody", {
+                                    time: `${minutes > 0 ? `${minutes}m ` : ""}${String(seconds).padStart(2, "0")}s`,
+                                    strong: (c) => <strong>{c}</strong>,
+                                })}
                             </p>
                         </div>
                     ) : (
@@ -226,7 +230,7 @@ export default function PinModal({
                                     boxShadow: pin.length === 4 ? "0 4px 16px rgba(59,130,246,0.4)" : "none",
                                 }}
                             >
-                                Confirmar
+                                {t("confirm")}
                             </button>
                         </>
                     )}
