@@ -3,11 +3,14 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/app/hooks/useAuth";
+import { Link } from "@/i18n/navigation";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader } from "@/app/components/ui";
 import { authedFetch } from "@/lib/authedFetch";
+import { formatMoney } from "@/lib/format";
 import {
   ShoppingCart, DollarSign, Receipt, Package, TrendingUp,
   ArrowRight, AlertTriangle, Zap, Boxes, Layers,
@@ -55,9 +58,9 @@ type Aba = "geral" | "precificacao";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const toBRL = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
+// Nomes de marca — não traduzir.
 const CANAL_INFO: Record<Canal, { label: string; bg: string; fg: string; solid: string }> = {
   mercadolivre: { label: "Mercado Livre", bg: "var(--brand-ml-bg)", fg: "var(--brand-ml-fg)", solid: "var(--brand-ml-solid)" },
   shopee: { label: "Shopee", bg: "var(--brand-shopee-bg)", fg: "var(--brand-shopee-fg)", solid: "var(--brand-shopee-bg)" },
@@ -69,6 +72,8 @@ const ymd = (d: Date) => d.toISOString().split("T")[0];
 // ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function VendasPage() {
+  const t = useTranslations("vendas");
+  const locale = useLocale();
   const { user, loading: authLoading } = useAuth();
 
   const [ownerUid, setOwnerUid] = useState("");
@@ -185,14 +190,14 @@ export default function VendasPage() {
   const { dataInicio, labelPeriodo } = useMemo(() => {
     const now = new Date();
     if (periodo === "mes") {
-      return { dataInicio: `${monthKey(now)}-01`, labelPeriodo: "Este mês" };
+      return { dataInicio: `${monthKey(now)}-01`, labelPeriodo: t("periodLabels.mes") };
     }
     if (periodo === "30d") {
       const d = new Date(now); d.setDate(d.getDate() - 29);
-      return { dataInicio: ymd(d), labelPeriodo: "Últimos 30 dias" };
+      return { dataInicio: ymd(d), labelPeriodo: t("periodLabels.d30") };
     }
-    return { dataInicio: "0000-00-00", labelPeriodo: "Todo o período" };
-  }, [periodo]);
+    return { dataInicio: "0000-00-00", labelPeriodo: t("periodLabels.tudo") };
+  }, [periodo, t]);
 
   const vendas = useMemo(
     () => todasVendas.filter((v) => v.date >= dataInicio),
@@ -228,7 +233,7 @@ export default function VendasPage() {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         buckets.push({
           key: monthKey(d),
-          label: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+          label: d.toLocaleDateString(locale, { month: "short" }).replace(".", ""),
           ml: 0, shopee: 0,
         });
       }
@@ -255,7 +260,7 @@ export default function VendasPage() {
 
     const max = Math.max(1, ...buckets.map((b) => b.ml + b.shopee));
     return { buckets, max };
-  }, [vendas, periodo]);
+  }, [vendas, periodo, locale]);
 
   // ── Top produtos vendidos × estoque ────────────────────────────────────────
   const topProdutos = useMemo(() => {
@@ -301,14 +306,14 @@ export default function VendasPage() {
     };
   }, [integracoes]);
 
-  if (blocked) return <AccessDenied category="Painel de Vendas" />;
+  if (blocked) return <AccessDenied category={t("meta.title")} />;
   if (authLoading || (user && !blocked && dbLoading)) return <PageLoader />;
   if (!user) return null;
 
   const periodOptions: { id: Periodo; label: string }[] = [
-    { id: "mes", label: "Este mês" },
-    { id: "30d", label: "30 dias" },
-    { id: "tudo", label: "Tudo" },
+    { id: "mes", label: t("periods.mes") },
+    { id: "30d", label: t("periods.d30") },
+    { id: "tudo", label: t("periods.tudo") },
   ];
 
   return (
@@ -321,11 +326,10 @@ export default function VendasPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl font-bold tracking-tight" style={{ color: "var(--db-text)" }}>
-              Painel de Vendas
+              {t("meta.title")}
             </h1>
             <p className="text-sm mt-1" style={{ color: "var(--db-text-3)" }}>
-              Vendas do Mercado Livre e Shopee — cada pedido entra automaticamente como
-              <span className="font-semibold" style={{ color: "var(--success)" }}> entrada no Fluxo de Caixa</span>.
+              {t.rich("meta.subtitle", { strong: (c) => <span className="font-semibold" style={{ color: "var(--success)" }}>{c}</span> })}
             </p>
           </div>
 
@@ -345,12 +349,12 @@ export default function VendasPage() {
                   </button>
                 ))}
               </div>
-              <a
+              <Link
                 href="/estoque"
                 className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
               >
-                <Zap size={15} /> Simular venda
-              </a>
+                <Zap size={15} /> {t("simulateSale")}
+              </Link>
             </div>
           )}
         </div>
@@ -358,20 +362,20 @@ export default function VendasPage() {
         {/* Abas */}
         <div className="flex items-center gap-2 overflow-x-auto -mt-2" style={{ borderBottom: "1px solid var(--cf-border)" }}>
           {([
-            { id: "geral", label: "Visão geral", icon: LayoutGrid },
-            { id: "precificacao", label: "Precificação", icon: Calculator },
-          ] as { id: Aba; label: string; icon: typeof LayoutGrid }[]).map((t) => (
+            { id: "geral", label: t("tabs.geral"), icon: LayoutGrid },
+            { id: "precificacao", label: t("tabs.precificacao"), icon: Calculator },
+          ] as { id: Aba; label: string; icon: typeof LayoutGrid }[]).map((tab) => (
             <button
-              key={t.id}
-              onClick={() => setAba(t.id)}
+              key={tab.id}
+              onClick={() => setAba(tab.id)}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold whitespace-nowrap cursor-pointer border-b-2 transition-colors"
               style={{
-                color: aba === t.id ? "var(--primary)" : "var(--cf-text-2)",
-                borderColor: aba === t.id ? "var(--primary)" : "transparent",
+                color: aba === tab.id ? "var(--primary)" : "var(--cf-text-2)",
+                borderColor: aba === tab.id ? "var(--primary)" : "transparent",
               }}
             >
-              <t.icon size={16} />
-              {t.label}
+              <tab.icon size={16} />
+              {tab.label}
             </button>
           ))}
         </div>
@@ -381,7 +385,7 @@ export default function VendasPage() {
 
         {/* Status dos canais */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
-          <span style={{ color: "var(--cf-text-3)" }}>Canais:</span>
+          <span style={{ color: "var(--cf-text-3)" }}>{t("channels.label")}</span>
           {(["mercadolivre", "shopee"] as Canal[]).map((c) => (
             <span
               key={c}
@@ -392,7 +396,7 @@ export default function VendasPage() {
               }}
             >
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: canaisConectados[c] ? "var(--success)" : "var(--cf-text-4)" }} />
-              {CANAL_INFO[c].label} {canaisConectados[c] ? "conectado" : "não conectado"}
+              {CANAL_INFO[c].label} {canaisConectados[c] ? t("channels.connected") : t("channels.notConnected")}
             </span>
           ))}
         </div>
@@ -400,30 +404,30 @@ export default function VendasPage() {
         {/* KPIs principais */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <Kpi
-            label="Valor de vendas"
-            value={toBRL(kpis.total)}
+            label={t("kpi.salesValue")}
+            value={toBRL(kpis.total, locale)}
             hint={labelPeriodo}
             icon={<DollarSign size={22} />}
             tone="success"
           />
           <Kpi
-            label="Nº de vendas"
+            label={t("kpi.salesCount")}
             value={String(kpis.pedidos)}
-            hint={`${kpis.unidades} unidade(s) vendida(s)`}
+            hint={t("kpi.unitsHint", { count: kpis.unidades })}
             icon={<ShoppingCart size={22} />}
             tone="primary"
           />
           <Kpi
-            label="Ticket médio"
-            value={toBRL(kpis.ticket)}
-            hint="Valor médio por pedido"
+            label={t("kpi.avgTicket")}
+            value={toBRL(kpis.ticket, locale)}
+            hint={t("kpi.avgTicketHint")}
             icon={<Receipt size={22} />}
             tone="purple"
           />
           <Kpi
-            label="Unidades vendidas"
+            label={t("kpi.unitsSold")}
             value={String(kpis.unidades)}
-            hint={`${topProdutos.length} SKU(s) diferentes`}
+            hint={t("kpi.skusHint", { count: topProdutos.length })}
             icon={<Layers size={22} />}
             tone="amber"
           />
@@ -434,7 +438,7 @@ export default function VendasPage() {
 
           {/* Por canal */}
           <div className="cf-card p-5 space-y-4">
-            <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Vendas por canal</h2>
+            <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>{t("byChannel.title")}</h2>
             {(["mercadolivre", "shopee"] as Canal[]).map((c) => {
               const d = c === "mercadolivre" ? kpis.ml : kpis.shopee;
               const pct = kpis.total > 0 ? (d.total / kpis.total) * 100 : 0;
@@ -444,13 +448,13 @@ export default function VendasPage() {
                     <span className="font-bold px-2 py-0.5 rounded" style={{ background: CANAL_INFO[c].bg, color: CANAL_INFO[c].fg }}>
                       {CANAL_INFO[c].label}
                     </span>
-                    <span className="mono font-bold" style={{ color: "var(--cf-text)" }}>{toBRL(d.total)}</span>
+                    <span className="mono font-bold" style={{ color: "var(--cf-text)" }}>{toBRL(d.total, locale)}</span>
                   </div>
                   <div className="cf-progress">
                     <div className="cf-progress-fill" style={{ width: `${pct}%`, background: CANAL_INFO[c].solid }} />
                   </div>
                   <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                    <span>{d.pedidos} pedido(s) · {d.unidades} un</span>
+                    <span>{t("byChannel.ordersUnits", { orders: d.pedidos, units: d.unidades })}</span>
                     <span>{pct.toFixed(0)}%</span>
                   </div>
                 </div>
@@ -461,16 +465,16 @@ export default function VendasPage() {
               <div className="pt-3 mt-1 space-y-1.5" style={{ borderTop: "1px solid var(--cf-border)" }}>
                 <div className="flex items-center justify-between text-xs">
                   <span style={{ color: "var(--cf-text-2)" }}>
-                    Líquido a receber da Shopee
+                    {t("shopeeNet.label")}
                     {shopeeRepasse.mock && (
-                      <span className="ml-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--cf-input)", color: "var(--cf-text-3)" }}>SIMULADO</span>
+                      <span className="ml-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--cf-input)", color: "var(--cf-text-3)" }}>{t("shopeeNet.simulated")}</span>
                     )}
                   </span>
-                  <span className="mono font-bold" style={{ color: "var(--success)" }}>{toBRL(shopeeRepasse.pendente)}</span>
+                  <span className="mono font-bold" style={{ color: "var(--success)" }}>{toBRL(shopeeRepasse.pendente, locale)}</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                  <span>Já liberado (60d): {toBRL(shopeeRepasse.liberado)}</span>
-                  <span>Taxas: {toBRL(shopeeRepasse.taxas)}</span>
+                  <span>{t("shopeeNet.released", { value: toBRL(shopeeRepasse.liberado, locale) })}</span>
+                  <span>{t("shopeeNet.fees", { value: toBRL(shopeeRepasse.taxas, locale) })}</span>
                 </div>
               </div>
             )}
@@ -480,7 +484,7 @@ export default function VendasPage() {
           <div className="cf-card p-5 lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>
-                Evolução das vendas
+                {t("chart.title")}
               </h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.mercadolivre.solid }} /> ML</span>
@@ -489,13 +493,13 @@ export default function VendasPage() {
             </div>
             {vendas.length === 0 ? (
               <div className="h-40 flex items-center justify-center text-xs" style={{ color: "var(--cf-text-3)" }}>
-                Sem vendas no período.
+                {t("chart.empty")}
               </div>
             ) : (
               <svg
                 viewBox="0 0 600 180" className="w-full" style={{ height: 160 }}
                 role="img"
-                aria-label="Gráfico de barras: vendas do Mercado Livre e Shopee por período — detalhamento na tabela abaixo"
+                aria-label={t("chart.ariaLabel")}
               >
                 {serie.buckets.map((b, i) => {
                   const n = serie.buckets.length;
@@ -517,20 +521,20 @@ export default function VendasPage() {
             )}
             {vendas.length > 0 && (
               <table className="sr-only">
-                <caption>Vendas do Mercado Livre e Shopee por período</caption>
+                <caption>{t("chart.caption")}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Período</th>
-                    <th scope="col">Mercado Livre</th>
-                    <th scope="col">Shopee</th>
+                    <th scope="col">{t("chart.colPeriod")}</th>
+                    <th scope="col">{CANAL_INFO.mercadolivre.label}</th>
+                    <th scope="col">{CANAL_INFO.shopee.label}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {serie.buckets.map((b) => (
                     <tr key={b.key}>
                       <th scope="row">{b.label}</th>
-                      <td>{toBRL(b.ml)}</td>
-                      <td>{toBRL(b.shopee)}</td>
+                      <td>{toBRL(b.ml, locale)}</td>
+                      <td>{toBRL(b.shopee, locale)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -545,22 +549,22 @@ export default function VendasPage() {
           {/* Top produtos */}
           <div className="cf-card lg:col-span-2 overflow-hidden">
             <div className="p-5" style={{ borderBottom: "1px solid var(--cf-border)" }}>
-              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Produtos mais vendidos</h2>
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>Receita no período × estoque atual</p>
+              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>{t("topProducts.title")}</h2>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("topProducts.subtitle")}</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr style={{ background: "var(--cf-txhdr)", borderBottom: "1px solid var(--cf-border)" }}>
-                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Produto</th>
-                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>Qtd</th>
-                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>Receita</th>
-                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>Estoque</th>
+                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("topProducts.colProduct")}</th>
+                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>{t("topProducts.colQty")}</th>
+                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>{t("topProducts.colRevenue")}</th>
+                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>{t("topProducts.colStock")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topProdutos.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center py-10 text-xs" style={{ color: "var(--cf-text-3)" }}>Nenhuma venda registrada no período.</td></tr>
+                    <tr><td colSpan={4} className="text-center py-10 text-xs" style={{ color: "var(--cf-text-3)" }}>{t("topProducts.empty")}</td></tr>
                   ) : topProdutos.map((p) => {
                     const ruptura = p.estoque !== null && p.estoque <= 0;
                     const baixo = p.estoque !== null && !ruptura && p.estoque <= p.minQuantity;
@@ -571,7 +575,7 @@ export default function VendasPage() {
                           <div className="text-[10px] mono" style={{ color: "var(--cf-text-3)" }}>{p.sku}</div>
                         </td>
                         <td className="px-5 py-3 text-right text-xs font-bold mono" style={{ color: "var(--cf-text)" }}>{p.qty}</td>
-                        <td className="px-5 py-3 text-right text-xs font-bold mono" style={{ color: "var(--success)" }}>{toBRL(p.receita)}</td>
+                        <td className="px-5 py-3 text-right text-xs font-bold mono" style={{ color: "var(--success)" }}>{toBRL(p.receita, locale)}</td>
                         <td className="px-5 py-3 text-right">
                           {p.estoque === null ? (
                             <span className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>—</span>
@@ -584,7 +588,7 @@ export default function VendasPage() {
                                   ? { background: "rgba(245,158,11,0.12)", color: "var(--warning)" }
                                   : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                             >
-                              {ruptura ? "Sem estoque" : `${p.estoque} un`}
+                              {ruptura ? t("topProducts.noStock") : t("topProducts.unitsShort", { count: p.estoque })}
                             </span>
                           )}
                         </td>
@@ -599,29 +603,29 @@ export default function VendasPage() {
           {/* Controle de estoque */}
           <div className="cf-card p-5 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Controle de estoque</h2>
-              <a href="/estoque" className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--primary)" }}>
-                Gerenciar <ArrowRight size={12} />
-              </a>
+              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>{t("stockControl.title")}</h2>
+              <Link href="/estoque" className="text-[11px] font-bold flex items-center gap-1" style={{ color: "var(--primary)" }}>
+                {t("stockControl.manage")} <ArrowRight size={12} />
+              </Link>
             </div>
             <div className="space-y-3 flex-1">
-              <MiniRow icon={<Boxes size={15} />} label="Unidades em estoque" value={`${estoqueResumo.unidades}`} />
-              <MiniRow icon={<DollarSign size={15} />} label="Valor imobilizado" value={toBRL(estoqueResumo.valor)} />
+              <MiniRow icon={<Boxes size={15} />} label={t("stockControl.units")} value={`${estoqueResumo.unidades}`} />
+              <MiniRow icon={<DollarSign size={15} />} label={t("stockControl.immobilized")} value={toBRL(estoqueResumo.valor, locale)} />
               <MiniRow
                 icon={<AlertTriangle size={15} />}
-                label="Estoque baixo"
+                label={t("stockControl.lowStock")}
                 value={`${estoqueResumo.baixo}`}
                 tone={estoqueResumo.baixo > 0 ? "warning" : undefined}
               />
               <MiniRow
                 icon={<Package size={15} />}
-                label="Sem estoque"
+                label={t("stockControl.noStock")}
                 value={`${estoqueResumo.zerado}`}
                 tone={estoqueResumo.zerado > 0 ? "danger" : undefined}
               />
             </div>
             <p className="text-[11px] mt-4 pt-3" style={{ color: "var(--cf-text-3)", borderTop: "1px solid var(--cf-border)" }}>
-              {estoqueResumo.itens} produto(s) cadastrado(s). Cada venda dá baixa automática e sincroniza os canais vinculados.
+              {t("stockControl.footer", { count: estoqueResumo.itens })}
             </p>
           </div>
         </div>
@@ -630,23 +634,23 @@ export default function VendasPage() {
         <div className="cf-card overflow-hidden">
           <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--cf-border)" }}>
             <div>
-              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>Vendas recentes</h2>
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>Últimos pedidos recebidos dos marketplaces</p>
+              <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>{t("recentSales.title")}</h2>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("recentSales.subtitle")}</p>
             </div>
             <span className="text-[11px] font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: "rgba(16,185,129,0.1)", color: "var(--success)" }}>
-              <TrendingUp size={12} /> Sincronizado no caixa
+              <TrendingUp size={12} /> {t("recentSales.syncedBadge")}
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr style={{ background: "var(--cf-txhdr)", borderBottom: "1px solid var(--cf-border)" }}>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data</th>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Canal</th>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Produto</th>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>Qtd</th>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>Unitário</th>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>Total</th>
+                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("recentSales.colDate")}</th>
+                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("recentSales.colChannel")}</th>
+                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("recentSales.colProduct")}</th>
+                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>{t("recentSales.colQty")}</th>
+                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>{t("recentSales.colUnit")}</th>
+                  <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>{t("recentSales.colTotal")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -654,8 +658,8 @@ export default function VendasPage() {
                   <tr>
                     <td colSpan={6} className="text-center py-14 text-sm" style={{ color: "var(--cf-text-3)" }}>
                       <ShoppingCart size={26} className="mx-auto mb-3 opacity-40" />
-                      Nenhuma venda no período.<br />
-                      <span className="text-xs">Vendas do Mercado Livre e da Shopee (reais ou simuladas em Estoque) aparecem aqui.</span>
+                      {t("recentSales.empty")}<br />
+                      <span className="text-xs">{t("recentSales.emptyHint")}</span>
                     </td>
                   </tr>
                 ) : vendas.slice(0, 40).map((v) => {
@@ -663,7 +667,7 @@ export default function VendasPage() {
                   return (
                     <tr key={v.id} className="cf-tx" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                       <td className="px-5 py-3 text-xs mono" style={{ color: "var(--cf-text-2)" }}>
-                        {new Date(v.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                        {new Date(v.date + "T12:00:00").toLocaleDateString(locale)}
                       </td>
                       <td className="px-5 py-3">
                         <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: CANAL_INFO[canal].bg, color: CANAL_INFO[canal].fg }}>
@@ -678,10 +682,10 @@ export default function VendasPage() {
                       </td>
                       <td className="px-5 py-3 text-right text-xs font-bold mono" style={{ color: "var(--cf-text)" }}>{v.saleQty || 1}</td>
                       <td className="px-5 py-3 text-right text-xs mono" style={{ color: "var(--cf-text-2)" }}>
-                        {toBRL(v.saleUnitPrice || (v.amount / (v.saleQty || 1)))}
+                        {toBRL(v.saleUnitPrice || (v.amount / (v.saleQty || 1)), locale)}
                       </td>
                       <td className="px-5 py-3 text-right text-xs font-bold mono" style={{ color: "var(--success)" }}>
-                        + {toBRL(v.amount || 0)}
+                        + {toBRL(v.amount || 0, locale)}
                       </td>
                     </tr>
                   );
@@ -714,6 +718,8 @@ export default function VendasPage() {
 // informados, e o que sobra cobre o custo do produto + o custo variável.
 
 function PrecificacaoTab() {
+  const t = useTranslations("vendas.pricing");
+  const locale = useLocale();
   const [custo, setCusto] = useState<number | "">("");
   const [impostos, setImpostos] = useState<number | "">("");
   const [custoVar, setCustoVar] = useState<number | "">("");
@@ -780,48 +786,46 @@ function PrecificacaoTab() {
         <div className="flex items-center gap-3 mb-2">
           <Calculator size={22} style={{ color: "var(--primary)" }} />
           <h2 className="font-heading text-lg font-bold" style={{ color: "var(--cf-text)" }}>
-            Calculadora de Precificação
+            {t("title")}
           </h2>
         </div>
         <p className="text-sm mb-6" style={{ color: "var(--cf-text-2)" }}>
-          Descubra o preço de venda que garante a margem desejada depois de pagar
-          impostos e os custos variáveis por unidade (embalagem, frete, comissão).
+          {t("intro")}
         </p>
         <div className="space-y-4">
-          {field("Custo do produto", "Quanto o produto custa para você (compra ou produção).", custo, setNum(setCusto), "R$")}
-          {field("Custo variável", "Embalagem, etiqueta, frete e comissão do canal — em R$ por unidade.", custoVar, setNum(setCustoVar), "R$")}
-          {field("Impostos e taxas", "Tributos sobre a venda — Simples, ICMS, etc.", impostos, setNum(setImpostos), "%")}
-          {field("Margem de lucro desejada", "Lucro líquido que você quer sobre o preço de venda.", margem, setNum(setMargem), "%")}
+          {field(t("productCost"), t("productCostHint"), custo, setNum(setCusto), "R$")}
+          {field(t("variableCost"), t("variableCostHint"), custoVar, setNum(setCustoVar), "R$")}
+          {field(t("taxes"), t("taxesHint"), impostos, setNum(setImpostos), "%")}
+          {field(t("margin"), t("marginHint"), margem, setNum(setMargem), "%")}
         </div>
       </div>
 
       {/* Resultado */}
       <div className="cf-card p-6 flex flex-col">
-        <h3 className="font-heading text-sm font-bold mb-1" style={{ color: "var(--cf-text)" }}>Preço de venda sugerido</h3>
+        <h3 className="font-heading text-sm font-bold mb-1" style={{ color: "var(--cf-text)" }}>{t("suggestedPrice")}</h3>
 
         {calc.inviavel ? (
           <div className="flex-1 flex items-center">
             <div className="w-full text-sm font-semibold p-4 rounded-xl" style={{ background: "rgba(239,68,68,0.1)", color: "var(--danger)" }}>
-              Impostos + margem somam 100% ou mais do preço.
-              Não há preço possível — reduza a margem ou os impostos.
+              {t("infeasible")}
             </div>
           </div>
         ) : (
           <>
             <div className="text-4xl md:text-5xl font-extrabold mono my-4" style={{ color: "var(--primary)" }}>
-              {toBRL(calc.preco)}
+              {toBRL(calc.preco, locale)}
             </div>
             {calc.markup > 0 && (
               <p className="text-[11px] mb-4" style={{ color: "var(--cf-text-3)" }}>
-                Markup de <span className="font-bold mono">{calc.markup.toFixed(2)}×</span> sobre o custo total (produto + variável).
+                {t.rich("markupNote", { markup: calc.markup.toFixed(2), b: (c) => <span className="font-bold mono">{c}</span> })}
               </p>
             )}
 
             <div className="space-y-2.5 mt-auto pt-4 text-sm" style={{ borderTop: "1px solid var(--cf-border)" }}>
-              <Linha label="Custo do produto" value={toBRL(calc.c)} />
-              <Linha label="Custo variável" value={toBRL(calc.v)} color="var(--danger)" />
-              <Linha label={`Impostos e taxas (${calc.iPct || 0}%)`} value={toBRL(calc.valorImpostos)} color="var(--danger)" />
-              <Linha label={`Lucro líquido (${calc.mPct || 0}%)`} value={toBRL(calc.lucro)} color="var(--success)" bold />
+              <Linha label={t("rowProductCost")} value={toBRL(calc.c, locale)} />
+              <Linha label={t("rowVariableCost")} value={toBRL(calc.v, locale)} color="var(--danger)" />
+              <Linha label={t("rowTaxes", { pct: calc.iPct || 0 })} value={toBRL(calc.valorImpostos, locale)} color="var(--danger)" />
+              <Linha label={t("rowProfit", { pct: calc.mPct || 0 })} value={toBRL(calc.lucro, locale)} color="var(--success)" bold />
             </div>
           </>
         )}

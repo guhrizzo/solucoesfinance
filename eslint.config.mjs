@@ -110,7 +110,6 @@ const eslintConfig = defineConfig([
       "app/*/dashboard/page.tsx",
       "app/*/not-found.tsx",
       "app/*/register/page.tsx",
-      "app/*/vendas/page.tsx",
       "app/components/AccessDenied.tsx",
       "app/components/CashFlow.tsx",
       "app/components/Navbar.tsx",

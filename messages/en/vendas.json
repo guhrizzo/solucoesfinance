@@ -1,1 +1,104 @@
-{}
+{
+  "meta": {
+    "title": "Sales Dashboard",
+    "subtitle": "Mercado Livre and Shopee sales — every order is automatically posted as a <strong>Cash Flow inflow</strong>."
+  },
+  "simulateSale": "Simulate sale",
+  "periods": {
+    "mes": "This month",
+    "d30": "30 days",
+    "tudo": "All"
+  },
+  "periodLabels": {
+    "mes": "This month",
+    "d30": "Last 30 days",
+    "tudo": "All time"
+  },
+  "tabs": {
+    "geral": "Overview",
+    "precificacao": "Pricing"
+  },
+  "channels": {
+    "label": "Channels:",
+    "connected": "connected",
+    "notConnected": "not connected"
+  },
+  "kpi": {
+    "salesValue": "Sales value",
+    "salesCount": "Sales count",
+    "avgTicket": "Average ticket",
+    "unitsSold": "Units sold",
+    "unitsHint": "{count, plural, one {# unit sold} other {# units sold}}",
+    "avgTicketHint": "Average value per order",
+    "skusHint": "{count, plural, one {# different SKU} other {# different SKUs}}"
+  },
+  "byChannel": {
+    "title": "Sales by channel",
+    "ordersUnits": "{orders, plural, one {# order} other {# orders}} · {units} units"
+  },
+  "shopeeNet": {
+    "label": "Shopee net receivable",
+    "simulated": "SIMULATED",
+    "released": "Released (60d): {value}",
+    "fees": "Fees: {value}"
+  },
+  "chart": {
+    "title": "Sales trend",
+    "empty": "No sales in the period.",
+    "ariaLabel": "Bar chart: Mercado Livre and Shopee sales by period — breakdown in the table below",
+    "caption": "Mercado Livre and Shopee sales by period",
+    "colPeriod": "Period"
+  },
+  "topProducts": {
+    "title": "Best-selling products",
+    "subtitle": "Revenue in the period × current stock",
+    "colProduct": "Product",
+    "colQty": "Qty",
+    "colRevenue": "Revenue",
+    "colStock": "Stock",
+    "empty": "No sales recorded in the period.",
+    "noStock": "Out of stock",
+    "unitsShort": "{count} units"
+  },
+  "stockControl": {
+    "title": "Stock control",
+    "manage": "Manage",
+    "units": "Units in stock",
+    "immobilized": "Tied-up value",
+    "lowStock": "Low stock",
+    "noStock": "Out of stock",
+    "footer": "{count, plural, one {# product registered.} other {# products registered.}} Each sale deducts stock automatically and syncs the linked channels."
+  },
+  "recentSales": {
+    "title": "Recent sales",
+    "subtitle": "Latest orders received from the marketplaces",
+    "syncedBadge": "Synced to cash flow",
+    "colDate": "Date",
+    "colChannel": "Channel",
+    "colProduct": "Product",
+    "colQty": "Qty",
+    "colUnit": "Unit",
+    "colTotal": "Total",
+    "empty": "No sales in the period.",
+    "emptyHint": "Mercado Livre and Shopee sales (real or simulated in Inventory) show up here."
+  },
+  "pricing": {
+    "title": "Pricing Calculator",
+    "intro": "Find the sale price that secures your target margin after paying taxes and the variable costs per unit (packaging, shipping, commission).",
+    "productCost": "Product cost",
+    "productCostHint": "How much the product costs you (purchase or production).",
+    "variableCost": "Variable cost",
+    "variableCostHint": "Packaging, label, shipping and channel commission — in R$ per unit.",
+    "taxes": "Taxes and fees",
+    "taxesHint": "Taxes on the sale — Simples, ICMS, etc.",
+    "margin": "Target profit margin",
+    "marginHint": "Net profit you want on the sale price.",
+    "suggestedPrice": "Suggested sale price",
+    "infeasible": "Taxes + margin add up to 100% or more of the price. No price is possible — lower the margin or the taxes.",
+    "markupNote": "Markup of <b>{markup}×</b> over the total cost (product + variable).",
+    "rowProductCost": "Product cost",
+    "rowVariableCost": "Variable cost",
+    "rowTaxes": "Taxes and fees ({pct}%)",
+    "rowProfit": "Net profit ({pct}%)"
+  }
+}

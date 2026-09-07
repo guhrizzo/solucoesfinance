@@ -1,1 +1,104 @@
-{}
+{
+  "meta": {
+    "title": "Panel de Ventas",
+    "subtitle": "Ventas de Mercado Livre y Shopee — cada pedido entra automáticamente como <strong>ingreso en el Flujo de Caja</strong>."
+  },
+  "simulateSale": "Simular venta",
+  "periods": {
+    "mes": "Este mes",
+    "d30": "30 días",
+    "tudo": "Todo"
+  },
+  "periodLabels": {
+    "mes": "Este mes",
+    "d30": "Últimos 30 días",
+    "tudo": "Todo el período"
+  },
+  "tabs": {
+    "geral": "Visión general",
+    "precificacao": "Precios"
+  },
+  "channels": {
+    "label": "Canales:",
+    "connected": "conectado",
+    "notConnected": "no conectado"
+  },
+  "kpi": {
+    "salesValue": "Valor de ventas",
+    "salesCount": "N.º de ventas",
+    "avgTicket": "Ticket promedio",
+    "unitsSold": "Unidades vendidas",
+    "unitsHint": "{count, plural, one {# unidad vendida} other {# unidades vendidas}}",
+    "avgTicketHint": "Valor promedio por pedido",
+    "skusHint": "{count, plural, one {# SKU distinto} other {# SKU distintos}}"
+  },
+  "byChannel": {
+    "title": "Ventas por canal",
+    "ordersUnits": "{orders, plural, one {# pedido} other {# pedidos}} · {units} un"
+  },
+  "shopeeNet": {
+    "label": "Neto a recibir de Shopee",
+    "simulated": "SIMULADO",
+    "released": "Ya liberado (60d): {value}",
+    "fees": "Comisiones: {value}"
+  },
+  "chart": {
+    "title": "Evolución de las ventas",
+    "empty": "Sin ventas en el período.",
+    "ariaLabel": "Gráfico de barras: ventas de Mercado Livre y Shopee por período — detalle en la tabla de abajo",
+    "caption": "Ventas de Mercado Livre y Shopee por período",
+    "colPeriod": "Período"
+  },
+  "topProducts": {
+    "title": "Productos más vendidos",
+    "subtitle": "Ingresos en el período × stock actual",
+    "colProduct": "Producto",
+    "colQty": "Cant.",
+    "colRevenue": "Ingresos",
+    "colStock": "Stock",
+    "empty": "Ninguna venta registrada en el período.",
+    "noStock": "Sin stock",
+    "unitsShort": "{count} un"
+  },
+  "stockControl": {
+    "title": "Control de stock",
+    "manage": "Gestionar",
+    "units": "Unidades en stock",
+    "immobilized": "Valor inmovilizado",
+    "lowStock": "Stock bajo",
+    "noStock": "Sin stock",
+    "footer": "{count, plural, one {# producto registrado.} other {# productos registrados.}} Cada venta descuenta stock automáticamente y sincroniza los canales vinculados."
+  },
+  "recentSales": {
+    "title": "Ventas recientes",
+    "subtitle": "Últimos pedidos recibidos de los marketplaces",
+    "syncedBadge": "Sincronizado en caja",
+    "colDate": "Fecha",
+    "colChannel": "Canal",
+    "colProduct": "Producto",
+    "colQty": "Cant.",
+    "colUnit": "Unitario",
+    "colTotal": "Total",
+    "empty": "Ninguna venta en el período.",
+    "emptyHint": "Las ventas de Mercado Livre y Shopee (reales o simuladas en Stock) aparecen aquí."
+  },
+  "pricing": {
+    "title": "Calculadora de Precios",
+    "intro": "Descubre el precio de venta que garantiza el margen deseado después de pagar impuestos y los costos variables por unidad (embalaje, envío, comisión).",
+    "productCost": "Costo del producto",
+    "productCostHint": "Cuánto te cuesta el producto (compra o producción).",
+    "variableCost": "Costo variable",
+    "variableCostHint": "Embalaje, etiqueta, envío y comisión del canal — en R$ por unidad.",
+    "taxes": "Impuestos y comisiones",
+    "taxesHint": "Tributos sobre la venta — Simples, ICMS, etc.",
+    "margin": "Margen de ganancia deseado",
+    "marginHint": "Ganancia neta que quieres sobre el precio de venta.",
+    "suggestedPrice": "Precio de venta sugerido",
+    "infeasible": "Impuestos + margen suman 100% o más del precio. No hay precio posible — reduce el margen o los impuestos.",
+    "markupNote": "Markup de <b>{markup}×</b> sobre el costo total (producto + variable).",
+    "rowProductCost": "Costo del producto",
+    "rowVariableCost": "Costo variable",
+    "rowTaxes": "Impuestos y comisiones ({pct}%)",
+    "rowProfit": "Ganancia neta ({pct}%)"
+  }
+}
