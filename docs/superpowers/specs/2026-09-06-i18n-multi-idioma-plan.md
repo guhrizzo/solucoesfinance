@@ -308,22 +308,29 @@ Commits: `e9d4911` (3a), `5d6ee6b` (3b), `0c93f63`/`9bc32bb`/`a9aec00` (3c),
 
 ---
 
-## Fase 4 — Dashboard + Fluxo de Caixa
+## Fase 4 — Dashboard + Fluxo de Caixa 🚧 em andamento
 
 Namespaces: `dashboard`, `fluxoCaixa`.
+Commit: `3f65a15` (4a).
 
-- [ ] **`app/[locale]/dashboard/page.tsx`** — KPIs, rótulos, estados vazios,
-      `aria-label` dos gráficos, tabela `sr-only` de detalhamento → `dashboard.json`.
-- [ ] **`app/[locale]/fluxo-caixa/page.tsx`** + **`app/components/CashFlow.tsx`**
-      (conteúdo real) → `fluxoCaixa.json`.
-- [ ] **`app/components/CategoryBreakdown.tsx`** → `dashboard`/`fluxoCaixa`.
-- [ ] Trocar o `locale` fixo das chamadas de `lib/format.ts` nesses arquivos
-      pelo `useLocale()` real; eixos/tooltips dos gráficos idem.
-- [ ] Meses/dias de semana dos gráficos: usar `useFormatter().dateTime` em vez
-      de arrays de nomes hardcoded.
-- [ ] `i18n:check` + `tsc` + `lint`.
-- [ ] Navegador: dashboard nos 3 idiomas; número `1.234,56` vira `1,234.56`
-      em `en`; `R$` permanece; datas dos gráficos localizadas.
+- [x] **4a — `app/[locale]/dashboard/page.tsx`** → `dashboard.json` — KPIs,
+      gráfico Receita vs Despesas (+ tabela `sr-only` + `aria-label`s),
+      vencimentos, transações, centro de custos, projeção. `toBRL`/`months`/
+      datas seguem o locale. **`AccessDenied.tsx`** → `common.accessDenied`
+      (o `category` chega já traduzido).
+- [ ] **4b — `app/components/CashFlow.tsx`** (1834 linhas, ~142 sites de
+      string + modal de transação, importação CSV, scan de NF por IA, bloco
+      de orçamento, previstos) → `fluxoCaixa.json`. Ainda NÃO feito.
+- [ ] **Categorias (`lib/cashflowCategories.ts`, 25 nomes)** — decisão
+      transversal: são valores GRAVADOS no Firestore (`tx.category`) e casados
+      por string em `costCenterSync`, `contasPagar`, `relatorios`, e agrupados
+      no dashboard. Migrar pra `{key, storedValue}` + namespace `categories`
+      compartilhado, feito de uma vez junto com Fase 5/7 (ou num passo
+      dedicado antes da 4b). Enquanto isso, os nomes de categoria aparecem em
+      pt-BR mesmo nas outras línguas.
+- [ ] **`app/components/CategoryBreakdown.tsx`** (80 linhas) → pendente.
+- [x] `dashboard` verificado: `i18n:check` + `tsc` + `build` limpos;
+      `eslint app/` 162/76. Não testado ao vivo (atrás de login).
 
 ---
 
