@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Loader2, ShieldCheck, FileText, ArrowRight, ArrowLeft } from "lucide-react";
@@ -33,13 +34,14 @@ const EMPTY: Company = { razaoSocial: "", cnpj: "", endereco: "" };
 
 export default function ContratoPage() {
   return (
-    <Suspense fallback={<PageLoader label="Carregando contrato…" />}>
+    <Suspense fallback={<PageLoader />}>
       <Contrato />
     </Suspense>
   );
 }
 
 function Contrato() {
+  const t = useTranslations("assinatura.contrato");
   const router = useRouter();
   const params = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -186,17 +188,17 @@ function Contrato() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.contractId) {
-        throw new Error(data?.error || "Não foi possível registrar o contrato.");
+        throw new Error(data?.error || t("registerFailed"));
       }
       // Aceito → segue direto pro pagamento seguro.
       await startCheckout(plan.id, data.contractId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao processar o contrato.");
+      setError(err instanceof Error ? err.message : t("processError"));
       setSubmitting(false);
     }
   }
 
-  if (authLoading || sub.loading || !plan) return <PageLoader label="Carregando contrato…" />;
+  if (authLoading || sub.loading || !plan) return <PageLoader />;
 
   const labelCls = "block text-xs font-semibold mb-1.5";
   const labelStyle = { color: "var(--db-text-2)" } as const;
@@ -215,18 +217,21 @@ function Contrato() {
           className="inline-flex items-center gap-1.5 text-xs font-semibold mb-5 cursor-pointer"
           style={{ color: "var(--db-text-3)" }}
         >
-          <ArrowLeft size={13} /> Voltar
+          <ArrowLeft size={13} /> {t("back")}
         </button>
 
         <div className="flex items-center gap-2 mb-1">
           <FileText size={17} style={{ color: "var(--brand-500)" }} />
           <h1 className="text-xl font-bold" style={{ color: "var(--db-text)" }}>
-            Contrato de prestação de serviços
+            {t("title")}
           </h1>
         </div>
         <p className="text-sm mb-6" style={{ color: "var(--db-text-3)" }}>
-          Plano <strong>{plan.label}</strong> · {formatBRLFromCents(plan.priceCents)} por período.
-          Preencha os dados da empresa, leia o contrato e assine para ir ao pagamento.
+          {t.rich("intro", {
+            plan: plan.label,
+            price: formatBRLFromCents(plan.priceCents),
+            b: (c) => <strong>{c}</strong>,
+          })}
         </p>
 
         <div className="grid lg:grid-cols-2 gap-5">
@@ -241,24 +246,24 @@ function Contrato() {
               }}
             >
               <h2 className="text-sm font-bold" style={{ color: "var(--db-text)" }}>
-                Dados da CONTRATANTE
+                {t("contractingParty")}
               </h2>
 
               <div>
-                <label className={labelCls} style={labelStyle}>Razão social</label>
+                <label className={labelCls} style={labelStyle}>{t("legalName")}</label>
                 <input
                   className={fieldCls}
                   style={fieldStyle}
                   value={razaoSocial}
                   onChange={(e) => setRazaoSocial(e.target.value)}
-                  placeholder="Ex.: Padaria do Bairro Ltda."
+                  placeholder={t("legalNamePlaceholder")}
                   maxLength={160}
                 />
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls} style={labelStyle}>CNPJ</label>
+                  <label className={labelCls} style={labelStyle}>{t("cnpj")}</label>
                   <input
                     className={`${fieldCls} mono`}
                     style={{
@@ -272,14 +277,14 @@ function Contrato() {
                   />
                 </div>
                 <div>
-                  <label className={labelCls} style={labelStyle}>Regime tributário</label>
+                  <label className={labelCls} style={labelStyle}>{t("taxRegime")}</label>
                   <select
                     className={fieldCls}
                     style={fieldStyle}
                     value={regime}
                     onChange={(e) => setRegime(e.target.value as TaxRegime | "")}
                   >
-                    <option value="">Selecione…</option>
+                    <option value="">{t("selectPlaceholder")}</option>
                     {TAX_REGIMES.map((r) => (
                       <option key={r} value={r}>
                         {REGIME_LABEL[r]}
@@ -290,38 +295,38 @@ function Contrato() {
               </div>
 
               <div>
-                <label className={labelCls} style={labelStyle}>Endereço da empresa</label>
+                <label className={labelCls} style={labelStyle}>{t("companyAddress")}</label>
                 <input
                   className={fieldCls}
                   style={fieldStyle}
                   value={endereco}
                   onChange={(e) => setEndereco(e.target.value)}
-                  placeholder="Rua, nº, bairro, cidade/UF, CEP"
+                  placeholder={t("addressPlaceholder")}
                   maxLength={240}
                 />
               </div>
 
               <div className="pt-1">
                 <h2 className="text-sm font-bold" style={{ color: "var(--db-text)" }}>
-                  Responsável que assina
+                  {t("signer")}
                 </h2>
               </div>
 
               <div>
-                <label className={labelCls} style={labelStyle}>Nome completo</label>
+                <label className={labelCls} style={labelStyle}>{t("fullName")}</label>
                 <input
                   className={fieldCls}
                   style={fieldStyle}
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Nome de quem assina pela empresa"
+                  placeholder={t("fullNamePlaceholder")}
                   maxLength={120}
                 />
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls} style={labelStyle}>CPF</label>
+                  <label className={labelCls} style={labelStyle}>{t("cpf")}</label>
                   <input
                     className={`${fieldCls} mono`}
                     style={{
@@ -335,13 +340,13 @@ function Contrato() {
                   />
                 </div>
                 <div>
-                  <label className={labelCls} style={labelStyle}>E-mail</label>
+                  <label className={labelCls} style={labelStyle}>{t("email")}</label>
                   <input
                     className={fieldCls}
                     style={fieldStyle}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="voce@empresa.com.br"
+                    placeholder={t("emailPlaceholder")}
                     type="email"
                   />
                 </div>
@@ -358,9 +363,7 @@ function Contrato() {
                   className="mt-0.5"
                 />
                 <span className="text-xs leading-relaxed">
-                  Li e aceito os termos deste contrato. Declaro que as informações prestadas são
-                  verdadeiras e que tenho poderes para representar a empresa CONTRATANTE. O aceite
-                  eletrônico será registrado com data, hora e IP.
+                  {t("acceptTerms")}
                 </span>
               </label>
 
@@ -384,11 +387,11 @@ function Contrato() {
               >
                 {submitting ? (
                   <>
-                    <Loader2 size={15} className="animate-spin" /> Registrando o aceite…
+                    <Loader2 size={15} className="animate-spin" /> {t("submitting")}
                   </>
                 ) : (
                   <>
-                    Assinar e ir para o pagamento <ArrowRight size={15} />
+                    {t("submit")} <ArrowRight size={15} />
                   </>
                 )}
               </button>
@@ -397,7 +400,7 @@ function Contrato() {
                 className="flex items-center gap-1.5 text-xs"
                 style={{ color: "var(--db-text-4)" }}
               >
-                <ShieldCheck size={12} /> Pagamento processado pela InfinitePay (Pix ou cartão).
+                <ShieldCheck size={12} /> {t("paymentNote")}
               </p>
             </div>
           </form>
@@ -414,6 +417,9 @@ function Contrato() {
             <h2 className="text-sm font-bold mb-3" style={{ color: "var(--db-text)" }}>
               {rendered?.title}
             </h2>
+            <p className="text-[11px] mb-2 rounded-lg px-3 py-2" style={{ background: "var(--db-sub)", color: "var(--db-text-3)" }}>
+              {t("ptOnlyNotice")}
+            </p>
             <div
               className="rounded-xl p-4 text-xs leading-relaxed overflow-y-auto"
               style={{
@@ -424,7 +430,7 @@ function Contrato() {
               }}
             >
               <p className="mb-1" style={{ color: "var(--db-text-3)" }}>
-                <strong>CONTRATADA:</strong> {NEXUSFI_PARTY.razaoSocial} · CNPJ {NEXUSFI_PARTY.cnpj} ·{" "}
+                <strong>{t("contractedParty")}</strong> {NEXUSFI_PARTY.razaoSocial} · CNPJ {NEXUSFI_PARTY.cnpj} ·{" "}
                 {nexusfiEnderecoLinha()}
               </p>
               {rendered?.preamble.map((p, i) => (

@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -12,6 +13,7 @@ import Paywall from "@/app/components/Paywall";
 import { isPlanId } from "@/lib/startCheckout";
 
 export default function AssinaturaPage() {
+  const t = useTranslations("assinatura");
   const router = useRouter();
   const { loading: authLoading } = useAuth();
   const sub = useSubscription();
@@ -35,7 +37,7 @@ export default function AssinaturaPage() {
     router.replace(`/assinatura/contrato?plano=${encodeURIComponent(autoPlan)}`);
   }, [authLoading, sub.loading, sub.isOwner, sub.status, autoPlan, router]);
 
-  if (authLoading || sub.loading) return <PageLoader label="Carregando assinatura…" />;
+  if (authLoading || sub.loading) return <PageLoader label={t("loading")} />;
 
   const redirecting =
     !!autoPlan && isPlanId(autoPlan) && sub.isOwner && sub.status !== "active";
@@ -48,7 +50,7 @@ export default function AssinaturaPage() {
       >
         <Loader2 size={28} className="animate-spin" style={{ color: "var(--brand-500)" }} />
         <p className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>
-          Abrindo o contrato…
+          {t("openingContract")}
         </p>
       </div>
     );

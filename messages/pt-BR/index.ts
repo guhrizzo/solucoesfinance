@@ -21,6 +21,8 @@ import errors from './errors.json';
 import plans from './plans.json';
 import billing from './billing.json';
 import categories from './categories.json';
+import assinatura from './assinatura.json';
+import users from './users.json';
 
 const messages = {
   common,
@@ -43,6 +45,8 @@ const messages = {
   plans,
   billing,
   categories,
+  assinatura,
+  users,
 };
 
 export default messages;

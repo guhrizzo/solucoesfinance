@@ -3,8 +3,10 @@
 export const dynamic = "force-dynamic";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2, AlertCircle, ArrowRight, Receipt } from "lucide-react";
+import { formatDate } from "@/lib/format";
 import { authedFetch } from "@/lib/authedFetch";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useSubscription } from "@/app/hooks/useSubscription";
@@ -13,6 +15,8 @@ import { PageLoader } from "@/app/components/ui";
 type Phase = "confirming" | "ok" | "pending" | "error";
 
 function Retorno() {
+  const t = useTranslations("assinatura.retorno");
+  const locale = useLocale();
   const params = useSearchParams();
   const { loading: authLoading } = useAuth();
   const sub = useSubscription();
@@ -59,7 +63,7 @@ function Retorno() {
     if (authLoading) return;
     if (!orderNsu || !transactionNsu || !slug) {
       setPhase("error");
-      setMsg("Retorno de pagamento incompleto. Se você pagou, o acesso libera assim que a confirmação chegar.");
+      setMsg(t("incompleteReturn"));
       return;
     }
 
@@ -81,11 +85,11 @@ function Retorno() {
         if (data.pending || res.status >= 500) {
           setPhase("pending");
           if (tries.current < 6) setTimeout(confirm, 5000);
-          else setMsg("A confirmação está demorando. Você pode fechar esta página — o acesso libera sozinho quando o pagamento for processado.");
+          else setMsg(t("confirmDelayed"));
           return;
         }
         setPhase("error");
-        setMsg(data.error || "Não foi possível confirmar o pagamento.");
+        setMsg(data.error || t("confirmFailed"));
       } catch {
         if (stop) return;
         setPhase("pending");
@@ -96,14 +100,14 @@ function Retorno() {
     return () => {
       stop = true;
     };
-  }, [authLoading, orderNsu, transactionNsu, slug]);
+  }, [authLoading, orderNsu, transactionNsu, slug, t]);
 
   // Se a assinatura ficou ativa (via webhook, em paralelo), trata como sucesso
   // sem depender do resultado do /confirm.
   const webhookConfirmou = !sub.loading && sub.isActive && sub.status === "active";
   const effectivePhase: Phase = webhookConfirmou ? "ok" : phase;
 
-  if (authLoading) return <PageLoader label="Carregando…" />;
+  if (authLoading) return <PageLoader label={t("loading")} />;
 
   return (
     <div
@@ -118,17 +122,17 @@ function Retorno() {
           <>
             <CheckCircle2 size={44} className="mx-auto" style={{ color: "var(--success)" }} />
             <h1 className="mt-4 text-xl font-bold" style={{ color: "var(--db-text)" }}>
-              Pagamento confirmado
+              {t("okTitle")}
             </h1>
             <p className="mt-2 text-sm" style={{ color: "var(--db-text-3)" }}>
               {sub.accessUntil
-                ? `Acesso liberado até ${new Date(sub.accessUntil).toLocaleDateString("pt-BR")}.`
-                : "Seu acesso foi liberado."}
+                ? t("accessUntil", { date: formatDate(sub.accessUntil, locale) })
+                : t("accessReleased")}
             </p>
             {contractId && (
               <>
                 <p className="mt-2 text-xs" style={{ color: "var(--db-text-4)" }}>
-                  Enviamos uma cópia do contrato para o seu e-mail.
+                  {t("contractEmailed")}
                 </p>
                 <button
                   onClick={baixarContrato}
@@ -137,7 +141,7 @@ function Retorno() {
                   style={{ color: "var(--brand-500)" }}
                 >
                   {downloading ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
-                  Baixar contrato (PDF)
+                  {t("downloadContract")}
                 </button>
               </>
             )}
@@ -146,14 +150,14 @@ function Retorno() {
               className="mt-6 inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-xl"
               style={{ background: "linear-gradient(135deg, var(--brand-500), var(--brand-600))", color: "#fff" }}
             >
-              Ir para o dashboard <ArrowRight size={15} />
+              {t("goToDashboard")} <ArrowRight size={15} />
             </a>
           </>
         ) : effectivePhase === "error" ? (
           <>
             <AlertCircle size={44} className="mx-auto" style={{ color: "var(--danger)" }} />
             <h1 className="mt-4 text-xl font-bold" style={{ color: "var(--db-text)" }}>
-              Não foi possível confirmar
+              {t("errorTitle")}
             </h1>
             <p className="mt-2 text-sm" style={{ color: "var(--db-text-3)" }}>
               {msg}
@@ -163,17 +167,17 @@ function Retorno() {
               className="mt-6 inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-xl"
               style={{ background: "var(--db-card-alt)", border: "1px solid var(--db-border)", color: "var(--db-text-2)" }}
             >
-              Voltar para assinatura
+              {t("backToSubscription")}
             </a>
           </>
         ) : (
           <>
             <Loader2 size={44} className="mx-auto animate-spin" style={{ color: "var(--brand-500)" }} />
             <h1 className="mt-4 text-xl font-bold" style={{ color: "var(--db-text)" }}>
-              Confirmando pagamento…
+              {t("confirmingTitle")}
             </h1>
             <p className="mt-2 text-sm" style={{ color: "var(--db-text-3)" }}>
-              {msg || "Isso pode levar alguns segundos. Não feche a página."}
+              {msg || t("confirmingBody")}
             </p>
           </>
         )}
@@ -186,7 +190,7 @@ function Retorno() {
             className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold"
             style={{ color: "var(--db-text-3)" }}
           >
-            <Receipt size={12} /> Ver comprovante
+            <Receipt size={12} /> {t("viewReceipt")}
           </a>
         )}
       </div>
@@ -196,7 +200,7 @@ function Retorno() {
 
 export default function RetornoPage() {
   return (
-    <Suspense fallback={<PageLoader label="Carregando…" />}>
+    <Suspense fallback={<PageLoader />}>
       <Retorno />
     </Suspense>
   );
