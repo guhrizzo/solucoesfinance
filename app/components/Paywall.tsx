@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 
 import { Loader2, Check, ShieldCheck, LogOut, Sparkles } from "lucide-react";
@@ -10,9 +11,9 @@ import {
   getPlan,
   planFor,
   annualSavingsCents,
-  formatBRLFromCents,
   type BillingPeriod,
 } from "@/lib/billingPlans";
+import { formatMoneyFromCents, formatDate } from "@/lib/format";
 import type { SubscriptionState } from "@/lib/billing";
 
 // Tela de assinatura / paywall. Usada tanto pelo <SubscriptionGate> (quando o
@@ -28,6 +29,9 @@ interface Props {
 
 export default function Paywall({ state, blocking = false, initialError = null }: Props) {
   const router = useRouter();
+  const t = useTranslations("billing.paywall");
+  const tPlans = useTranslations("plans");
+  const locale = useLocale();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(initialError);
   const [period, setPeriod] = useState<BillingPeriod>("mensal");
@@ -48,26 +52,28 @@ export default function Paywall({ state, blocking = false, initialError = null }
   };
 
   const titulo = state.comped
-    ? "Acesso cortesia"
+    ? t("titleComped")
     : state.status === "past_due"
       ? blocking
-        ? "Seu acesso expirou"
-        : "Renovar assinatura"
+        ? t("titleExpired")
+        : t("titleRenew")
       : state.status === "trialing"
-        ? `Teste grátis — ${state.daysLeft} ${state.daysLeft === 1 ? "dia restante" : "dias restantes"}`
-        : "Sua assinatura está ativa";
+        ? t("titleTrial", { days: state.daysLeft })
+        : t("titleActive");
 
+  const planTierId = state.plan ? getPlan(state.plan)?.tier : undefined;
+  const planLabel = planTierId ? tPlans(`tier.${planTierId}.label`) : (state.plan ?? "");
   const subtitulo = state.comped
-    ? "Sua conta tem acesso completo e ilimitado, sem cobrança. Nada a pagar."
+    ? t("subComped")
     : state.status === "past_due"
       ? state.isOwner
-        ? "Escolha um plano pra continuar usando o NexusFi. Pagamento via Pix ou cartão em até 12x."
-        : "A assinatura desta conta está pendente. Fale com o titular pra regularizar o pagamento."
+        ? t("subExpiredOwner")
+        : t("subExpiredMember")
       : state.status === "trialing"
         ? state.isOwner
-          ? "Assine agora e não perca o acesso quando o teste acabar."
-          : "Conta em período de teste. O titular pode assinar a qualquer momento."
-        : `Plano ${state.plan ? (getPlan(state.plan)?.label ?? state.plan) : ""} · acesso até ${new Date(state.accessUntil).toLocaleDateString("pt-BR")}.`;
+          ? t("subTrialOwner")
+          : t("subTrialMember")
+        : t("subActive", { plan: planLabel, date: formatDate(state.accessUntil, locale) });
 
   const mostrarPlanos = state.isOwner && state.status !== "active" && !state.comped;
 
@@ -112,10 +118,10 @@ export default function Paywall({ state, blocking = false, initialError = null }
             <>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-bold" style={{ color: "var(--db-text)" }}>Escolha como pagar</p>
-                  <p className="mt-1 text-xs" style={{ color: "var(--db-text-3)" }}>Comece pelo mensal e mude quando quiser.</p>
+                  <p className="text-sm font-bold" style={{ color: "var(--db-text)" }}>{t("choosePayment")}</p>
+                  <p className="mt-1 text-xs" style={{ color: "var(--db-text-3)" }}>{t("choosePaymentHint")}</p>
                 </div>
-                <div className="inline-flex rounded-xl p-1" style={{ background: "var(--db-card-alt)", border: "1px solid var(--db-border)" }} role="group" aria-label="Período de cobrança">
+                <div className="inline-flex rounded-xl p-1" style={{ background: "var(--db-card-alt)", border: "1px solid var(--db-border)" }} role="group" aria-label={t("billingPeriod")}>
                   {BILLING_PERIODS.map((p) => (
                     <button
                       key={p.id}
@@ -129,8 +135,8 @@ export default function Paywall({ state, blocking = false, initialError = null }
                         boxShadow: period === p.id ? "var(--db-shadow-sm)" : "none",
                       }}
                     >
-                      {p.label}
-                      {p.id === "anual" && <span className="ml-1.5 text-[10px]" style={{ color: "var(--pos, #12854a)" }}>-2 meses</span>}
+                      {tPlans(`period.${p.id}.label`)}
+                      {p.id === "anual" && <span className="ml-1.5 text-[10px]" style={{ color: "var(--pos, #12854a)" }}>{t("annualBadge")}</span>}
                     </button>
                   ))}
                 </div>
@@ -140,6 +146,8 @@ export default function Paywall({ state, blocking = false, initialError = null }
                 {PLAN_TIERS.map((tier) => {
                   const plan = planFor(tier.id, period);
                   const savings = annualSavingsCents(tier.id);
+                  const tierLabel = tPlans(`tier.${tier.id}.label`);
+                  const tierFeatures = tPlans.raw(`tier.${tier.id}.features`) as string[];
                   return (
                     <div
                       key={tier.id}
@@ -151,28 +159,28 @@ export default function Paywall({ state, blocking = false, initialError = null }
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold uppercase tracking-wide" style={{ color: "var(--db-text-2)" }}>
-                          {tier.label}
+                          {tierLabel}
                         </span>
                         {tier.highlight && (
                           <span
                             className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                             style={{ background: "rgba(21,101,192,0.12)", color: "var(--brand-500)" }}
                           >
-                            Mais completo
+                            {t("mostComplete")}
                           </span>
                         )}
                       </div>
                       <p className="mt-2 text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
-                        {formatBRLFromCents(plan.priceCents)}
+                        {formatMoneyFromCents(plan.priceCents, locale)}
                         <span className="text-sm font-semibold" style={{ color: "var(--db-text-3)" }}>
-                          {period === "anual" ? "/ano" : "/mês"}
+                          {period === "anual" ? t("perYear") : t("perMonth")}
                         </span>
                       </p>
                       <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--db-text-3)" }}>
-                        {tier.blurb}
+                        {tPlans(`tier.${tier.id}.blurb`)}
                       </p>
                       <div className="mt-4 flex flex-col gap-2.5">
-                        {tier.features.slice(0, 4).map((feature) => (
+                        {tierFeatures.slice(0, 4).map((feature) => (
                           <div key={feature} className="flex items-start gap-2 text-xs" style={{ color: "var(--db-text-2)" }}>
                             <Check size={14} className="mt-0.5 shrink-0" style={{ color: "var(--brand-500)" }} />
                             <span>{feature}</span>
@@ -182,7 +190,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
                       <div className="mt-5 flex-1">
                         {period === "anual" && savings > 0 && (
                           <p className="text-xs font-semibold" style={{ color: "var(--pos, #12854a)" }}>
-                            Economize {formatBRLFromCents(savings)} por ano
+                            {t("annualSavings", { value: formatMoneyFromCents(savings, locale) })}
                           </p>
                         )}
                       </div>
@@ -200,7 +208,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
                         ) : (
                           <Check size={15} />
                         )}
-                        {state.status === "past_due" ? "Assinar" : "Assinar agora"}
+                        {state.status === "past_due" ? t("subscribe") : t("subscribeNow")}
                       </button>
                     </div>
                   );
@@ -210,7 +218,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
           )}
 
           <p className="flex items-center gap-1.5 mt-6 text-xs" style={{ color: "var(--db-text-4)" }}>
-            <ShieldCheck size={12} /> Pagamento processado pela InfinitePay.
+            <ShieldCheck size={12} /> {t("processedBy")}
           </p>
         </div>
 
@@ -219,7 +227,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
           className="inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
           style={{ color: "var(--db-text-3)" }}
         >
-          <LogOut size={12} /> Sair da conta
+          <LogOut size={12} /> {t("logout")}
         </button>
       </div>
 

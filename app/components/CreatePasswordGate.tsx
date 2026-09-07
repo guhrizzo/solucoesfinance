@@ -6,18 +6,16 @@
 // docs/superpowers/specs/2026-08-24-criar-user-senha-google-design.md
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Lock, User, Eye, EyeOff, AlertCircle, ShieldCheck, Check } from "lucide-react";
 import { linkPasswordToCurrentUser } from "@/lib/authLink";
 import { passwordRules } from "@/lib/passwordRules";
 
-const firebaseErrorMap: Record<string, string> = {
-  "auth/weak-password": "Senha fraca. Siga os requisitos indicados abaixo do campo de senha.",
-  "auth/password-does-not-meet-requirements": "Senha não atende aos requisitos mínimos de segurança.",
-  "auth/requires-recent-login": "Por segurança, saia e entre novamente com o Google antes de concluir esta etapa.",
-  "auth/network-request-failed": "Falha de rede. Verifique sua conexão.",
-};
-const getErrorMessage = (code: string) =>
-  firebaseErrorMap[code] ?? "Ocorreu um erro inesperado. Tente novamente.";
+const KNOWN_ERROR_CODES = new Set([
+  "auth/weak-password",
+  "auth/password-does-not-meet-requirements",
+  "auth/network-request-failed",
+]);
 
 interface CreatePasswordGateProps {
   open: boolean;
@@ -27,6 +25,16 @@ interface CreatePasswordGateProps {
 }
 
 export default function CreatePasswordGate({ open, email, suggestedName, onComplete }: CreatePasswordGateProps) {
+  const t = useTranslations("auth.createPasswordGate");
+  const tErr = useTranslations("auth.errors");
+  const tRules = useTranslations("auth.passwordRules");
+
+  const getErrorMessage = (code: string) => {
+    if (code === "auth/requires-recent-login") return t("errRecentLogin");
+    if (KNOWN_ERROR_CODES.has(code)) return tErr(code);
+    return tErr("unexpected");
+  };
+
   const [name, setName] = useState(suggestedName ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -96,9 +104,9 @@ export default function CreatePasswordGate({ open, email, suggestedName, onCompl
           <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3" style={{ background: "rgba(255,255,255,0.12)" }}>
             <ShieldCheck size={22} className="text-white" />
           </div>
-          <h1 className="text-lg font-extrabold text-white leading-snug">Complete seu cadastro</h1>
+          <h1 className="text-lg font-extrabold text-white leading-snug">{t("title")}</h1>
           <p className="text-blue-200/70 text-xs mt-1 leading-relaxed">
-            Você entrou pelo Google — falta definir seu nome e uma senha própria para usar em outras funções da plataforma.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -111,13 +119,13 @@ export default function CreatePasswordGate({ open, email, suggestedName, onCompl
           )}
 
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#0d2247" }}>Nome completo</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#0d2247" }}>{t("nameLabel")}</label>
             <div className="relative">
               <User size={15} className="cpg-icon" />
               <input
                 type="text"
                 className="cpg-input"
-                placeholder="Seu nome"
+                placeholder={t("namePlaceholder")}
                 value={name}
                 onChange={(e) => { setName(e.target.value); setError(null); }}
                 autoComplete="name"
@@ -127,13 +135,13 @@ export default function CreatePasswordGate({ open, email, suggestedName, onCompl
           </div>
 
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#0d2247" }}>Criar senha</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#0d2247" }}>{t("passwordLabel")}</label>
             <div className="relative">
               <Lock size={15} className="cpg-icon" />
               <input
                 type={showPass ? "text" : "password"}
                 className="cpg-input pr-10"
-                placeholder="Mínimo 12 caracteres"
+                placeholder={t("passwordPlaceholder")}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(null); }}
                 onFocus={() => setPasswordFocused(true)}
@@ -161,7 +169,7 @@ export default function CreatePasswordGate({ open, email, suggestedName, onCompl
                     <div className="cpg-rule-dot" style={{ background: ok ? "#10b981" : "#e2e8f0" }}>
                       {ok && <Check size={8} color="white" strokeWidth={3} />}
                     </div>
-                    {rule.label}
+                    {tRules(rule.key)}
                   </div>
                 );
               })}
@@ -169,13 +177,13 @@ export default function CreatePasswordGate({ open, email, suggestedName, onCompl
           )}
 
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#0d2247" }}>Confirmar senha</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "#0d2247" }}>{t("confirmLabel")}</label>
             <div className="relative">
               <Lock size={15} className="cpg-icon" />
               <input
                 type={showPass ? "text" : "password"}
                 className="cpg-input"
-                placeholder="Repita a senha"
+                placeholder={t("confirmPlaceholder")}
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
                 autoComplete="new-password"
@@ -183,12 +191,12 @@ export default function CreatePasswordGate({ open, email, suggestedName, onCompl
               />
             </div>
             {confirmPassword && !confirmOk && (
-              <p className="text-xs mt-1.5" style={{ color: "#e11d48" }}>As senhas não coincidem.</p>
+              <p className="text-xs mt-1.5" style={{ color: "#e11d48" }}>{t("passwordsDontMatch")}</p>
             )}
           </div>
 
           <button type="submit" disabled={!canSubmit || saving} className="cpg-btn">
-            {saving ? "Salvando..." : "Concluir cadastro"}
+            {saving ? t("submitting") : t("submit")}
           </button>
         </form>
       </div>

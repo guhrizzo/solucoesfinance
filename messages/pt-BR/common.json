@@ -12,6 +12,19 @@
   "search": "Buscar",
   "showPassword": "Mostrar senha",
   "hidePassword": "Ocultar senha",
+  "a11yWidget": {
+    "options": "Opções de acessibilidade",
+    "close": "Fechar opções de acessibilidade",
+    "heading": "Acessibilidade",
+    "textSize": "Tamanho do texto",
+    "decrease": "Diminuir tamanho do texto",
+    "reset100": "Restaurar tamanho do texto padrão (100%)",
+    "increase": "Aumentar tamanho do texto",
+    "underlineLinks": "Sublinhar links",
+    "reduceMotion": "Reduzir animações",
+    "libras": "Tradução em Libras",
+    "restoreDefaults": "Restaurar padrões"
+  },
   "cookies": {
     "ariaLabel": "Aviso de cookies e privacidade",
     "miniText": "Usamos cookies essenciais e, com sua permissão, de preferências e análise.",

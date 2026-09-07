@@ -19,6 +19,7 @@ import onboarding from './onboarding.json';
 import legal from './legal.json';
 import errors from './errors.json';
 import plans from './plans.json';
+import billing from './billing.json';
 
 const messages = {
   common,
@@ -39,6 +40,7 @@ const messages = {
   legal,
   errors,
   plans,
+  billing,
 };
 
 export default messages;

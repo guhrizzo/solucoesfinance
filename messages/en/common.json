@@ -12,6 +12,19 @@
   "search": "Search",
   "showPassword": "Show password",
   "hidePassword": "Hide password",
+  "a11yWidget": {
+    "options": "Accessibility options",
+    "close": "Close accessibility options",
+    "heading": "Accessibility",
+    "textSize": "Text size",
+    "decrease": "Decrease text size",
+    "reset100": "Reset text size to default (100%)",
+    "increase": "Increase text size",
+    "underlineLinks": "Underline links",
+    "reduceMotion": "Reduce motion",
+    "libras": "Libras (Brazilian Sign Language)",
+    "restoreDefaults": "Restore defaults"
+  },
   "cookies": {
     "ariaLabel": "Cookie and privacy notice",
     "miniText": "We use essential cookies and, with your permission, preference and analytics cookies.",

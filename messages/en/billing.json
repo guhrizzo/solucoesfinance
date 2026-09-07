@@ -1,0 +1,35 @@
+{
+  "trialBanner": {
+    "endsToday": "Your free trial ends <strong>today</strong>.",
+    "endsIn": "Your free trial ends <strong>in {days, plural, one {# day} other {# days}}</strong>.",
+    "ownerCta": "Subscribe so you don't lose access.",
+    "memberNote": "Talk to the account owner.",
+    "subscribeNow": "Subscribe now",
+    "dismiss": "Dismiss"
+  },
+  "paywall": {
+    "titleComped": "Complimentary access",
+    "titleExpired": "Your access has expired",
+    "titleRenew": "Renew subscription",
+    "titleTrial": "Free trial — {days, plural, one {# day left} other {# days left}}",
+    "titleActive": "Your subscription is active",
+    "subComped": "Your account has full, unlimited access at no charge. Nothing to pay.",
+    "subExpiredOwner": "Choose a plan to keep using NexusFi. Payment via Pix or card in up to 12 installments.",
+    "subExpiredMember": "This account's subscription is past due. Talk to the owner to sort out the payment.",
+    "subTrialOwner": "Subscribe now and don't lose access when the trial ends.",
+    "subTrialMember": "Account is in the trial period. The owner can subscribe at any time.",
+    "subActive": "{plan} plan · access until {date}.",
+    "choosePayment": "Choose how to pay",
+    "choosePaymentHint": "Start monthly and switch whenever you want.",
+    "billingPeriod": "Billing period",
+    "annualBadge": "-2 months",
+    "mostComplete": "Most complete",
+    "perYear": "/year",
+    "perMonth": "/month",
+    "annualSavings": "Save {value} per year",
+    "subscribe": "Subscribe",
+    "subscribeNow": "Subscribe now",
+    "processedBy": "Payment processed by InfinitePay.",
+    "logout": "Log out"
+  }
+}

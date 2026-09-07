@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 import { Sparkles, X } from "lucide-react";
 import { useSubscription } from "../hooks/useSubscription";
@@ -51,6 +52,7 @@ function Chrome({ pathname, children }: { pathname: string; children: React.Reac
 }
 
 function TrialBanner({ sub }: { sub: ReturnType<typeof useSubscription> }) {
+  const t = useTranslations("billing.trialBanner");
   const urgente = sub.daysLeft <= 2;
   const [hidden, setHidden] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -63,7 +65,7 @@ function TrialBanner({ sub }: { sub: ReturnType<typeof useSubscription> }) {
 
   if (hidden && !urgente) return null;
 
-  const dias = sub.daysLeft <= 0 ? "hoje" : `em ${sub.daysLeft} ${sub.daysLeft === 1 ? "dia" : "dias"}`;
+  const strong = { strong: (c: React.ReactNode) => <strong>{c}</strong> };
 
   return (
     <div
@@ -76,15 +78,17 @@ function TrialBanner({ sub }: { sub: ReturnType<typeof useSubscription> }) {
     >
       <Sparkles size={15} className="shrink-0" />
       <span className="flex-1">
-        Seu teste grátis termina <strong>{dias}</strong>.{" "}
-        {sub.isOwner ? "Assine para não perder o acesso." : "Fale com o titular da conta."}
+        {sub.daysLeft <= 0
+          ? t.rich("endsToday", strong)
+          : t.rich("endsIn", { ...strong, days: sub.daysLeft })}{" "}
+        {sub.isOwner ? t("ownerCta") : t("memberNote")}
       </span>
       {sub.isOwner && (
         <a
           href="/assinatura"
           className="font-semibold underline underline-offset-2 shrink-0"
         >
-          Assinar agora
+          {t("subscribeNow")}
         </a>
       )}
       {!urgente && (
@@ -97,7 +101,7 @@ function TrialBanner({ sub }: { sub: ReturnType<typeof useSubscription> }) {
               /* ignore */
             }
           }}
-          aria-label="Dispensar"
+          aria-label={t("dismiss")}
           className="shrink-0 opacity-60 hover:opacity-100"
         >
           <X size={14} />
