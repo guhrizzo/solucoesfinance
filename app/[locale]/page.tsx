@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { useLocale, useTranslations } from "next-intl";
 
 const MODAL_FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -18,7 +19,6 @@ function useMounted() {
 import {
   TrendingUp,
   TrendingDown,
-  DollarSign,
   BarChart2,
   Zap,
   ArrowRight,
@@ -27,7 +27,6 @@ import {
   X,
   Globe,
   PieChart,
-  Activity,
   Star,
   FileText,
   Users,
@@ -38,96 +37,52 @@ import {
 } from "lucide-react";
 import Footer from "@/app/components/Footer";
 import { Link } from "@/i18n/navigation";
+import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
+import { formatMoneyFromCents } from "@/lib/format";
 import {
   PLAN_TIERS,
   BILLING_PERIODS,
   planFor,
   monthlyEquivalentCents,
   annualSavingsCents,
-  formatBRLFromCents,
   type BillingPeriod,
 } from "@/lib/billingPlans";
 
-const stats = [
-  { label: "Empresas atendidas", value: "12.4K", change: "+18.2%", up: true },
-  { label: "Volume gerenciado", value: "R$ 9.1B", change: "+31.4%", up: true },
-  { label: "Relatórios gerados/mês", value: "890K", change: "+14.7%", up: true },
-  { label: "Redução de custos", value: "23%", change: "+3.1%", up: true },
-];
+// Ícones das funcionalidades — o texto vem de messages/*/landing.json
+// (features.items), na mesma ordem.
+const FEATURE_ICONS = [BarChart2, FileText, CreditCard, PieChart, Users, Globe];
 
-const features = [
-  {
-    icon: BarChart2,
-    title: "Fluxo de caixa em tempo real",
-    desc: "Visualize entradas, saídas e projeções do fluxo de caixa da sua empresa com painéis atualizados automaticamente.",
-  },
-  {
-    icon: FileText,
-    title: "Relatórios financeiros automáticos",
-    desc: "DRE, Balanço Patrimonial e relatórios gerenciais gerados automaticamente com base nos seus lançamentos.",
-  },
-  {
-    icon: CreditCard,
-    title: "Contas a pagar e receber",
-    desc: "Gerencie vencimentos, emita cobranças e controle inadimplência tudo em um só lugar, com alertas inteligentes.",
-  },
-  {
-    icon: PieChart,
-    title: "Centro de custos e orçamento",
-    desc: "Categorize despesas por departamento, defina metas orçamentárias e monitore desvios em tempo real.",
-  },
-  {
-    icon: Users,
-    title: "Multi-usuário e permissões",
-    desc: "Controle de acesso por perfil: administrador, financeiro, gestor. Cada colaborador vê apenas o que precisa.",
-  },
-  {
-    icon: Globe,
-    title: "Integração com marketplaces",
-    desc: "Conecte Mercado Livre e Shopee: cada venda entra automaticamente no fluxo de caixa, com taxas e repasses já lançados.",
-  },
-];
+type StatItem = { label: string; value: string; change: string };
+type FeatureItem = { title: string; desc: string };
+type TestimonialItem = { name: string; role: string; text: string };
 
-const testimonials = [
-  {
-    name: "Marcos Oliveira",
-    role: "CFO — Construtora Delta",
-    text: "Eliminamos planilhas manuais e reduzimos em 40% o tempo gasto com fechamento mensal. Visibilidade total do negócio.",
-    stars: 5,
-  },
-  {
-    name: "Patrícia Mendes",
-    role: "Diretora financeira — Grupo Viva",
-    text: "O controle de centros de custo nos ajudou a identificar onde estávamos perdendo margem. Resultado: 23% de redução de despesas.",
-    stars: 5,
-  },
-  {
-    name: "Bruno Castilho",
-    role: "Sócio — Castilho Advogados",
-    text: "Perfeito para escritórios. Emito relatórios para os sócios em minutos, com dados confiáveis e visualmente claros.",
-    stars: 5,
-  },
-];
-
-const painPoints = [
-  "Planilhas descentralizadas e propensas a erros",
-  "Fechamento mensal demorado e manual",
-  "Falta de visibilidade do fluxo de caixa",
-  "Dificuldade em controlar custos por área",
-];
-
-const tickers = [
-  { label: "Receita do mês", value: "R$ 1.24M", up: true },
-  { label: "Despesas do mês", value: "R$ 890K", up: false },
-  { label: "Margem líquida", value: "28.2%", up: true },
-  { label: "Inadimplência", value: "3.1%", up: false },
-  { label: "Fluxo projetado", value: "+ R$ 340K", up: true },
-  { label: "Contas vencendo hoje", value: "12", up: false },
-  { label: "NPS clientes", value: "74", up: true },
-  { label: "Custo operacional", value: "R$ 412K", up: false },
-];
+const NAV_ITEMS = ["features", "plans", "integrations", "useCases", "contact"] as const;
+const TICKER_KEYS = [
+  "monthRevenue",
+  "monthExpenses",
+  "netMargin",
+  "defaultRate",
+  "projectedFlow",
+  "dueToday",
+  "clientNps",
+  "opCost",
+] as const;
+const TICKER_VALUES: Record<(typeof TICKER_KEYS)[number], { value: string; up: boolean }> = {
+  monthRevenue: { value: "R$ 1.24M", up: true },
+  monthExpenses: { value: "R$ 890K", up: false },
+  netMargin: { value: "28.2%", up: true },
+  defaultRate: { value: "3.1%", up: false },
+  projectedFlow: { value: "+ R$ 340K", up: true },
+  dueToday: { value: "12", up: false },
+  clientNps: { value: "74", up: true },
+  opCost: { value: "R$ 412K", up: false },
+};
 
 export default function FinanceHome() {
+  const t = useTranslations("landing");
+  const tPlans = useTranslations("plans");
+  const locale = useLocale();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -136,8 +91,13 @@ export default function FinanceHome() {
   const [period, setPeriod] = useState<BillingPeriod>("mensal");
   const [periodModalOpen, setPeriodModalOpen] = useState(false);
   const mounted = useMounted();
-  const periodLabel =
-    BILLING_PERIODS.find((p) => p.id === period)?.label ?? "Mensal";
+  const periodLabel = tPlans(`period.${period}.label`);
+
+  const stats = t.raw("stats.items") as StatItem[];
+  const features = t.raw("features.items") as FeatureItem[];
+  const testimonials = t.raw("testimonials.items") as TestimonialItem[];
+  const painPoints = t.raw("problem.painPoints") as string[];
+  const solutionPoints = t.raw("problem.solutionPoints") as string[];
 
   // Dialog acessível pro modal de período — mesma técnica de
   // app/components/ui/Modal.tsx (role/foco/Esc/focus trap), só que inline:
@@ -352,44 +312,50 @@ export default function FinanceHome() {
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            {["Funcionalidades", "Planos", "Integrações", "Casos de uso", "Contato"].map((item) => (
-              <a key={item} href={item === "Planos" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium transition-colors">
-                {item}
+            {NAV_ITEMS.map((item) => (
+              <a key={item} href={item === "plans" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium transition-colors">
+                {t(`nav.${item}`)}
               </a>
             ))}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            <LocaleSwitcher className="text-white mr-1" />
             <Link href="/login">
               <button className="btn-outline text-white text-sm px-5 py-2 cursor-pointer rounded-full font-medium">
-                Entrar
+                {t("nav.login")}
               </button>
             </Link>
             <Link href="/register">
               <button className="btn-primary text-white text-sm px-5 py-2.5 rounded-full font-semibold cursor-pointer">
-                Testar grátis
+                {t("nav.tryFree")}
               </button>
             </Link>
           </div>
 
-          <button className="md:hidden text-white" onClick={() => setMenuOpen(!menuOpen)}>
+          <button
+            className="md:hidden text-white"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
+          >
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
 
         {menuOpen && (
           <div className="md:hidden nav-blur px-6 pb-6 flex flex-col gap-4">
-            {["Funcionalidades", "Planos", "Integrações", "Casos de uso", "Contato"].map((item) => (
-              <a key={item} href={item === "Planos" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium py-1 transition-colors">
-                {item}
+            {NAV_ITEMS.map((item) => (
+              <a key={item} href={item === "plans" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium py-1 transition-colors">
+                {t(`nav.${item}`)}
               </a>
             ))}
+            <LocaleSwitcher className="text-white py-1" />
             <div className="flex gap-3 pt-2">
               <Link href="/login">
-                <button className="btn-outline text-white text-sm px-5 py-2 rounded-full font-medium flex-1">Entrar</button>
+                <button className="btn-outline text-white text-sm px-5 py-2 rounded-full font-medium flex-1">{t("nav.login")}</button>
               </Link>
               <Link href="/register">
-                <button className="btn-primary text-white text-sm px-5 py-2.5 rounded-full font-semibold flex-1">Testar grátis</button>
+                <button className="btn-primary text-white text-sm px-5 py-2.5 rounded-full font-semibold flex-1">{t("nav.tryFree")}</button>
               </Link>
             </div>
           </div>
@@ -428,31 +394,31 @@ export default function FinanceHome() {
             <div>
               <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-6 fade-in">
                 <span className="w-2 h-2 rounded-full bg-green-400 pulse-dot" />
-                <span className="text-blue-100 text-xs font-medium mono">Novo · Integração com ERP e contabilidade</span>
+                <span className="text-blue-100 text-xs font-medium mono">{t("hero.badge")}</span>
               </div>
 
               <h1 className="text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 fade-in-delay-1">
-                Gestão financeira
+                {t("hero.titleLine1")}
                 <br />
                 <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(90deg, #42a5f5, #90caf9)" }}>
-                  que sua empresa
+                  {t("hero.titleLine2")}
                 </span>
                 <br />
-                merece.
+                {t("hero.titleLine3")}
               </h1>
 
               <p className="text-blue-200/70 text-lg leading-relaxed mb-8 max-w-lg fade-in-delay-2">
-                Centralize o financeiro da sua empresa: fluxo de caixa, contas a pagar e receber, relatórios automáticos e controle de custos — tudo em uma plataforma simples e poderosa.
+                {t("hero.subtitle")}
               </p>
 
               <div className="flex flex-wrap gap-4 fade-in-delay-3">
                 <Link href="/register">
                   <button className="btn-primary text-white font-semibold px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
-                    Testar 7 dias grátis <ArrowRight size={16} />
+                    {t("hero.ctaPrimary")} <ArrowRight size={16} />
                   </button>
                 </Link>
                 <button className="btn-outline text-white font-medium px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
-                  Agendar demonstração
+                  {t("hero.ctaSecondary")}
                 </button>
               </div>
 
@@ -465,7 +431,9 @@ export default function FinanceHome() {
                   ))}
                 </div>
                 <p className="text-blue-200/60 text-sm">
-                  <span className="text-white font-semibold">+ 500 empresas</span> já organizam suas finanças com a NexusFi
+                  {t.rich("hero.socialProof", {
+                    strong: (chunks) => <span className="text-white font-semibold">{chunks}</span>,
+                  })}
                 </p>
               </div>
             </div>
@@ -475,11 +443,11 @@ export default function FinanceHome() {
               <div className="card-glass rounded-2xl p-6 glow-blue">
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <p className="text-blue-300/60 text-xs mono uppercase tracking-widest">Fluxo de caixa — Outubro</p>
-                    <p className="text-white text-3xl font-bold mt-1">+ R$ 348.200</p>
+                    <p className="text-blue-300/60 text-xs mono uppercase tracking-widest">{t("heroWidget.cashFlowLabel")}</p>
+                    <p className="text-white text-3xl font-bold mt-1">{t("heroWidget.cashFlowValue")}</p>
                   </div>
                   <span className="bg-green-500/20 text-green-400 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-1">
-                    <TrendingUp size={13} /> +12.8%
+                    <TrendingUp size={13} /> {t("heroWidget.cashFlowDelta")}
                   </span>
                 </div>
 
@@ -495,23 +463,23 @@ export default function FinanceHome() {
                   ))}
                 </div>
                 <div className="flex justify-between text-blue-300/40 text-xs mono mb-5">
-                  <span>Jan</span><span>Mar</span><span>Mai</span><span>Jul</span><span>Set</span><span>Out</span>
+                  <span>{t("heroWidget.months.jan")}</span><span>{t("heroWidget.months.mar")}</span><span>{t("heroWidget.months.may")}</span><span>{t("heroWidget.months.jul")}</span><span>{t("heroWidget.months.sep")}</span><span>{t("heroWidget.months.oct")}</span>
                 </div>
 
                 {/* Mini KPIs */}
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: "Receita bruta", val: "R$ 1.24M", up: true },
-                    { label: "Despesas totais", val: "R$ 890K", up: false },
-                    { label: "Margem líquida", val: "28.2%", up: true },
-                    { label: "Inadimplência", val: "3.1%", up: false },
+                    { label: t("heroWidget.kpiGrossRevenue"), val: "R$ 1.24M", up: true },
+                    { label: t("heroWidget.kpiTotalExpenses"), val: "R$ 890K", up: false },
+                    { label: t("heroWidget.kpiNetMargin"), val: "28.2%", up: true },
+                    { label: t("heroWidget.kpiDefaultRate"), val: "3.1%", up: false },
                   ].map((k) => (
                     <div key={k.label} className="bg-white/5 rounded-xl p-3">
                       <p className="text-blue-300/75 text-xs mb-1">{k.label}</p>
                       <p className="text-white font-bold text-sm mono">{k.val}</p>
                       <span className={`text-xs flex items-center gap-0.5 mt-0.5 ${k.up ? "text-green-400" : "text-red-400"}`}>
                         {k.up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                        {k.up ? "dentro da meta" : "atenção"}
+                        {k.up ? t("heroWidget.onTarget") : t("heroWidget.attention")}
                       </span>
                     </div>
                   ))}
@@ -524,16 +492,19 @@ export default function FinanceHome() {
         {/* Ticker */}
         <div className="relative z-10 bg-blue-950/60 border-t border-white/5 py-3 overflow-hidden">
           <div className="ticker-track">
-            {[...tickers, ...tickers].map((t, i) => (
-              <div key={i} className="flex items-center gap-2 shrink-0">
-                <span className="text-blue-300/75 text-xs mono">{t.label}</span>
-                <span className="text-white text-xs font-semibold mono">{t.value}</span>
-                <span className={`text-xs mono ${t.up ? "text-green-400" : "text-red-400"}`}>
-                  {t.up ? "▲" : "▼"}
-                </span>
-                <span className="text-white/10 text-xs">|</span>
-              </div>
-            ))}
+            {[...TICKER_KEYS, ...TICKER_KEYS].map((key, i) => {
+              const tk = TICKER_VALUES[key];
+              return (
+                <div key={i} className="flex items-center gap-2 shrink-0">
+                  <span className="text-blue-300/75 text-xs mono">{t(`ticker.${key}`)}</span>
+                  <span className="text-white text-xs font-semibold mono">{tk.value}</span>
+                  <span className={`text-xs mono ${tk.up ? "text-green-400" : "text-red-400"}`}>
+                    {tk.up ? "▲" : "▼"}
+                  </span>
+                  <span className="text-white/10 text-xs">|</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -546,9 +517,9 @@ export default function FinanceHome() {
               <div key={s.label} className="stat-card bg-white rounded-2xl p-6 border border-blue-50 shadow-sm shadow-blue-50">
                 <p className="text-slate-500 text-xs font-medium mb-2">{s.label}</p>
                 <p className="text-blue-900 text-3xl font-extrabold mb-1">{s.value}</p>
-                <span className={`text-xs font-semibold flex items-center gap-1 ${s.up ? "text-green-500" : "text-red-500"}`}>
-                  {s.up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  {s.change} <span className="text-slate-500 font-normal">vs. ano anterior</span>
+                <span className="text-xs font-semibold flex items-center gap-1 text-green-500">
+                  <TrendingUp size={12} />
+                  {s.change} <span className="text-slate-500 font-normal">{t("stats.vsPreviousYear")}</span>
                 </span>
               </div>
             ))}
@@ -562,12 +533,12 @@ export default function FinanceHome() {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="section-line">
               <h2 className="text-4xl font-extrabold text-blue-950 leading-tight mb-6">
-                Chega de planilhas.
+                {t("problem.titleLine1")}
                 <br />
-                Assuma o controle.
+                {t("problem.titleLine2")}
               </h2>
               <p className="text-slate-500 leading-relaxed mb-8">
-                A maioria das empresas ainda gerencia o financeiro em planilhas descentralizadas, com risco de erros, retrabalho e falta de visibilidade. A NexusFi resolve isso de uma vez.
+                {t("problem.body")}
               </p>
               <ul className="space-y-3">
                 {painPoints.map((p) => (
@@ -580,22 +551,17 @@ export default function FinanceHome() {
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
-              <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-6">Com a NexusFi</p>
+              <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-6">{t("problem.solutionLabel")}</p>
               <div className="space-y-5">
-                {[
-                  { label: "Dados financeiros centralizados", pct: 100 },
-                  { label: "Relatórios automáticos e precisos", pct: 100 },
-                  { label: "Fluxo de caixa sempre visível", pct: 100 },
-                  { label: "Controle de custos por centro", pct: 100 },
-                ].map((item) => (
-                  <div key={item.label}>
+                {solutionPoints.map((label) => (
+                  <div key={label}>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="text-blue-950 font-medium flex items-center gap-2">
-                        <CheckCircle size={14} className="text-green-500" /> {item.label}
+                        <CheckCircle size={14} className="text-green-500" /> {label}
                       </span>
                     </div>
                     <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden">
-                      <div className="progress-bar h-full bg-linear-to-r from-blue-500 to-blue-400 rounded-full" style={{ width: `${item.pct}%` }} />
+                      <div className="progress-bar h-full bg-linear-to-r from-blue-500 to-blue-400 rounded-full" style={{ width: "100%" }} />
                     </div>
                   </div>
                 ))}
@@ -610,32 +576,32 @@ export default function FinanceHome() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-xl mb-14 section-line">
             <h2 className="text-4xl font-extrabold text-blue-950 leading-tight">
-              Tudo que o financeiro da sua empresa precisa
+              {t("features.title")}
             </h2>
             <p className="text-slate-500 mt-4 leading-relaxed">
-              Módulos integrados pensados para PMEs, startups e empresas em crescimento.
+              {t("features.subtitle")}
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((f) => (
-              <div key={f.title} className="group feature-card bg-white rounded-2xl p-6 border border-slate-100 shadow-sm cursor-pointer transition-all duration-300 ease-in-out hover:border-[#1565c0] hover:shadow-[0_8px_30px_rgba(21,101,192,0.1)] hover:-translate-y-1">
-                <div className="relative w-11 h-11 mb-4 flex items-center justify-center group">
-
-                  {/* Fundo que gira */}
-                  <div className="absolute inset-0 rounded-xl bg-blue-50 border border-blue-100/40 transition-transform duration-300 group-hover:rotate-15 group-hover:scale-105"></div>
-
-                  {/* Ícone fixo */}
-                  <f.icon size={20} className="relative text-blue-600 scale-100 z-10 group-hover:scale-105 ease-in-out duration-200" />
-
+            {features.map((f, i) => {
+              const Icon = FEATURE_ICONS[i] ?? BarChart2;
+              return (
+                <div key={f.title} className="group feature-card bg-white rounded-2xl p-6 border border-slate-100 shadow-sm cursor-pointer transition-all duration-300 ease-in-out hover:border-[#1565c0] hover:shadow-[0_8px_30px_rgba(21,101,192,0.1)] hover:-translate-y-1">
+                  <div className="relative w-11 h-11 mb-4 flex items-center justify-center group">
+                    {/* Fundo que gira */}
+                    <div className="absolute inset-0 rounded-xl bg-blue-50 border border-blue-100/40 transition-transform duration-300 group-hover:rotate-15 group-hover:scale-105"></div>
+                    {/* Ícone fixo */}
+                    <Icon size={20} className="relative text-blue-600 scale-100 z-10 group-hover:scale-105 ease-in-out duration-200" />
+                  </div>
+                  <h3 className="text-blue-950 font-bold mb-2">{f.title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
+                  <div className="flex items-center gap-1 mt-4 text-blue-500 text-sm font-medium">
+                    {t("features.learnMore")} <ChevronRight size={14} />
+                  </div>
                 </div>
-                <h3 className="text-blue-950 font-bold mb-2">{f.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
-                <div className="flex items-center gap-1 mt-4 text-blue-500 text-sm font-medium">
-                  Saiba mais <ChevronRight size={14} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -644,12 +610,14 @@ export default function FinanceHome() {
       <section className="py-24 bg-white" id="planos">
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-xl mx-auto text-center mb-14">
-            <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-3">Planos e preços</p>
+            <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-3">{t("pricing.eyebrow")}</p>
             <h2 className="text-4xl font-extrabold text-blue-950 leading-tight">
-              Escolha o plano ideal para sua empresa
+              {t("pricing.title")}
             </h2>
             <p className="text-slate-500 mt-4 leading-relaxed">
-              Teste grátis por <span className="text-blue-600 font-semibold">7 dias</span> em qualquer plano. Sem cartão de crédito, sem compromisso.
+              {t.rich("pricing.subtitle", {
+                accent: (chunks) => <span className="text-blue-600 font-semibold">{chunks}</span>,
+              })}
             </p>
           </div>
 
@@ -660,10 +628,10 @@ export default function FinanceHome() {
               onClick={() => setPeriodModalOpen(true)}
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-blue-950 shadow-sm transition-colors hover:border-blue-300 cursor-pointer"
             >
-              Cobrança: <span className="text-blue-600">{periodLabel}</span>
+              {t("pricing.billingLabel")} <span className="text-blue-600">{periodLabel}</span>
               {period === "anual" && (
                 <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-700">
-                  2 meses de desconto
+                  {t("pricing.annualDiscountBadge")}
                 </span>
               )}
               <ChevronDown size={15} className="text-slate-400" />
@@ -675,6 +643,10 @@ export default function FinanceHome() {
               const plan = planFor(tier.id, period);
               const destaque = !!tier.highlight;
               const savings = annualSavingsCents(tier.id);
+              const tierLabel = tPlans(`tier.${tier.id}.label`);
+              const tierFeatures = tPlans.raw(`tier.${tier.id}.features`) as string[];
+              const tierFeaturesLead =
+                tier.id === "pro" ? tPlans(`tier.pro.featuresLead`) : null;
               return (
                 <div
                   key={tier.id}
@@ -687,7 +659,7 @@ export default function FinanceHome() {
                   {destaque && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                       <span className="bg-linear-to-r from-blue-700 to-blue-600 text-white text-xs font-semibold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
-                        Mais completo
+                        {t("pricing.mostComplete")}
                       </span>
                     </div>
                   )}
@@ -702,39 +674,39 @@ export default function FinanceHome() {
                       <Zap size={20} className="text-blue-600" />
                     )}
                   </div>
-                  <h3 className="text-blue-950 text-xl font-bold mb-1">Plano {tier.label}</h3>
-                  <p className="text-slate-500 text-sm mb-5">{tier.blurb}</p>
+                  <h3 className="text-blue-950 text-xl font-bold mb-1">{t("pricing.planName", { name: tierLabel })}</h3>
+                  <p className="text-slate-500 text-sm mb-5">{tPlans(`tier.${tier.id}.blurb`)}</p>
                   <div className="mb-1 flex items-end gap-1">
                     <span className="text-blue-950 text-4xl font-extrabold">
-                      {formatBRLFromCents(plan.priceCents)}
+                      {formatMoneyFromCents(plan.priceCents, locale)}
                     </span>
                     <span className="text-slate-500 text-sm font-medium mb-1">
-                      {period === "anual" ? "/ano" : "/mês"}
+                      {period === "anual" ? t("pricing.perYear") : t("pricing.perMonth")}
                     </span>
                   </div>
                   {period === "anual" ? (
                     <p className="text-slate-500 text-xs mb-1">
-                      equivale a {formatBRLFromCents(monthlyEquivalentCents(plan))}/mês
+                      {t("pricing.annualEquivalent", { value: formatMoneyFromCents(monthlyEquivalentCents(plan), locale) })}
                     </p>
                   ) : (
                     <p className="text-slate-500 text-xs mb-1">
-                      {formatBRLFromCents(planFor(tier.id, "anual").priceCents)}/ano no plano anual
+                      {t("pricing.annualHint", { value: formatMoneyFromCents(planFor(tier.id, "anual").priceCents, locale) })}
                     </p>
                   )}
                   {period === "anual" && savings > 0 && (
                     <p className="text-green-700 text-xs font-semibold mb-1">
-                      Economize {formatBRLFromCents(savings)} por ano
+                      {t("pricing.annualSavings", { value: formatMoneyFromCents(savings, locale) })}
                     </p>
                   )}
                   <p className="text-green-700 text-xs font-semibold mt-3 mb-6 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
-                    7 dias grátis para testar
+                    {t("pricing.trialNote")}
                   </p>
                   <ul className="space-y-3 mb-8 flex-1">
-                    {tier.featuresLead && (
-                      <li className="text-blue-950 text-sm font-semibold">{tier.featuresLead}</li>
+                    {tierFeaturesLead && (
+                      <li className="text-blue-950 text-sm font-semibold">{tierFeaturesLead}</li>
                     )}
-                    {tier.features.map((item) => (
+                    {tierFeatures.map((item) => (
                       <li key={item} className="flex items-start gap-2.5 text-slate-600 text-sm">
                         <CheckCircle size={15} className="text-green-500 shrink-0 mt-0.5" />
                         {item}
@@ -749,7 +721,7 @@ export default function FinanceHome() {
                           : "border border-blue-200 text-blue-600 hover:bg-blue-50"
                       }`}
                     >
-                      Assinar plano {tier.label}
+                      {t("pricing.subscribe", { name: tierLabel })}
                     </button>
                   </Link>
                 </div>
@@ -781,22 +753,24 @@ export default function FinanceHome() {
                 className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
               >
                 <div className="flex items-start justify-between mb-1">
-                  <h3 id={periodModalTitleId} className="text-lg font-bold text-blue-950">Período de cobrança</h3>
+                  <h3 id={periodModalTitleId} className="text-lg font-bold text-blue-950">{t("pricing.modal.title")}</h3>
                   <button
                     type="button"
                     onClick={() => setPeriodModalOpen(false)}
                     className="text-slate-400 hover:text-slate-600 cursor-pointer"
-                    aria-label="Fechar"
+                    aria-label={t("pricing.modal.close")}
                   >
                     <X size={18} />
                   </button>
                 </div>
                 <p className="text-slate-500 text-sm mb-5">
-                  Mensal ou anual — você escolhe como prefere pagar e pode mudar depois.
+                  {t("pricing.modal.body")}
                 </p>
                 <div className="space-y-2.5">
                   {BILLING_PERIODS.map((p) => {
                     const active = p.id === period;
+                    const pLabel = tPlans(`period.${p.id}.label`);
+                    const pNote = tPlans(`period.${p.id}.note`);
                     return (
                       <button
                         key={p.id}
@@ -812,9 +786,9 @@ export default function FinanceHome() {
                         }`}
                       >
                         <span>
-                          <span className="block font-semibold text-blue-950">{p.label}</span>
-                          {p.note && (
-                            <span className="block text-xs font-medium text-green-700">{p.note}</span>
+                          <span className="block font-semibold text-blue-950">{pLabel}</span>
+                          {pNote && (
+                            <span className="block text-xs font-medium text-green-700">{pNote}</span>
                           )}
                         </span>
                         <span
@@ -838,23 +812,23 @@ export default function FinanceHome() {
       {/* CTA Section */}
       <section className="py-24" style={{ background: "linear-gradient(135deg, #0d2247 0%, #0e3a7a 50%, #1565c0 100%)" }}>
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-blue-300 text-sm font-medium mono uppercase tracking-widest mb-4">Sem cartão de crédito</p>
+          <p className="text-blue-300 text-sm font-medium mono uppercase tracking-widest mb-4">{t("cta.eyebrow")}</p>
           <h2 className="text-4xl lg:text-5xl font-extrabold text-white leading-tight mb-6">
-            Organize o financeiro
+            {t("cta.titleLine1")}
             <br />
-            da sua empresa hoje.
+            {t("cta.titleLine2")}
           </h2>
           <p className="text-blue-200/70 text-lg mb-10 max-w-xl mx-auto">
-            7 dias grátis, configuração em menos de 5 minutos, suporte humano incluído.
+            {t("cta.body")}
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/register">
               <button className="btn-primary text-white font-semibold px-8 py-4 rounded-xl flex items-center gap-2 cursor-pointer text-base">
-                Começar teste grátis <ArrowRight size={17} />
+                {t("cta.primary")} <ArrowRight size={17} />
               </button>
             </Link>
             <button className="btn-outline text-white font-medium px-8 py-4 rounded-xl cursor-pointer text-base">
-              Falar com consultor
+              {t("cta.secondary")}
             </button>
           </div>
         </div>
@@ -865,25 +839,25 @@ export default function FinanceHome() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-xl mb-14 section-line">
             <h2 className="text-4xl font-extrabold text-blue-950 leading-tight">
-              Empresas que transformaram seu financeiro
+              {t("testimonials.title")}
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((t) => (
-              <div key={t.name} className="bg-slate-50 rounded-2xl p-7 border border-slate-100">
+            {testimonials.map((tm) => (
+              <div key={tm.name} className="bg-slate-50 rounded-2xl p-7 border border-slate-100">
                 <div className="flex gap-0.5 mb-4">
-                  {Array(t.stars).fill(0).map((_, i) => (
+                  {Array(5).fill(0).map((_, i) => (
                     <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <p className="text-slate-600 leading-relaxed mb-5 text-sm">"{t.text}"</p>
+                <p className="text-slate-600 leading-relaxed mb-5 text-sm">&ldquo;{tm.text}&rdquo;</p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                    {t.name[0]}
+                    {tm.name[0]}
                   </div>
                   <div>
-                    <p className="text-blue-950 font-semibold text-sm">{t.name}</p>
-                    <p className="text-slate-500 text-xs">{t.role}</p>
+                    <p className="text-blue-950 font-semibold text-sm">{tm.name}</p>
+                    <p className="text-slate-500 text-xs">{tm.role}</p>
                   </div>
                 </div>
               </div>

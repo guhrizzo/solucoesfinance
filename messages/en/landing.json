@@ -1,1 +1,191 @@
-{}
+{
+  "meta": {
+    "title": "NexusFi — Financial management for businesses",
+    "description": "Centralize your company's finances: cash flow, payables and receivables, automated reports and cost control.",
+    "ogTitle": "NexusFi — Financial management for businesses",
+    "ogDescription": "A complete platform to organize your company's finances with real-time data."
+  },
+  "nav": {
+    "features": "Features",
+    "plans": "Pricing",
+    "integrations": "Integrations",
+    "useCases": "Use cases",
+    "contact": "Contact",
+    "login": "Log in",
+    "tryFree": "Try for free",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "hero": {
+    "badge": "New · ERP and accounting integration",
+    "titleLine1": "The financial management",
+    "titleLine2": "your company",
+    "titleLine3": "deserves.",
+    "subtitle": "Centralize your company's finances: cash flow, payables and receivables, automated reports and cost control — all in one simple, powerful platform.",
+    "ctaPrimary": "Start 7-day free trial",
+    "ctaSecondary": "Book a demo",
+    "socialProof": "<strong>500+ companies</strong> already run their finances on NexusFi"
+  },
+  "heroWidget": {
+    "cashFlowLabel": "Cash flow — October",
+    "cashFlowValue": "+ R$ 348,200",
+    "cashFlowDelta": "+12.8%",
+    "months": { "jan": "Jan", "mar": "Mar", "may": "May", "jul": "Jul", "sep": "Sep", "oct": "Oct" },
+    "kpiGrossRevenue": "Gross revenue",
+    "kpiTotalExpenses": "Total expenses",
+    "kpiNetMargin": "Net margin",
+    "kpiDefaultRate": "Default rate",
+    "onTarget": "on target",
+    "attention": "attention"
+  },
+  "ticker": {
+    "monthRevenue": "Month revenue",
+    "monthExpenses": "Month expenses",
+    "netMargin": "Net margin",
+    "defaultRate": "Default rate",
+    "projectedFlow": "Projected flow",
+    "dueToday": "Bills due today",
+    "clientNps": "Client NPS",
+    "opCost": "Operating cost"
+  },
+  "stats": {
+    "vsPreviousYear": "vs. previous year",
+    "items": [
+      { "label": "Companies served", "value": "12.4K", "change": "+18.2%" },
+      { "label": "Volume managed", "value": "R$ 9.1B", "change": "+31.4%" },
+      { "label": "Reports generated/month", "value": "890K", "change": "+14.7%" },
+      { "label": "Cost reduction", "value": "23%", "change": "+3.1%" }
+    ]
+  },
+  "problem": {
+    "titleLine1": "No more spreadsheets.",
+    "titleLine2": "Take control.",
+    "body": "Most companies still manage finances in scattered spreadsheets, with the risk of errors, rework and no visibility. NexusFi fixes that for good.",
+    "painPoints": [
+      "Scattered, error-prone spreadsheets",
+      "Slow, manual monthly close",
+      "No visibility into cash flow",
+      "Hard to control costs by area"
+    ],
+    "solutionLabel": "With NexusFi",
+    "solutionPoints": [
+      "Centralized financial data",
+      "Automated, accurate reports",
+      "Cash flow always visible",
+      "Cost control by cost center"
+    ]
+  },
+  "features": {
+    "title": "Everything your company's finance team needs",
+    "subtitle": "Integrated modules built for SMBs, startups and growing companies.",
+    "learnMore": "Learn more",
+    "items": [
+      {
+        "title": "Real-time cash flow",
+        "desc": "See your company's inflows, outflows and cash-flow projections on dashboards that update automatically."
+      },
+      {
+        "title": "Automated financial reports",
+        "desc": "Income statement, balance sheet and management reports generated automatically from your entries."
+      },
+      {
+        "title": "Payables and receivables",
+        "desc": "Manage due dates, issue invoices and track overdue accounts all in one place, with smart alerts."
+      },
+      {
+        "title": "Cost centers and budgeting",
+        "desc": "Categorize expenses by department, set budget targets and monitor variances in real time."
+      },
+      {
+        "title": "Multi-user and permissions",
+        "desc": "Role-based access: admin, finance, manager. Each teammate sees only what they need."
+      },
+      {
+        "title": "Marketplace integration",
+        "desc": "Connect Mercado Livre and Shopee: every sale flows automatically into cash flow, with fees and payouts already posted."
+      }
+    ]
+  },
+  "pricing": {
+    "eyebrow": "Pricing",
+    "title": "Choose the right plan for your company",
+    "subtitle": "Free <accent>7-day trial</accent> on any plan. No credit card, no commitment.",
+    "billingLabel": "Billing:",
+    "annualDiscountBadge": "2 months off",
+    "planName": "{name} plan",
+    "perYear": "/year",
+    "perMonth": "/month",
+    "annualEquivalent": "equals {value}/month",
+    "annualHint": "{value}/year on the annual plan",
+    "annualSavings": "Save {value} per year",
+    "trialNote": "7-day free trial",
+    "mostComplete": "Most complete",
+    "subscribe": "Subscribe to {name} plan",
+    "modal": {
+      "title": "Billing period",
+      "body": "Monthly or annual — you choose how you'd rather pay, and you can change it later.",
+      "close": "Close"
+    }
+  },
+  "cta": {
+    "eyebrow": "No credit card",
+    "titleLine1": "Organize your company's",
+    "titleLine2": "finances today.",
+    "body": "7 days free, setup in under 5 minutes, human support included.",
+    "primary": "Start free trial",
+    "secondary": "Talk to a consultant"
+  },
+  "testimonials": {
+    "title": "Companies that transformed their finances",
+    "items": [
+      {
+        "name": "Marcos Oliveira",
+        "role": "CFO — Construtora Delta",
+        "text": "We eliminated manual spreadsheets and cut the time spent on monthly close by 40%. Full visibility into the business."
+      },
+      {
+        "name": "Patrícia Mendes",
+        "role": "Finance Director — Grupo Viva",
+        "text": "Cost-center tracking helped us find where we were losing margin. The result: a 23% cut in expenses."
+      },
+      {
+        "name": "Bruno Castilho",
+        "role": "Partner — Castilho Advogados",
+        "text": "Perfect for firms. I send reports to the partners in minutes, with reliable data that's visually clear."
+      }
+    ]
+  },
+  "footer": {
+    "tagline": "Complete financial management for businesses: cash flow, accounts and reports in one place.",
+    "colProduct": "Product",
+    "colCompany": "Company",
+    "colSupport": "Support",
+    "product": {
+      "cashFlow": "Cash flow",
+      "payables": "Payables/receivables",
+      "reports": "Reports",
+      "api": "API"
+    },
+    "company": {
+      "about": "About",
+      "blog": "Blog",
+      "careers": "Careers",
+      "press": "Press"
+    },
+    "support": {
+      "privacy": "Privacy Policy",
+      "accessibility": "Accessibility Statement",
+      "help": "Help center",
+      "contact": "Contact",
+      "status": "Status"
+    },
+    "rights": "© {year} NexusFi. All rights reserved.",
+    "lgpd": "LGPD compliant"
+  },
+  "localeSwitcher": {
+    "label": "Language",
+    "pt-BR": "Português",
+    "en": "English",
+    "es": "Español"
+  }
+}

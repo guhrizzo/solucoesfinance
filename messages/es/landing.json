@@ -1,1 +1,191 @@
-{}
+{
+  "meta": {
+    "title": "NexusFi — Gestión financiera para empresas",
+    "description": "Centraliza las finanzas de tu empresa: flujo de caja, cuentas por pagar y cobrar, informes automáticos y control de costos.",
+    "ogTitle": "NexusFi — Gestión financiera para empresas",
+    "ogDescription": "Una plataforma completa para organizar las finanzas de tu empresa con datos en tiempo real."
+  },
+  "nav": {
+    "features": "Funcionalidades",
+    "plans": "Precios",
+    "integrations": "Integraciones",
+    "useCases": "Casos de uso",
+    "contact": "Contacto",
+    "login": "Ingresar",
+    "tryFree": "Probar gratis",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
+  },
+  "hero": {
+    "badge": "Nuevo · Integración con ERP y contabilidad",
+    "titleLine1": "La gestión financiera",
+    "titleLine2": "que tu empresa",
+    "titleLine3": "merece.",
+    "subtitle": "Centraliza las finanzas de tu empresa: flujo de caja, cuentas por pagar y cobrar, informes automáticos y control de costos, todo en una plataforma simple y potente.",
+    "ctaPrimary": "Probar 7 días gratis",
+    "ctaSecondary": "Agendar demostración",
+    "socialProof": "<strong>+500 empresas</strong> ya organizan sus finanzas con NexusFi"
+  },
+  "heroWidget": {
+    "cashFlowLabel": "Flujo de caja — Octubre",
+    "cashFlowValue": "+ R$ 348.200",
+    "cashFlowDelta": "+12.8%",
+    "months": { "jan": "Ene", "mar": "Mar", "may": "May", "jul": "Jul", "sep": "Sep", "oct": "Oct" },
+    "kpiGrossRevenue": "Ingreso bruto",
+    "kpiTotalExpenses": "Gastos totales",
+    "kpiNetMargin": "Margen neto",
+    "kpiDefaultRate": "Morosidad",
+    "onTarget": "dentro del objetivo",
+    "attention": "atención"
+  },
+  "ticker": {
+    "monthRevenue": "Ingresos del mes",
+    "monthExpenses": "Gastos del mes",
+    "netMargin": "Margen neto",
+    "defaultRate": "Morosidad",
+    "projectedFlow": "Flujo proyectado",
+    "dueToday": "Cuentas que vencen hoy",
+    "clientNps": "NPS de clientes",
+    "opCost": "Costo operativo"
+  },
+  "stats": {
+    "vsPreviousYear": "vs. año anterior",
+    "items": [
+      { "label": "Empresas atendidas", "value": "12.4K", "change": "+18.2%" },
+      { "label": "Volumen gestionado", "value": "R$ 9.1B", "change": "+31.4%" },
+      { "label": "Informes generados/mes", "value": "890K", "change": "+14.7%" },
+      { "label": "Reducción de costos", "value": "23%", "change": "+3.1%" }
+    ]
+  },
+  "problem": {
+    "titleLine1": "Basta de planillas.",
+    "titleLine2": "Toma el control.",
+    "body": "La mayoría de las empresas todavía gestiona las finanzas en planillas descentralizadas, con riesgo de errores, retrabajo y falta de visibilidad. NexusFi lo resuelve de una vez.",
+    "painPoints": [
+      "Planillas descentralizadas y propensas a errores",
+      "Cierre mensual lento y manual",
+      "Falta de visibilidad del flujo de caja",
+      "Dificultad para controlar costos por área"
+    ],
+    "solutionLabel": "Con NexusFi",
+    "solutionPoints": [
+      "Datos financieros centralizados",
+      "Informes automáticos y precisos",
+      "Flujo de caja siempre visible",
+      "Control de costos por centro"
+    ]
+  },
+  "features": {
+    "title": "Todo lo que el área financiera de tu empresa necesita",
+    "subtitle": "Módulos integrados pensados para pymes, startups y empresas en crecimiento.",
+    "learnMore": "Saber más",
+    "items": [
+      {
+        "title": "Flujo de caja en tiempo real",
+        "desc": "Visualiza ingresos, egresos y proyecciones del flujo de caja de tu empresa con paneles que se actualizan automáticamente."
+      },
+      {
+        "title": "Informes financieros automáticos",
+        "desc": "Estado de resultados, balance general e informes de gestión generados automáticamente a partir de tus registros."
+      },
+      {
+        "title": "Cuentas por pagar y cobrar",
+        "desc": "Gestiona vencimientos, emite cobros y controla la morosidad, todo en un solo lugar, con alertas inteligentes."
+      },
+      {
+        "title": "Centros de costo y presupuesto",
+        "desc": "Clasifica gastos por departamento, define metas presupuestarias y monitorea desvíos en tiempo real."
+      },
+      {
+        "title": "Multiusuario y permisos",
+        "desc": "Control de acceso por perfil: administrador, finanzas, gerente. Cada colaborador ve solo lo que necesita."
+      },
+      {
+        "title": "Integración con marketplaces",
+        "desc": "Conecta Mercado Libre y Shopee: cada venta entra automáticamente en el flujo de caja, con tarifas y liquidaciones ya registradas."
+      }
+    ]
+  },
+  "pricing": {
+    "eyebrow": "Precios",
+    "title": "Elige el plan ideal para tu empresa",
+    "subtitle": "Prueba gratis por <accent>7 días</accent> en cualquier plan. Sin tarjeta de crédito, sin compromiso.",
+    "billingLabel": "Facturación:",
+    "annualDiscountBadge": "2 meses de descuento",
+    "planName": "Plan {name}",
+    "perYear": "/año",
+    "perMonth": "/mes",
+    "annualEquivalent": "equivale a {value}/mes",
+    "annualHint": "{value}/año en el plan anual",
+    "annualSavings": "Ahorra {value} por año",
+    "trialNote": "7 días gratis para probar",
+    "mostComplete": "Más completo",
+    "subscribe": "Suscribirse al plan {name}",
+    "modal": {
+      "title": "Período de facturación",
+      "body": "Mensual o anual: eliges cómo prefieres pagar y puedes cambiarlo después.",
+      "close": "Cerrar"
+    }
+  },
+  "cta": {
+    "eyebrow": "Sin tarjeta de crédito",
+    "titleLine1": "Organiza las finanzas de",
+    "titleLine2": "tu empresa hoy.",
+    "body": "7 días gratis, configuración en menos de 5 minutos, soporte humano incluido.",
+    "primary": "Comenzar prueba gratis",
+    "secondary": "Hablar con un consultor"
+  },
+  "testimonials": {
+    "title": "Empresas que transformaron sus finanzas",
+    "items": [
+      {
+        "name": "Marcos Oliveira",
+        "role": "CFO — Construtora Delta",
+        "text": "Eliminamos las planillas manuales y redujimos un 40% el tiempo del cierre mensual. Visibilidad total del negocio."
+      },
+      {
+        "name": "Patrícia Mendes",
+        "role": "Directora financiera — Grupo Viva",
+        "text": "El control de centros de costo nos ayudó a identificar dónde perdíamos margen. Resultado: 23% de reducción de gastos."
+      },
+      {
+        "name": "Bruno Castilho",
+        "role": "Socio — Castilho Advogados",
+        "text": "Perfecto para despachos. Envío informes a los socios en minutos, con datos confiables y visualmente claros."
+      }
+    ]
+  },
+  "footer": {
+    "tagline": "Gestión financiera completa para empresas: flujo de caja, cuentas e informes en un solo lugar.",
+    "colProduct": "Producto",
+    "colCompany": "Empresa",
+    "colSupport": "Soporte",
+    "product": {
+      "cashFlow": "Flujo de caja",
+      "payables": "Cuentas por pagar/cobrar",
+      "reports": "Informes",
+      "api": "API"
+    },
+    "company": {
+      "about": "Acerca de",
+      "blog": "Blog",
+      "careers": "Empleo",
+      "press": "Prensa"
+    },
+    "support": {
+      "privacy": "Política de Privacidad",
+      "accessibility": "Declaración de Accesibilidad",
+      "help": "Centro de ayuda",
+      "contact": "Contacto",
+      "status": "Estado"
+    },
+    "rights": "© {year} NexusFi. Todos los derechos reservados.",
+    "lgpd": "En conformidad con la LGPD"
+  },
+  "localeSwitcher": {
+    "label": "Idioma",
+    "pt-BR": "Português",
+    "en": "English",
+    "es": "Español"
+  }
+}

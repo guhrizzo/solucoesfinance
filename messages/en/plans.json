@@ -1,0 +1,32 @@
+{
+  "tier": {
+    "basico": {
+      "label": "Basic",
+      "blurb": "Your company's essential financial control, organized in one place.",
+      "features": [
+        "Real-time cash flow",
+        "Payables and receivables",
+        "Automated reports (income statement)",
+        "Unlimited cost centers",
+        "Multi-user with permissions",
+        "Email support"
+      ]
+    },
+    "pro": {
+      "label": "Pro",
+      "blurb": "Everything in Basic, plus marketplace integrations and AI automation.",
+      "featuresLead": "Everything in Basic, plus:",
+      "features": [
+        "Mercado Livre and Shopee integration",
+        "AI automation: cash-flow, income-statement and payables/receivables reconciliation",
+        "Product inventory control",
+        "Sales dashboard",
+        "Priority support"
+      ]
+    }
+  },
+  "period": {
+    "mensal": { "label": "Monthly", "note": "" },
+    "anual": { "label": "Annual", "note": "2 months off" }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "tier": {
+    "basico": {
+      "label": "Básico",
+      "blurb": "O controle financeiro essencial da sua empresa, organizado num só lugar.",
+      "features": [
+        "Fluxo de caixa em tempo real",
+        "Contas a pagar e a receber",
+        "Relatórios automáticos (DRE)",
+        "Centro de custos ilimitado",
+        "Multiusuário com permissões",
+        "Suporte por e-mail"
+      ]
+    },
+    "pro": {
+      "label": "Pro",
+      "blurb": "Tudo do Básico, com integrações de marketplace e automação por IA.",
+      "featuresLead": "Tudo do Básico, e mais:",
+      "features": [
+        "Integração com Mercado Livre e Shopee",
+        "Automação por IA: conciliação do fluxo de caixa, DRE e contas a pagar/receber",
+        "Controle de estoque de produtos",
+        "Painel de vendas",
+        "Suporte prioritário"
+      ]
+    }
+  },
+  "period": {
+    "mensal": { "label": "Mensal", "note": "" },
+    "anual": { "label": "Anual", "note": "2 meses de desconto" }
+  }
+}

@@ -26,9 +26,12 @@ const fail = (msg) => {
 
 function flatten(obj, prefix = "") {
   const out = {};
-  for (const [k, v] of Object.entries(obj)) {
+  const entries = Array.isArray(obj)
+    ? obj.map((v, i) => [String(i), v])
+    : Object.entries(obj);
+  for (const [k, v] of entries) {
     const key = prefix ? `${prefix}.${k}` : k;
-    if (v && typeof v === "object" && !Array.isArray(v)) {
+    if (v && typeof v === "object") {
       Object.assign(out, flatten(v, key));
     } else {
       out[key] = v;

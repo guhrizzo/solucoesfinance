@@ -1,7 +1,6 @@
 // GERADO — índice de mensagens do idioma. Importa cada namespace
 // estaticamente (evita a corrida de compilação do import() dinâmico no
-// Turbopack). Ao adicionar um namespace, adicione o arquivo .json e a
-// linha correspondente aqui + em scripts/i18n-check.mjs.
+// Turbopack). Ao adicionar um namespace: crie o .json e a linha aqui.
 import common from './common.json';
 import nav from './nav.json';
 import auth from './auth.json';
@@ -19,6 +18,7 @@ import landing from './landing.json';
 import onboarding from './onboarding.json';
 import legal from './legal.json';
 import errors from './errors.json';
+import plans from './plans.json';
 
 const messages = {
   common,
@@ -38,6 +38,7 @@ const messages = {
   onboarding,
   legal,
   errors,
+  plans,
 };
 
 export default messages;
