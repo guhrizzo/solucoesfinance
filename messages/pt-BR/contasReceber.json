@@ -1,1 +1,182 @@
-{}
+{
+  "meta": {
+    "title": "Contas a receber",
+    "newBill": "Nova cobrança",
+    "newBillFab": "Nova conta a receber"
+  },
+  "header": {
+    "allClear": "✓ Tudo em dia!",
+    "dueSoon": "{count, plural, one {# vence nos próximos {days} dias} other {# vencem nos próximos {days} dias}}",
+    "overdue": "{count, plural, one {# cobrança atrasada} other {# cobranças atrasadas}}"
+  },
+  "alertButton": {
+    "title": "Alertas: {days} dias",
+    "aria": "Configurar alertas de prazo — hoje em {days} dias"
+  },
+  "kpi": {
+    "toReceive": "A receber",
+    "overdue": "Atrasadas",
+    "received": "Recebidas",
+    "alert": "Alerta ({days}d)",
+    "billCount": "{count, plural, one {# cobrança} other {# cobranças}}",
+    "dueSoon": "vence em breve"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar descrição ou observação…",
+    "searchAria": "Buscar descrição ou observação",
+    "filterAll": "Todos",
+    "categoryAll": "Todas",
+    "monthHint": "Vencimentos deste mês — troque o mês no seletor da Navbar",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
+  },
+  "sections": {
+    "atrasado": "Atrasadas",
+    "pendente": "Pendentes",
+    "agendado": "Agendadas",
+    "recebido": "Recebidas"
+  },
+  "status": {
+    "pendente": "Pendente",
+    "recebido": "Recebido",
+    "atrasado": "Atrasado",
+    "agendado": "Agendado"
+  },
+  "categories": {
+    "clientes": "Clientes",
+    "servicos": "Serviços",
+    "produtos": "Produtos",
+    "devolucoes": "Devoluções",
+    "emprestimos": "Empréstimos",
+    "outros": "Outros"
+  },
+  "empty": {
+    "noResults": "Nenhum resultado",
+    "nothingIn": "Nada em {period}",
+    "adjustFilters": "Ajuste os filtros para ver outras cobranças.",
+    "noneThisMonth": "Nenhuma cobrança vence neste mês. Troque o mês no seletor da Navbar ou adicione uma cobrança.",
+    "addBill": "Adicionar cobrança"
+  },
+  "card": {
+    "installment": "Parcela {index}/{count}",
+    "photoCount": "{count, plural, one {# foto} other {# fotos}}",
+    "viewPhotos": "{count, plural, one {Ver # foto anexada} other {Ver # fotos anexadas}}",
+    "receivedOn": "Recebido em {date}",
+    "overdueBy": "{count, plural, one {Atrasado há # dia} other {Atrasado há # dias}} · {date}",
+    "dueToday": "⚠️ Vence hoje! · {date}",
+    "dueIn": "{count, plural, one {Vence em # dia} other {Vence em # dias}} · {date}",
+    "prevMethod": "Prev:",
+    "receivedMethod": "Rec:",
+    "markReceived": "Marcar como recebido",
+    "received": "Recebido",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "settleLabel": "Recebido"
+  },
+  "modal": {
+    "editTitle": "Editar cobrança",
+    "newTitle": "Nova cobrança",
+    "autoPost": "Ao receber, lança automaticamente no Fluxo de Caixa",
+    "tabBillEditing": "Cobrança",
+    "tabBillNew": "Nova cobrança",
+    "tabCadastro": "Cadastro",
+    "fieldTitle": "Descrição",
+    "fieldTitlePlaceholder": "Ex: Venda para Empresa X",
+    "amountPerInstallment": "Valor por parcela (R$)",
+    "amount": "Valor (R$)",
+    "firstDueDate": "1º prazo",
+    "dueDate": "Prazo",
+    "category": "Categoria",
+    "recurrence": "Recorrência",
+    "recurrenceUnica": "Única",
+    "recurrenceNumeral": "Numeral",
+    "numeralDisabled": "Parcelamento só na criação de uma cobrança nova",
+    "monthlyInstallments": "Parcelas mensais",
+    "fixedAfterCreate": "(fixo após criar)",
+    "installmentsRange": "Informe de 2 a 60 parcelas.",
+    "installmentsPreview": "{count} parcelas de {amount} · total {total}",
+    "initialStatus": "Status inicial",
+    "seriesStartsPending": "Toda série começa pendente. Baixe cada parcela ao recebê-la.",
+    "photos": "Fotos (invoice, recibo...) — {count}",
+    "photoAlt": "Foto {index}",
+    "removePhoto": "Remover foto {index}",
+    "uploading": "Enviando...",
+    "addPhoto": "Adicionar foto",
+    "uploadError": "Erro ao upload: {message}",
+    "paymentMethodLabel": "Forma de recebimento prevista",
+    "notes": "Observação (opcional)",
+    "notesPlaceholder": "Nome do cliente, referência…",
+    "saving": "Salvando…",
+    "saveChanges": "Salvar alterações",
+    "createBill": "Criar cobrança",
+    "notAuthenticated": "Não autenticado",
+    "pinConfirmEditTitle": "Confirmar edição",
+    "pinConfirmCreateTitle": "Confirmar criação",
+    "pinConfirmSaveSubtitle": "Digite seu PIN de 4 dígitos para salvar",
+    "saveError": "Erro ao salvar"
+  },
+  "alertSettings": {
+    "title": "Alertas de cobrança",
+    "question": "Quantos dias antes do prazo alertar?",
+    "oneDay": "1 dia",
+    "thirtyDays": "30 dias",
+    "dayShort": "{days}d",
+    "preview": "Você verá um badge no menu e um toast ao entrar na página quando uma cobrança vencer em até <strong>{count, plural, one {# dia} other {# dias}}</strong>.",
+    "cancel": "Cancelar",
+    "save": "Salvar"
+  },
+  "gallery": {
+    "counterAria": "Foto {index} de {total}",
+    "photoAlt": "Foto {index}",
+    "prev": "Foto anterior",
+    "next": "Próxima foto"
+  },
+  "receiveModal": {
+    "title": "Registrar recebimento",
+    "summary": "{title} · {amount}",
+    "receiveDate": "Data do recebimento",
+    "paymentMethodLabel": "Forma de recebimento utilizada",
+    "registering": "Registrando…",
+    "confirm": "Confirmar recebimento",
+    "registerError": "Erro ao registrar recebimento",
+    "pinTitle": "Confirmar recebimento",
+    "pinSubtitle": "Digite seu PIN de 4 dígitos para confirmar a baixa"
+  },
+  "cashflowNote": {
+    "installment": "Cobrança · Parcela {index}/{count}",
+    "single": "Cobrança · {recurrence}",
+    "recurrenceUnica": "Única",
+    "recurrenceNumeral": "Parcelada"
+  },
+  "seriesDelete": {
+    "title": "Excluir parcela",
+    "message": "\"{title}\" — parcela {index}/{count}. Parcelas já recebidas nunca são removidas.",
+    "action": "Excluir"
+  },
+  "seriesEdit": {
+    "title": "Aplicar em quais parcelas?",
+    "message": "Você editou a parcela {index}/{count} de \"{title}\".",
+    "action": "Salvando"
+  },
+  "confirmDelete": {
+    "pinTitle": "Confirmar exclusão",
+    "pinSubtitle": "Digite seu PIN de 4 dígitos para excluir esta cobrança."
+  },
+  "error": {
+    "connect": "Erro ao conectar",
+    "tryAgain": "Tentar novamente"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alertas configurados para # dia antes do prazo} other {Alertas configurados para # dias antes do prazo}}",
+    "overdueOnLoad": "{count, plural, one {# cobrança atrasada — procure receber!} other {# cobranças atrasadas — procure receber!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# cobrança vence nos próximos {days} dias} other {# cobranças vencem nos próximos {days} dias}}",
+    "installmentsCreated": "{count} parcelas criadas ({from} → {to})",
+    "billUpdated": "Cobrança atualizada!",
+    "billCreated": "Cobrança criada!",
+    "futureInstallmentsUpdated": "{count, plural, one {# parcela futura atualizada} other {# parcelas futuras atualizadas}}",
+    "noFutureInstallments": "Nenhuma parcela futura pendente",
+    "receivedPosted": "Recebido! Lançado no Fluxo de Caixa ✓",
+    "installmentsRemoved": "{count, plural, one {# parcela removida.} other {# parcelas removidas.}}",
+    "billRemoved": "Cobrança removida.",
+    "seriesUpdateError": "Erro ao atualizar a série"
+  }
+}

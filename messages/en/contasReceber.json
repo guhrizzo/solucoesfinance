@@ -1,1 +1,182 @@
-{}
+{
+  "meta": {
+    "title": "Accounts receivable",
+    "newBill": "New invoice",
+    "newBillFab": "New account receivable"
+  },
+  "header": {
+    "allClear": "✓ All caught up!",
+    "dueSoon": "{count, plural, one {# due in the next {days} days} other {# due in the next {days} days}}",
+    "overdue": "{count, plural, one {# overdue invoice} other {# overdue invoices}}"
+  },
+  "alertButton": {
+    "title": "Alerts: {days} days",
+    "aria": "Configure due-date alerts — currently {days} days ahead"
+  },
+  "kpi": {
+    "toReceive": "To receive",
+    "overdue": "Overdue",
+    "received": "Received",
+    "alert": "Alert ({days}d)",
+    "billCount": "{count, plural, one {# invoice} other {# invoices}}",
+    "dueSoon": "due soon"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search description or note…",
+    "searchAria": "Search description or note",
+    "filterAll": "All",
+    "categoryAll": "All",
+    "monthHint": "Due dates this month — change the month in the Navbar selector",
+    "resultCount": "{count, plural, one {# result} other {# results}}"
+  },
+  "sections": {
+    "atrasado": "Overdue",
+    "pendente": "Pending",
+    "agendado": "Scheduled",
+    "recebido": "Received"
+  },
+  "status": {
+    "pendente": "Pending",
+    "recebido": "Received",
+    "atrasado": "Overdue",
+    "agendado": "Scheduled"
+  },
+  "categories": {
+    "clientes": "Customers",
+    "servicos": "Services",
+    "produtos": "Products",
+    "devolucoes": "Refunds",
+    "emprestimos": "Loans",
+    "outros": "Other"
+  },
+  "empty": {
+    "noResults": "No results",
+    "nothingIn": "Nothing in {period}",
+    "adjustFilters": "Adjust the filters to see other invoices.",
+    "noneThisMonth": "No invoice is due this month. Change the month in the Navbar selector or add an invoice.",
+    "addBill": "Add invoice"
+  },
+  "card": {
+    "installment": "Installment {index}/{count}",
+    "photoCount": "{count, plural, one {# photo} other {# photos}}",
+    "viewPhotos": "{count, plural, one {View # attached photo} other {View # attached photos}}",
+    "receivedOn": "Received on {date}",
+    "overdueBy": "{count, plural, one {Overdue by # day} other {Overdue by # days}} · {date}",
+    "dueToday": "⚠️ Due today! · {date}",
+    "dueIn": "{count, plural, one {Due in # day} other {Due in # days}} · {date}",
+    "prevMethod": "Est.:",
+    "receivedMethod": "Rec.:",
+    "markReceived": "Mark as received",
+    "received": "Received",
+    "edit": "Edit",
+    "delete": "Delete",
+    "settleLabel": "Received"
+  },
+  "modal": {
+    "editTitle": "Edit invoice",
+    "newTitle": "New invoice",
+    "autoPost": "When received, it's automatically posted to Cash Flow",
+    "tabBillEditing": "Invoice",
+    "tabBillNew": "New invoice",
+    "tabCadastro": "Contact",
+    "fieldTitle": "Description",
+    "fieldTitlePlaceholder": "e.g. Sale to Company X",
+    "amountPerInstallment": "Amount per installment (R$)",
+    "amount": "Amount (R$)",
+    "firstDueDate": "1st term",
+    "dueDate": "Term",
+    "category": "Category",
+    "recurrence": "Recurrence",
+    "recurrenceUnica": "One-off",
+    "recurrenceNumeral": "Installments",
+    "numeralDisabled": "Installments can only be set when creating a new invoice",
+    "monthlyInstallments": "Monthly installments",
+    "fixedAfterCreate": "(fixed after creation)",
+    "installmentsRange": "Enter 2 to 60 installments.",
+    "installmentsPreview": "{count} installments of {amount} · total {total}",
+    "initialStatus": "Initial status",
+    "seriesStartsPending": "Every series starts pending. Settle each installment when you receive it.",
+    "photos": "Photos (invoice, receipt...) — {count}",
+    "photoAlt": "Photo {index}",
+    "removePhoto": "Remove photo {index}",
+    "uploading": "Uploading...",
+    "addPhoto": "Add photo",
+    "uploadError": "Upload error: {message}",
+    "paymentMethodLabel": "Expected receipt method",
+    "notes": "Note (optional)",
+    "notesPlaceholder": "Customer name, reference…",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "createBill": "Create invoice",
+    "notAuthenticated": "Not authenticated",
+    "pinConfirmEditTitle": "Confirm edit",
+    "pinConfirmCreateTitle": "Confirm creation",
+    "pinConfirmSaveSubtitle": "Enter your 4-digit PIN to save",
+    "saveError": "Error saving"
+  },
+  "alertSettings": {
+    "title": "Collection alerts",
+    "question": "How many days before the term should we alert you?",
+    "oneDay": "1 day",
+    "thirtyDays": "30 days",
+    "dayShort": "{days}d",
+    "preview": "You'll see a menu badge and a toast when you open the page if an invoice is due within <strong>{count, plural, one {# day} other {# days}}</strong>.",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "gallery": {
+    "counterAria": "Photo {index} of {total}",
+    "photoAlt": "Photo {index}",
+    "prev": "Previous photo",
+    "next": "Next photo"
+  },
+  "receiveModal": {
+    "title": "Record receipt",
+    "summary": "{title} · {amount}",
+    "receiveDate": "Receipt date",
+    "paymentMethodLabel": "Receipt method used",
+    "registering": "Recording…",
+    "confirm": "Confirm receipt",
+    "registerError": "Error recording receipt",
+    "pinTitle": "Confirm receipt",
+    "pinSubtitle": "Enter your 4-digit PIN to confirm the settlement"
+  },
+  "cashflowNote": {
+    "installment": "Invoice · Installment {index}/{count}",
+    "single": "Invoice · {recurrence}",
+    "recurrenceUnica": "One-off",
+    "recurrenceNumeral": "Installments"
+  },
+  "seriesDelete": {
+    "title": "Delete installment",
+    "message": "\"{title}\" — installment {index}/{count}. Installments already received are never removed.",
+    "action": "Delete"
+  },
+  "seriesEdit": {
+    "title": "Apply to which installments?",
+    "message": "You edited installment {index}/{count} of \"{title}\".",
+    "action": "Saving"
+  },
+  "confirmDelete": {
+    "pinTitle": "Confirm deletion",
+    "pinSubtitle": "Enter your 4-digit PIN to delete this invoice."
+  },
+  "error": {
+    "connect": "Connection error",
+    "tryAgain": "Try again"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alerts set to # day before the term} other {Alerts set to # days before the term}}",
+    "overdueOnLoad": "{count, plural, one {# overdue invoice — follow up on collection!} other {# overdue invoices — follow up on collection!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# invoice due in the next {days} days} other {# invoices due in the next {days} days}}",
+    "installmentsCreated": "{count} installments created ({from} → {to})",
+    "billUpdated": "Invoice updated!",
+    "billCreated": "Invoice created!",
+    "futureInstallmentsUpdated": "{count, plural, one {# future installment updated} other {# future installments updated}}",
+    "noFutureInstallments": "No pending future installments",
+    "receivedPosted": "Received! Posted to Cash Flow ✓",
+    "installmentsRemoved": "{count, plural, one {# installment removed.} other {# installments removed.}}",
+    "billRemoved": "Invoice removed.",
+    "seriesUpdateError": "Error updating the series"
+  }
+}

@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useMemo, useCallback, useId, useRef } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
     Plus, X, Check, Trash2, Edit3, AlertTriangle,
     CalendarClock, Loader2, Search, Filter,
@@ -20,6 +21,7 @@ import { CadastroManager, CadastroField, formatDoc, onlyDigits } from "@/app/com
 import type { PaymentMethod } from "@/app/types/payment";
 import { verifyPin, loadPinHash, getPinLockStatus } from "@/app/hooks/usePin";
 import { usePeriod } from "@/app/hooks/usePeriod";
+import { formatMoney } from "@/lib/format";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "@/app/components/AuditTrail";
 import SeriesScopeDialog, { type SeriesScope } from "@/app/components/SeriesScopeDialog";
@@ -72,28 +74,28 @@ interface Receivable {
 
 const TODAY = new Date().toISOString().split("T")[0];
 
-const CATEGORIES: { label: string; icon: LucideIcon; color: string }[] = [
-    { label: "Clientes", icon: Building2, color: "var(--pos)" },
-    { label: "Serviços", icon: Zap, color: "var(--brand)" },
-    { label: "Produtos", icon: Receipt, color: "var(--warn)" },
-    { label: "Devoluções", icon: ArrowUpRight, color: "var(--brand)" },
-    { label: "Empréstimos", icon: CircleDollarSign, color: "var(--brand)" },
-    { label: "Outros", icon: Tag, color: "var(--text-subtle)" },
+// `label` é o VALOR gravado no Firestore (`receivable.category`) e casado por
+// string em CAT_TO_CASHFLOW — NÃO traduzir. `key` indexa
+// contasReceber.categories p/ exibição.
+const CATEGORIES: { label: string; key: string; icon: LucideIcon; color: string }[] = [
+    { label: "Clientes", key: "clientes", icon: Building2, color: "var(--pos)" },
+    { label: "Serviços", key: "servicos", icon: Zap, color: "var(--brand)" },
+    { label: "Produtos", key: "produtos", icon: Receipt, color: "var(--warn)" },
+    { label: "Devoluções", key: "devolucoes", icon: ArrowUpRight, color: "var(--brand)" },
+    { label: "Empréstimos", key: "emprestimos", icon: CircleDollarSign, color: "var(--brand)" },
+    { label: "Outros", key: "outros", icon: Tag, color: "var(--text-subtle)" },
 ];
 
-const RECURRENCE_LABEL: Record<Recurrence, string> = {
-    unica: "Única",
-    numeral: "Parcelada",
+// Só tokens de cor por status — o rótulo vem de contasReceber.status.<key>.
+const STATUS_META: Record<ReceivableStatus, { bg: string; color: string; border: string }> = {
+    pendente: { bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)" },
+    recebido: { bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)" },
+    atrasado: { bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)" },
+    agendado: { bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)" },
 };
 
-const STATUS_META: Record<ReceivableStatus, { label: string; bg: string; color: string; border: string }> = {
-    pendente: { label: "Pendente", bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)" },
-    recebido: { label: "Recebido", bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)" },
-    atrasado: { label: "Atrasado", bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)" },
-    agendado: { label: "Agendado", bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)" },
-};
-
-// Mapeamento de categoria → cashflow
+// Mapeamento de categoria (valor gravado) → categoria do Fluxo de Caixa
+// (também valor gravado, casado por string no cashflow) — NÃO traduzir.
 const CAT_TO_CASHFLOW: Record<string, string> = {
     "Clientes": "Vendas",
     "Serviços": "Serviços",
@@ -105,12 +107,11 @@ const CAT_TO_CASHFLOW: Record<string, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const toBRL = (n: number) =>
-    n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
-const labelDate = (d: string) =>
+const labelDate = (d: string, locale: string) =>
     new Date(d + "T12:00:00")
-        .toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+        .toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" })
         .replace(/\./g, "");
 
 const daysUntil = (d: string): number => {
@@ -141,17 +142,17 @@ function parseAmount(raw: string): number {
 function formatAmount(raw: string): string {
     // Remove tudo que não é número, vírgula ou ponto
     let s = raw.replace(/[^\d,.]/g, "");
-    
+
     // Se estiver vazio, retorna vazio
     if (!s) return "";
-    
+
     // Se tem vírgula (formato brasileiro), separa inteiros e decimais
     if (s.includes(",")) {
         const [intPart, decPart] = s.split(",");
         const formatted = intPart.replace(/\./g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         return decPart !== undefined ? formatted + "," + decPart : formatted;
     }
-    
+
     // Se não tem vírgula, retorna apenas os dígitos sem formatação de milhares
     // Isso permite o usuário digitar valores sem separadores
     return s;
@@ -191,6 +192,11 @@ interface ReceivableModalProps {
 }
 
 function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModalProps) {
+    const t = useTranslations("contasReceber.modal");
+    const tCat = useTranslations("contasReceber.categories");
+    const tStatus = useTranslations("contasReceber.status");
+    const tPin = useTranslations("common.pin");
+    const locale = useLocale();
     const [title, setTitle] = useState("");
     const [rawAmt, setRawAmt] = useState("");
     const [dueDate, setDueDate] = useState(TODAY);
@@ -307,14 +313,14 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
             const timestamp = Date.now();
             const filename = `${timestamp}-${file.name}`;
             const storageRef = ref(storage, `receivables/${filename}`);
-            
+
             await uploadBytes(storageRef, file);
             const url = await getDownloadURL(storageRef);
-            
+
             setPhotos(prev => [...prev, url]);
             setErr("");
         } catch (e: any) {
-            setErr(`Erro ao upload: ${e.message}`);
+            setErr(t("uploadError", { message: e.message }));
         } finally {
             setUploadingPhoto(false);
         }
@@ -326,10 +332,10 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
     async function submit() {
         if (!canSave || saving) return;
-        if (!uid) { setErr("Não autenticado"); return; }
+        if (!uid) { setErr(t("notAuthenticated")); return; }
         const pinHash = await loadPinHash(uid);
         if (!pinHash) {
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
             return;
         }
         setPinErr("");
@@ -357,23 +363,23 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                 });
                 onClose();
             } catch (e: any) {
-                setErr(e?.message ?? "Erro ao salvar");
+                setErr(e?.message ?? t("saveError"));
                 setSaving(false);
             }
         } else if (result === "locked") {
             setPinOpen(false);
-            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            setErr(tPin("lockedRetry"));
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setPinOpen(false);
-                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+                setErr(tPin("lockedRetry"));
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setPinOpen(false);
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
         }
     }
 
@@ -398,14 +404,14 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                 <div className="flex items-center justify-between px-5 py-4">
                     <div>
                         <p id={receivableTitleId} className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-                            {editing ? "Editar cobrança" : "Nova cobrança"}
+                            {editing ? t("editTitle") : t("newTitle")}
                         </p>
                         <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--pos)" }}>
-                            <Check size={11} /> Ao receber, lança automaticamente no Fluxo de Caixa
+                            <Check size={11} /> {t("autoPost")}
                         </p>
                     </div>
                     <button onClick={() => !saving && onClose()}
-                        aria-label="Fechar"
+                        aria-label={tPin("close")}
                         className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
@@ -414,10 +420,10 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                 {/* Abas */}
                 <div className="flex gap-1 px-5" style={{ borderBottom: "1px solid var(--cf-border)" }}>
-                    {([["conta", editing ? "Cobrança" : "Nova cobrança"], ["cadastro", "Cadastro"]] as const).map(([t, label]) => (
-                        <button key={t} onClick={() => setTab(t)} type="button"
+                    {([["conta", editing ? t("tabBillEditing") : t("tabBillNew")], ["cadastro", t("tabCadastro")]] as const).map(([tabKey, label]) => (
+                        <button key={tabKey} onClick={() => setTab(tabKey)} type="button"
                             className="px-3 py-2.5 text-xs font-bold cursor-pointer -mb-px"
-                            style={tab === t
+                            style={tab === tabKey
                                 ? { color: "var(--pos)", borderBottom: "2px solid var(--pos)" }
                                 : { color: "var(--cf-text-2)", borderBottom: "2px solid transparent" }}>
                             {label}
@@ -453,8 +459,8 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         uid={uid}
                         kind="cliente"
                         accent="var(--pos)"
-                        label="Descrição"
-                        placeholder="Ex: Venda para Empresa X"
+                        label={t("fieldTitle")}
+                        placeholder={t("fieldTitlePlaceholder")}
                         title={title}
                         partyDoc={partyDoc}
                         onChange={v => { setTitle(v.title); setPartyName(v.partyName ?? ""); setPartyDoc(v.partyDoc ?? ""); }}
@@ -465,7 +471,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                             <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                                {isSeries ? "Valor por parcela (R$)" : "Valor (R$)"}
+                                {isSeries ? t("amountPerInstallment") : t("amount")}
                             </label>
                             <input id={amtId} inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
@@ -474,7 +480,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         </div>
                         <div className="space-y-2">
                             <label htmlFor={dueDateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                                {isSeries ? "1º prazo" : "Prazo"}
+                                {isSeries ? t("firstDueDate") : t("dueDate")}
                             </label>
                             <input id={dueDateId} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
@@ -484,7 +490,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Categoria */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Categoria</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("category")}</legend>
                         <div className="grid grid-cols-3 gap-2">
                             {CATEGORIES.map(cat => {
                                 const sel = category === cat.label;
@@ -495,7 +501,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                             ? { borderColor: cat.color, background: cat.color + "18", color: cat.color }
                                             : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
                                         <cat.icon size={13} />
-                                        {cat.label}
+                                        {tCat(cat.key)}
                                     </button>
                                 );
                             })}
@@ -504,15 +510,15 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Recorrência */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Recorrência</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("recurrence")}</legend>
                         <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
-                            {([["unica", "Única"], ["numeral", "Numeral"]] as [Recurrence, string][]).map(([r, label]) => {
+                            {([["unica", t("recurrenceUnica")], ["numeral", t("recurrenceNumeral")]] as [Recurrence, string][]).map(([r, label]) => {
                                 const disabled = r === "numeral" && !numeralAllowed;
                                 return (
                                     <button key={r} type="button"
                                         onClick={() => !disabled && setRecurrence(r)}
                                         disabled={disabled}
-                                        title={disabled ? "Parcelamento só na criação de uma cobrança nova" : undefined}
+                                        title={disabled ? t("numeralDisabled") : undefined}
                                         className="py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={recurrence === r
                                             ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", cursor: "pointer" }
@@ -527,7 +533,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                             <div className="pt-1 space-y-2">
                                 <div className="flex items-center gap-3">
                                     <label htmlFor={installmentsId} className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>
-                                        Parcelas mensais
+                                        {t("monthlyInstallments")}
                                     </label>
                                     <input
                                         id={installmentsId}
@@ -537,14 +543,14 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                         className="w-20 rounded-lg px-3 py-2 text-sm outline-none font-mono disabled:opacity-50"
                                         style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                                     {editing && (
-                                        <span className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>(fixo após criar)</span>
+                                        <span className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>{t("fixedAfterCreate")}</span>
                                     )}
                                 </div>
                                 {!installmentsOk ? (
-                                    <p className="text-[11px]" style={{ color: "var(--neg)" }}>Informe de 2 a 60 parcelas.</p>
+                                    <p className="text-[11px]" style={{ color: "var(--neg)" }}>{t("installmentsRange")}</p>
                                 ) : amount > 0 ? (
                                     <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                                        {installments} parcelas de {toBRL(amount)} · total {toBRL(amount * installments)}
+                                        {t("installmentsPreview", { count: installments, amount: toBRL(amount, locale), total: toBRL(amount * installments, locale) })}
                                     </p>
                                 ) : null}
                             </div>
@@ -553,7 +559,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 
                     {/* Status */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Status inicial</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("initialStatus")}</legend>
                         <div className="grid grid-cols-2 gap-2">
                             {(["pendente", "recebido", "agendado", "atrasado"] as ReceivableStatus[]).map(s => {
                                 const meta = STATUS_META[s];
@@ -564,14 +570,14 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                                         style={status === s
                                             ? { background: meta.bg, borderColor: meta.border, color: meta.color, cursor: isSeries ? "not-allowed" : "pointer" }
                                             : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text-2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
-                                        {meta.label}
+                                        {tStatus(s)}
                                     </button>
                                 );
                             })}
                         </div>
                         {isSeries && (
                             <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                                Toda série começa pendente. Baixe cada parcela ao recebê-la.
+                                {t("seriesStartsPending")}
                             </p>
                         )}
                     </fieldset>
@@ -581,18 +587,18 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         {/* Não é <label> — não há um único campo associado (galeria +
                             botão de upload logo abaixo). */}
                         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                            Fotos (invoice, recibo...) — {photos.length}
+                            {t("photos", { count: photos.length })}
                         </p>
-                        
+
                         {/* Gallery de fotos */}
                         {photos.length > 0 && (
                             <div className="grid grid-cols-3 gap-2 mb-2">
                                 {photos.map((url, idx) => (
                                     <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-[var(--sunken)]">
-                                        <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                                        <img src={url} alt={t("photoAlt", { index: idx + 1 })} className="w-full h-full object-cover" />
                                         <button
                                             onClick={() => removePhoto(idx)}
-                                            aria-label={`Remover foto ${idx + 1}`}
+                                            aria-label={t("removePhoto", { index: idx + 1 })}
                                             className="absolute top-1 right-1 p-1 rounded-lg cursor-pointer"
                                             style={{ background: "rgba(0,0,0,0.6)" }}>
                                             <Trash size={12} style={{ color: "white" }} />
@@ -606,7 +612,7 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         <label className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border-2 border-dashed cursor-pointer transition-all"
                             style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                             <ImageIcon size={16} />
-                            {uploadingPhoto ? "Enviando..." : "Adicionar foto"}
+                            {uploadingPhoto ? t("uploading") : t("addPhoto")}
                             <input
                                 type="file"
                                 accept="image/*"
@@ -621,15 +627,15 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     <PaymentMethodSelector
                         value={paymentMethod}
                         onChange={setPaymentMethod}
-                        label="Forma de recebimento prevista"
+                        label={t("paymentMethodLabel")}
                         required
                     />
 
                     {/* Observação */}
                     <div className="space-y-2">
-                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
+                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("notes")}</label>
                         <input id={notesId} value={notes} onChange={e => setNotes(e.target.value)}
-                            placeholder="Nome do cliente, referência…"
+                            placeholder={t("notesPlaceholder")}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -640,8 +646,8 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                             ? { background: "var(--pos)", color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
-                            ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
-                            : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar cobrança"}</>}
+                            ? <><Loader2 size={15} className="animate-spin" /> {t("saving")}</>
+                            : <><ShieldCheck size={15} /> {editing ? t("saveChanges") : t("createBill")}</>}
                     </button>
                     </>
                     )}
@@ -651,8 +657,8 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
             {/* Modal de PIN para confirmar criação/edição */}
             <PinModal
                 open={pinOpen}
-                title={editing ? "Confirmar edição" : "Confirmar criação"}
-                subtitle="Digite seu PIN de 4 dígitos para salvar"
+                title={editing ? t("pinConfirmEditTitle") : t("pinConfirmCreateTitle")}
+                subtitle={t("pinConfirmSaveSubtitle")}
                 onClose={() => setPinOpen(false)}
                 onSuccess={handlePinSuccess}
             />
@@ -665,6 +671,8 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
 function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
     open: boolean; alertDays: number; onClose: () => void; onSave: (d: number) => void;
 }) {
+    const t = useTranslations("contasReceber.alertSettings");
+    const tPin = useTranslations("common.pin");
     const [val, setVal] = useState(alertDays);
     useEffect(() => { if (open) setVal(alertDays); }, [open, alertDays]);
     if (!open) return null;
@@ -676,13 +684,13 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                 <div className="flex items-start justify-between mb-5">
                     <div>
                         <h3 className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-                            Alertas de cobrança
+                            {t("title")}
                         </h3>
                         <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>
-                            Quantos dias antes do prazo alertar?
+                            {t("question")}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" aria-label="Fechar"
+                    <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" aria-label={tPin("close")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -691,9 +699,9 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                 {/* Slider visual */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>1 dia</span>
-                        <span className="font-heading text-2xl font-bold" style={{ color: "var(--cf-text)" }}>{val}d</span>
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>30 dias</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>{t("oneDay")}</span>
+                        <span className="font-heading text-2xl font-bold" style={{ color: "var(--cf-text)" }}>{t("dayShort", { days: val })}</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>{t("thirtyDays")}</span>
                     </div>
                     <input type="range" min={1} max={30} value={val} onChange={e => setVal(Number(e.target.value))}
                         className="w-full cursor-pointer accent-green-500" />
@@ -704,7 +712,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                                 style={val === d
                                     ? { background: "var(--pos)", borderColor: "transparent", color: "white" }
                                     : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}>
-                                {d}d
+                                {t("dayShort", { days: d })}
                             </button>
                         ))}
                     </div>
@@ -715,19 +723,19 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                     style={{ background: "var(--pos-weak)", border: "1px solid var(--pos-weak)" }}>
                     <Bell size={15} style={{ color: "var(--pos)", flexShrink: 0 }} />
                     <p className="text-xs" style={{ color: "var(--pos)" }}>
-                        Você verá um badge no menu e um toast ao entrar na página quando uma cobrança vencer em até <strong>{val} dia{val !== 1 ? "s" : ""}</strong>.
+                        {t.rich("preview", { count: val, strong: (c) => <strong>{c}</strong> })}
                     </p>
                 </div>
 
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold cursor-pointer"
                         style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
-                        Cancelar
+                        {t("cancel")}
                     </button>
                     <button onClick={() => { onSave(val); onClose(); }}
                         className="flex-1 py-3 rounded-xl text-sm font-bold cursor-pointer"
                         style={{ background: "var(--pos)", color: "white" }}>
-                        Salvar
+                        {t("save")}
                     </button>
                 </div>
             </div>
@@ -742,6 +750,8 @@ function PhotoGalleryModal({ open, photos, onClose }: {
     photos: string[];
     onClose: () => void;
 }) {
+    const t = useTranslations("contasReceber.gallery");
+    const tPin = useTranslations("common.pin");
     const [currentIndex, setCurrentIndex] = useState(0);
     const dialogRef = useRef<HTMLDivElement>(null);
     const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -811,25 +821,25 @@ function PhotoGalleryModal({ open, photos, onClose }: {
                 ref={dialogRef}
                 role="dialog"
                 aria-modal="true"
-                aria-label={`Foto ${currentIndex + 1} de ${photos.length}`}
+                aria-label={t("counterAria", { index: currentIndex + 1, total: photos.length })}
                 tabIndex={-1}
                 className="relative w-full h-full flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}>
                 {/* Imagem principal */}
                 <div className="relative max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center">
-                    <img src={current} alt={`Foto ${currentIndex + 1}`}
+                    <img src={current} alt={t("photoAlt", { index: currentIndex + 1 })}
                         className="max-w-full max-h-full object-contain rounded-xl" />
                 </div>
 
                 {/* Navegação */}
                 {photos.length > 1 && (
                     <>
-                        <button onClick={handlePrev} aria-label="Foto anterior"
+                        <button onClick={handlePrev} aria-label={t("prev")}
                             className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
                             style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                             <ChevronLeft size={24} />
                         </button>
-                        <button onClick={handleNext} aria-label="Próxima foto"
+                        <button onClick={handleNext} aria-label={t("next")}
                             className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
                             style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                             <ChevronRight size={24} />
@@ -846,7 +856,7 @@ function PhotoGalleryModal({ open, photos, onClose }: {
                 </div>
 
                 {/* Botão fechar */}
-                <button onClick={onClose} aria-label="Fechar"
+                <button onClick={onClose} aria-label={tPin("close")}
                     className="absolute top-4 right-4 p-2 rounded-lg cursor-pointer transition-all hover:scale-110"
                     style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                     <X size={20} />
@@ -865,6 +875,9 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
     onClose: () => void;
     onConfirm: (receivedAt: string, method: PaymentMethod) => Promise<void>;
 }) {
+    const t = useTranslations("contasReceber.receiveModal");
+    const tPin = useTranslations("common.pin");
+    const locale = useLocale();
     const [receivedAt, setReceivedAt] = useState(TODAY);
     const [method, setMethod] = useState<PaymentMethod | null>(null);
     const [pinOpen, setPinOpen] = useState(false);
@@ -889,7 +902,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
         if (!canConfirm || !uid) return;
         const pinHash = await loadPinHash(uid);
         if (!pinHash) {
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
             return;
         }
         setErr("");
@@ -906,23 +919,23 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                 await onConfirm(receivedAt, method!);
                 onClose();
             } catch (e: any) {
-                setErr(e?.message ?? "Erro ao registrar recebimento");
+                setErr(e?.message ?? t("registerError"));
                 setSaving(false);
             }
         } else if (result === "locked") {
             setPinOpen(false);
-            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            setErr(tPin("lockedRetry"));
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setPinOpen(false);
-                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+                setErr(tPin("lockedRetry"));
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setPinOpen(false);
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
         }
     }
 
@@ -939,10 +952,10 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
 
                 <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                     <div>
-                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Registrar recebimento</p>
-                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{receivable.title} · {toBRL(receivable.amount)}</p>
+                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{t("summary", { title: receivable.title, amount: toBRL(receivable.amount, locale) })}</p>
                     </div>
-                    <button onClick={() => !saving && onClose()} aria-label="Fechar" className="p-1.5 rounded-lg cursor-pointer"
+                    <button onClick={() => !saving && onClose()} aria-label={tPin("close")} className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -958,7 +971,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
 
                     {/* Data do recebimento */}
                     <div className="space-y-2">
-                        <label htmlFor={receivedAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data do recebimento</label>
+                        <label htmlFor={receivedAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("receiveDate")}</label>
                         <input id={receivedAtId} type="date" value={receivedAt} onChange={e => setReceivedAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -968,7 +981,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                     <PaymentMethodSelector
                         value={method}
                         onChange={setMethod}
-                        label="Forma de recebimento utilizada"
+                        label={t("paymentMethodLabel")}
                         required
                     />
 
@@ -978,16 +991,16 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
                             ? { background: "var(--pos)", color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
-                            ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
-                            : <><ShieldCheck size={15} /> Confirmar recebimento</>}
+                            ? <><Loader2 size={15} className="animate-spin" /> {t("registering")}</>
+                            : <><ShieldCheck size={15} /> {t("confirm")}</>}
                     </button>
                 </div>
             </div>
         </div>
         <PinModal
             open={pinOpen}
-            title="Confirmar recebimento"
-            subtitle="Digite seu PIN de 4 dígitos para confirmar a baixa"
+            title={t("pinTitle")}
+            subtitle={t("pinSubtitle")}
             onClose={() => setPinOpen(false)}
             onSuccess={handlePinSuccess}
         />
@@ -1004,6 +1017,9 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
     onDelete: () => void;
     onOpenReceiveModal: () => void;
 }) {
+    const t = useTranslations("contasReceber.card");
+    const tStatus = useTranslations("contasReceber.status");
+    const locale = useLocale();
     const [showPhotos, setShowPhotos] = useState(false);
     const days = daysUntil(receivable.dueDate);
     const status: ReceivableStatus = receivable._status;
@@ -1042,11 +1058,11 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                                         style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
-                                        {meta.label}
+                                        {tStatus(status)}
                                     </span>
                                     {receivable.seriesId && receivable.installmentCount && (
                                         <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text-3)" }}>
-                                            <Repeat size={10} /> Parcela {receivable.installmentIndex}/{receivable.installmentCount}
+                                            <Repeat size={10} /> {t("installment", { index: receivable.installmentIndex ?? 0, count: receivable.installmentCount })}
                                         </span>
                                     )}
                                     {receivable?.photos?.length > 0 && (
@@ -1060,17 +1076,17 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                             }}
                                             role="button"
                                             tabIndex={0}
-                                            aria-label={`Ver ${receivable?.photos?.length} foto${receivable?.photos?.length !== 1 ? "s" : ""} anexada${receivable?.photos?.length !== 1 ? "s" : ""}`}
+                                            aria-label={t("viewPhotos", { count: receivable.photos.length })}
                                             className="nxfi-clickable-focus flex items-center gap-1 text-xs px-2 py-0.5 rounded-full cursor-pointer transition-all hover:opacity-80"
                                             style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
-                                            <ImageIcon size={10} /> {receivable?.photos?.length} foto{receivable?.photos?.length !== 1 ? "s" : ""}
+                                            <ImageIcon size={10} /> {t("photoCount", { count: receivable.photos.length })}
                                         </span>
                                     )}
                                 </div>
                             </div>
                             <span className="font-heading font-bold text-base shrink-0 mono"
                                 style={{ color: isOverdue ? "var(--neg)" : "var(--cf-text)" }}>
-                                {toBRL(receivable.amount)}
+                                {toBRL(receivable.amount, locale)}
                             </span>
                         </div>
 
@@ -1081,12 +1097,12 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                             <span className="text-xs font-medium"
                                 style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-2)" }}>
                                 {status === ("recebido" as const)
-                                    ? `Recebido em ${receivable.receivedAt ? labelDate(receivable.receivedAt) : "—"}`
+                                    ? t("receivedOn", { date: receivable.receivedAt ? labelDate(receivable.receivedAt, locale) : "—" })
                                     : isOverdue
-                                        ? `Atrasado há ${Math.abs(days)} dia${Math.abs(days) !== 1 ? "s" : ""} · ${labelDate(receivable.dueDate)}`
+                                        ? t("overdueBy", { count: Math.abs(days), date: labelDate(receivable.dueDate, locale) })
                                         : days === 0
-                                            ? `⚠️ Vence hoje! · ${labelDate(receivable.dueDate)}`
-                                            : `Vence em ${days} dia${days !== 1 ? "s" : ""} · ${labelDate(receivable.dueDate)}`}
+                                            ? t("dueToday", { date: labelDate(receivable.dueDate, locale) })
+                                            : t("dueIn", { count: days, date: labelDate(receivable.dueDate, locale) })}
                             </span>
                             {isUrgent && (
                                 <span className="ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
@@ -1100,12 +1116,12 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                                 {receivable.paidPaymentMethod ? (
                                     <>
                                         {receivable.paymentMethod && receivable.paymentMethod !== receivable.paidPaymentMethod && (
-                                            <PaymentMethodBadge method={receivable.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                            <PaymentMethodBadge method={receivable.paymentMethod as PaymentMethod} prefix={t("prevMethod")} small />
                                         )}
-                                        <PaymentMethodBadge method={receivable.paidPaymentMethod as PaymentMethod} prefix="Rec:" small />
+                                        <PaymentMethodBadge method={receivable.paidPaymentMethod as PaymentMethod} prefix={t("receivedMethod")} small />
                                     </>
                                 ) : receivable.paymentMethod && (
-                                    <PaymentMethodBadge method={receivable.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                    <PaymentMethodBadge method={receivable.paymentMethod as PaymentMethod} prefix={t("prevMethod")} small />
                                 )}
                             </div>
                         )}
@@ -1123,25 +1139,25 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
                             style={{ background: "var(--pos)", color: "white" }}>
                             <CheckCircle2 size={13} />
-                            Marcar como recebido
+                            {t("markReceived")}
                         </button>
                     ) : (
                         <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold"
                             style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
-                            <Check size={13} /> Recebido
+                            <Check size={13} /> {t("received")}
                         </div>
                     )}
-                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label="Editar"
+                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label={t("edit")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
-                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label="Excluir"
+                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label={t("delete")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>
                 </div>
 
-                <AuditTrail record={receivable} settleLabel="Recebido" />
+                <AuditTrail record={receivable} settleLabel={t("settleLabel")} />
             </div>
             <PhotoGalleryModal open={showPhotos} photos={receivable?.photos ?? []} onClose={() => setShowPhotos(false)} />
         </div>
@@ -1175,6 +1191,10 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function ContasReceberPage() {
+    const t = useTranslations("contasReceber");
+    const tPin = useTranslations("common.pin");
+    const tNav = useTranslations("nav");
+    const locale = useLocale();
     const [uid, setUid] = useState<string | null>(null);
     // uid do login atual — usado para o PIN (pessoal) e para o selo de autoria,
     // separado de `uid`, que é o dono dos dados (pode ser outra conta).
@@ -1188,7 +1208,7 @@ export default function ContasReceberPage() {
     const [modal, setModal] = useState(false);
     const [editing, setEditing] = useState<Receivable | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    
+
     // Deletion states
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -1224,7 +1244,7 @@ export default function ContasReceberPage() {
     const saveAlertDays = (d: number) => {
         setAlertDays(d);
         localStorage.setItem("nexusfi:alertDaysReceivable", String(d));
-        showToast(`Alertas configurados para ${d} dia${d !== 1 ? "s" : ""} antes do prazo`);
+        showToast(t("toast.alertsConfigured", { count: d }));
     };
 
     // Auth + Firestore realtime
@@ -1255,7 +1275,7 @@ export default function ContasReceberPage() {
 
                     setUid(ownerUid);
                     setAuthUid(u.uid);
-                    setUserName(u.displayName ?? u.email ?? "Usuário");
+                    setUserName(u.displayName ?? u.email ?? "");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
                     snapUnsub = onSnapshot(
@@ -1271,7 +1291,7 @@ export default function ContasReceberPage() {
 
     // ── Toast de alerta ao entrar na página ───────────────────────────────────
     // Dispara uma única vez quando os dados carregam
-    const alertsShownRef = React.useRef(false);
+    const alertsShownRef = useRef(false);
     useEffect(() => {
         if (pageState !== "ready" || alertsShownRef.current) return;
         alertsShownRef.current = true;
@@ -1287,17 +1307,11 @@ export default function ContasReceberPage() {
 
         setTimeout(() => {
             if (overdue.length > 0) {
-                showToast(
-                    `${overdue.length} cobrança${overdue.length !== 1 ? "s" : ""} atrasada${overdue.length !== 1 ? "s" : ""} — procure receber!`,
-                    "err"
-                );
+                showToast(t("toast.overdueOnLoad", { count: overdue.length }), "err");
             }
             if (soon.length > 0) {
                 setTimeout(() => {
-                    showToast(
-                        `⏰ ${soon.length} cobrança${soon.length !== 1 ? "s" : ""} vence${soon.length !== 1 ? "m" : ""} nos próximos ${alertDaysCurrent} dias`,
-                        "warn"
-                    );
+                    showToast(t("toast.dueSoonOnLoad", { count: soon.length, days: alertDaysCurrent }), "warn");
                 }, 600);
             }
         }, 800);
@@ -1314,7 +1328,7 @@ export default function ContasReceberPage() {
 
     // ── Salvar cobrança ────────────────────────────────────────────────────────
     async function handleSave(data: Omit<Receivable, "id" | "userId" | "createdAt">) {
-        if (!uid) throw new Error("Não autenticado");
+        if (!uid) throw new Error(tPin("notConfigured"));
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc, writeBatch }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
@@ -1349,7 +1363,7 @@ export default function ContasReceberPage() {
             }
             await batch.commit();
             const last = addMonthsClamped(data.dueDate, n - 1);
-            showToast(`${n} parcelas criadas (${monthLabel(data.dueDate)} → ${monthLabel(last)})`);
+            showToast(t("toast.installmentsCreated", { count: n, from: monthLabel(data.dueDate), to: monthLabel(last) }));
             return;
         }
 
@@ -1361,11 +1375,11 @@ export default function ContasReceberPage() {
 
         if (editing) {
             await updateDoc(doc(db, "users", uid, "receivables", editing.id), { ...clean, ...stampUpdate(actor) } as any);
-            showToast("Cobrança atualizada!");
+            showToast(t("toast.billUpdated"));
             if (editing.seriesId) setSeriesEdit({ base: editing, data });
         } else {
             await addDoc(collection(db, "users", uid, "receivables"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
-            showToast("Cobrança criada!");
+            showToast(t("toast.billCreated"));
         }
     }
 
@@ -1402,9 +1416,9 @@ export default function ContasReceberPage() {
                 count++;
             });
             if (count) await batch.commit();
-            showToast(count ? `${count} parcela(s) futura(s) atualizada(s)` : "Nenhuma parcela futura pendente");
+            showToast(count ? t("toast.futureInstallmentsUpdated", { count }) : t("toast.noFutureInstallments"));
         } catch (e: any) {
-            showToast(e?.message ?? "Erro ao atualizar a série", "err");
+            showToast(e?.message ?? t("toast.seriesUpdateError"), "err");
         } finally {
             setSeriesBusy(false);
             setSeriesEdit(null);
@@ -1429,6 +1443,10 @@ export default function ContasReceberPage() {
             ...stampSettle(actor),
         });
 
+        const recurrenceLabel = receiveTarget.recurrence === "numeral"
+            ? t("cashflowNote.recurrenceNumeral")
+            : t("cashflowNote.recurrenceUnica");
+
         await addDoc(collection(db, "users", uid, "cashflow"), {
             type: "entrada",
             description: receiveTarget.title,
@@ -1437,15 +1455,15 @@ export default function ContasReceberPage() {
             date: receivedAt,
             note:
                 receiveTarget.installmentIndex && receiveTarget.installmentCount
-                    ? `Cobrança · Parcela ${receiveTarget.installmentIndex}/${receiveTarget.installmentCount}`
-                    : `Cobrança · ${RECURRENCE_LABEL[receiveTarget.recurrence] ?? "Única"}`,
+                    ? t("cashflowNote.installment", { index: receiveTarget.installmentIndex, count: receiveTarget.installmentCount })
+                    : t("cashflowNote.single", { recurrence: recurrenceLabel }),
             sourceReceivableId: receiveTarget.id,
             paymentMethod: method,
             createdAt: Date.now(),
             ...stampCreate(actor),
         });
 
-        showToast("Recebido! Lançado no Fluxo de Caixa ✓");
+        showToast(t("toast.receivedPosted"));
         setReceiveModalOpen(false);
         setReceiveTarget(null);
     }
@@ -1461,7 +1479,7 @@ export default function ContasReceberPage() {
         if (!uid) return;
         const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
-            showToast("Configure seu PIN na página de Perfil antes de excluir.", "err");
+            showToast(tPin("notConfigured"), "err");
             return;
         }
         setDeleteScope(scope);
@@ -1495,10 +1513,10 @@ export default function ContasReceberPage() {
                     const batch = writeBatch(db);
                     alvo.forEach((d) => batch.delete(d.ref));
                     await batch.commit();
-                    showToast(`${alvo.length} parcela(s) removida(s).`);
+                    showToast(t("toast.installmentsRemoved", { count: alvo.length }));
                 } else {
                     await deleteDoc(doc(db, "users", uid, "receivables", confirmId));
-                    showToast("Cobrança removida.");
+                    showToast(t("toast.billRemoved"));
                 }
                 setConfirmId(null);
                 setDeleteScope("one");
@@ -1509,18 +1527,18 @@ export default function ContasReceberPage() {
             }
         } else if (result === "locked") {
             setPinOpenDelete(false);
-            showToast("PIN bloqueado por excesso de tentativas.", "err");
+            showToast(tPin("lockedRetry"), "err");
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setPinOpenDelete(false);
-                showToast("PIN bloqueado por excesso de tentativas.", "err");
+                showToast(tPin("lockedRetry"), "err");
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setPinOpenDelete(false);
-            showToast("Configure seu PIN de 4 dígitos na página de Perfil.", "err");
+            showToast(tPin("notConfigured"), "err");
         }
     }
 
@@ -1544,10 +1562,10 @@ export default function ContasReceberPage() {
 
     // Agrupa em seções ordenadas por prioridade
     const sections = useMemo(() => [
-        { key: "atrasado", label: "Atrasadas", color: "var(--neg)", receivables: filtered.filter(r => r._status === ("atrasado" as const)) },
-        { key: "pendente", label: "Pendentes", color: "var(--warn)", receivables: filtered.filter(r => r._status === ("pendente" as const)) },
-        { key: "agendado", label: "Agendadas", color: "var(--brand)", receivables: filtered.filter(r => r._status === ("agendado" as const)) },
-        { key: "recebido", label: "Recebidas", color: "var(--pos)", receivables: filtered.filter(r => r._status === ("recebido" as const)) },
+        { key: "atrasado", color: "var(--neg)", receivables: filtered.filter(r => r._status === ("atrasado" as const)) },
+        { key: "pendente", color: "var(--warn)", receivables: filtered.filter(r => r._status === ("pendente" as const)) },
+        { key: "agendado", color: "var(--brand)", receivables: filtered.filter(r => r._status === ("agendado" as const)) },
+        { key: "recebido", color: "var(--pos)", receivables: filtered.filter(r => r._status === ("recebido" as const)) },
     ].filter(s => s.receivables.length > 0), [filtered]);
 
     // KPIs
@@ -1570,18 +1588,18 @@ export default function ContasReceberPage() {
 
     // ── Loading / Error ────────────────────────────────────────────────────────
 
-    if (pageState === "blocked") return <AccessDenied category="Contas a Receber" />;
+    if (pageState === "blocked") return <AccessDenied category={tNav("items.contasReceber")} />;
 
     if (pageState === "loading") return <PageLoader background="var(--cf-bg)" />;
 
     if (pageState === "error") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
-            <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>Erro ao conectar</p>
+            <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>{t("error.connect")}</p>
             <p className="text-xs font-mono rounded-xl p-4 max-w-sm break-all" style={{ color: "var(--neg)", background: "var(--neg-weak)" }}>{errMsg}</p>
             <button onClick={() => window.location.reload()}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                 style={{ background: "var(--pos)", color: "white" }}>
-                Tentar novamente
+                {t("error.tryAgain")}
             </button>
         </div>
     );
@@ -1589,7 +1607,7 @@ export default function ContasReceberPage() {
     return (
         <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
 
-            <Navbar user={{ displayName: userName, email: userEmail }} activePath="/contas-receber" onLogout={handleLogout} />
+            <Navbar user={{ displayName: userName || null, email: userEmail }} activePath="/contas-receber" onLogout={handleLogout} />
 
             {/* Modais */}
             <ReceivableModal
@@ -1611,8 +1629,8 @@ export default function ContasReceberPage() {
             />
             <PinModal
                 open={pinOpenDelete}
-                title="Confirmar Exclusão"
-                subtitle="Digite seu PIN de 4 dígitos para excluir esta cobrança."
+                title={t("confirmDelete.pinTitle")}
+                subtitle={t("confirmDelete.pinSubtitle")}
                 onClose={() => { setPinOpenDelete(false); setConfirmId(null); setDeleteScope("one"); }}
                 onSuccess={handlePinDeleteSuccess}
             />
@@ -1620,13 +1638,13 @@ export default function ContasReceberPage() {
             {/* Escopo de exclusão de série (parcela) */}
             <SeriesScopeDialog
                 open={!!seriesDelete}
-                title="Excluir parcela"
+                title={t("seriesDelete.title")}
                 message={
                     seriesDelete
-                        ? `"${seriesDelete.title}" — parcela ${seriesDelete.installmentIndex}/${seriesDelete.installmentCount}. Parcelas já recebidas nunca são removidas.`
+                        ? t("seriesDelete.message", { title: seriesDelete.title, index: seriesDelete.installmentIndex ?? 0, count: seriesDelete.installmentCount ?? 0 })
                         : ""
                 }
-                actionLabel="Excluir"
+                actionLabel={t("seriesDelete.action")}
                 onPick={(scope) => seriesDelete && startDelete(seriesDelete.id, scope)}
                 onCancel={() => setSeriesDelete(null)}
             />
@@ -1634,20 +1652,19 @@ export default function ContasReceberPage() {
             {/* Escopo de edição de série (parcela) */}
             <SeriesScopeDialog
                 open={!!seriesEdit}
-                title="Aplicar em quais parcelas?"
+                title={t("seriesEdit.title")}
                 message={
                     seriesEdit
-                        ? `Você editou a parcela ${seriesEdit.base.installmentIndex}/${seriesEdit.base.installmentCount} de "${seriesEdit.base.title}".`
+                        ? t("seriesEdit.message", { index: seriesEdit.base.installmentIndex ?? 0, count: seriesEdit.base.installmentCount ?? 0, title: seriesEdit.base.title })
                         : ""
                 }
-                actionLabel="Salvando"
+                actionLabel={t("seriesEdit.action")}
                 loading={seriesBusy}
                 onPick={applySeriesEdit}
                 onCancel={() => setSeriesEdit(null)}
             />
 
-            {/* (O modal de confirmação visual antigo foi removido, agora apenas usamos PinModal para confirmar deleção, 
-                mas vamos manter o estado deleting para os botões). */}
+            {/* A confirmação de exclusão é feita direto no PinModal. */}
 
             {/* Toast stack */}
             <ToastStack toasts={toasts} />
@@ -1658,20 +1675,20 @@ export default function ContasReceberPage() {
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>
-                            Contas a receber
+                            {t("meta.title")}
                         </h1>
                         <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text-2)" }}>
                             {kpis.alert > 0
                                 ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "var(--warn)" }}>
                                     <AlertTriangle size={12} />
-                                    {kpis.alert} vence{kpis.alert !== 1 ? "m" : ""} nos próximos {alertDays} dias
+                                    {t("header.dueSoon", { count: kpis.alert, days: alertDays })}
                                 </span>
                                 : kpis.totalOverdue > 0
                                     ? <span className="flex items-center gap-1 font-semibold" style={{ color: "var(--neg)" }}>
                                         <AlertTriangle size={12} />
-                                        {kpis.totalOverdue} cobrança{kpis.totalOverdue !== 1 ? "s" : ""} atrasada{kpis.totalOverdue !== 1 ? "s" : ""}
+                                        {t("header.overdue", { count: kpis.totalOverdue })}
                                     </span>
-                                    : <span style={{ color: "var(--pos)" }}>✓ Tudo em dia!</span>
+                                    : <span style={{ color: "var(--pos)" }}>{t("header.allClear")}</span>
                             }
                         </p>
                     </div>
@@ -1679,8 +1696,8 @@ export default function ContasReceberPage() {
                         <button onClick={() => setSettingsOpen(true)}
                             className="relative p-2 rounded-xl cursor-pointer"
                             style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                            title={`Alertas: ${alertDays} dias`}
-                            aria-label={`Configurar alertas de prazo — hoje em ${alertDays} dias`}>
+                            title={t("alertButton.title", { days: alertDays })}
+                            aria-label={t("alertButton.aria", { days: alertDays })}>
                             <Settings2 size={16} />
                             {/* Indicador do prazo configurado */}
                             <span className="absolute -top-1 -right-1 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
@@ -1691,7 +1708,7 @@ export default function ContasReceberPage() {
                         <button onClick={() => { setEditing(null); setModal(true); }}
                             className="hidden sm:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
                             style={{ background: "var(--pos)", color: "white" }}>
-                            <Plus size={14} /> Nova cobrança
+                            <Plus size={14} /> {t("meta.newBill")}
                         </button>
                     </div>
                 </div>
@@ -1699,10 +1716,10 @@ export default function ContasReceberPage() {
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
-                        { label: "A receber", val: toBRL(kpis.aReceber), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalNotReceived} cobrança${kpis.totalNotReceived !== 1 ? "s" : ""}` },
-                        { label: "Atrasadas", val: toBRL(kpis.atrasado), color: "var(--neg)", bg: "var(--neg-weak)", sub: `${kpis.totalOverdue} cobrança${kpis.totalOverdue !== 1 ? "s" : ""}` },
-                        { label: "Recebidas", val: toBRL(kpis.recebido), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalReceived} cobrança${kpis.totalReceived !== 1 ? "s" : ""}` },
-                        { label: `Alerta (${alertDays}d)`, val: String(kpis.alert), color: "var(--warn)", bg: "var(--warn-weak)", sub: "vence em breve" },
+                        { label: t("kpi.toReceive"), val: toBRL(kpis.aReceber, locale), color: "var(--pos)", bg: "var(--pos-weak)", sub: t("kpi.billCount", { count: kpis.totalNotReceived }) },
+                        { label: t("kpi.overdue"), val: toBRL(kpis.atrasado, locale), color: "var(--neg)", bg: "var(--neg-weak)", sub: t("kpi.billCount", { count: kpis.totalOverdue }) },
+                        { label: t("kpi.received"), val: toBRL(kpis.recebido, locale), color: "var(--pos)", bg: "var(--pos-weak)", sub: t("kpi.billCount", { count: kpis.totalReceived }) },
+                        { label: t("kpi.alert", { days: alertDays }), val: String(kpis.alert), color: "var(--warn)", bg: "var(--warn-weak)", sub: t("kpi.dueSoon") },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
@@ -1719,7 +1736,7 @@ export default function ContasReceberPage() {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
-                            placeholder="Buscar descrição ou observação…" aria-label="Buscar descrição ou observação"
+                            placeholder={t("toolbar.searchPlaceholder")} aria-label={t("toolbar.searchAria")}
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -1732,7 +1749,7 @@ export default function ContasReceberPage() {
                                     style={filterStatus === f
                                         ? { background: meta?.bg ?? "var(--cf-text)", color: meta?.color ?? "var(--cf-bg)", borderColor: meta?.border ?? "transparent" }
                                         : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
-                                    {f === "todos" ? "Todos" : STATUS_META[f].label}
+                                    {f === "todos" ? t("toolbar.filterAll") : t(`status.${f}`)}
                                 </button>
                             );
                         })}
@@ -1743,16 +1760,16 @@ export default function ContasReceberPage() {
                                 <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
-                                    <option value="todas">Todas</option>
-                                    {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
+                                    <option value="todas">{t("toolbar.categoryAll")}</option>
+                                    {CATEGORIES.map(c => <option key={c.label} value={c.label}>{t(`categories.${c.key}`)}</option>)}
                                 </select>
                             </div>
                             <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                                title="Vencimentos deste mês — troque o mês no seletor da Navbar">
+                                title={t("toolbar.monthHint")}>
                                 {periodLabel}
                             </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
-                                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+                                {t("toolbar.resultCount", { count: filtered.length })}
                             </span>
                         </div>
                     </div>
@@ -1767,19 +1784,19 @@ export default function ContasReceberPage() {
                         </div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
-                                ? "Nenhum resultado"
-                                : `Nada em ${periodLabel}`}
+                                ? t("empty.noResults")
+                                : t("empty.nothingIn", { period: periodLabel })}
                         </p>
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
-                                ? "Ajuste os filtros para ver outras cobranças."
-                                : "Nenhuma cobrança vence neste mês. Troque o mês no seletor da Navbar ou adicione uma cobrança."}
+                                ? t("empty.adjustFilters")
+                                : t("empty.noneThisMonth")}
                         </p>
                         {!search && filterStatus === "todos" && filterCategory === "todas" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}
                                 className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer mt-2"
                                 style={{ background: "var(--pos)", color: "white" }}>
-                                <Plus size={14} /> Adicionar cobrança
+                                <Plus size={14} /> {t("empty.addBill")}
                             </button>
                         )}
                     </div>
@@ -1790,14 +1807,14 @@ export default function ContasReceberPage() {
                                 {/* Separador de seção */}
                                 <div className="flex items-center gap-2.5 mb-3">
                                     <div className="w-2 h-2 rounded-full shrink-0" style={{ background: section.color }} />
-                                    <p className="text-sm font-bold" style={{ color: section.color }}>{section.label}</p>
+                                    <p className="text-sm font-bold" style={{ color: section.color }}>{t(`sections.${section.key}`)}</p>
                                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                                         style={{ background: section.color + "18", color: section.color }}>
                                         {section.receivables.length}
                                     </span>
                                     <div className="flex-1 h-px" style={{ background: section.color + "30" }} />
                                     <span className="text-xs font-bold mono" style={{ color: section.color }}>
-                                        {toBRL(section.receivables.reduce((s, r) => s + r.amount, 0))}
+                                        {toBRL(section.receivables.reduce((s, r) => s + r.amount, 0), locale)}
                                     </span>
                                 </div>
 
@@ -1824,7 +1841,7 @@ export default function ContasReceberPage() {
 
             {/* FAB mobile */}
             <button onClick={() => { setEditing(null); setModal(true); }}
-                aria-label="Nova conta a receber"
+                aria-label={t("meta.newBillFab")}
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                 style={{
                     bottom: 74, right: 16, width: 52, height: 52,
@@ -1837,6 +1854,3 @@ export default function ContasReceberPage() {
         </div>
     );
 }
-
-// Necessário para o useRef dentro do useEffect sem import
-import React from "react";
