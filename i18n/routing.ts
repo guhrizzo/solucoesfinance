@@ -1,5 +1,10 @@
 import { defineRouting } from "next-intl/routing";
 
+// Nome do cookie de idioma — igual ao default do next-intl. Exportado à parte
+// pra escrita manual (useLocalePreference, LocaleSync) sem depender do shape
+// interno do objeto `routing`.
+export const LOCALE_COOKIE = "NEXT_LOCALE";
+
 // Configuração central de idiomas. pt-BR é o padrão e a fonte da verdade das
 // mensagens (toda chave nasce em messages/pt-BR/); en e es espelham o mesmo
 // conjunto de chaves.
