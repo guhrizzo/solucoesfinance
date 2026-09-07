@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 export default function NotFound() {
+  const t = useTranslations("common");
+  const tnf = useTranslations("common.notFound");
   const [pathName, setPathName] = useState("");
 
   useEffect(() => {
@@ -338,13 +341,12 @@ export default function NotFound() {
 
         <div className="status-badge">
           <div className="status-dot" />
-          <span className="status-text">Página não encontrada</span>
+          <span className="status-text">{tnf("badge")}</span>
         </div>
 
-        <h1 className="title">Você se perdeu no sistema</h1>
+        <h1 className="title">{tnf("title")}</h1>
         <p className="subtitle">
-          A rota que você tentou acessar não existe ou foi movida.
-          Verifique o endereço ou volte para o início.
+          {tnf("subtitle")}
         </p>
 
         <div className="btn-group">
@@ -352,19 +354,19 @@ export default function NotFound() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
-            Ir para o Dashboard
+            {tnf("goDashboard")}
           </a>
           <button onClick={() => window.history.back()} className="btn-secondary">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
             </svg>
-            Voltar
+            {t("back")}
           </button>
         </div>
 
         <div className="code-hint">
-          <p>rota solicitada</p>
-          <code>{pathName || "/rota-inexistente"}</code>
+          <p>{tnf("requestedRoute")}</p>
+          <code>{pathName || tnf("fallbackRoute")}</code>
         </div>
       </div>
     </div>

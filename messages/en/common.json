@@ -1,5 +1,6 @@
 {
   "loading": "Loading…",
+  "skipToContent": "Skip to content",
   "save": "Save",
   "cancel": "Cancel",
   "close": "Close",
@@ -63,6 +64,19 @@
     "fullPolicy": "See full policy",
     "title": "Your privacy",
     "body": "We use cookies and similar technologies to <b>keep you securely signed in</b>, remember your preferences (like theme and layout) and understand, in aggregate, how the platform is used so we can improve it. This data is processed in compliance with Brazil's General Data Protection Law (Law No. 13.709/2018). Essential cookies are always on; the others depend on your consent, which you can withdraw at any time.",
-    "alwaysOn": "(always on)"
+    "alwaysOn": "(always on)",
+    "categories": {
+      "essential": "Essential",
+      "preferences": "Preferences",
+      "analytics": "Usage analytics"
+    }
+  },
+  "notFound": {
+    "badge": "Page not found",
+    "title": "You got lost in the system",
+    "subtitle": "The route you tried to access doesn't exist or has moved. Check the address or go back to the start.",
+    "goDashboard": "Go to the Dashboard",
+    "requestedRoute": "requested route",
+    "fallbackRoute": "/nonexistent-route"
   }
 }

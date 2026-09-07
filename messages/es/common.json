@@ -1,5 +1,6 @@
 {
   "loading": "Cargando…",
+  "skipToContent": "Saltar al contenido",
   "save": "Guardar",
   "cancel": "Cancelar",
   "close": "Cerrar",
@@ -63,6 +64,19 @@
     "fullPolicy": "Ver política completa",
     "title": "Tu privacidad",
     "body": "Usamos cookies y tecnologías similares para <b>mantener tu sesión iniciada de forma segura</b>, recordar tus preferencias (como el tema y el diseño) y entender de forma agregada cómo se usa la plataforma, para mejorarla. El tratamiento de estos datos cumple con la Ley General de Protección de Datos de Brasil (Ley n.º 13.709/2018). Las cookies esenciales siempre están activas; las demás dependen de tu consentimiento, que puedes retirar cuando quieras.",
-    "alwaysOn": "(siempre activas)"
+    "alwaysOn": "(siempre activas)",
+    "categories": {
+      "essential": "Esenciales",
+      "preferences": "Preferencias",
+      "analytics": "Análisis de uso"
+    }
+  },
+  "notFound": {
+    "badge": "Página no encontrada",
+    "title": "Te perdiste en el sistema",
+    "subtitle": "La ruta a la que intentaste acceder no existe o se movió. Verifica la dirección o vuelve al inicio.",
+    "goDashboard": "Ir al Panel",
+    "requestedRoute": "ruta solicitada",
+    "fallbackRoute": "/ruta-inexistente"
   }
 }

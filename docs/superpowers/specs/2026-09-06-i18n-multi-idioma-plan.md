@@ -413,31 +413,43 @@ Namespaces: `impostos`, `costCenter`, `relatorios` (com `relatorios.pdf`).
 
 ---
 
-## Fase 8 — Varredura final
+## Fase 8 — Varredura final ✅ concluída
 
-- [ ] **`messages/*/errors.json`** — consolidar toasts e mensagens de erro
-      remanescentes de todo o app (grep por `showToast(` / `throw new Error(`
-      com string literal em `app/`).
-- [ ] **`lib/emailTemplates.ts`** — todos os templates traduzidos; disparo lê
-      `locale` do doc do membro destinatário (fallback `pt-BR`). Conferir
-      `lib/contractFinalize.ts` / rotas que disparam e-mail.
-- [ ] **Contrato** (`lib/contractText.ts`) — confirmar que permanece pt-BR;
-      adicionar só a frase traduzida de aviso na tela
-      `app/[locale]/assinatura/contrato/page.tsx` (`legal.json`).
-- [ ] **Telas internas** `debug/`, `developer/`, `design-system/`,
-      `users/page.tsx`, `assinatura/**` — decidir: traduzir ou registrar como
-      fora de escopo no spec/`/acessibilidade`. (Recomendo: `users` e
-      `assinatura` traduzir; `debug`/`developer`/`design-system` fora de
-      escopo, são internas.)
-- [ ] **Regra de lint anti-string-literal** — ligar
-      `@formatjs/no-literal-string` (ou `react/jsx-no-literals` com allowlist)
-      para todos os diretórios `app/[locale]/**` migrados; ajustar exceções
-      (números, símbolos, nomes próprios).
-- [ ] `i18n:check` + `tsc` + `npm run lint` + `npm run build` limpos.
-- [ ] Atualizar o spec (seção "Fora de escopo") com o que de fato ficou de fora.
-- [ ] Atualizar a memória do projeto (nota de i18n).
-- [ ] Varredura final no navegador: percorrer as rotas principais nos 3
-      idiomas procurando string em português vazada.
+- [x] **`messages/*/errors.json`** — fica `{}`. A varredura por `showToast(` /
+      `throw new Error(` com string literal em `app/[locale]/**` só achou
+      `users/page.tsx` (agora migrada). Cada página já tem os toasts no
+      próprio namespace; um `errors.json` central seria redundante.
+- [x] **`app/[locale]/users/page.tsx`** + `users.json` — commit da parte
+      "Minha conta". Permissões via `nav.items.<key>`, regras de senha via
+      `auth.passwordRules.<key>`, erros Firebase via `auth.errors`.
+- [x] **`app/[locale]/assinatura/**`** (3 páginas) + `assinatura.json` — commit
+      `731ac0d`. Chrome do formulário de contrato traduzido; corpo do contrato
+      (`renderContractText`) segue pt-BR com aviso `contrato.ptOnlyNotice`.
+- [x] **`CookieConsent`** — os 3 rótulos de categoria via
+      `common.cookies.categories.*`; a `description` de cada uma segue pt-BR
+      (cita artigos da LGPD, mesma decisão de `/privacidade`).
+- [x] **`app/[locale]/not-found.tsx`** — 404 do segmento via `common.notFound.*`.
+- [x] `i18n:check` (22 ns × 3), `tsc`, `next build` limpos; eslint sem
+      regressão de erros.
+
+### Fora de escopo (registrado)
+
+- **`lib/emailTemplates.ts`** (+ `lib/contractFinalize.ts` e rotas
+  `api/auth/reset-password`, `api/feedback/resolve`, `api/team/*`) — e-mails
+  transacionais seguem pt-BR. Traduzir exige plumbing de i18n server-side
+  (ler `locale` do doc do destinatário, `createTranslator` nas rotas) e o
+  produto é BR-first sem cliente estrangeiro. Item aberto pra quando houver.
+- **`lib/consent.ts` `CATEGORY_INFO.description`** — texto jurídico LGPD,
+  pt-BR por decisão (só os `label` traduzem).
+- **`lib/contractText.ts`** — contrato jurídico BR, pt-BR por decisão.
+- **`app/[locale]/debug/`, `developer/`, `design-system/`** — telas internas
+  de dev, não entram na tradução.
+- **Regra de lint anti-string-literal** (`@formatjs/no-literal-string` etc.) —
+  NÃO ligada: ruído alto (nomes de marca, símbolos, `var(--*)`, aria de ícone)
+  e as fases já rodaram `i18n:check` + eslint parity + `tsc` + build a cada
+  passo. Reavaliar se surgir regressão de string vazada.
+- **Fallbacks de `callTeamApi`** em `users/page.tsx` (nível de módulo) — 2
+  strings pt-BR; o caminho normal é o servidor devolver `data.error`.
 
 ---
 

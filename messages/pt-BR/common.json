@@ -1,5 +1,6 @@
 {
   "loading": "Carregando…",
+  "skipToContent": "Pular para o conteúdo",
   "save": "Salvar",
   "cancel": "Cancelar",
   "close": "Fechar",
@@ -63,6 +64,19 @@
     "fullPolicy": "Ver política completa",
     "title": "Sua privacidade",
     "body": "Usamos cookies e tecnologias semelhantes para <b>manter você conectado com segurança</b>, lembrar suas preferências (como tema e layout) e entender de forma agregada como a plataforma é usada, para melhorá-la. O tratamento desses dados segue a <b>Lei Geral de Proteção de Dados (Lei nº 13.709/2018)</b>. Os cookies essenciais são sempre ativos; os demais dependem do seu consentimento, que você pode retirar quando quiser.",
-    "alwaysOn": "(sempre ativos)"
+    "alwaysOn": "(sempre ativos)",
+    "categories": {
+      "essential": "Essenciais",
+      "preferences": "Preferências",
+      "analytics": "Análise de uso"
+    }
+  },
+  "notFound": {
+    "badge": "Página não encontrada",
+    "title": "Você se perdeu no sistema",
+    "subtitle": "A rota que você tentou acessar não existe ou foi movida. Verifique o endereço ou volte para o início.",
+    "goDashboard": "Ir para o Dashboard",
+    "requestedRoute": "rota solicitada",
+    "fallbackRoute": "/rota-inexistente"
   }
 }

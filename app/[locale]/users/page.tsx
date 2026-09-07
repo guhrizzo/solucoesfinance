@@ -1,9 +1,10 @@
 "use client";
 
-// app/perfil/page.tsx
+// app/[locale]/users/page.tsx — "Minha conta"
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Shield, Lock, Mail, Eye, EyeOff, Check, AlertCircle, Trash2, Plus,
   UsersRound, UserPlus, Edit2, RotateCw, ShieldOff, ShieldCheck,
@@ -35,6 +36,17 @@ interface TeamMember {
   createdAt: number;
 }
 
+// Códigos Firebase que temos tradução dedicada (o resto cai em errors.unexpected).
+const KNOWN_AUTH_ERRORS = new Set([
+  "auth/weak-password",
+  "auth/password-does-not-meet-requirements",
+  "auth/requires-recent-login",
+  "auth/credential-already-in-use",
+  "auth/popup-closed-by-user",
+  "auth/cancelled-popup-request",
+  "auth/network-request-failed",
+]);
+
 /** POST autenticado (Bearer do ID token do Firebase) numa rota /api/team/**; lança com a mensagem de erro do servidor em caso de falha. */
 async function callTeamApi(path: string, body: unknown): Promise<any> {
   const { getFirebase } = await import("@/lib/firebase");
@@ -50,19 +62,6 @@ async function callTeamApi(path: string, body: unknown): Promise<any> {
   if (!res.ok) throw new Error(data.error || "Ocorreu um erro inesperado.");
   return data;
 }
-
-// ── Erros Firebase → PT-BR ────────────────────────────────────────────────────
-const firebaseErrorMap: Record<string, string> = {
-  "auth/weak-password": "Senha fraca. Siga os requisitos indicados abaixo do campo de senha.",
-  "auth/password-does-not-meet-requirements": "Senha não atende aos requisitos mínimos de segurança.",
-  "auth/requires-recent-login": "Por segurança, saia e entre novamente antes de alterar seus métodos de login.",
-  "auth/credential-already-in-use": "Essa conta do Google já está vinculada a outro usuário.",
-  "auth/popup-closed-by-user": "Janela fechada antes de concluir. Tente novamente.",
-  "auth/cancelled-popup-request": "Login cancelado. Tente novamente.",
-  "auth/network-request-failed": "Falha de rede. Verifique sua conexão.",
-};
-const getErrorMessage = (code: string) =>
-  firebaseErrorMap[code] ?? "Ocorreu um erro inesperado. Tente novamente.";
 
 interface AppUser {
   uid: string;
@@ -80,6 +79,8 @@ function TeamMemberModal({
   onClose: () => void;
   onSaved: (msg: string) => void;
 }) {
+  const t = useTranslations("users.memberModal");
+  const tNav = useTranslations("nav");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [permissions, setPermissions] = useState<Set<PermissionKey>>(new Set());
@@ -120,25 +121,25 @@ function TeamMemberModal({
           memberUid: editing.memberUid,
           permissions: Array.from(permissions),
         });
-        onSaved("Permissões atualizadas!");
+        onSaved(t("permsUpdated"));
       } else {
         await callTeamApi("/api/team/create-member", {
           displayName: displayName.trim(),
           email: email.trim(),
           permissions: Array.from(permissions),
         });
-        onSaved("Membro criado! Um e-mail foi enviado para definir a senha.");
+        onSaved(t("memberCreated"));
       }
       onClose();
     } catch (e: any) {
-      setErr(e.message || "Erro ao salvar");
+      setErr(e.message || t("saveError"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={editing ? "Editar permissões" : "Adicionar membro"} size="sm" closeDisabled={saving}>
+    <Modal open={open} onClose={onClose} title={editing ? t("editTitle") : t("newTitle")} size="sm" closeDisabled={saving}>
       <form onSubmit={handleSubmit} className="p-5 space-y-4">
         {err && (
           <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-sm" style={{ background: "rgba(239,68,68,0.08)", color: "var(--neg)" }}>
@@ -150,14 +151,14 @@ function TeamMemberModal({
         {!editing && (
           <>
             <div>
-              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>Nome</label>
-              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ex: Ana Ribeiro" required />
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>{t("name")}</label>
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={t("namePlaceholder")} required />
             </div>
             <div>
-              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>E-mail</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ana@empresa.com" required />
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>{t("email")}</label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required />
               <p className="text-xs mt-1.5" style={{ color: "var(--db-text-3)" }}>
-                Ela recebe um e-mail para definir a própria senha — ninguém, nem você, fica sabendo qual é.
+                {t("emailHint")}
               </p>
             </div>
           </>
@@ -180,7 +181,7 @@ function TeamMemberModal({
 
         <div>
           <label className="text-xs font-semibold block mb-2" style={{ color: "var(--db-text-2)" }}>
-            Categorias liberadas
+            {t("releasedCategories")}
           </label>
           <div className="space-y-1.5">
             {PERMISSION_CATEGORIES.map((cat) => {
@@ -201,24 +202,24 @@ function TeamMemberModal({
                   >
                     {checked && <Check size={10} color="white" strokeWidth={3} />}
                   </div>
-                  <span className="text-sm font-medium" style={{ color: "var(--db-text)" }}>{cat.label}</span>
+                  <span className="text-sm font-medium" style={{ color: "var(--db-text)" }}>{tNav(`items.${cat.key}`)}</span>
                 </button>
               );
             })}
           </div>
           {permissions.size === 0 && (
             <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: "var(--db-text-3)" }}>
-              <AlertCircle size={11} /> Sem nenhuma categoria marcada, a pessoa não vê nada além da própria conta.
+              <AlertCircle size={11} /> {t("noCategoriesWarning")}
             </p>
           )}
         </div>
 
         <div className="flex gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving} className="flex-1">
-            Cancelar
+            {t("cancel")}
           </Button>
           <Button type="submit" disabled={!canSave} loading={saving} icon={Check} className="flex-1">
-            {editing ? "Salvar" : "Criar e convidar"}
+            {editing ? t("save") : t("createInvite")}
           </Button>
         </div>
       </form>
@@ -227,6 +228,12 @@ function TeamMemberModal({
 }
 
 export default function PerfilPage() {
+  const t = useTranslations("users");
+  const tNav = useTranslations("nav");
+  const tPw = useTranslations("auth.passwordRules");
+  const tAuthErr = useTranslations("auth.errors");
+  const errMsg = (code: string) => (KNOWN_AUTH_ERRORS.has(code) ? tAuthErr(code) : tAuthErr("unexpected"));
+
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -298,20 +305,18 @@ export default function PerfilPage() {
           displayName: u.displayName,
           providerIds: u.providerData.map((p) => p.providerId),
         });
-        
+
         // Verifica se tem PIN
         const pinHash = await loadPinHash(u.uid);
         setHasPin(!!pinHash);
-        
+
         setLoading(false);
       });
     })();
     return () => unsub?.();
   }, []);
 
-  // Lista de equipe — só o dono da conta assina isso; um membro nunca lê
-  // `users/{ownerUid}/team` (não é dele) nem precisa, já que não gerencia
-  // ninguém.
+  // Lista de equipe — só o dono da conta assina isso.
   useEffect(() => {
     if (scope.loading || !scope.isOwner || !scope.ownerUid) { setTeam([]); return; }
     let unsub: (() => void) | undefined;
@@ -333,10 +338,10 @@ export default function PerfilPage() {
     setRevoking(true);
     try {
       await callTeamApi("/api/team/remove-member", { memberUid: revokeTarget.memberUid });
-      showToast("Acesso revogado.", "info");
+      showToast(t("team.accessRevokedToast"), "info");
       setRevokeTarget(null);
     } catch (e: any) {
-      showToast(e.message || "Erro ao revogar acesso.", "error");
+      showToast(e.message || t("team.revokeError"), "error");
     } finally {
       setRevoking(false);
     }
@@ -346,9 +351,9 @@ export default function PerfilPage() {
     setResendingId(member.id);
     try {
       await callTeamApi("/api/team/resend-invite", { memberUid: member.memberUid });
-      showToast("Convite reenviado!", "success");
+      showToast(t("team.inviteResent"), "success");
     } catch (e: any) {
-      showToast(e.message || "Erro ao reenviar.", "error");
+      showToast(e.message || t("team.resendError"), "error");
     } finally {
       setResendingId(null);
     }
@@ -371,9 +376,9 @@ export default function PerfilPage() {
         setPinSetupOpen(false);
         setPinSetupStep(1);
         setPinTemp("");
-        showToast("PIN configurado com sucesso!", "success"); // Toast success in this UI
+        showToast(t("pin.configured"), "success");
       } else {
-        (window as any).__pinModalShake?.("Os PINs não coincidem. Tente novamente.");
+        (window as any).__pinModalShake?.(t("pin.mismatch"));
         setTimeout(() => {
           setPinSetupStep(1);
           setPinTemp("");
@@ -392,9 +397,9 @@ export default function PerfilPage() {
       if (!auth.currentUser) return;
       await linkGoogleToCurrentUser(auth.currentUser);
       await refreshProviders();
-      showToast("Google vinculado com sucesso.", "success");
+      showToast(t("loginMethods.googleLinked"), "success");
     } catch (err: any) {
-      showToast(getErrorMessage(err.code), "error");
+      showToast(errMsg(err.code), "error");
     } finally {
       setLinkingGoogle(false);
     }
@@ -418,9 +423,9 @@ export default function PerfilPage() {
       setShowPasswordForm(false);
       setNewPassword("");
       setConfirmPassword("");
-      showToast("Senha criada com sucesso.", "success");
+      showToast(t("loginMethods.passwordCreated"), "success");
     } catch (err: any) {
-      setPasswordError(getErrorMessage(err.code));
+      setPasswordError(errMsg(err.code));
     } finally {
       setSavingPassword(false);
     }
@@ -436,9 +441,9 @@ export default function PerfilPage() {
       if (!auth.currentUser) return;
       await unlinkProvider(auth.currentUser, providerId);
       await refreshProviders();
-      showToast(`${label} removido.`, "info");
+      showToast(t("loginMethods.removed", { label }), "info");
     } catch (err: any) {
-      showToast(getErrorMessage(err.code), "error");
+      showToast(errMsg(err.code), "error");
     } finally {
       setUnlinkingId(null);
     }
@@ -459,15 +464,15 @@ export default function PerfilPage() {
         <div className="max-w-2xl mx-auto space-y-5">
 
           <div>
-            <h1 className="text-xl md:text-2xl font-extrabold" style={{ color: "var(--db-text)" }}>Minha conta</h1>
-            <p className="text-sm mt-1" style={{ color: "var(--db-text-2)" }}>Dados pessoais e métodos de login.</p>
+            <h1 className="text-xl md:text-2xl font-extrabold" style={{ color: "var(--db-text)" }}>{t("meta.title")}</h1>
+            <p className="text-sm mt-1" style={{ color: "var(--db-text-2)" }}>{t("meta.subtitle")}</p>
           </div>
 
           {/* ── Cabeçalho do perfil ── */}
           <Card padding="lg" className="flex items-center gap-4">
             <AvatarUploader showToast={showToast} />
             <div className="min-w-0">
-              <p className="font-bold truncate" style={{ color: "var(--db-text)" }}>{user.displayName ?? "Usuário"}</p>
+              <p className="font-bold truncate" style={{ color: "var(--db-text)" }}>{user.displayName ?? t("fallbackUser")}</p>
               <p className="text-sm truncate" style={{ color: "var(--db-text-2)" }}>{user.email}</p>
             </div>
           </Card>
@@ -476,10 +481,10 @@ export default function PerfilPage() {
           <Card padding="lg">
             <div className="flex items-center gap-2 mb-1">
               <Shield size={16} style={{ color: "var(--brand-500)" }} />
-              <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Métodos de login</h2>
+              <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>{t("loginMethods.title")}</h2>
             </div>
             <p className="text-xs mb-5" style={{ color: "var(--db-text-2)" }}>
-              Ambos os métodos acessam a mesma conta — nenhum deles cria um usuário novo.
+              {t("loginMethods.desc")}
             </p>
 
             {/* Senha */}
@@ -489,9 +494,9 @@ export default function PerfilPage() {
                   <Lock size={15} style={{ color: "var(--db-text-2)" }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--db-text)" }}>E-mail e senha</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--db-text)" }}>{t("loginMethods.emailPassword")}</p>
                   <p className="text-xs" style={{ color: hasPassword ? "var(--success)" : "var(--db-text-3)" }}>
-                    {hasPassword ? "Ativo" : "Não configurado"}
+                    {hasPassword ? t("loginMethods.active") : t("loginMethods.notConfigured")}
                   </p>
                 </div>
               </div>
@@ -502,10 +507,10 @@ export default function PerfilPage() {
                   icon={Trash2}
                   disabled={methodCount <= 1 || unlinkingId === "password"}
                   loading={unlinkingId === "password"}
-                  onClick={() => handleUnlink("password", "Login por senha")}
-                  title={methodCount <= 1 ? "Mantenha ao menos um método de login" : undefined}
+                  onClick={() => handleUnlink("password", t("loginMethods.passwordLoginLabel"))}
+                  title={methodCount <= 1 ? t("loginMethods.keepOne") : undefined}
                 >
-                  Remover
+                  {t("loginMethods.remove")}
                 </Button>
               ) : (
                 <Button
@@ -514,7 +519,7 @@ export default function PerfilPage() {
                   icon={Plus}
                   onClick={() => setShowPasswordForm((s) => !s)}
                 >
-                  Definir senha
+                  {t("loginMethods.setPassword")}
                 </Button>
               )}
             </div>
@@ -531,7 +536,7 @@ export default function PerfilPage() {
                 <div className="relative">
                   <Input
                     type={showPass ? "text" : "password"}
-                    placeholder="Nova senha"
+                    placeholder={t("loginMethods.newPasswordPlaceholder")}
                     value={newPassword}
                     onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null); }}
                     className="pr-10"
@@ -549,7 +554,7 @@ export default function PerfilPage() {
                 </div>
                 <Input
                   type={showPass ? "text" : "password"}
-                  placeholder="Confirmar senha"
+                  placeholder={t("loginMethods.confirmPasswordPlaceholder")}
                   value={confirmPassword}
                   onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null); }}
                   autoComplete="new-password"
@@ -561,26 +566,26 @@ export default function PerfilPage() {
                     {passwordRules.map((rule) => {
                       const ok = rule.test(newPassword);
                       return (
-                        <div key={rule.label} className="flex items-center gap-1.5 text-xs" style={{ color: ok ? "var(--success)" : "var(--db-text-3)" }}>
+                        <div key={rule.key} className="flex items-center gap-1.5 text-xs" style={{ color: ok ? "var(--success)" : "var(--db-text-3)" }}>
                           <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ background: ok ? "var(--success)" : "var(--cf-border)" }}>
                             {ok && <Check size={8} color="white" strokeWidth={3} />}
                           </div>
-                          {rule.label}
+                          {tPw(rule.key)}
                         </div>
                       );
                     })}
                   </div>
                 )}
                 {confirmPassword && !confirmOk && (
-                  <p className="text-xs px-1" style={{ color: "var(--neg)" }}>As senhas não coincidem.</p>
+                  <p className="text-xs px-1" style={{ color: "var(--neg)" }}>{t("loginMethods.passwordsDontMatch")}</p>
                 )}
 
                 <div className="flex gap-2 pt-1">
                   <Button type="submit" size="sm" disabled={!passOk || !confirmOk} loading={savingPassword}>
-                    Salvar senha
+                    {t("loginMethods.savePassword")}
                   </Button>
                   <Button type="button" variant="ghost" size="sm" onClick={() => { setShowPasswordForm(false); setNewPassword(""); setConfirmPassword(""); setPasswordError(null); }}>
-                    Cancelar
+                    {t("loginMethods.cancel")}
                   </Button>
                 </div>
               </form>
@@ -601,9 +606,9 @@ export default function PerfilPage() {
                   {/* eslint-enable no-restricted-syntax */}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--db-text)" }}>Google</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--db-text)" }}>{t("loginMethods.google")}</p>
                   <p className="text-xs" style={{ color: hasGoogle ? "var(--success)" : "var(--db-text-3)" }}>
-                    {hasGoogle ? "Vinculado" : "Não vinculado"}
+                    {hasGoogle ? t("loginMethods.linked") : t("loginMethods.notLinked")}
                   </p>
                 </div>
               </div>
@@ -614,14 +619,14 @@ export default function PerfilPage() {
                   icon={Trash2}
                   disabled={methodCount <= 1 || unlinkingId === "google.com"}
                   loading={unlinkingId === "google.com"}
-                  onClick={() => handleUnlink("google.com", "Google")}
-                  title={methodCount <= 1 ? "Mantenha ao menos um método de login" : undefined}
+                  onClick={() => handleUnlink("google.com", t("loginMethods.google"))}
+                  title={methodCount <= 1 ? t("loginMethods.keepOne") : undefined}
                 >
-                  Remover
+                  {t("loginMethods.remove")}
                 </Button>
               ) : (
                 <Button variant="secondary" size="sm" icon={Plus} loading={linkingGoogle} onClick={handleLinkGoogle}>
-                  Vincular Google
+                  {t("loginMethods.linkGoogle")}
                 </Button>
               )}
             </div>
@@ -631,10 +636,10 @@ export default function PerfilPage() {
           <Card padding="lg">
             <div className="flex items-center gap-2 mb-1">
               <Lock size={16} style={{ color: "var(--brand-500)" }} />
-              <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>PIN de Segurança</h2>
+              <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>{t("pin.title")}</h2>
             </div>
             <p className="text-xs mb-5" style={{ color: "var(--db-text-2)" }}>
-              Utilizado para confirmar ações financeiras sensíveis (como criar, baixar ou excluir lançamentos).
+              {t("pin.desc")}
             </p>
 
             <div className="flex items-center justify-between py-3">
@@ -643,9 +648,9 @@ export default function PerfilPage() {
                   <Shield size={15} style={{ color: "var(--db-text-2)" }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--db-text)" }}>PIN de 4 dígitos</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--db-text)" }}>{t("pin.fourDigit")}</p>
                   <p className="text-xs" style={{ color: hasPin ? "var(--success)" : "var(--db-text-3)" }}>
-                    {hasPin ? "Ativo" : "Não configurado"}
+                    {hasPin ? t("pin.active") : t("pin.notConfigured")}
                   </p>
                 </div>
               </div>
@@ -654,7 +659,7 @@ export default function PerfilPage() {
                 size="sm"
                 onClick={() => { setPinSetupStep(1); setPinSetupOpen(true); }}
               >
-                {hasPin ? "Alterar PIN" : "Configurar PIN"}
+                {hasPin ? t("pin.change") : t("pin.configure")}
               </Button>
             </div>
           </Card>
@@ -665,19 +670,19 @@ export default function PerfilPage() {
               <div className="flex items-start justify-between gap-3 mb-1">
                 <div className="flex items-center gap-2">
                   <UsersRound size={16} style={{ color: "var(--brand-500)" }} />
-                  <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Equipe</h2>
+                  <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>{t("team.title")}</h2>
                 </div>
                 <Button size="sm" icon={UserPlus} onClick={() => { setEditingMember(null); setShowTeamModal(true); }}>
-                  Adicionar membro
+                  {t("team.addMember")}
                 </Button>
               </div>
               <p className="text-xs mb-5" style={{ color: "var(--db-text-2)" }}>
-                Convide pessoas para acessar sua conta com permissão só nas categorias que você liberar. Você continua com acesso total a tudo.
+                {t("team.desc")}
               </p>
 
               {team.length === 0 ? (
                 <p className="text-sm text-center py-6" style={{ color: "var(--db-text-3)" }}>
-                  Nenhum membro de equipe ainda.
+                  {t("team.empty")}
                 </p>
               ) : (
                 <div className="space-y-2.5">
@@ -703,16 +708,16 @@ export default function PerfilPage() {
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {revoked ? (
                                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "var(--db-sub)", color: "var(--db-text-3)" }}>
-                                  Acesso revogado
+                                  {t("team.accessRevoked")}
                                 </span>
                               ) : labels.length === 0 ? (
                                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "var(--db-sub)", color: "var(--db-text-3)" }}>
-                                  Sem categorias liberadas
+                                  {t("team.noCategories")}
                                 </span>
                               ) : (
                                 labels.map((l) => (
                                   <span key={l.key} className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "rgba(21,101,192,0.08)", color: "var(--brand-500)" }}>
-                                    {l.label}
+                                    {tNav(`items.${l.key}`)}
                                   </span>
                                 ))
                               )}
@@ -725,14 +730,14 @@ export default function PerfilPage() {
                               variant="ghost" size="sm" icon={RotateCw}
                               loading={resendingId === m.id}
                               onClick={() => handleResendInvite(m)}
-                              title="Reenviar link de acesso"
+                              title={t("team.resendTitle")}
                             >
-                              <span className="hidden sm:inline">Reenviar</span>
+                              <span className="hidden sm:inline">{t("team.resend")}</span>
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" icon={Edit2} onClick={() => { setEditingMember(m); setShowTeamModal(true); }} title="Editar permissões" />
+                          <Button variant="ghost" size="sm" icon={Edit2} onClick={() => { setEditingMember(m); setShowTeamModal(true); }} title={t("team.editPermsTitle")} />
                           {!revoked && (
-                            <Button variant="ghost" size="sm" icon={ShieldOff} onClick={() => setRevokeTarget(m)} title="Revogar acesso" />
+                            <Button variant="ghost" size="sm" icon={ShieldOff} onClick={() => setRevokeTarget(m)} title={t("team.revokeTitle")} />
                           )}
                         </div>
                       </div>
@@ -748,18 +753,18 @@ export default function PerfilPage() {
             <Card padding="lg">
               <div className="flex items-center gap-2 mb-1">
                 <ShieldCheck size={16} style={{ color: "var(--brand-500)" }} />
-                <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>Seu acesso</h2>
+                <h2 className="font-bold text-sm" style={{ color: "var(--db-text)" }}>{t("memberAccess.title")}</h2>
               </div>
               <p className="text-xs mb-4" style={{ color: "var(--db-text-2)" }}>
-                Sua conta foi convidada por um administrador, com acesso liberado só nas categorias abaixo.
+                {t("memberAccess.desc")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {(scope.permissions === "all" ? [] : scope.permissions).length === 0 ? (
-                  <span className="text-xs" style={{ color: "var(--db-text-3)" }}>Nenhuma categoria liberada ainda.</span>
+                  <span className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("memberAccess.none")}</span>
                 ) : (
                   PERMISSION_CATEGORIES.filter((c) => scope.permissions !== "all" && scope.permissions.includes(c.key)).map((c) => (
                     <span key={c.key} className="text-xs font-semibold px-2 py-1 rounded-lg" style={{ background: "rgba(21,101,192,0.08)", color: "var(--brand-500)" }}>
-                      {c.label}
+                      {tNav(`items.${c.key}`)}
                     </span>
                   ))
                 )}
@@ -770,20 +775,20 @@ export default function PerfilPage() {
           <div className="flex items-start gap-2 px-1">
             <Mail size={13} className="shrink-0 mt-0.5" style={{ color: "var(--db-text-3)" }} />
             <p className="text-xs" style={{ color: "var(--db-text-3)" }}>
-              Senha e Google vinculados ao mesmo e-mail sempre acessam esta única conta ({user.uid.slice(0, 8)}…).
+              {t("accountFootnote", { id: user.uid.slice(0, 8) })}
             </p>
           </div>
         </div>
       </main>
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      
+
       <PinModal
         key={pinSetupStep}
         open={pinSetupOpen}
         collectOnly={true}
-        title={pinSetupStep === 1 ? (hasPin ? "Novo PIN" : "Configurar PIN") : "Confirmar PIN"}
-        subtitle={pinSetupStep === 1 ? "Digite um PIN de 4 dígitos" : "Digite novamente o PIN de 4 dígitos"}
+        title={pinSetupStep === 1 ? (hasPin ? t("pin.newTitle") : t("pin.configureTitle")) : t("pin.confirmTitle")}
+        subtitle={pinSetupStep === 1 ? t("pin.enterNew") : t("pin.enterAgain")}
         onClose={() => { setPinSetupOpen(false); setPinSetupStep(1); setPinTemp(""); }}
         onSuccess={handlePinSubmit}
       />
@@ -795,17 +800,20 @@ export default function PerfilPage() {
         onSaved={(msg) => showToast(msg, "success")}
       />
 
-      <Modal open={!!revokeTarget} onClose={() => !revoking && setRevokeTarget(null)} title="Revogar acesso?" size="sm" closeDisabled={revoking}>
+      <Modal open={!!revokeTarget} onClose={() => !revoking && setRevokeTarget(null)} title={t("team.revokeConfirmTitle")} size="sm" closeDisabled={revoking}>
         <div className="p-5 space-y-4">
           <p className="text-sm" style={{ color: "var(--db-text-2)" }}>
-            <strong style={{ color: "var(--db-text)" }}>{revokeTarget?.displayName}</strong> perde o acesso imediatamente e não consegue mais entrar na conta. Você pode liberar de novo depois, editando as permissões.
+            {t.rich("team.revokeConfirmBody", {
+              name: revokeTarget?.displayName ?? "",
+              b: (c) => <strong style={{ color: "var(--db-text)" }}>{c}</strong>,
+            })}
           </p>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setRevokeTarget(null)} disabled={revoking} className="flex-1">
-              Cancelar
+              {t("team.cancel")}
             </Button>
             <Button variant="danger" icon={ShieldOff} onClick={handleRevokeMember} loading={revoking} className="flex-1">
-              Revogar
+              {t("team.revoke")}
             </Button>
           </div>
         </div>
