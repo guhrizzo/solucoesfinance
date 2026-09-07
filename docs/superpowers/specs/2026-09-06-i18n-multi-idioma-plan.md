@@ -388,21 +388,28 @@ ConfirmModal) e `092f2e4` (parte 2: estoque).
 
 ---
 
-## Fase 7 — Impostos + Centro de Custo + Relatórios
+## Fase 7 — Impostos + Centro de Custo + Relatórios ✅ concluída
 
-Namespaces: `impostos`, `costCenter`, `relatorios`.
+Namespaces: `impostos`, `costCenter`, `relatorios` (com `relatorios.pdf`).
 
-- [ ] **`app/[locale]/impostos/page.tsx`** (~85 KB) — apurações, regimes,
-      alíquotas, vínculo com contas a pagar. Traduzir rótulos; **não** mexer
-      na lógica fiscal BR.
-- [ ] **`app/[locale]/costCenter/page.tsx`** (~73 KB) — centros de custo,
-      rateio, período/baixa.
-- [ ] **`app/[locale]/relatorios/page.tsx`** (~88 KB) + **`lib/reportPdf.ts`** —
-      o PDF recebe `locale` de quem gera; cabeçalhos/rótulos do relatório
-      traduzidos; `BRL`/datas via `lib/format.ts` com o locale.
-- [ ] `i18n:check` + `tsc` + `lint`.
-- [ ] Navegador: as 3 telas nos 3 idiomas; gerar um PDF de relatório em `en` e
-      conferir números/datas/rótulos.
+- [x] **`app/[locale]/costCenter/page.tsx`** + `costCenter.json` — `cc9b53e`.
+      Categorias de despesa keyed (`EXPENSE_CATEGORY_KEY` +
+      `expenseCategoryLabel`, `costCenter.expenseCategories.*`, 29 nomes de
+      CATEGORY_SETS/DEFAULT). ConfirmModal local via `common.*`.
+- [x] **`app/[locale]/impostos/page.tsx`** + `impostos.json` — `feccad5`.
+      Lógica fiscal BR intacta (`TaxType.id`, `esfera`, `TAX_TYPE_TO_CATEGORY`).
+      Siglas iguais nos 3 idiomas em `impostos.taxTypes.<id>`; descrições em
+      `impostos.taxTypeDesc.<id>`. STATUS_META sem `label`; FREQUENCY_LABEL saiu.
+- [x] **`app/[locale]/relatorios/page.tsx`** + **`lib/reportPdf.ts`** +
+      `relatorios.json` — `0e0257c`. O PDF recebe `locale` +
+      `messages` (`useMessages()`) e usa `createTranslator` no namespace
+      `relatorios.pdf`; moeda via `formatMoney(n, locale)`, data no locale.
+      Nomes de categoria (tela e PDF) via `categoryLabel` (namespace
+      `categories`). Termos contábeis da DRE traduzem; detecção de subtotal
+      no PDF deixou de depender do texto ("=" + índice da linha de margem).
+- [x] `i18n:check` (20 ns × 3), `tsc`, build limpos; eslint sem regressão.
+- [ ] Navegador / PDF em `en`: bloqueado por login — validado por build +
+      tsc + i18n:check.
 
 ---
 
