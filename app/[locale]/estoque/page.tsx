@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useId } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/app/hooks/useAuth";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
@@ -12,6 +13,7 @@ import {
   Zap, Loader2, ArrowRight, Package, X, CheckCircle, Download
 } from "lucide-react";
 import { authedFetch } from "@/lib/authedFetch";
+import { formatMoney } from "@/lib/format";
 
 // Interfaces de Dados
 interface ProdutoEstoque {
@@ -45,8 +47,16 @@ interface Vinculo {
   quantity: number;
 }
 
+const toBRL = (n: number, locale: string) => formatMoney(n, locale);
+
 export default function EstoquePage() {
+  const t = useTranslations("estoque");
+  const tc = useTranslations("common");
+  const tNav = useTranslations("nav");
+  const locale = useLocale();
   const { user, loading: authLoading } = useAuth();
+
+  const platformLabel = (p: "mercadolivre" | "shopee") => t(`platformName.${p}`);
 
   // Resolve de quem são os dados que este login deve ver: o próprio uid
   // (dono) ou o do dono da conta (membro convidado) — ver
@@ -281,32 +291,33 @@ export default function EstoquePage() {
 
     if (integration === "ml_success") {
       if (warning === "limited_permissions") {
-        showToast("Conta do Mercado Livre conectada, mas sem permissão para importar anúncios automaticamente. Vincule manualmente ou revise os escopos da aplicação.", "info");
+        showToast(t("toast.mlConnectedLimited"), "info");
       } else {
         showToast(
           imported && imported !== "0"
-            ? `Mercado Livre integrado! ${imported} anúncio(s) importado(s).`
-            : "Conta do Mercado Livre integrada com sucesso!",
+            ? t("toast.mlIntegratedImported", { count: imported })
+            : t("toast.mlIntegrated"),
           "success"
         );
       }
       cleanUrlParams();
     } else if (integration === "shopee_success") {
       if (warning === "limited_permissions") {
-        showToast("Loja da Shopee conectada, mas sem permissão para importar itens automaticamente. Vincule manualmente ou revise os escopos do app.", "info");
+        showToast(t("toast.shopeeConnectedLimited"), "info");
       } else {
         showToast(
           imported && imported !== "0"
-            ? `Shopee integrada! ${imported} item(ns) importado(s).`
-            : "Loja da Shopee integrada com sucesso!",
+            ? t("toast.shopeeIntegratedImported", { count: imported })
+            : t("toast.shopeeIntegrated"),
           "success"
         );
       }
       cleanUrlParams();
     } else if (integration === "ml_error" || integration === "shopee_error") {
-      showToast(`Erro na integração: ${message || "Verifique suas credenciais"}`, "error");
+      showToast(t("toast.integrationError", { message: message || t("toast.integrationErrorGeneric") }), "error");
       cleanUrlParams();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cleanUrlParams = () => {
@@ -336,9 +347,7 @@ export default function EstoquePage() {
     if (!user || syncing) return;
     setSyncing(true);
     showToast(
-      direction === "pull"
-        ? "Puxando estoque do Mercado Livre..."
-        : "Sincronizando estoque com as plataformas...",
+      direction === "pull" ? t("sync.pullingML") : t("sync.syncing"),
       "info"
     );
 
@@ -350,13 +359,13 @@ export default function EstoquePage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(data.message || "Sincronização completa!", "success");
+        showToast(data.message || t("sync.complete"), "success");
       } else {
-        showToast(data.error || "Falha na sincronização", "error");
+        showToast(data.error || t("sync.failed"), "error");
       }
     } catch (err) {
       console.error(err);
-      showToast("Erro ao conectar ao servidor de sincronização", "error");
+      showToast(t("sync.serverError"), "error");
     } finally {
       setSyncing(false);
     }
@@ -370,10 +379,10 @@ export default function EstoquePage() {
       const res = await authedFetch("/api/shopee/repasse");
       const data = await res.json();
       if (res.ok) setShopeeResumo(data);
-      else showToast(data.error || "Falha ao consultar repasse da Shopee", "error");
+      else showToast(data.error || t("toast.shopeeRepasseFail"), "error");
     } catch (err) {
       console.error(err);
-      showToast("Erro ao consultar repasse da Shopee", "error");
+      showToast(t("toast.shopeeRepasseError"), "error");
     } finally {
       setShopeeResumoLoading(false);
     }
@@ -393,23 +402,25 @@ export default function EstoquePage() {
   const resumoContas = (platform: "mercadolivre" | "shopee") => {
     const contas = integracoes.filter((i) => i.platform === platform);
     if (contas.length === 0) return null;
-    if (contas.length === 1) return `Conectado como ${contas[0].accountName}`;
-    return `${contas.length} contas conectadas`;
+    if (contas.length === 1) return t("accountsSummary.one", { name: contas[0].accountName });
+    return t("accountsSummary.many", { count: contas.length });
   };
 
   // Estado do token de uma integração — texto transparente, sem alarme falso
   // (o access token renova sozinho na próxima chamada via getValidAccessToken).
   const statusToken = (i: Integracao) => {
-    if (!i.accessToken || i.accessToken.startsWith("mock_")) return "Modo simulado";
-    if (!i.expiresAt) return "Conectada";
+    if (!i.accessToken || i.accessToken.startsWith("mock_")) return t("tokenStatus.simMode");
+    if (!i.expiresAt) return t("tokenStatus.connected");
     return i.expiresAt > Date.now()
-      ? `Token válido até ${new Date(i.expiresAt).toLocaleString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        })} · renova sozinho`
-      : "Token renova na próxima sincronização";
+      ? t("tokenStatus.validUntil", {
+          date: new Date(i.expiresAt).toLocaleString(locale, {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        })
+      : t("tokenStatus.renewsNext");
   };
 
   // Puxa o resumo quando há loja Shopee conectada (na carga e ao abrir o modal).
@@ -457,14 +468,14 @@ export default function EstoquePage() {
           });
         }
 
-        showToast("Produto atualizado com sucesso!");
+        showToast(t("toast.productUpdated"));
       } else {
         // Criando novo produto
         // Verificar SKU duplicado
         const qSku = query(collection(db, "estoque"), where("userId", "==", ownerUid), where("sku", "==", formSku.trim().toUpperCase()));
         const snapSku = await getDocs(qSku);
         if (!snapSku.empty) {
-          showToast("Este SKU já está sendo utilizado em outro produto!", "error");
+          showToast(t("toast.skuInUse"), "error");
           setFormSaving(false);
           return;
         }
@@ -474,14 +485,14 @@ export default function EstoquePage() {
           userId: ownerUid,
           createdAt: Date.now(),
         });
-        showToast("Produto cadastrado com sucesso!");
+        showToast(t("toast.productCreated"));
       }
 
       setModalProdutoOpen(false);
       resetProdutoForm();
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || "Erro ao salvar produto", "error");
+      showToast(err.message || t("toast.productSaveError"), "error");
     } finally {
       setFormSaving(false);
     }
@@ -499,9 +510,9 @@ export default function EstoquePage() {
   // Excluir Produto
   const handleDeleteProduto = (id: string, sku: string) => {
     setConfirmDialog({
-      title: "Remover produto",
-      message: `Deseja realmente remover o produto ${sku} e todos os seus vínculos com anúncios?`,
-      confirmText: "Remover",
+      title: t("confirm.removeProductTitle"),
+      message: t("confirm.removeProductMsg", { sku }),
+      confirmText: t("confirm.removeProductAction"),
       onConfirm: () => doDeleteProduto(id, sku),
     });
   };
@@ -522,19 +533,19 @@ export default function EstoquePage() {
         await deleteDoc(doc(db, "vinculos", d.id));
       }
 
-      showToast("Produto e seus vínculos removidos com sucesso!", "success");
+      showToast(t("toast.productRemoved"), "success");
     } catch (err) {
       console.error(err);
-      showToast("Erro ao remover produto", "error");
+      showToast(t("toast.productRemoveError"), "error");
     }
   };
 
   // Desconectar Integração
-  const handleDisconnect = (id: string, platform: string) => {
+  const handleDisconnect = (id: string, platform: "mercadolivre" | "shopee") => {
     setConfirmDialog({
-      title: "Desconectar integração",
-      message: `Deseja desconectar a conta integrada da plataforma ${platform}? Seus anúncios vinculados não serão mais sincronizados.`,
-      confirmText: "Desconectar",
+      title: t("confirm.disconnectTitle"),
+      message: t("confirm.disconnectMsg", { platform: platformLabel(platform) }),
+      confirmText: t("confirm.disconnectAction"),
       onConfirm: () => doDisconnect(id),
     });
   };
@@ -555,10 +566,10 @@ export default function EstoquePage() {
         await deleteDoc(doc(db, "vinculos", d.id));
       }
 
-      showToast("Integração e vínculos removidos.", "success");
+      showToast(t("toast.integrationRemoved"), "success");
     } catch (err) {
       console.error(err);
-      showToast("Erro ao desconectar conta", "error");
+      showToast(t("toast.disconnectError"), "error");
     }
   };
 
@@ -582,7 +593,7 @@ export default function EstoquePage() {
       );
       const snapExistente = await getDocs(qExistente);
       if (!snapExistente.empty) {
-        showToast("Este anúncio já está vinculado a um SKU do seu estoque!", "error");
+        showToast(t("toast.adAlreadyLinked"), "error");
         setFormVinculoSaving(false);
         return;
       }
@@ -606,11 +617,11 @@ export default function EstoquePage() {
         updatedAt: Date.now()
       });
 
-      showToast("Anúncio vinculado com sucesso!");
+      showToast(t("toast.adLinked"));
       resetVinculoForm();
     } catch (err) {
       console.error(err);
-      showToast("Erro ao adicionar vínculo", "error");
+      showToast(t("toast.adLinkError"), "error");
     } finally {
       setFormVinculoSaving(false);
     }
@@ -626,9 +637,9 @@ export default function EstoquePage() {
   // Remover Vínculo Individual
   const handleRemoveVinculo = (id: string) => {
     setConfirmDialog({
-      title: "Desvincular anúncio",
-      message: "Deseja realmente desvincular este anúncio do produto central?",
-      confirmText: "Desvincular",
+      title: t("confirm.unlinkTitle"),
+      message: t("confirm.unlinkMsg"),
+      confirmText: t("confirm.unlinkAction"),
       onConfirm: () => doRemoveVinculo(id),
     });
   };
@@ -640,10 +651,10 @@ export default function EstoquePage() {
       const { doc, deleteDoc } = await import("firebase/firestore");
 
       await deleteDoc(doc(db, "vinculos", id));
-      showToast("Vínculo removido.", "success");
+      showToast(t("toast.linkRemoved"), "success");
     } catch (err) {
       console.error(err);
-      showToast("Erro ao remover vínculo", "error");
+      showToast(t("toast.linkRemoveError"), "error");
     }
   };
 
@@ -682,7 +693,7 @@ export default function EstoquePage() {
     if (!ownerUid || !simSku || !simQuantity) return;
 
     const produto = produtos.find((p) => p.sku === simSku);
-    if (!produto) { showToast("Produto não encontrado no estoque", "error"); return; }
+    if (!produto) { showToast(t("toast.productNotFound"), "error"); return; }
 
     const qty = Math.max(1, parseInt(simQuantity) || 1);
     const parsedPrice = parsePriceField(simUnitPrice);
@@ -690,7 +701,7 @@ export default function EstoquePage() {
     const novaQtd = Math.max(0, (produto.quantity || 0) - qty);
 
     setSimRunning(true);
-    showToast("Registrando venda simulada...", "info");
+    showToast(t("toast.simRunning"), "info");
 
     try {
       const { getFirebase } = await import("@/lib/firebase");
@@ -725,13 +736,13 @@ export default function EstoquePage() {
       });
 
       showToast(
-        `Venda simulada: ${qty}x ${produto.name} · SKU ${simSku} agora com ${novaQtd} un. Confira no Painel de Vendas.`,
+        t("toast.simDone", { qty, name: produto.name, sku: simSku, stock: novaQtd }),
         "success"
       );
       setModalSimuladorOpen(false);
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || "Falha ao simular venda", "error");
+      showToast(err.message || t("toast.simFailed"), "error");
     } finally {
       setSimRunning(false);
     }
@@ -798,13 +809,13 @@ export default function EstoquePage() {
         const res = await authedFetch("/api/auth/shopee/redirect", { method: "POST" });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.authUrl) {
-          showToast(data.error || "Não foi possível iniciar a conexão com a Shopee", "error");
+          showToast(data.error || t("toast.shopeeConnectFail"), "error");
           return;
         }
         window.location.href = data.authUrl;
       } catch (err) {
         console.error(err);
-        showToast(err instanceof Error ? err.message : "Erro ao conectar à Shopee", "error");
+        showToast(err instanceof Error ? err.message : t("toast.shopeeConnectError"), "error");
       }
       return;
     }
@@ -813,7 +824,7 @@ export default function EstoquePage() {
     window.location.href = `/api/auth/${platform}/redirect?userId=${ownerUid}`;
   };
 
-  if (blocked) return <AccessDenied category="Estoque" />;
+  if (blocked) return <AccessDenied category={tNav("items.estoque")} />;
 
   // Se estiver carregando sessão
   if (authLoading || (user && !blocked && dbLoading)) {
@@ -845,7 +856,7 @@ export default function EstoquePage() {
         open={!!confirmDialog}
         title={confirmDialog?.title ?? ""}
         message={confirmDialog?.message ?? ""}
-        confirmText={confirmDialog?.confirmText ?? "Confirmar"}
+        confirmText={confirmDialog?.confirmText}
         isDangerous
         loading={confirmLoading}
         onConfirm={runConfirm}
@@ -858,10 +869,10 @@ export default function EstoquePage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl font-bold tracking-tight" style={{ color: "var(--db-text)" }}>
-              Estoque Centralizado
+              {t("meta.title")}
             </h1>
             <p className="text-sm mt-1" style={{ color: "var(--db-text-3)" }}>
-              Gerencie seu saldo de forma centralizada e integre com Mercado Livre e Shopee.
+              {t("meta.subtitle")}
             </p>
           </div>
 
@@ -872,7 +883,7 @@ export default function EstoquePage() {
               className="btn-success flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, var(--pos), var(--pos))", cursor: "pointer" }}
             >
-              <Zap size={15} /> Simular Venda (Teste)
+              <Zap size={15} /> {t("actions.simulateSale")}
             </button>
 
             <button
@@ -880,7 +891,7 @@ export default function EstoquePage() {
               className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
               style={{ cursor: "pointer" }}
             >
-              <Settings size={15} /> Integrações ({kpis.totalIntegracoes})
+              <Settings size={15} /> {t("actions.integrations", { count: kpis.totalIntegracoes })}
             </button>
 
             <button
@@ -891,7 +902,7 @@ export default function EstoquePage() {
               className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
               style={{ cursor: "pointer" }}
             >
-              <Plus size={15} /> Novo Produto
+              <Plus size={15} /> {t("actions.newProduct")}
             </button>
           </div>
         </div>
@@ -901,11 +912,11 @@ export default function EstoquePage() {
           {/* KPI 1 */}
           <div className="cf-kpi p-5 flex items-center justify-between">
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Total em Estoque</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("kpi.total")}</h2>
               <p className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>
                 {kpis.totalItens}
               </p>
-              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Unidades físicas</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>{t("kpi.totalHint")}</p>
             </div>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-500/10 text-primary">
               <Package size={22} />
@@ -915,11 +926,11 @@ export default function EstoquePage() {
           {/* KPI 2 */}
           <div className="cf-kpi p-5 flex items-center justify-between" style={{ borderColor: kpis.baixoEstoque > 0 ? "rgba(239, 68, 68, 0.4)" : "" }}>
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Estoque Baixo</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("kpi.lowStock")}</h2>
               <p className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: kpis.baixoEstoque > 0 ? "var(--danger)" : "var(--cf-text)" }}>
                 {kpis.baixoEstoque}
               </p>
-              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Produtos precisando reposição</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>{t("kpi.lowStockHint")}</p>
             </div>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${kpis.baixoEstoque > 0 ? "bg-red-500/10 text-danger" : "bg-gray-500/10 text-gray-400"}`}>
               <AlertTriangle size={22} />
@@ -929,11 +940,11 @@ export default function EstoquePage() {
           {/* KPI 3 */}
           <div className="cf-kpi p-5 flex items-center justify-between">
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Anúncios Vinculados</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("kpi.linkedAds")}</h2>
               <p className="font-heading text-2xl font-bold mt-1.5 mono" style={{ color: "var(--cf-text)" }}>
                 {kpis.totalAnuncios}
               </p>
-              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Nas plataformas ativas</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>{t("kpi.linkedAdsHint")}</p>
             </div>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-purple-500/10 text-purple-500">
               <ShoppingBag size={22} />
@@ -943,17 +954,17 @@ export default function EstoquePage() {
           {/* KPI 4 */}
           <div className="cf-kpi p-5 flex items-center justify-between">
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Canais Ativos</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("kpi.activeChannels")}</h2>
               <div className="flex items-center gap-1.5 mt-1.5">
                 <span className="flex h-2.5 w-2.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
                 <p className="font-heading text-xl font-bold mono" style={{ color: "var(--cf-text)" }}>
-                  {integracoes.length > 0 ? `${integracoes.length} Conectados` : "Nenhum"}
+                  {integracoes.length > 0 ? t("kpi.channelsConnected", { count: integracoes.length }) : t("kpi.channelsNone")}
                 </p>
               </div>
-              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>Mercado Livre & Shopee</p>
+              <p className="text-[11px] mt-1" style={{ color: "var(--cf-text-3)" }}>{t("kpi.channelsHint")}</p>
             </div>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-500">
               <Globe size={22} />
@@ -968,11 +979,11 @@ export default function EstoquePage() {
               <div className="flex items-center gap-2.5">
                 <img src="/Shopee.svg" alt="Shopee" style={{ height: "22px", objectFit: "contain" }} />
                 <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>
-                  Shopee — estoque e repasse
+                  {t("shopeePanel.title")}
                 </h2>
                 {shopeeResumo?.mock && (
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--cf-input)", color: "var(--cf-text-3)" }}>
-                    SIMULADO
+                    {t("shopeePanel.simulated")}
                   </span>
                 )}
               </div>
@@ -983,40 +994,40 @@ export default function EstoquePage() {
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
                 <RefreshCw size={13} className={shopeeResumoLoading ? "animate-spin" : ""} />
-                Atualizar
+                {t("shopeePanel.refresh")}
               </button>
             </div>
 
             {!shopeeResumo && shopeeResumoLoading ? (
-              <p className="text-xs py-4 text-center" style={{ color: "var(--cf-text-3)" }}>Consultando a Shopee…</p>
+              <p className="text-xs py-4 text-center" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.loading")}</p>
             ) : !shopeeResumo ? (
-              <p className="text-xs py-4 text-center" style={{ color: "var(--cf-text-3)" }}>Clique em Atualizar para carregar os dados da Shopee.</p>
+              <p className="text-xs py-4 text-center" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.empty")}</p>
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Itens cadastrados</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.itemsRegistered")}</p>
                     <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--cf-text)" }}>{shopeeResumo.estoque.itens}</p>
-                    <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{shopeeResumo.estoque.skus} SKU(s)</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.skus", { count: shopeeResumo.estoque.skus })}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Unidades na Shopee</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.unitsShopee")}</p>
                     <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--cf-text)" }}>{shopeeResumo.estoque.unidades}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Líquido a receber</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.netReceivable")}</p>
                     <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--success)" }}>
-                      {shopeeResumo.repasse.pendente.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {toBRL(shopeeResumo.repasse.pendente, locale)}
                     </p>
-                    <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>escrow ainda não liberado</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.escrowNote")}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Já liberado (60d)</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("shopeePanel.released60d")}</p>
                     <p className="font-heading text-xl font-bold mono mt-1" style={{ color: "var(--cf-text)" }}>
-                      {shopeeResumo.repasse.liberado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {toBRL(shopeeResumo.repasse.liberado, locale)}
                     </p>
                     <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>
-                      taxas: {shopeeResumo.repasse.taxas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {t("shopeePanel.fees", { value: toBRL(shopeeResumo.repasse.taxas, locale) })}
                     </p>
                   </div>
                 </div>
@@ -1039,11 +1050,11 @@ export default function EstoquePage() {
             {/* Abas */}
             <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
               {[
-                { id: "todos", label: "Todos", icon: null },
-                { id: "mercadolivre", label: "", ariaLabel: "Filtrar por Mercado Livre", image: "/Logotipo_MercadoLivre.png" },
-                { id: "shopee", label: "", ariaLabel: "Filtrar por Shopee", image: "/Shopee.svg" },
-                { id: "local", label: "Apenas Local", icon: null },
-                { id: "baixo", label: "Estoque Baixo", icon: AlertTriangle }
+                { id: "todos", label: t("tabs.todos"), icon: null },
+                { id: "mercadolivre", label: "", ariaLabel: t("tabs.filterML"), image: "/Logotipo_MercadoLivre.png" },
+                { id: "shopee", label: "", ariaLabel: t("tabs.filterShopee"), image: "/Shopee.svg" },
+                { id: "local", label: t("tabs.local"), icon: null },
+                { id: "baixo", label: t("tabs.lowStock"), icon: AlertTriangle }
               ].map((tab) => {
                 const IconComponent = tab.icon;
                 return (
@@ -1071,8 +1082,8 @@ export default function EstoquePage() {
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--cf-text-3)" }} />
                 <input
                   type="text"
-                  placeholder="Buscar por SKU ou Nome..."
-                  aria-label="Buscar por SKU ou nome"
+                  placeholder={t("search.placeholder")}
+                  aria-label={t("search.aria")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs outline-none"
@@ -1084,20 +1095,20 @@ export default function EstoquePage() {
                 <button
                   onClick={() => handleSincronizarManual("mercadolivre", "pull")}
                   disabled={syncing}
-                  title="Puxar estoque e preço dos anúncios do Mercado Livre (o ML manda)"
+                  title={t("sync.pullMLTitle")}
                   className="px-3 py-2.5 rounded-xl cursor-pointer flex items-center gap-1.5 border-none text-[11px] font-bold whitespace-nowrap disabled:opacity-50"
                   style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                 >
                   <Download size={14} className={syncing ? "animate-pulse" : ""} />
-                  Puxar do ML
+                  {t("sync.pullML")}
                 </button>
               )}
 
               <button
                 onClick={() => handleSincronizarManual()}
                 disabled={syncing}
-                title="Sincronizar: empurra o estoque central pros canais"
-                aria-label="Sincronizar estoque com os canais"
+                title={t("sync.syncTitle")}
+                aria-label={t("sync.syncAria")}
                 className="p-2.5 rounded-xl cursor-pointer flex items-center justify-center border-none disabled:opacity-50"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1117,11 +1128,11 @@ export default function EstoquePage() {
                 className="px-5 py-2 text-[11px]"
                 style={{ borderBottom: "1px solid var(--cf-border)", color: "var(--cf-text-3)" }}
               >
-                Conta:{" "}
+                {t("channelAccount.label")}{" "}
                 <span style={{ color: "var(--cf-text-2)", fontWeight: 700 }}>
                   {contas.map((c) => c.accountName).join(" · ")}
                 </span>{" "}
-                · {n} {n === 1 ? "anúncio vinculado" : "anúncios vinculados"}
+                · {t("channelAccount.adsLinked", { count: n })}
               </div>
             );
           })()}
@@ -1131,19 +1142,19 @@ export default function EstoquePage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr style={{ background: "var(--cf-txhdr)", borderBottom: "1px solid var(--cf-border)" }}>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Código/SKU</th>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Produto</th>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Preço Base</th>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Quantidade</th>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Canais Ativos</th>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>Ações</th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("table.colSku")}</th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("table.colProduct")}</th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("table.colBasePrice")}</th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("table.colQty")}</th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("table.colChannels")}</th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-right" style={{ color: "var(--cf-text-2)" }}>{t("table.colActions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {produtosFiltrados.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-12 text-sm" style={{ color: "var(--cf-text-3)" }}>
-                      Nenhum produto cadastrado ou correspondente ao filtro.
+                      {t("table.empty")}
                     </td>
                   </tr>
                 ) : (
@@ -1162,24 +1173,27 @@ export default function EstoquePage() {
                         <td className="px-5 py-4">
                           <div className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{p.name}</div>
                           <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>
-                            Última atualização: {new Date(p.updatedAt).toLocaleDateString("pt-BR")} às {new Date(p.updatedAt).toLocaleTimeString("pt-BR")}
+                            {t("table.lastUpdate", {
+                              date: new Date(p.updatedAt).toLocaleDateString(locale),
+                              time: new Date(p.updatedAt).toLocaleTimeString(locale),
+                            })}
                           </div>
                         </td>
 
                         {/* Preço */}
                         <td className="px-5 py-4 text-xs font-bold mono" style={{ color: "var(--cf-text)" }}>
-                          {p.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          {toBRL(p.price, locale)}
                         </td>
 
                         {/* Quantidade */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold mono" style={{ color: isEstoqueBaixo ? "var(--danger)" : "var(--cf-text)" }}>
-                              {p.quantity} un
+                              {t("table.unitsShort", { count: p.quantity })}
                             </span>
                             {isEstoqueBaixo && (
                               <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase" style={{ background: "rgba(239, 68, 68, 0.1)", color: "var(--danger)" }}>
-                                Baixo
+                                {t("table.lowBadge")}
                               </span>
                             )}
                           </div>
@@ -1201,7 +1215,7 @@ export default function EstoquePage() {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {skusVinculados.length === 0 ? (
                               <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)", border: "1px solid var(--cf-border)" }}>
-                                Apenas Local
+                                {t("table.localOnly")}
                               </span>
                             ) : (
                               skusVinculados.map((v) => {
@@ -1231,8 +1245,8 @@ export default function EstoquePage() {
                                 setSelectedProdutoSku(p.sku);
                                 setModalVinculosOpen(true);
                               }}
-                              title="Gerenciar Vínculos de Anúncio"
-                              aria-label={`Gerenciar vínculos de anúncio de ${p.name}`}
+                              title={t("table.manageLinks")}
+                              aria-label={t("table.manageLinksAria", { name: p.name })}
                               className="p-1.5 rounded-lg border-none cursor-pointer"
                               style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                             >
@@ -1249,8 +1263,8 @@ export default function EstoquePage() {
                                 setFormMinQuantity(p.minQuantity.toString());
                                 setModalProdutoOpen(true);
                               }}
-                              title="Editar Produto"
-                              aria-label={`Editar ${p.name}`}
+                              title={t("table.editProduct")}
+                              aria-label={t("table.editAria", { name: p.name })}
                               className="p-1.5 rounded-lg border-none cursor-pointer"
                               style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                             >
@@ -1259,8 +1273,8 @@ export default function EstoquePage() {
 
                             <button
                               onClick={() => handleDeleteProduto(p.id, p.sku)}
-                              title="Excluir Produto"
-                              aria-label={`Excluir ${p.name}`}
+                              title={t("table.deleteProduct")}
+                              aria-label={t("table.deleteAria", { name: p.name })}
                               className="p-1.5 rounded-lg border-none cursor-pointer"
                               style={{ background: "var(--neg-weak)", color: "var(--neg)" }}
                             >
@@ -1287,11 +1301,11 @@ export default function EstoquePage() {
           <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-fade-in" style={{ background: "var(--cf-card)" }}>
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
               <h3 className="font-heading font-bold text-base" style={{ color: "var(--cf-text)" }}>
-                {editingProduto ? "Editar Produto" : "Novo Produto no Estoque"}
+                {editingProduto ? t("productModal.editTitle") : t("productModal.newTitle")}
               </h3>
               <button
                 onClick={() => setModalProdutoOpen(false)}
-                aria-label="Fechar"
+                aria-label={tc("close")}
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1301,14 +1315,14 @@ export default function EstoquePage() {
 
             <form onSubmit={handleSaveProduto} className="p-5 space-y-4">
               <div className="space-y-1">
-                <label htmlFor={formSkuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Código / SKU</label>
+                <label htmlFor={formSkuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("productModal.sku")}</label>
                 <input
                   id={formSkuId}
                   type="text"
                   value={formSku}
                   onChange={(e) => setFormSku(e.target.value)}
                   disabled={!!editingProduto}
-                  placeholder="EX: PROD-1001"
+                  placeholder={t("productModal.skuPlaceholder")}
                   required
                   className="w-full px-3 py-2.5 rounded-xl text-sm outline-none mono"
                   style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
@@ -1316,13 +1330,13 @@ export default function EstoquePage() {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor={formNameId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Nome do Produto</label>
+                <label htmlFor={formNameId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("productModal.name")}</label>
                 <input
                   id={formNameId}
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="EX: Fone de Ouvido SoundMax"
+                  placeholder={t("productModal.namePlaceholder")}
                   required
                   className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                   style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
@@ -1331,7 +1345,7 @@ export default function EstoquePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label htmlFor={formPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço Base (R$)</label>
+                  <label htmlFor={formPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("productModal.basePrice")}</label>
                   <input
                     id={formPriceId}
                     type="text"
@@ -1345,7 +1359,7 @@ export default function EstoquePage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor={formQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade Física</label>
+                  <label htmlFor={formQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("productModal.quantity")}</label>
                   <input
                     id={formQuantityId}
                     type="number"
@@ -1360,7 +1374,7 @@ export default function EstoquePage() {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor={formMinQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Alerta de Estoque Baixo (Quantidade Mínima)</label>
+                <label htmlFor={formMinQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("productModal.minQuantity")}</label>
                 <input
                   id={formMinQuantityId}
                   type="number"
@@ -1380,7 +1394,7 @@ export default function EstoquePage() {
                   className="px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer"
                   style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                 >
-                  Cancelar
+                  {t("productModal.cancel")}
                 </button>
                 <button
                   type="submit"
@@ -1388,7 +1402,7 @@ export default function EstoquePage() {
                   className="btn-primary px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer flex items-center gap-1.5"
                 >
                   {formSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                  Salvar
+                  {t("productModal.save")}
                 </button>
               </div>
             </form>
@@ -1402,11 +1416,11 @@ export default function EstoquePage() {
           <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl animate-fade-in" style={{ background: "var(--cf-card)" }}>
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
               <h3 className="font-heading font-bold text-base" style={{ color: "var(--cf-text)" }}>
-                Gerenciar Integrações de Canais
+                {t("integrationsModal.title")}
               </h3>
               <button
                 onClick={() => setModalIntegracoesOpen(false)}
-                aria-label="Fechar"
+                aria-label={tc("close")}
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1418,7 +1432,7 @@ export default function EstoquePage() {
 
               {/* Canais Disponíveis */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Disponíveis para Integração</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.available")}</h4>
 
                 {/* Canal 1: Mercado Livre */}
                 <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
@@ -1426,11 +1440,11 @@ export default function EstoquePage() {
                     <div className="flex flex-col items-center gap-2">
                       <img src="/Logotipo_MercadoLivre.png" alt="Mercado Livre" style={{ height: "40px", objectFit: "contain" }} />
                       <div className="text-center">
-                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>Integração real via OAuth2.0</div>
+                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.mlDesc")}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {resumoContas("mercadolivre") ? (
                     <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
@@ -1442,7 +1456,7 @@ export default function EstoquePage() {
                       className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
                       style={{ background: "var(--primary)", color: "white" }}
                     >
-                      Conectar Conta
+                      {t("integrationsModal.connectAccount")}
                     </button>
                   )}
                 </div>
@@ -1453,11 +1467,11 @@ export default function EstoquePage() {
                     <div className="flex flex-col items-center gap-2">
                       <img src="/Shopee.svg" alt="Shopee" style={{ height: "40px", objectFit: "contain" }} />
                       <div className="text-center">
-                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>Integração real de anúncios e vendas</div>
+                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.shopeeDesc")}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {resumoContas("shopee") ? (
                     <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
@@ -1469,7 +1483,7 @@ export default function EstoquePage() {
                       className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
                       style={{ background: "var(--primary)", color: "white" }}
                     >
-                      Conectar Conta
+                      {t("integrationsModal.connectAccount")}
                     </button>
                   )}
                 </div>
@@ -1478,11 +1492,11 @@ export default function EstoquePage() {
 
               {/* Contas Conectadas */}
               <div className="space-y-3 pt-2" style={{ borderTop: "1px solid var(--cf-border)" }}>
-                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Suas Contas Integradas ({integracoes.length})</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.yourAccounts", { count: integracoes.length })}</h4>
 
                 {integracoes.length === 0 ? (
                   <div className="text-center py-4 text-xs" style={{ color: "var(--cf-text-3)" }}>
-                    Nenhuma conta conectada no momento.
+                    {t("integrationsModal.noneConnected")}
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
@@ -1503,22 +1517,22 @@ export default function EstoquePage() {
                               onClick={() => handleConnectAccount(item.platform)}
                               className="p-1 px-2 rounded hover:bg-black/5 cursor-pointer border-none font-bold"
                               style={{ background: "transparent", color: "var(--cf-text-2)" }}
-                              title="Refazer a autorização OAuth desta conta"
+                              title={t("integrationsModal.reconnectTitle")}
                             >
-                              <RefreshCw size={12} className="inline mr-1" /> Reconectar
+                              <RefreshCw size={12} className="inline mr-1" /> {t("integrationsModal.reconnect")}
                             </button>
                             <button
                               onClick={() => handleDisconnect(item.id, item.platform)}
                               className="p-1 px-2 rounded hover:bg-red-500/10 cursor-pointer border-none text-red-500 font-bold"
                               style={{ background: "transparent" }}
                             >
-                              <LogOut size={12} className="inline mr-1" /> Desconectar
+                              <LogOut size={12} className="inline mr-1" /> {t("integrationsModal.disconnect")}
                             </button>
                           </div>
                         </div>
                         <div className="mt-1.5 pl-7 text-[10px] leading-relaxed" style={{ color: "var(--cf-text-3)" }}>
                           {statusToken(item)}
-                          {item.createdAt ? ` · conectada em ${new Date(item.createdAt).toLocaleDateString("pt-BR")}` : ""}
+                          {item.createdAt ? t("integrationsModal.connectedOn", { date: new Date(item.createdAt).toLocaleDateString(locale) }) : ""}
                         </div>
                       </div>
                     ))}
@@ -1538,15 +1552,15 @@ export default function EstoquePage() {
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
               <div>
                 <h3 className="font-heading font-bold text-base" style={{ color: "var(--cf-text)" }}>
-                  Vínculos Multi-canal do SKU: <span className="mono text-primary font-bold">{selectedProdutoSku}</span>
+                  {t("linksModal.title")} <span className="mono text-primary font-bold">{selectedProdutoSku}</span>
                 </h3>
                 <p className="text-[10px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>
-                  Conecte anúncios de suas contas integradas a este código para sincronização automática.
+                  {t("linksModal.subtitle")}
                 </p>
               </div>
               <button
                 onClick={() => setModalVinculosOpen(false)}
-                aria-label="Fechar"
+                aria-label={tc("close")}
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1558,13 +1572,13 @@ export default function EstoquePage() {
 
               {/* Lado Esquerdo: Lista de Anúncios Vinculados */}
               <div className="p-5 space-y-4" style={{ borderRight: "1px solid var(--cf-border)" }}>
-                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Anúncios Vinculados</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("linksModal.linkedAds")}</h4>
 
                 {vinculos.filter((v) => v.sku === selectedProdutoSku).length === 0 ? (
                   <div className="h-60 flex flex-col justify-center items-center text-center p-4" style={{ color: "var(--cf-text-3)" }}>
                     <LinkIcon size={24} className="mb-2 opacity-50" />
-                    <p className="text-xs font-semibold">Nenhum anúncio vinculado a este produto.</p>
-                    <p className="text-[10px] mt-1 max-w-[180px]">Vincule um anúncio no formulário ao lado para sincronizar o estoque.</p>
+                    <p className="text-xs font-semibold">{t("linksModal.noneLinked")}</p>
+                    <p className="text-[10px] mt-1 max-w-[180px]">{t("linksModal.noneLinkedHint")}</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -1582,7 +1596,7 @@ export default function EstoquePage() {
                           </span>
                           <button
                             onClick={() => handleRemoveVinculo(vin.id)}
-                            aria-label={`Remover vínculo com ${vin.platform === "mercadolivre" ? "Mercado Livre" : "Shopee"}`}
+                            aria-label={t("linksModal.removeLinkAria", { platform: platformLabel(vin.platform) })}
                             className="p-1 rounded cursor-pointer border-none text-red-500 hover:bg-red-500/10"
                             style={{ background: "transparent" }}
                           >
@@ -1591,9 +1605,9 @@ export default function EstoquePage() {
                         </div>
                         <div className="font-semibold font-heading" style={{ color: "var(--cf-text)" }}>{vin.title}</div>
                         <div className="flex items-center justify-between font-mono text-[10px]" style={{ color: "var(--cf-text-3)" }}>
-                          <span>ID: {vin.adId}</span>
+                          <span>{t("linksModal.idLabel", { id: vin.adId })}</span>
                           <span className="font-bold text-right" style={{ color: "var(--cf-text)" }}>
-                            {vin.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            {toBRL(vin.price, locale)}
                           </span>
                         </div>
                       </div>
@@ -1604,11 +1618,11 @@ export default function EstoquePage() {
 
               {/* Lado Direito: Formulário Vincular Novo Anúncio */}
               <div className="p-5 space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Vincular Novo Anúncio</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("linksModal.newLink")}</h4>
 
                 <form onSubmit={handleAddVinculo} className="space-y-3.5">
                   <div className="space-y-1">
-                    <label htmlFor={vinculoPlatformId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Plataforma</label>
+                    <label htmlFor={vinculoPlatformId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("linksModal.platform")}</label>
                     <select
                       id={vinculoPlatformId}
                       value={formVinculoPlatform}
@@ -1622,13 +1636,13 @@ export default function EstoquePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label htmlFor={vinculoAdIdId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>ID do Anúncio</label>
+                    <label htmlFor={vinculoAdIdId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("linksModal.adId")}</label>
                     <input
                       id={vinculoAdIdId}
                       type="text"
                       value={formVinculoAdId}
                       onChange={(e) => setFormVinculoAdId(e.target.value)}
-                      placeholder="EX: MLB40001001"
+                      placeholder={t("linksModal.adIdPlaceholder")}
                       required
                       className="w-full px-3 py-2 rounded-xl text-xs outline-none mono"
                       style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
@@ -1636,13 +1650,13 @@ export default function EstoquePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label htmlFor={vinculoTitleId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Título do Anúncio</label>
+                    <label htmlFor={vinculoTitleId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("linksModal.adTitle")}</label>
                     <input
                       id={vinculoTitleId}
                       type="text"
                       value={formVinculoTitle}
                       onChange={(e) => setFormVinculoTitle(e.target.value)}
-                      placeholder="EX: Fone Bluetooth SoundMax Pro"
+                      placeholder={t("linksModal.adTitlePlaceholder")}
                       required
                       className="w-full px-3 py-2 rounded-xl text-xs outline-none"
                       style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
@@ -1651,7 +1665,7 @@ export default function EstoquePage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label htmlFor={vinculoPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço no Canal (R$)</label>
+                      <label htmlFor={vinculoPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("linksModal.channelPrice")}</label>
                       <input
                         id={vinculoPriceId}
                         type="text"
@@ -1665,7 +1679,7 @@ export default function EstoquePage() {
                     </div>
 
                     <div className="space-y-1">
-                      <label htmlFor={vinculoQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Estoque Atual</label>
+                      <label htmlFor={vinculoQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("linksModal.currentStock")}</label>
                       <input
                         id={vinculoQuantityId}
                         type="number"
@@ -1685,7 +1699,7 @@ export default function EstoquePage() {
                     className="w-full btn-primary py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     {formVinculoSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                    Vincular Anúncio
+                    {t("linksModal.linkAd")}
                   </button>
                 </form>
               </div>
@@ -1703,12 +1717,12 @@ export default function EstoquePage() {
               <div className="flex items-center gap-2">
                 <Zap size={16} className="text-emerald-500" />
                 <h3 className="font-heading font-bold text-base" style={{ color: "var(--cf-text)" }}>
-                  Simulador de Vendas
+                  {t("simulatorModal.title")}
                 </h3>
               </div>
               <button
                 onClick={() => setModalSimuladorOpen(false)}
-                aria-label="Fechar"
+                aria-label={tc("close")}
                 className="p-1.5 rounded-lg cursor-pointer border-none"
                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
               >
@@ -1719,14 +1733,14 @@ export default function EstoquePage() {
             <form onSubmit={handleSimularVenda} className="p-5 space-y-4">
 
               <div className="rounded-xl px-4 py-3 text-[11px] leading-relaxed space-y-1.5" style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", color: "var(--success)" }}>
-                <p className="font-bold flex items-center gap-1"><CheckCircle size={12} /> O que a simulação faz:</p>
-                <p>1. Baixa a quantidade vendida do estoque central do SKU (e espelha nos anúncios vinculados, se houver).</p>
-                <p>2. Lança a venda como <strong>entrada no Fluxo de Caixa</strong> na categoria Vendas.</p>
-                <p>3. A venda passa a aparecer no <strong>Painel de Vendas</strong> e no Dashboard.</p>
+                <p className="font-bold flex items-center gap-1"><CheckCircle size={12} /> {t("simulatorModal.whatItDoes")}</p>
+                <p>{t("simulatorModal.step1")}</p>
+                <p>{t.rich("simulatorModal.step2", { b: (c) => <strong>{c}</strong> })}</p>
+                <p>{t.rich("simulatorModal.step3", { b: (c) => <strong>{c}</strong> })}</p>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor={simSkuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Produto vendido</label>
+                <label htmlFor={simSkuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.productSold")}</label>
                 <select
                   id={simSkuId}
                   value={simSku}
@@ -1735,17 +1749,17 @@ export default function EstoquePage() {
                   className="w-full px-3 py-2.5 rounded-xl text-xs outline-none cursor-pointer"
                   style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
                 >
-                  <option value="">-- Escolha um produto --</option>
+                  <option value="">{t("simulatorModal.choose")}</option>
                   {produtos.map((p) => (
                     <option key={p.id} value={p.sku}>
-                      {p.name} (SKU: {p.sku} | Estoque: {p.quantity})
+                      {t("simulatorModal.optionLabel", { name: p.name, sku: p.sku, qty: p.quantity })}
                     </option>
                   ))}
                 </select>
               </div>
 
               <fieldset className="space-y-1 border-0 p-0 m-0 min-w-0">
-                <legend className="text-[10px] font-bold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-3)" }}>Canal da venda</legend>
+                <legend className="text-[10px] font-bold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.saleChannel")}</legend>
                 <div className="grid grid-cols-2 gap-2">
                   {(["mercadolivre", "shopee"] as const).map((c) => (
                     <button
@@ -1757,7 +1771,7 @@ export default function EstoquePage() {
                         ? { background: "rgba(16,185,129,0.12)", borderColor: "var(--pos)", color: "var(--pos)" }
                         : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}
                     >
-                      {c === "mercadolivre" ? "Mercado Livre" : "Shopee"}
+                      {platformLabel(c)}
                     </button>
                   ))}
                 </div>
@@ -1765,7 +1779,7 @@ export default function EstoquePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label htmlFor={simQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Quantidade</label>
+                  <label htmlFor={simQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.quantity")}</label>
                   <input
                     id={simQuantityId}
                     type="number"
@@ -1778,7 +1792,7 @@ export default function EstoquePage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor={simUnitPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>Preço unitário (R$)</label>
+                  <label htmlFor={simUnitPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.unitPrice")}</label>
                   <input
                     id={simUnitPriceId}
                     type="text"
@@ -1799,7 +1813,7 @@ export default function EstoquePage() {
                   className="px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer"
                   style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
                 >
-                  Fechar
+                  {t("simulatorModal.close")}
                 </button>
                 <button
                   type="submit"
@@ -1808,7 +1822,7 @@ export default function EstoquePage() {
                   style={{ background: "linear-gradient(135deg, var(--pos), var(--pos))" }}
                 >
                   {simRunning ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                  Registrar venda simulada
+                  {t("simulatorModal.submit")}
                 </button>
               </div>
             </form>

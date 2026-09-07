@@ -1,1 +1,197 @@
-{}
+{
+  "platformName": {
+    "mercadolivre": "Mercado Livre",
+    "shopee": "Shopee"
+  },
+  "meta": {
+    "title": "Estoque Centralizado",
+    "subtitle": "Gerencie seu saldo de forma centralizada e integre com Mercado Livre e Shopee."
+  },
+  "actions": {
+    "simulateSale": "Simular Venda (Teste)",
+    "integrations": "Integrações ({count})",
+    "newProduct": "Novo Produto"
+  },
+  "kpi": {
+    "total": "Total em Estoque",
+    "totalHint": "Unidades físicas",
+    "lowStock": "Estoque Baixo",
+    "lowStockHint": "Produtos precisando reposição",
+    "linkedAds": "Anúncios Vinculados",
+    "linkedAdsHint": "Nas plataformas ativas",
+    "activeChannels": "Canais Ativos",
+    "channelsConnected": "{count} Conectados",
+    "channelsNone": "Nenhum",
+    "channelsHint": "Mercado Livre & Shopee"
+  },
+  "shopeePanel": {
+    "title": "Shopee — estoque e repasse",
+    "simulated": "SIMULADO",
+    "refresh": "Atualizar",
+    "loading": "Consultando a Shopee…",
+    "empty": "Clique em Atualizar para carregar os dados da Shopee.",
+    "itemsRegistered": "Itens cadastrados",
+    "skus": "{count} SKU(s)",
+    "unitsShopee": "Unidades na Shopee",
+    "netReceivable": "Líquido a receber",
+    "escrowNote": "escrow ainda não liberado",
+    "released60d": "Já liberado (60d)",
+    "fees": "taxas: {value}"
+  },
+  "tabs": {
+    "todos": "Todos",
+    "filterML": "Filtrar por Mercado Livre",
+    "filterShopee": "Filtrar por Shopee",
+    "local": "Apenas Local",
+    "lowStock": "Estoque Baixo"
+  },
+  "search": {
+    "placeholder": "Buscar por SKU ou Nome...",
+    "aria": "Buscar por SKU ou nome"
+  },
+  "sync": {
+    "pullML": "Puxar do ML",
+    "pullMLTitle": "Puxar estoque e preço dos anúncios do Mercado Livre (o ML manda)",
+    "syncTitle": "Sincronizar: empurra o estoque central pros canais",
+    "syncAria": "Sincronizar estoque com os canais",
+    "pullingML": "Puxando estoque do Mercado Livre...",
+    "syncing": "Sincronizando estoque com as plataformas...",
+    "complete": "Sincronização completa!",
+    "failed": "Falha na sincronização",
+    "serverError": "Erro ao conectar ao servidor de sincronização"
+  },
+  "channelAccount": {
+    "label": "Conta:",
+    "adsLinked": "{count, plural, one {# anúncio vinculado} other {# anúncios vinculados}}"
+  },
+  "table": {
+    "colSku": "Código/SKU",
+    "colProduct": "Produto",
+    "colBasePrice": "Preço Base",
+    "colQty": "Quantidade",
+    "colChannels": "Canais Ativos",
+    "colActions": "Ações",
+    "empty": "Nenhum produto cadastrado ou correspondente ao filtro.",
+    "lastUpdate": "Última atualização: {date} às {time}",
+    "unitsShort": "{count} un",
+    "lowBadge": "Baixo",
+    "localOnly": "Apenas Local",
+    "manageLinks": "Gerenciar Vínculos de Anúncio",
+    "manageLinksAria": "Gerenciar vínculos de anúncio de {name}",
+    "editProduct": "Editar Produto",
+    "editAria": "Editar {name}",
+    "deleteProduct": "Excluir Produto",
+    "deleteAria": "Excluir {name}"
+  },
+  "productModal": {
+    "editTitle": "Editar Produto",
+    "newTitle": "Novo Produto no Estoque",
+    "sku": "Código / SKU",
+    "skuPlaceholder": "EX: PROD-1001",
+    "name": "Nome do Produto",
+    "namePlaceholder": "EX: Fone de Ouvido SoundMax",
+    "basePrice": "Preço Base (R$)",
+    "quantity": "Quantidade Física",
+    "minQuantity": "Alerta de Estoque Baixo (Quantidade Mínima)",
+    "cancel": "Cancelar",
+    "save": "Salvar"
+  },
+  "integrationsModal": {
+    "title": "Gerenciar Integrações de Canais",
+    "available": "Disponíveis para Integração",
+    "mlDesc": "Integração real via OAuth2.0",
+    "shopeeDesc": "Integração real de anúncios e vendas",
+    "connectAccount": "Conectar Conta",
+    "yourAccounts": "Suas Contas Integradas ({count})",
+    "noneConnected": "Nenhuma conta conectada no momento.",
+    "reconnect": "Reconectar",
+    "reconnectTitle": "Refazer a autorização OAuth desta conta",
+    "disconnect": "Desconectar",
+    "connectedOn": " · conectada em {date}"
+  },
+  "tokenStatus": {
+    "simMode": "Modo simulado",
+    "connected": "Conectada",
+    "validUntil": "Token válido até {date} · renova sozinho",
+    "renewsNext": "Token renova na próxima sincronização"
+  },
+  "accountsSummary": {
+    "one": "Conectado como {name}",
+    "many": "{count} contas conectadas"
+  },
+  "linksModal": {
+    "title": "Vínculos Multi-canal do SKU:",
+    "subtitle": "Conecte anúncios de suas contas integradas a este código para sincronização automática.",
+    "linkedAds": "Anúncios Vinculados",
+    "noneLinked": "Nenhum anúncio vinculado a este produto.",
+    "noneLinkedHint": "Vincule um anúncio no formulário ao lado para sincronizar o estoque.",
+    "removeLinkAria": "Remover vínculo com {platform}",
+    "idLabel": "ID: {id}",
+    "newLink": "Vincular Novo Anúncio",
+    "platform": "Plataforma",
+    "adId": "ID do Anúncio",
+    "adIdPlaceholder": "EX: MLB40001001",
+    "adTitle": "Título do Anúncio",
+    "adTitlePlaceholder": "EX: Fone Bluetooth SoundMax Pro",
+    "channelPrice": "Preço no Canal (R$)",
+    "currentStock": "Estoque Atual",
+    "linkAd": "Vincular Anúncio"
+  },
+  "simulatorModal": {
+    "title": "Simulador de Vendas",
+    "whatItDoes": "O que a simulação faz:",
+    "step1": "1. Baixa a quantidade vendida do estoque central do SKU (e espelha nos anúncios vinculados, se houver).",
+    "step2": "2. Lança a venda como <b>entrada no Fluxo de Caixa</b> na categoria Vendas.",
+    "step3": "3. A venda passa a aparecer no <b>Painel de Vendas</b> e no Dashboard.",
+    "productSold": "Produto vendido",
+    "choose": "-- Escolha um produto --",
+    "optionLabel": "{name} (SKU: {sku} | Estoque: {qty})",
+    "saleChannel": "Canal da venda",
+    "quantity": "Quantidade",
+    "unitPrice": "Preço unitário (R$)",
+    "close": "Fechar",
+    "submit": "Registrar venda simulada"
+  },
+  "toast": {
+    "productUpdated": "Produto atualizado com sucesso!",
+    "skuInUse": "Este SKU já está sendo utilizado em outro produto!",
+    "productCreated": "Produto cadastrado com sucesso!",
+    "productSaveError": "Erro ao salvar produto",
+    "productRemoved": "Produto e seus vínculos removidos com sucesso!",
+    "productRemoveError": "Erro ao remover produto",
+    "adAlreadyLinked": "Este anúncio já está vinculado a um SKU do seu estoque!",
+    "adLinked": "Anúncio vinculado com sucesso!",
+    "adLinkError": "Erro ao adicionar vínculo",
+    "linkRemoved": "Vínculo removido.",
+    "linkRemoveError": "Erro ao remover vínculo",
+    "integrationRemoved": "Integração e vínculos removidos.",
+    "disconnectError": "Erro ao desconectar conta",
+    "productNotFound": "Produto não encontrado no estoque",
+    "simRunning": "Registrando venda simulada...",
+    "simDone": "Venda simulada: {qty}x {name} · SKU {sku} agora com {stock} un. Confira no Painel de Vendas.",
+    "simFailed": "Falha ao simular venda",
+    "mlConnectedLimited": "Conta do Mercado Livre conectada, mas sem permissão para importar anúncios automaticamente. Vincule manualmente ou revise os escopos da aplicação.",
+    "mlIntegratedImported": "Mercado Livre integrado! {count} anúncio(s) importado(s).",
+    "mlIntegrated": "Conta do Mercado Livre integrada com sucesso!",
+    "shopeeConnectedLimited": "Loja da Shopee conectada, mas sem permissão para importar itens automaticamente. Vincule manualmente ou revise os escopos do app.",
+    "shopeeIntegratedImported": "Shopee integrada! {count} item(ns) importado(s).",
+    "shopeeIntegrated": "Loja da Shopee integrada com sucesso!",
+    "integrationError": "Erro na integração: {message}",
+    "integrationErrorGeneric": "Verifique suas credenciais",
+    "shopeeConnectFail": "Não foi possível iniciar a conexão com a Shopee",
+    "shopeeConnectError": "Erro ao conectar à Shopee",
+    "shopeeRepasseFail": "Falha ao consultar repasse da Shopee",
+    "shopeeRepasseError": "Erro ao consultar repasse da Shopee"
+  },
+  "confirm": {
+    "removeProductTitle": "Remover produto",
+    "removeProductMsg": "Deseja realmente remover o produto {sku} e todos os seus vínculos com anúncios?",
+    "removeProductAction": "Remover",
+    "disconnectTitle": "Desconectar integração",
+    "disconnectMsg": "Deseja desconectar a conta integrada da plataforma {platform}? Seus anúncios vinculados não serão mais sincronizados.",
+    "disconnectAction": "Desconectar",
+    "unlinkTitle": "Desvincular anúncio",
+    "unlinkMsg": "Deseja realmente desvincular este anúncio do produto central?",
+    "unlinkAction": "Desvincular"
+  }
+}
