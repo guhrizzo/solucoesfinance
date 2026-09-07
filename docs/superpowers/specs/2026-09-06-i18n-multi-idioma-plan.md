@@ -261,29 +261,40 @@ Commits: `703923c` (2a), `d9313cb` (2b), `7858cd2` (2c+2d).
 
 ---
 
-## Fase 3 — Chrome da área logada
+## Fase 3 — Chrome da área logada 🚧 em andamento
 
 Namespaces: `nav`, `common`, `configuracoes`, `onboarding`.
+Commits: `e9d4911` (3a), `5d6ee6b` (3b), `0c93f63` (3c parcial).
 
-- [ ] **`app/components/Navbar.tsx`** — sidebar, rótulos de rota, menu do
-      usuário, notificações, tooltips/`aria-label` → `nav.json`.
-- [ ] **`app/components/OnboardingModal.tsx`** → `onboarding.json`.
-- [ ] **`app/components/Paywall.tsx`**, **`SubscriptionGate.tsx`** →
-      `common`/`configuracoes`.
-- [ ] **`app/components/ui/**`** — qualquer texto embutido (estados vazios,
-      placeholders de `Table`, `EmptyState`, `PageHeader`) → `common.json`.
-- [ ] **`app/[locale]/configuracoes/**`** — `page.tsx`, `PerfilTab.tsx`,
-      `AparenciaTab.tsx`, `FeedbackTab.tsx`, `FeedbackAdminTab.tsx` →
-      `configuracoes.json`.
-- [ ] **Nova linha "Idioma"** em `AparenciaTab.tsx` — `Segmented` com
-      `PT-BR / EN / ES`, ligada a `useLocalePreference` (Fase 1.7); toast de
-      confirmação traduzido.
-- [ ] **`AccessibilityWidget.tsx`** — textos do painel → `common`/`nav`.
-- [ ] `i18n:check` + `tsc` + `lint`.
-- [ ] Navegador (conta de teste): trocar idioma em Configurações → recarregar
-      → persiste (cookie + Firestore); sidebar/menu traduzidos; `<html lang>`
-      correto; entrar de outro "dispositivo" (limpar cookie) puxa o idioma do
-      Firestore.
+- [x] **3a — `Navbar.tsx`** — sidebar, rótulos de rota (por `key` estável, não
+      pelo texto), menu do usuário, notificações demo, `aria-label`s, rodapé
+      → `nav.json`. **`MonthPickerModal.tsx`** (meses + rótulos).
+      **`usePeriod.tsx`** — rótulo do mês segue o locale. **`PageLoader`** —
+      label padrão via `common.loading`.
+- [x] **3b — `configuracoes/page.tsx`** (título, abas por `id`) +
+      **`AparenciaTab.tsx`** (todas as linhas + toasts) → `configuracoes.json`.
+- [x] **3b — Nova linha "Idioma"** em `AparenciaTab` (`Segmented`
+      PT-BR/EN/ES) ligada a `useLocalePreference`.
+- [x] **3c — `CookieConsent.tsx`** — banner curto + card expandido + botões
+      → `common.cookies`. `CATEGORY_INFO` (label/descrição das 3 categorias,
+      citam art. da LGPD) segue em pt-BR, como `/privacidade`.
+- [ ] **Falta na Fase 3:**
+  - `PerfilTab.tsx`, `FeedbackTab.tsx`, `FeedbackAdminTab.tsx`
+  - `OnboardingModal.tsx` → `onboarding.json` (cuidado: as respostas do
+    onboarding — ex. "Serviço" — são gravadas no Firestore e comparadas por
+    string; migrar como os `key` da Navbar)
+  - `Paywall.tsx`, `SubscriptionGate.tsx`, `CreatePasswordGate.tsx`
+    (`passwordRules.label` → `auth.passwordRules`)
+  - `AccessibilityWidget.tsx` (textos do painel)
+  - restante de `components/ui/**` (pouco texto — `EmptyState`/`Table` usam
+    `empty` via prop, sem literal próprio)
+  - **Persistência do idioma no Firestore** (`users/{authUid}/profile/settings`
+    `{locale}` — regra `profile/{doc}` já permite; falta o write no
+    `useLocalePreference` + sync Firestore→cookie no bootstrap de auth) +
+    teste ao vivo com conta logada
+- [x] `i18n:check` + `tsc` + `build` limpos; `eslint app/` 162/79.
+  Navbar/Configurações não testados ao vivo (atrás de login); CookieConsent
+  verificado no site público (en).
 
 ---
 
