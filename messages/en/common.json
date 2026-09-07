@@ -12,6 +12,11 @@
   "search": "Search",
   "showPassword": "Show password",
   "hidePassword": "Hide password",
+  "accessDenied": {
+    "title": "Restricted access",
+    "body": "Your account doesn't have permission to access <b>{category}</b>. Ask the account administrator to grant it.",
+    "goToAccount": "Go to My account"
+  },
   "a11yWidget": {
     "options": "Accessibility options",
     "close": "Close accessibility options",

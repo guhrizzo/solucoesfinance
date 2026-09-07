@@ -1,1 +1,80 @@
-{}
+{
+  "printReportTitle": "Informe financiero — {period}",
+  "generatedAt": "Generado el {datetime}",
+  "resultOf": "Resultado de {period}",
+  "resultSubtitle": "KPIs, transacciones y centros de costo del mes seleccionado",
+  "prevMonth": "Mes anterior",
+  "nextMonth": "Mes siguiente",
+  "printReport": "Imprimir informe",
+  "printReportTooltip": "Imprimir / guardar en PDF el informe de este mes",
+  "kpi": {
+    "grossRevenue": "Ingreso bruto",
+    "totalExpenses": "Gastos totales",
+    "netProfit": "Utilidad neta",
+    "defaultRate": "Morosidad",
+    "vsPrevMonth": "vs. mes anterior",
+    "overdue": "Vencidas",
+    "onTime": "Al día",
+    "pending": "{value} pendiente"
+  },
+  "chart": {
+    "title": "Ingresos vs. Gastos",
+    "subtitle": "Año {year} — mensual",
+    "typeBar": "Barra",
+    "typeLine": "Línea",
+    "typePie": "Circular",
+    "revenue": "Ingreso",
+    "expense": "Gasto",
+    "showValues": "Mostrar valores",
+    "hideValues": "Ocultar valores",
+    "noData": "Sin datos en el período.",
+    "ariaPie": "Gráfico circular: ingresos {revPct}% y gastos {expPct}% del total del año — desglose mes a mes en la tabla de abajo",
+    "ariaBarLine": "Gráfico de {type}: ingresos y gastos mensuales de {year} — desglose mes a mes en la tabla de abajo",
+    "srCaption": "Ingresos y gastos mensuales de {year}",
+    "srMonth": "Mes",
+    "totalRevenueYear": "Total ingresos (año)",
+    "totalExpenseYear": "Total gastos (año)",
+    "accumulatedBalance": "Saldo acumulado"
+  },
+  "upcomingBills": {
+    "title": "Próximos vencimientos",
+    "urgentCount": "{count} urgente",
+    "empty": "¡No hay cuentas pendientes por vencer pronto!",
+    "dueOn": "vence {date}",
+    "seeAll": "Ver todas"
+  },
+  "transactions": {
+    "title": "Últimas transacciones",
+    "subtitle": "Movimientos de {period}",
+    "seeAll": "Ver todas",
+    "emptyShort": "No hay registros.",
+    "empty": "No hay transacciones registradas.",
+    "colDescription": "Descripción",
+    "colType": "Tipo",
+    "colAmount": "Importe",
+    "colDate": "Fecha",
+    "colStatus": "Estado",
+    "inflow": "Ingreso",
+    "outflow": "Egreso",
+    "reconciled": "Conciliado",
+    "pending": "Pendiente"
+  },
+  "costCenter": {
+    "title": "Centros de costo",
+    "seeAllAria": "Ver todos los centros de costo",
+    "ariaDonut": "Gráfico de anillo: gastos por centro de costo — desglose en la lista de abajo",
+    "totalExpenses": "total gastos",
+    "empty": "Sin gastos en el período."
+  },
+  "projection": {
+    "title": "Proyección de flujo de caja (Próximos 30 días)",
+    "subtitle": "Basado en el saldo actual y los cobros/cuentas programados para los próximos 30 días",
+    "currentBalance": "Saldo actual",
+    "currentBalanceNote": "consolidado histórico",
+    "expectedIn": "Ingresos previstos",
+    "expectedInNote": "cobros en los próximos 30 días",
+    "scheduledOut": "Egresos programados",
+    "scheduledOutNote": "compromisos en los próximos 30 días",
+    "projectedFinal": "Saldo proyectado final"
+  }
+}

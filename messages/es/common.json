@@ -12,6 +12,11 @@
   "search": "Buscar",
   "showPassword": "Mostrar contraseña",
   "hidePassword": "Ocultar contraseña",
+  "accessDenied": {
+    "title": "Acceso restringido",
+    "body": "Tu cuenta no tiene permiso para acceder a <b>{category}</b>. Habla con el administrador de la cuenta para habilitarlo.",
+    "goToAccount": "Ir a Mi cuenta"
+  },
   "a11yWidget": {
     "options": "Opciones de accesibilidad",
     "close": "Cerrar opciones de accesibilidad",

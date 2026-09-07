@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ShieldAlert } from "lucide-react";
 
 /**
@@ -8,8 +9,11 @@ import { ShieldAlert } from "lucide-react";
  * dessa página liberada em `users/{uid}/profile/access`. Cada página decide
  * sozinha, no próprio efeito de auth, se deve renderizar isto em vez do seu
  * conteúdo normal — ver lib/accountScope.ts.
+ *
+ * `category` deve vir JÁ TRADUZIDO (ex.: t("nav.items.dashboard")).
  */
 export default function AccessDenied({ category }: { category: string }) {
+  const t = useTranslations("common.accessDenied");
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--db-bg)" }}>
       <div
@@ -23,9 +27,9 @@ export default function AccessDenied({ category }: { category: string }) {
           <ShieldAlert size={26} style={{ color: "var(--danger)" }} />
         </div>
         <div>
-          <h1 className="font-bold text-lg" style={{ color: "var(--db-text)" }}>Acesso restrito</h1>
+          <h1 className="font-bold text-lg" style={{ color: "var(--db-text)" }}>{t("title")}</h1>
           <p className="text-sm mt-1.5" style={{ color: "var(--db-text-2)" }}>
-            Sua conta não tem permissão para acessar <strong>{category}</strong>. Fale com o administrador da conta para liberar.
+            {t.rich("body", { category, b: (c) => <strong>{c}</strong> })}
           </p>
         </div>
         <a
@@ -33,7 +37,7 @@ export default function AccessDenied({ category }: { category: string }) {
           className="inline-block text-sm font-semibold px-4 py-2.5 rounded-xl text-white cursor-pointer"
           style={{ background: "var(--primary)" }}
         >
-          Ir para Minha conta
+          {t("goToAccount")}
         </a>
       </div>
     </div>

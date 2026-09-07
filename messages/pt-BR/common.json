@@ -12,6 +12,11 @@
   "search": "Buscar",
   "showPassword": "Mostrar senha",
   "hidePassword": "Ocultar senha",
+  "accessDenied": {
+    "title": "Acesso restrito",
+    "body": "Sua conta não tem permissão para acessar <b>{category}</b>. Fale com o administrador da conta para liberar.",
+    "goToAccount": "Ir para Minha conta"
+  },
   "a11yWidget": {
     "options": "Opções de acessibilidade",
     "close": "Fechar opções de acessibilidade",

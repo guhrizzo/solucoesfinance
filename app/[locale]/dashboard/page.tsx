@@ -2,19 +2,21 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   TrendingUp, TrendingDown, DollarSign, CreditCard,
   AlertCircle, Clock, Wallet, ChevronRight, ChevronLeft, ArrowUpRight,
   ArrowDownRight, MoreHorizontal, Filter, Download, Printer,
   RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import OnboardingModal, { type OnboardingAnswers } from "@/app/components/OnboardingModal";
 import CreatePasswordGate from "@/app/components/CreatePasswordGate";
 import Navbar from "@/app/components/Navbar";
 import { Badge, PageLoader, Sensitive } from "@/app/components/ui";
 import AccessDenied from "@/app/components/AccessDenied";
 import { usePeriod } from "@/app/hooks/usePeriod";
+import { formatMoney, formatDateTime } from "@/lib/format";
 import "./dashboard.css";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -49,15 +51,6 @@ interface Receivable {
   status: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const toBRL = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-const fmt = (n: number) =>
-  n < 0 ? `- R$ ${Math.abs(n).toLocaleString("pt-BR")}` : `R$ ${n.toLocaleString("pt-BR")}`;
-
-const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-
 // Cor semântica por KPI — resolvida via tokens do design system (nunca hex).
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   blue:    { bg: "var(--brand-weak)", text: "var(--brand)", icon: "var(--brand-weak)" },
@@ -67,6 +60,15 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
 };
 
 export default function Dashboard() {
+  const locale = useLocale();
+  const t = useTranslations("dashboard");
+  const tNav = useTranslations("nav");
+  const toBRL = useCallback((n: number) => formatMoney(n, locale), [locale]);
+  const months = useMemo(() => {
+    const f = new Intl.DateTimeFormat(locale, { month: "short" });
+    return Array.from({ length: 12 }, (_, i) => f.format(new Date(2000, i, 1)));
+  }, [locale]);
+
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Gate bloqueante pra contas que entraram só pelo Google e nunca definiram senha.
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
@@ -88,9 +90,9 @@ export default function Dashboard() {
     } catch { /* ignora ambientes sem localStorage */ }
   }, []);
 
-  const changeChartType = (t: "bar" | "line" | "pie") => {
-    setChartType(t);
-    try { localStorage.setItem("dashboard_chart_type", t); } catch { /* noop */ }
+  const changeChartType = (next: "bar" | "line" | "pie") => {
+    setChartType(next);
+    try { localStorage.setItem("dashboard_chart_type", next); } catch { /* noop */ }
   };
 
   // Firestore Data States
@@ -116,7 +118,7 @@ export default function Dashboard() {
   // ── Impressão do relatório do mês ──
   const [printedAt, setPrintedAt] = useState("");
   const handlePrint = () => {
-    setPrintedAt(new Date().toLocaleString("pt-BR"));
+    setPrintedAt(formatDateTime(new Date(), locale));
     // deixa o React pintar o cabeçalho de impressão antes de abrir o diálogo
     setTimeout(() => window.print(), 60);
   };
@@ -268,12 +270,12 @@ export default function Dashboard() {
     const taxaInadimplencia = totalPendingVal > 0 ? (overdueVal / totalPendingVal) * 100 : 0;
 
     return [
-      { label: "Receita bruta",   value: <Sensitive hidden={hideValues}>{toBRL(receitaMes)}</Sensitive>, change: varReceita, up: parseFloat(varReceita) >= 0, sub: "vs. mês anterior", icon: TrendingUp,  color: "blue"    },
-      { label: "Despesas totais", value: <Sensitive hidden={hideValues}>{toBRL(despesaMes)}</Sensitive>, change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: "vs. mês anterior", icon: CreditCard,  color: "rose"    },
-      { label: "Lucro líquido",   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: "vs. mês anterior", icon: Wallet,      color: "emerald" },
-      { label: "Inadimplência",   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? "Atrasadas" : "Em dia",  up: taxaInadimplencia === 0,  sub: `${toBRL(overdueVal)} pendente`, icon: AlertCircle, color: "amber"   },
+      { label: t("kpi.grossRevenue"), value: <Sensitive hidden={hideValues}>{toBRL(receitaMes)}</Sensitive>, change: varReceita, up: parseFloat(varReceita) >= 0, sub: t("kpi.vsPrevMonth"), icon: TrendingUp,  color: "blue"    },
+      { label: t("kpi.totalExpenses"), value: <Sensitive hidden={hideValues}>{toBRL(despesaMes)}</Sensitive>, change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: t("kpi.vsPrevMonth"), icon: CreditCard,  color: "rose"    },
+      { label: t("kpi.netProfit"),   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: t("kpi.vsPrevMonth"), icon: Wallet,      color: "emerald" },
+      { label: t("kpi.defaultRate"),   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? t("kpi.overdue") : t("kpi.onTime"),  up: taxaInadimplencia === 0,  sub: t("kpi.pending", { value: toBRL(overdueVal) }), icon: AlertCircle, color: "amber"   },
     ];
-  }, [txs, receivables, hideValues, refDate]);
+  }, [txs, receivables, hideValues, refDate, t, toBRL]);
 
   // 2. Gráfico Receita vs. Despesas agrupado por mês do ano selecionado
   const chartData = useMemo(() => {
@@ -313,12 +315,12 @@ export default function Dashboard() {
         return {
           ...b,
           urgent: diffDays <= 3,
-          dueFormatted: due.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+          dueFormatted: due.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })
         };
       })
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
       .slice(0, 4);
-  }, [bills]);
+  }, [bills, locale]);
 
   // 4. Últimas transações do mês selecionado (máximo 6 reais)
   const recentTransactions = useMemo(() => {
@@ -413,7 +415,7 @@ export default function Dashboard() {
     };
   }, [txs, bills, receivables]);
 
-  if (blocked) return <AccessDenied category="Dashboard" />;
+  if (blocked) return <AccessDenied category={tNav("items.dashboard")} />;
 
   if (loading) return <PageLoader />;
 
@@ -464,10 +466,10 @@ export default function Dashboard() {
         <div className="print-only" style={{ marginBottom: 20, borderBottom: "2px solid var(--text)", paddingBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
             <div>
-              <p style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>Relatório financeiro — {periodLabel}</p>
+              <p style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>{t("printReportTitle", { period: periodLabel })}</p>
               <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{user?.displayName || user?.email || ""}</p>
             </div>
-            {printedAt && <p style={{ fontSize: 11, color: "var(--text-subtle)", whiteSpace: "nowrap" }}>Gerado em {printedAt}</p>}
+            {printedAt && <p style={{ fontSize: 11, color: "var(--text-subtle)", whiteSpace: "nowrap" }}>{t("generatedAt", { datetime: printedAt })}</p>}
           </div>
         </div>
 
@@ -475,17 +477,17 @@ export default function Dashboard() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-base md:text-lg font-extrabold leading-tight" style={{ color: "var(--db-text)" }}>
-              Resultado de {periodLabel}
+              {t("resultOf", { period: periodLabel })}
             </h1>
             <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>
-              KPIs, transações e centro de custos do mês selecionado
+              {t("resultSubtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 no-print">
             <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
               <button
                 onClick={goPrevMonth}
-                aria-label="Mês anterior"
+                aria-label={t("prevMonth")}
                 className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer"
                 style={{ color: "var(--brand)" }}
               >
@@ -495,7 +497,7 @@ export default function Dashboard() {
               <button
                 onClick={goNextMonth}
                 disabled={isCurrentMonth}
-                aria-label="Próximo mês"
+                aria-label={t("nextMonth")}
                 className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                 style={{ color: "var(--brand)" }}
               >
@@ -506,10 +508,10 @@ export default function Dashboard() {
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors hover:bg-[var(--sunken)] cursor-pointer"
               style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "var(--db-card)" }}
-              title="Imprimir / salvar em PDF o relatório deste mês"
+              title={t("printReportTooltip")}
             >
               <Printer size={14} />
-              <span className="hidden sm:inline">Imprimir relatório</span>
+              <span className="hidden sm:inline">{t("printReport")}</span>
             </button>
           </div>
         </div>
@@ -547,15 +549,15 @@ export default function Dashboard() {
           <div className="chart-card xl:col-span-2 p-4 md:p-6">
             <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2">
               <div>
-                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Receita vs. Despesas</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Ano de {refDate.getFullYear()} — mensal</p>
+                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("chart.title")}</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("chart.subtitle", { year: refDate.getFullYear() })}</p>
               </div>
               <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <div className="flex items-center rounded-lg border overflow-hidden no-print" style={{ borderColor: "var(--db-border)" }}>
                   {([
-                    { t: "bar" as const,  icon: BarChart3, label: "Barra" },
-                    { t: "line" as const, icon: LineChart, label: "Linha" },
-                    { t: "pie" as const,  icon: PieChart,  label: "Pizza" },
+                    { t: "bar" as const,  icon: BarChart3, label: t("chart.typeBar") },
+                    { t: "line" as const, icon: LineChart, label: t("chart.typeLine") },
+                    { t: "pie" as const,  icon: PieChart,  label: t("chart.typePie") },
                   ]).map((opt) => (
                     <button
                       key={opt.t}
@@ -574,16 +576,16 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-500)" }} /> Receita
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-500)" }} /> {t("chart.revenue")}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-400)" }} /> Despesa
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-400)" }} /> {t("chart.expense")}
                 </div>
                 <button
                   onClick={() => setHideValues(!hideValues)}
                   className="flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer no-print" style={{ color: "var(--brand)" }}
                 >
-                  <Download size={12} /><span className="hidden sm:inline">{hideValues ? "Mostrar Valores" : "Ocultar Valores"}</span>
+                  <Download size={12} /><span className="hidden sm:inline">{hideValues ? t("chart.showValues") : t("chart.hideValues")}</span>
                 </button>
               </div>
             </div>
@@ -594,7 +596,7 @@ export default function Dashboard() {
                   const totExp = chartData.expenses.reduce((a, b) => a + b, 0);
                   const total = totRev + totExp;
                   if (total === 0) {
-                    return <p className="text-xs" style={{ color: "var(--db-text-3)" }}>Sem dados no período.</p>;
+                    return <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("chart.noData")}</p>;
                   }
                   const cx = 90, cy = 90, r = 78;
                   const revFrac = totRev / total;
@@ -620,7 +622,7 @@ export default function Dashboard() {
                     <svg
                       width="180" height="180" viewBox="0 0 180 180"
                       role="img"
-                      aria-label={`Gráfico de pizza: receita ${Math.round(revFrac * 100)}% e despesa ${100 - Math.round(revFrac * 100)}% do total do ano — detalhamento mês a mês na tabela abaixo`}
+                      aria-label={t("chart.ariaPie", { revPct: Math.round(revFrac * 100), expPct: 100 - Math.round(revFrac * 100) })}
                     >
                       {slice(0, revFrac, "var(--brand-500)", "rev")}
                       {slice(revFrac, 1, "var(--brand-400)", "exp")}
@@ -633,13 +635,13 @@ export default function Dashboard() {
               <svg
                 viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}
                 role="img"
-                aria-label={`Gráfico de ${chartType === "line" ? "linha" : "barras"}: receita e despesa mensal de ${refDate.getFullYear()} — detalhamento mês a mês na tabela abaixo`}
+                aria-label={t("chart.ariaBarLine", { type: chartType === "line" ? t("chart.typeLine") : t("chart.typeBar"), year: refDate.getFullYear() })}
               >
-                {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
+                {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => (
                   <g key={i}>
-                    <line x1="40" y1={10 + (1 - t) * 160} x2="590" y2={10 + (1 - t) * 160} stroke="var(--db-border)" strokeWidth="1" />
-                    <text x="32" y={10 + (1 - t) * 160 + 4} fontSize="9" fill="var(--db-text-3)" textAnchor="end" fontFamily="JetBrains Mono, monospace">
-                      {Math.round(t * chartData.maxVal / 100) * 100 === 0 ? "0" : `${Math.round(t * chartData.maxVal / 1000)}k`}
+                    <line x1="40" y1={10 + (1 - frac) * 160} x2="590" y2={10 + (1 - frac) * 160} stroke="var(--db-border)" strokeWidth="1" />
+                    <text x="32" y={10 + (1 - frac) * 160 + 4} fontSize="9" fill="var(--db-text-3)" textAnchor="end" fontFamily="JetBrains Mono, monospace">
+                      {Math.round(frac * chartData.maxVal / 100) * 100 === 0 ? "0" : `${Math.round(frac * chartData.maxVal / 1000)}k`}
                     </text>
                   </g>
                 ))}
@@ -710,14 +712,14 @@ export default function Dashboard() {
                   </p>
                   <div className="flex items-center gap-1.5 text-xs">
                     <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-500)" }} />
-                    <span style={{ color: "var(--db-text-2)" }}>Receita</span>
+                    <span style={{ color: "var(--db-text-2)" }}>{t("chart.revenue")}</span>
                     <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
                       <Sensitive hidden={hideValues}>{toBRL(chartData.revenues[hoverMonth])}</Sensitive>
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs mt-1">
                     <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-400)" }} />
-                    <span style={{ color: "var(--db-text-2)" }}>Despesa</span>
+                    <span style={{ color: "var(--db-text-2)" }}>{t("chart.expense")}</span>
                     <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
                       <Sensitive hidden={hideValues}>{toBRL(chartData.expenses[hoverMonth])}</Sensitive>
                     </span>
@@ -730,12 +732,12 @@ export default function Dashboard() {
                 tela — mesmos dados de chartData, mês a mês. Só visível pra
                 tecnologia assistiva (sr-only). */}
             <table className="sr-only">
-              <caption>Receita e despesa mensal de {refDate.getFullYear()}</caption>
+              <caption>{t("chart.srCaption", { year: refDate.getFullYear() })}</caption>
               <thead>
                 <tr>
-                  <th scope="col">Mês</th>
-                  <th scope="col">Receita</th>
-                  <th scope="col">Despesa</th>
+                  <th scope="col">{t("chart.srMonth")}</th>
+                  <th scope="col">{t("chart.revenue")}</th>
+                  <th scope="col">{t("chart.expense")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -750,9 +752,9 @@ export default function Dashboard() {
             </table>
             <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
               {[
-                { label:"Total receitas (ano)", val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-500)" },
-                { label:"Total despesas (ano)", val: <Sensitive hidden={hideValues}>{toBRL(chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-400)" },
-                { label:"Saldo acumulado", val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color: (chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)) >= 0 ? "var(--success)" : "var(--danger)" },
+                { label:t("chart.totalRevenueYear"), val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-500)" },
+                { label:t("chart.totalExpenseYear"), val: <Sensitive hidden={hideValues}>{toBRL(chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-400)" },
+                { label:t("chart.accumulatedBalance"), val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color: (chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)) >= 0 ? "var(--success)" : "var(--danger)" },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-xs mb-0.5 leading-tight" style={{ color: "var(--db-text-2)" }}>{s.label}</p>
@@ -765,15 +767,15 @@ export default function Dashboard() {
           {/* Vencimentos Próximos */}
           <div className="side-card p-4 md:p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4 md:mb-5">
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Vencimentos próximos</h2>
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("upcomingBills.title")}</h2>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "var(--neg-weak)", color: "var(--neg)" }}>
-                {upcomingBillsData.filter(b => b.urgent).length} urgente
+                {t("upcomingBills.urgentCount", { count: upcomingBillsData.filter(b => b.urgent).length })}
               </span>
             </div>
             <div className="space-y-1 md:space-y-2 flex-1 overflow-y-auto">
               {upcomingBillsData.length === 0 ? (
                 <div className="text-center py-8 text-xs" style={{ color: "var(--db-text-3)" }}>
-                  Nenhuma conta pendente vencendo em breve!
+                  {t("upcomingBills.empty")}
                 </div>
               ) : (
                 upcomingBillsData.map((bill) => (
@@ -788,7 +790,7 @@ export default function Dashboard() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold leading-tight truncate" style={{ color: "var(--db-text)" }}>{bill.name}</p>
-                        <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>vence {bill.dueFormatted}</p>
+                        <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>{t("upcomingBills.dueOn", { date: bill.dueFormatted })}</p>
                       </div>
                     </div>
                     <p className="text-xs font-bold mono shrink-0 ml-2" style={{ color: bill.urgent ? "var(--neg)" : "var(--db-text)" }}>
@@ -800,7 +802,7 @@ export default function Dashboard() {
             </div>
             <a href="/contasPagar" className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 transition-colors hover:bg-[var(--sunken)] text-center no-print"
               style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "transparent" }}>
-              Ver todas <ChevronRight size={13} />
+              {t("upcomingBills.seeAll")} <ChevronRight size={13} />
             </a>
           </div>
         </div>
@@ -811,19 +813,19 @@ export default function Dashboard() {
           <div className="chart-card xl:col-span-2 p-4 md:p-6">
             <div className="flex items-center justify-between mb-4 md:mb-5">
               <div>
-                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Últimas transações</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Movimentações de {periodLabel}</p>
+                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("transactions.title")}</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("transactions.subtitle", { period: periodLabel })}</p>
               </div>
               <div className="flex items-center gap-2 no-print">
                 <a href="/fluxo-caixa" className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors" style={{ background: "var(--brand)", color: "var(--brand-on)" }}>
-                  Ver todas
+                  {t("transactions.seeAll")}
                 </a>
               </div>
             </div>
 
             <div className="md:hidden space-y-2">
               {recentTransactions.length === 0 ? (
-                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>Nenhum lançamento registrado.</div>
+                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>{t("transactions.emptyShort")}</div>
               ) : (
                 recentTransactions.map((tx) => (
                   <div key={tx.id} className="tx-row flex items-center justify-between p-3 rounded-xl" style={{ border: `1px solid var(--db-border)` }}>
@@ -836,7 +838,7 @@ export default function Dashboard() {
                         <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
                       </span>
                       <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
-                        {tx.reconciled ? "Conciliado" : "Pendente"}
+                        {tx.reconciled ? t("transactions.reconciled") : t("transactions.pending")}
                       </Badge>
                     </div>
                   </div>
@@ -848,7 +850,7 @@ export default function Dashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b db-divider">
-                    {["Descrição","Tipo","Valor","Data","Status"].map((h) => (
+                    {[t("transactions.colDescription"), t("transactions.colType"), t("transactions.colAmount"), t("transactions.colDate"), t("transactions.colStatus")].map((h) => (
                       <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap" style={{ color: "var(--db-text)" }}>{h}</th>
                     ))}
                   </tr>
@@ -856,16 +858,16 @@ export default function Dashboard() {
                 <tbody>
                   {recentTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-xs" style={{ color: "var(--db-text-3)" }}>Nenhuma transação registrada.</td>
+                      <td colSpan={5} className="py-8 text-center text-xs" style={{ color: "var(--db-text-3)" }}>{t("transactions.empty")}</td>
                     </tr>
                   ) : (
                     recentTransactions.map((tx) => (
                       <tr key={tx.id} className="tx-row">
                         <td className="py-3 pr-4"><p className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>{tx.description}</p></td>
-                        <td className="py-3 pr-4"><span className="text-xs font-medium" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>{tx.type === "entrada" ? "Entrada" : "Saída"}</span></td>
+                        <td className="py-3 pr-4"><span className="text-xs font-medium" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>{tx.type === "entrada" ? t("transactions.inflow") : t("transactions.outflow")}</span></td>
                         <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}><Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive></span></td>
                         <td className="py-3 pr-4"><span className="text-xs whitespace-nowrap" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span></td>
-                        <td className="py-3"><Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">{tx.reconciled ? "Conciliado" : "Pendente"}</Badge></td>
+                        <td className="py-3"><Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">{tx.reconciled ? t("transactions.reconciled") : t("transactions.pending")}</Badge></td>
                       </tr>
                     ))
                   )}
@@ -877,14 +879,14 @@ export default function Dashboard() {
           {/* Centros de Custo (Donut Chart) */}
           <div className="side-card p-4 md:p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4 md:mb-5">
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centro de custos</h2>
-              <a href="/costCenter" aria-label="Ver todos os centros de custo" style={{ color: "var(--db-text-2)" }} className="transition-colors no-print"><MoreHorizontal size={16} /></a>
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("costCenter.title")}</h2>
+              <a href="/costCenter" aria-label={t("costCenter.seeAllAria")} style={{ color: "var(--db-text-2)" }} className="transition-colors no-print"><MoreHorizontal size={16} /></a>
             </div>
             <div className="flex justify-center mb-4 md:mb-5">
               <svg
                 width="130" height="130" viewBox="0 0 140 140"
                 role="img"
-                aria-label="Gráfico de rosca: despesas por centro de custo — detalhamento na lista abaixo"
+                aria-label={t("costCenter.ariaDonut")}
               >
                 {(() => {
                   const circ = 2 * Math.PI * 52;
@@ -907,12 +909,12 @@ export default function Dashboard() {
                     {toBRL(costCenterData.totalExpenses)}
                   </text>
                 )}
-                <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text-3)" fontFamily="Sora">total despesas</text>
+                <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text-3)" fontFamily="Sora">{t("costCenter.totalExpenses")}</text>
               </svg>
             </div>
             <div className="space-y-2.5 flex-1 overflow-y-auto">
               {costCenterData.centers.length === 0 ? (
-                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>Nenhuma despesa no período.</div>
+                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>{t("costCenter.empty")}</div>
               ) : (
                 costCenterData.centers.map((cc) => (
                   <div key={cc.name} className="flex items-center justify-between">
@@ -937,15 +939,15 @@ export default function Dashboard() {
         <div className="chart-card p-4 md:p-6">
           <div className="flex items-start md:items-center justify-between mb-4 gap-2">
             <div>
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Projeção de fluxo de caixa (Próximos 30 dias)</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Baseado em saldo atual e recebimentos/contas agendadas para os próximos 30 dias</p>
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("projection.title")}</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("projection.subtitle")}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
             {[
-              { label:"Saldo atual",        val: <Sensitive hidden={hideValues}>{toBRL(projection.saldoAtual)}</Sensitive>, icon:Wallet,       color:"blue",    note:"consolidado histórico" },
-              { label:"Entradas previstas", val: <Sensitive hidden={hideValues}>{`+ ${toBRL(projection.entradasPrevistas)}`}</Sensitive>, icon:TrendingUp,   color:"emerald", note:"recebíveis próximos 30 dias"  },
-              { label:"Saídas agendadas",   val: <Sensitive hidden={hideValues}>{`- ${toBRL(projection.saidasAgendadas)}`}</Sensitive>, icon:TrendingDown, color:"rose",    note:"compromissos próximos 30 dias"  },
+              { label:t("projection.currentBalance"), val: <Sensitive hidden={hideValues}>{toBRL(projection.saldoAtual)}</Sensitive>, icon:Wallet,       color:"blue",    note:t("projection.currentBalanceNote") },
+              { label:t("projection.expectedIn"),     val: <Sensitive hidden={hideValues}>{`+ ${toBRL(projection.entradasPrevistas)}`}</Sensitive>, icon:TrendingUp,   color:"emerald", note:t("projection.expectedInNote")  },
+              { label:t("projection.scheduledOut"),   val: <Sensitive hidden={hideValues}>{`- ${toBRL(projection.saidasAgendadas)}`}</Sensitive>, icon:TrendingDown, color:"rose",    note:t("projection.scheduledOutNote")  },
             ].map((item) => {
               const cMap: Record<string, { bg: string; text: string; icon: string }> = {
                 blue:    { bg:"var(--brand-weak)", text:"var(--brand)", icon:"var(--brand-weak)" },
@@ -969,7 +971,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 md:mt-5">
             <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--db-text-2)" }}>
-              <span>Saldo projetado final</span>
+              <span>{t("projection.projectedFinal")}</span>
               <span className="mono font-semibold" style={{ color: "var(--pos)" }}>
                 <Sensitive hidden={hideValues}>{toBRL(projection.saldoProjetado)}</Sensitive>{" "}
                 <span className="font-normal text-xs ml-1" style={{ color: "var(--db-text-2)" }}>

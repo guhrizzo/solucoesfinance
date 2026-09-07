@@ -1,1 +1,80 @@
-{}
+{
+  "printReportTitle": "Relatório financeiro — {period}",
+  "generatedAt": "Gerado em {datetime}",
+  "resultOf": "Resultado de {period}",
+  "resultSubtitle": "KPIs, transações e centro de custos do mês selecionado",
+  "prevMonth": "Mês anterior",
+  "nextMonth": "Próximo mês",
+  "printReport": "Imprimir relatório",
+  "printReportTooltip": "Imprimir / salvar em PDF o relatório deste mês",
+  "kpi": {
+    "grossRevenue": "Receita bruta",
+    "totalExpenses": "Despesas totais",
+    "netProfit": "Lucro líquido",
+    "defaultRate": "Inadimplência",
+    "vsPrevMonth": "vs. mês anterior",
+    "overdue": "Atrasadas",
+    "onTime": "Em dia",
+    "pending": "{value} pendente"
+  },
+  "chart": {
+    "title": "Receita vs. Despesas",
+    "subtitle": "Ano de {year} — mensal",
+    "typeBar": "Barra",
+    "typeLine": "Linha",
+    "typePie": "Pizza",
+    "revenue": "Receita",
+    "expense": "Despesa",
+    "showValues": "Mostrar Valores",
+    "hideValues": "Ocultar Valores",
+    "noData": "Sem dados no período.",
+    "ariaPie": "Gráfico de pizza: receita {revPct}% e despesa {expPct}% do total do ano — detalhamento mês a mês na tabela abaixo",
+    "ariaBarLine": "Gráfico de {type}: receita e despesa mensal de {year} — detalhamento mês a mês na tabela abaixo",
+    "srCaption": "Receita e despesa mensal de {year}",
+    "srMonth": "Mês",
+    "totalRevenueYear": "Total receitas (ano)",
+    "totalExpenseYear": "Total despesas (ano)",
+    "accumulatedBalance": "Saldo acumulado"
+  },
+  "upcomingBills": {
+    "title": "Vencimentos próximos",
+    "urgentCount": "{count} urgente",
+    "empty": "Nenhuma conta pendente vencendo em breve!",
+    "dueOn": "vence {date}",
+    "seeAll": "Ver todas"
+  },
+  "transactions": {
+    "title": "Últimas transações",
+    "subtitle": "Movimentações de {period}",
+    "seeAll": "Ver todas",
+    "emptyShort": "Nenhum lançamento registrado.",
+    "empty": "Nenhuma transação registrada.",
+    "colDescription": "Descrição",
+    "colType": "Tipo",
+    "colAmount": "Valor",
+    "colDate": "Data",
+    "colStatus": "Status",
+    "inflow": "Entrada",
+    "outflow": "Saída",
+    "reconciled": "Conciliado",
+    "pending": "Pendente"
+  },
+  "costCenter": {
+    "title": "Centro de custos",
+    "seeAllAria": "Ver todos os centros de custo",
+    "ariaDonut": "Gráfico de rosca: despesas por centro de custo — detalhamento na lista abaixo",
+    "totalExpenses": "total despesas",
+    "empty": "Nenhuma despesa no período."
+  },
+  "projection": {
+    "title": "Projeção de fluxo de caixa (Próximos 30 dias)",
+    "subtitle": "Baseado em saldo atual e recebimentos/contas agendadas para os próximos 30 dias",
+    "currentBalance": "Saldo atual",
+    "currentBalanceNote": "consolidado histórico",
+    "expectedIn": "Entradas previstas",
+    "expectedInNote": "recebíveis próximos 30 dias",
+    "scheduledOut": "Saídas agendadas",
+    "scheduledOutNote": "compromissos próximos 30 dias",
+    "projectedFinal": "Saldo projetado final"
+  }
+}

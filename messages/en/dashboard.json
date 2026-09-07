@@ -1,1 +1,80 @@
-{}
+{
+  "printReportTitle": "Financial report — {period}",
+  "generatedAt": "Generated on {datetime}",
+  "resultOf": "{period} results",
+  "resultSubtitle": "KPIs, transactions and cost centers for the selected month",
+  "prevMonth": "Previous month",
+  "nextMonth": "Next month",
+  "printReport": "Print report",
+  "printReportTooltip": "Print / save this month's report as PDF",
+  "kpi": {
+    "grossRevenue": "Gross revenue",
+    "totalExpenses": "Total expenses",
+    "netProfit": "Net profit",
+    "defaultRate": "Default rate",
+    "vsPrevMonth": "vs. previous month",
+    "overdue": "Overdue",
+    "onTime": "On time",
+    "pending": "{value} pending"
+  },
+  "chart": {
+    "title": "Revenue vs. Expenses",
+    "subtitle": "{year} — monthly",
+    "typeBar": "Bar",
+    "typeLine": "Line",
+    "typePie": "Pie",
+    "revenue": "Revenue",
+    "expense": "Expense",
+    "showValues": "Show values",
+    "hideValues": "Hide values",
+    "noData": "No data for this period.",
+    "ariaPie": "Pie chart: revenue {revPct}% and expenses {expPct}% of the year's total — month-by-month breakdown in the table below",
+    "ariaBarLine": "{type} chart: monthly revenue and expenses for {year} — month-by-month breakdown in the table below",
+    "srCaption": "Monthly revenue and expenses for {year}",
+    "srMonth": "Month",
+    "totalRevenueYear": "Total revenue (year)",
+    "totalExpenseYear": "Total expenses (year)",
+    "accumulatedBalance": "Accumulated balance"
+  },
+  "upcomingBills": {
+    "title": "Upcoming due dates",
+    "urgentCount": "{count} urgent",
+    "empty": "No pending bills due soon!",
+    "dueOn": "due {date}",
+    "seeAll": "See all"
+  },
+  "transactions": {
+    "title": "Recent transactions",
+    "subtitle": "{period} activity",
+    "seeAll": "See all",
+    "emptyShort": "No entries recorded.",
+    "empty": "No transactions recorded.",
+    "colDescription": "Description",
+    "colType": "Type",
+    "colAmount": "Amount",
+    "colDate": "Date",
+    "colStatus": "Status",
+    "inflow": "Inflow",
+    "outflow": "Outflow",
+    "reconciled": "Reconciled",
+    "pending": "Pending"
+  },
+  "costCenter": {
+    "title": "Cost centers",
+    "seeAllAria": "See all cost centers",
+    "ariaDonut": "Donut chart: expenses by cost center — breakdown in the list below",
+    "totalExpenses": "total expenses",
+    "empty": "No expenses for this period."
+  },
+  "projection": {
+    "title": "Cash-flow projection (Next 30 days)",
+    "subtitle": "Based on current balance and receivables/bills scheduled for the next 30 days",
+    "currentBalance": "Current balance",
+    "currentBalanceNote": "historical consolidated",
+    "expectedIn": "Expected inflows",
+    "expectedInNote": "receivables in the next 30 days",
+    "scheduledOut": "Scheduled outflows",
+    "scheduledOutNote": "commitments in the next 30 days",
+    "projectedFinal": "Projected final balance"
+  }
+}
