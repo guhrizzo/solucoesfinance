@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useMemo, useCallback, useRef, useId } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
     Plus, X, Check, Trash2, Edit3, AlertTriangle,
     Calendar, Loader2, Search, Filter,
@@ -23,6 +24,7 @@ import type { PaymentMethod } from "@/app/types/payment";
 import { syncTaxCashflow } from "@/lib/billTaxSync";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "@/app/components/AuditTrail";
+import { formatMoney } from "@/lib/format";
 
 const FOCUSABLE_SELECTOR =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -70,210 +72,65 @@ interface Tax {
 
 const TODAY = new Date().toISOString().split("T")[0];
 
+// `id` é o VALOR gravado no Firestore (`tax.type`), casado por string em
+// TAX_TYPE_TO_CATEGORY e nos filtros — NÃO traduzir. `label`/`description`
+// abaixo são só fallback; a exibição usa impostos.taxTypes.<id> /
+// impostos.taxTypeDesc.<id>. `esfera` é lógica de agrupamento, não texto.
 interface TaxTypeMeta {
     id: TaxType;
-    label: string;
     icon: LucideIcon;
     color: string;
-    description: string;
     esfera: TaxSphere;
 }
 
 const TAX_TYPES: TaxTypeMeta[] = [
-    // Federais (Tons de Azul)
-    {
-        id: "simples_nacional",
-        label: "Simples Nacional",
-        icon: Zap,
-        color: "var(--cat-1)",
-        description: "Regime Unificado de Impostos (DAS)",
-        esfera: "federal",
-    },
-    {
-        id: "irpf",
-        label: "IRPF",
-        icon: DollarSign,
-        color: "var(--cat-2)",
-        description: "Imposto de Renda Pessoa Física",
-        esfera: "federal",
-    },
-    {
-        id: "irpj",
-        label: "IRPJ",
-        icon: Building2,
-        color: "var(--brand)",
-        description: "Imposto de Renda Pessoa Jurídica",
-        esfera: "federal",
-    },
-    {
-        id: "pis",
-        label: "PIS",
-        icon: Percent,
-        color: "var(--cat-3)",
-        description: "Programa de Integração Social",
-        esfera: "federal",
-    },
-    {
-        id: "cofins",
-        label: "COFINS",
-        icon: BarChart3,
-        color: "var(--cat-4)",
-        description: "Contribuição para Financiamento da Seguridade Social",
-        esfera: "federal",
-    },
-    {
-        id: "csll",
-        label: "CSLL",
-        icon: TrendingUp,
-        color: "var(--cat-5)",
-        description: "Contribuição Social sobre o Lucro Líquido",
-        esfera: "federal",
-    },
-    {
-        id: "ipi",
-        label: "IPI",
-        icon: Package,
-        color: "var(--cat-6)",
-        description: "Imposto sobre Produtos Industrializados",
-        esfera: "federal",
-    },
-    {
-        id: "iof",
-        label: "IOF",
-        icon: DollarSign,
-        color: "var(--cat-7)",
-        description: "Imposto sobre Operações Financeiras",
-        esfera: "federal",
-    },
-    {
-        id: "itr",
-        label: "ITR",
-        icon: Globe,
-        color: "var(--cat-8)",
-        description: "Imposto Territorial Rural",
-        esfera: "federal",
-    },
-    {
-        id: "inss",
-        label: "INSS",
-        icon: Shield,
-        color: "var(--cat-1)",
-        description: "Previdência Social",
-        esfera: "federal",
-    },
-    {
-        id: "fgts",
-        label: "FGTS",
-        icon: Briefcase,
-        color: "var(--cat-2)",
-        description: "Fundo de Garantia do Tempo de Serviço",
-        esfera: "federal",
-    },
-    // Estaduais (Tons de Roxo/Rosa)
-    {
-        id: "icms",
-        label: "ICMS",
-        icon: TrendingUp,
-        color: "var(--cat-3)",
-        description: "Imposto sobre Circulação de Mercadorias e Serviços",
-        esfera: "estadual",
-    },
-    {
-        id: "ipva",
-        label: "IPVA",
-        icon: Car,
-        color: "var(--cat-4)",
-        description: "Imposto sobre a Propriedade de Veículos Automotores",
-        esfera: "estadual",
-    },
-    {
-        id: "itcmd",
-        label: "ITCMD",
-        icon: FileText,
-        color: "var(--cat-5)",
-        description: "Imposto sobre Transmissão Causa Mortis e Doação",
-        esfera: "estadual",
-    },
-    // Municipais (Tons de Verde/Teal)
-    {
-        id: "iss",
-        label: "ISS",
-        icon: FileText,
-        color: "var(--pos)",
-        description: "Imposto Sobre Serviços",
-        esfera: "municipal",
-    },
-    {
-        id: "iptu",
-        label: "IPTU",
-        icon: Home,
-        color: "var(--pos)",
-        description: "Imposto Predial e Territorial Urbano",
-        esfera: "municipal",
-    },
-    {
-        id: "itbi",
-        label: "ITBI",
-        icon: Building2,
-        color: "var(--cat-6)",
-        description: "Imposto sobre Transmissão de Bens Imóveis",
-        esfera: "municipal",
-    },
+    // Federais
+    { id: "simples_nacional", icon: Zap, color: "var(--cat-1)", esfera: "federal" },
+    { id: "irpf", icon: DollarSign, color: "var(--cat-2)", esfera: "federal" },
+    { id: "irpj", icon: Building2, color: "var(--brand)", esfera: "federal" },
+    { id: "pis", icon: Percent, color: "var(--cat-3)", esfera: "federal" },
+    { id: "cofins", icon: BarChart3, color: "var(--cat-4)", esfera: "federal" },
+    { id: "csll", icon: TrendingUp, color: "var(--cat-5)", esfera: "federal" },
+    { id: "ipi", icon: Package, color: "var(--cat-6)", esfera: "federal" },
+    { id: "iof", icon: DollarSign, color: "var(--cat-7)", esfera: "federal" },
+    { id: "itr", icon: Globe, color: "var(--cat-8)", esfera: "federal" },
+    { id: "inss", icon: Shield, color: "var(--cat-1)", esfera: "federal" },
+    { id: "fgts", icon: Briefcase, color: "var(--cat-2)", esfera: "federal" },
+    // Estaduais
+    { id: "icms", icon: TrendingUp, color: "var(--cat-3)", esfera: "estadual" },
+    { id: "ipva", icon: Car, color: "var(--cat-4)", esfera: "estadual" },
+    { id: "itcmd", icon: FileText, color: "var(--cat-5)", esfera: "estadual" },
+    // Municipais
+    { id: "iss", icon: FileText, color: "var(--pos)", esfera: "municipal" },
+    { id: "iptu", icon: Home, color: "var(--pos)", esfera: "municipal" },
+    { id: "itbi", icon: Building2, color: "var(--cat-6)", esfera: "municipal" },
     // Outros
-    {
-        id: "outro",
-        label: "Outro",
-        icon: HelpCircle,
-        color: "var(--cat-7)",
-        description: "Outros impostos e taxas",
-        esfera: "outro",
-    },
+    { id: "outro", icon: HelpCircle, color: "var(--cat-7)", esfera: "outro" },
 ];
 
-const FREQUENCY_LABEL: Record<TaxFrequency, string> = {
-    mensal: "Mensal",
-    trimestral: "Trimestral",
-    semestral: "Semestral",
-    anual: "Anual",
+// Só tokens de cor/ícone por status — o rótulo vem de impostos.status.<key>.
+const STATUS_META: Record<TaxStatus, { bg: string; color: string; border: string; icon: LucideIcon }> = {
+    nao_pago: { bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)", icon: Clock },
+    pago: { bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)", icon: Check },
+    atraso: { bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)", icon: AlertTriangle },
+    agendado: { bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)", icon: Calendar },
 };
 
-const STATUS_META: Record<TaxStatus, { label: string; bg: string; color: string; border: string; icon: LucideIcon }> = {
-    nao_pago: { label: "Não Pago", bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)", icon: Clock },
-    pago: { label: "Pago", bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)", icon: Check },
-    atraso: { label: "Em Atraso", bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)", icon: AlertTriangle },
-    agendado: { label: "Agendado", bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)", icon: Calendar },
-};
-
-// Mapeamento de tipo de imposto → categoria do cashflow
+// Mapeamento de tipo de imposto → categoria do cashflow (valor gravado — não traduzir).
 const TAX_TYPE_TO_CATEGORY: Record<TaxType, string> = {
-    simples_nacional: "Impostos",
-    irpf: "Impostos",
-    irpj: "Impostos",
-    pis: "Impostos",
-    cofins: "Impostos",
-    csll: "Impostos",
-    ipi: "Impostos",
-    iof: "Impostos",
-    itr: "Impostos",
-    inss: "Impostos",
-    fgts: "Impostos",
-    icms: "Impostos",
-    ipva: "Impostos",
-    itcmd: "Impostos",
-    iss: "Impostos",
-    iptu: "Impostos",
-    itbi: "Impostos",
-    outro: "Impostos",
+    simples_nacional: "Impostos", irpf: "Impostos", irpj: "Impostos", pis: "Impostos",
+    cofins: "Impostos", csll: "Impostos", ipi: "Impostos", iof: "Impostos", itr: "Impostos",
+    inss: "Impostos", fgts: "Impostos", icms: "Impostos", ipva: "Impostos", itcmd: "Impostos",
+    iss: "Impostos", iptu: "Impostos", itbi: "Impostos", outro: "Impostos",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const toBRL = (n: number) =>
-    n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
-const labelDate = (d: string) =>
+const labelDate = (d: string, locale: string) =>
     new Date(d + "T12:00:00")
-        .toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+        .toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" })
         .replace(/\./g, "");
 
 const daysUntil = (d: string): number => {
@@ -303,14 +160,11 @@ function parseAmount(raw: string): number {
 function formatAmount(raw: string): string {
     let s = raw.replace(/[^\d,.]/g, "");
     if (!s) return "";
-    // Se tem vírgula, formata com separador de milhares
     if (s.includes(",")) {
         const [intPart, decPart] = s.split(",");
         const formatted = intPart.replace(/\./g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         return decPart !== undefined ? formatted + "," + decPart : formatted;
     }
-    // Se não tem vírgula, retorna apenas os dígitos sem formatação de milhares
-    // Isso permite o usuário digitar valores sem separadores
     return s;
 }
 
@@ -348,6 +202,13 @@ interface TaxModalProps {
 }
 
 function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
+    const t = useTranslations("impostos.modal");
+    const tType = useTranslations("impostos.taxTypes");
+    const tDesc = useTranslations("impostos.taxTypeDesc");
+    const tFreq = useTranslations("impostos.frequency");
+    const tStatus = useTranslations("impostos.status");
+    const tSphere = useTranslations("impostos.spheres");
+    const tPin = useTranslations("common.pin");
     const [name, setName] = useState("");
     const [type, setType] = useState<TaxType>("simples_nacional");
     const [activeSphere, setActiveSphere] = useState<TaxSphere>("federal");
@@ -444,7 +305,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
         if (!canSave || saving || !uid) return;
         const pinHash = await loadPinHash(uid);
         if (!pinHash) {
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
             return;
         }
         setErr("");
@@ -459,18 +320,18 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
             submit();
         } else if (result === "locked") {
             setPinOpen(false);
-            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            setErr(tPin("lockedRetry"));
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setPinOpen(false);
-                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+                setErr(tPin("lockedRetry"));
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setPinOpen(false);
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
         }
     }
 
@@ -495,7 +356,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
             setAttachments(prev => [...prev, url]);
             setErr("");
         } catch (e: any) {
-            setErr(`Erro ao upload: ${e.message}`);
+            setErr(t("uploadError", { message: e.message }));
         } finally {
             setUploadingFile(false);
         }
@@ -524,12 +385,13 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
             });
             onClose();
         } catch (e: any) {
-            setErr(e?.message ?? "Erro ao salvar");
+            setErr(e?.message ?? t("saveError"));
             setSaving(false);
         }
     }
 
     const typeMeta = getTaxMeta(type);
+    const TypeIcon = typeMeta.icon;
 
     return (
         <div className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
@@ -549,18 +411,18 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                 <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                     <div className="flex items-center gap-2.5">
-                        {editing && <typeMeta.icon size={16} style={{ color: typeMeta.color }} />}
+                        {editing && <TypeIcon size={16} style={{ color: typeMeta.color }} />}
                         <div>
                             <p id={taxTitleId} className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-                                {editing ? "Editar imposto" : "Novo imposto"}
+                                {editing ? t("editTitle") : t("newTitle")}
                             </p>
                             <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
-                                Acompanhe seus impostos e prazos
+                                {t("subtitle")}
                             </p>
                         </div>
                     </div>
                     <button onClick={() => !saving && onClose()}
-                        aria-label="Fechar"
+                        aria-label={tPin("close")}
                         className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
@@ -577,9 +439,9 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Nome */}
                     <div className="space-y-2">
-                        <label htmlFor={nameId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Nome/Descrição</label>
+                        <label htmlFor={nameId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("name")}</label>
                         <input id={nameId} value={name} onChange={e => setName(e.target.value)}
-                            placeholder="Ex: IRPF 2024 - Período"
+                            placeholder={t("namePlaceholder")}
                             // Primeiro campo do modal — focar automaticamente ao abrir
                             // é o padrão esperado ao abrir um formulário de criação.
                             // eslint-disable-next-line jsx-a11y/no-autofocus
@@ -590,25 +452,19 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Tipo de imposto */}
                     <fieldset className="space-y-2.5 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Tipo de imposto</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("taxType")}</legend>
 
                         {/* Abas por Esfera Tributária */}
                         <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)" }}>
                             {(["federal", "estadual", "municipal", "outro"] as const).map(s => {
                                 const active = activeSphere === s;
-                                const sphereLabels: Record<TaxSphere, string> = {
-                                    federal: "Federal",
-                                    estadual: "Estadual",
-                                    municipal: "Municipal",
-                                    outro: "Outro",
-                                };
                                 return (
                                     <button key={s} type="button" onClick={() => setActiveSphere(s)}
                                         className="flex-1 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-center transition-all border-none"
                                         style={active
                                             ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
                                             : { color: "var(--cf-text-2)", background: "transparent" }}>
-                                        {sphereLabels[s]}
+                                        {tSphere(s)}
                                     </button>
                                 );
                             })}
@@ -616,19 +472,20 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                         {/* Grid de Seleção de Tipo de Imposto */}
                         <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1">
-                            {TAX_TYPES.filter(t => t.esfera === activeSphere).map(t => {
-                                const sel = type === t.id;
+                            {TAX_TYPES.filter(tt => tt.esfera === activeSphere).map(tt => {
+                                const sel = type === tt.id;
+                                const TtIcon = tt.icon;
                                 return (
-                                    <button key={t.id} type="button" onClick={() => setType(t.id)}
+                                    <button key={tt.id} type="button" onClick={() => setType(tt.id)}
                                         className="flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all text-left w-full"
                                         style={sel
-                                            ? { borderColor: t.color, background: t.color + "18", color: t.color }
+                                            ? { borderColor: tt.color, background: tt.color + "18", color: tt.color }
                                             : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
                                         <span className="flex items-center gap-1 font-bold">
-                                            <t.icon size={12} /> {t.label}
+                                            <TtIcon size={12} /> {tType(tt.id)}
                                         </span>
                                         <span className="text-[9px] opacity-80 font-normal leading-tight">
-                                            {t.description}
+                                            {tDesc(tt.id)}
                                         </span>
                                     </button>
                                 );
@@ -639,14 +496,14 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     {/* Valor + Valor estimado */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
+                            <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("amount")}</label>
                             <input id={amtId} inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label htmlFor={estimatedAmtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Estimado (opcional)</label>
+                            <label htmlFor={estimatedAmtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("estimatedLabel")}</label>
                             <input id={estimatedAmtId} inputMode="decimal" value={estimatedRawAmt} onChange={e => setEstimatedRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
@@ -657,18 +514,18 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     {/* Vencimento + Frequência */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                            <label htmlFor={dueDateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Vencimento</label>
+                            <label htmlFor={dueDateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("dueDate")}</label>
                             <input id={dueDateId} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
                         <div className="space-y-2">
-                            <label htmlFor={frequencyId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Frequência</label>
+                            <label htmlFor={frequencyId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("frequency")}</label>
                             <select id={frequencyId} value={frequency} onChange={e => setFrequency(e.target.value as TaxFrequency)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
                                 {(["mensal", "trimestral", "semestral", "anual"] as TaxFrequency[]).map(f => (
-                                    <option key={f} value={f}>{FREQUENCY_LABEL[f]}</option>
+                                    <option key={f} value={f}>{tFreq(f)}</option>
                                 ))}
                             </select>
                         </div>
@@ -676,7 +533,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Status */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Status inicial</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("initialStatus")}</legend>
                         <div className="grid grid-cols-2 gap-2">
                             {(["nao_pago", "pago", "agendado", "atraso"] as TaxStatus[]).map(s => {
                                 const meta = STATUS_META[s];
@@ -686,7 +543,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                         style={status === s
                                             ? { background: meta.bg, borderColor: meta.border, color: meta.color }
                                             : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}>
-                                        {meta.label}
+                                        {tStatus(s)}
                                     </button>
                                 );
                             })}
@@ -697,7 +554,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                     <PaymentMethodSelector
                         value={paymentMethod}
                         onChange={setPaymentMethod}
-                        label="Forma de pagamento prevista"
+                        label={t("paymentMethodLabel")}
                         required
                     />
 
@@ -706,7 +563,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                         {/* Não é <label> — não há um único campo associado (lista +
                             botão de upload logo abaixo). */}
                         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                            Documentos (DARF, RPA...) — {attachments.length}
+                            {t("documents", { count: attachments.length })}
                         </p>
 
                         {attachments.length > 0 && (
@@ -719,11 +576,11 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                                             <a href={url} target="_blank" rel="noopener noreferrer"
                                                 className="text-xs truncate"
                                                 style={{ color: "var(--brand)", textDecoration: "underline" }}>
-                                                Documento {idx + 1}
+                                                {t("documentN", { index: idx + 1 })}
                                             </a>
                                         </div>
                                         <button onClick={() => removeAttachment(idx)}
-                                            aria-label={`Remover documento ${idx + 1}`}
+                                            aria-label={t("removeDocument", { index: idx + 1 })}
                                             className="p-1 rounded-lg cursor-pointer"
                                             style={{ background: "var(--neg-weak)" }}>
                                             <Trash2 size={12} style={{ color: "var(--neg)" }} />
@@ -736,7 +593,7 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                         <label className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border-2 border-dashed cursor-pointer transition-all"
                             style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                             <Download size={16} />
-                            {uploadingFile ? "Enviando..." : "Adicionar documento"}
+                            {uploadingFile ? t("uploading") : t("addDocument")}
                             <input
                                 type="file"
                                 accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
@@ -749,9 +606,9 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
 
                     {/* Observações */}
                     <div className="space-y-2">
-                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observações</label>
+                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("notes")}</label>
                         <input id={notesId} value={notes} onChange={e => setNotes(e.target.value)}
-                            placeholder="Código, referência, observações..."
+                            placeholder={t("notesPlaceholder")}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -762,16 +619,16 @@ function TaxModal({ open, editing, uid, onClose, onSave }: TaxModalProps) {
                             ? { background: `linear-gradient(135deg, ${typeMeta.color}, ${typeMeta.color}cc)`, color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
-                            ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
-                            : <><Check size={15} /> {editing ? "Salvar alterações" : "Criar imposto"}</>}
+                            ? <><Loader2 size={15} className="animate-spin" /> {t("saving")}</>
+                            : <><Check size={15} /> {editing ? t("saveChanges") : t("createTax")}</>}
                     </button>
                 </div>
             </div>
-            
+
             <PinModal
                 open={pinOpen}
-                title={editing ? "Salvar alterações" : "Criar imposto"}
-                subtitle="Digite seu PIN de 4 dígitos para confirmar"
+                title={editing ? t("saveChanges") : t("createTax")}
+                subtitle={t("pinConfirmSubtitle")}
                 onClose={() => setPinOpen(false)}
                 onSuccess={handlePinSuccess}
             />
@@ -787,6 +644,9 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
     onClose: () => void;
     onConfirm: (paidAt: string, method: PaymentMethod) => Promise<void>;
 }) {
+    const t = useTranslations("impostos.payModal");
+    const tPin = useTranslations("common.pin");
+    const locale = useLocale();
     const [paidAt, setPaidAt] = useState(TODAY);
     const [method, setMethod] = useState<PaymentMethod | null>(null);
     const [pinOpen, setPinOpen] = useState(false);
@@ -811,7 +671,7 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
         if (!canConfirm || !uid) return;
         const pinHash = await loadPinHash(uid);
         if (!pinHash) {
-            setErr("Configure seu PIN de 4 dígitos na página de Usuários antes de continuar.");
+            setErr(tPin("notConfigured"));
             return;
         }
         setErr("");
@@ -828,23 +688,23 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                 await onConfirm(paidAt, method!);
                 onClose();
             } catch (e: any) {
-                setErr(e?.message ?? "Erro ao registrar pagamento");
+                setErr(e?.message ?? t("registerError"));
                 setSaving(false);
             }
         } else if (result === "locked") {
             setPinOpen(false);
-            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            setErr(tPin("lockedRetry"));
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setPinOpen(false);
-                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+                setErr(tPin("lockedRetry"));
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setPinOpen(false);
-            setErr("Configure seu PIN de 4 dígitos na página de Usuários antes de continuar.");
+            setErr(tPin("notConfigured"));
         }
     }
 
@@ -861,10 +721,10 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
 
                 <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                     <div>
-                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Confirmar pagamento</p>
-                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{tax.name} · {toBRL(tax.amount)}</p>
+                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{t("summary", { name: tax.name, amount: toBRL(tax.amount, locale) })}</p>
                     </div>
-                    <button onClick={() => !saving && onClose()} aria-label="Fechar" className="p-1.5 rounded-lg cursor-pointer"
+                    <button onClick={() => !saving && onClose()} aria-label={tPin("close")} className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -879,7 +739,7 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                     )}
 
                     <div className="space-y-2">
-                        <label htmlFor={paidAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data de pagamento</label>
+                        <label htmlFor={paidAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("paidDate")}</label>
                         <input id={paidAtId} type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -888,7 +748,7 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                     <PaymentMethodSelector
                         value={method}
                         onChange={setMethod}
-                        label="Forma de pagamento utilizada"
+                        label={t("paymentMethodLabel")}
                         required
                     />
 
@@ -898,16 +758,16 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
                             ? { background: "linear-gradient(135deg, var(--pos), var(--pos))", color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
-                            ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
-                            : <><ShieldCheck size={15} /> Confirmar pagamento</>}
+                            ? <><Loader2 size={15} className="animate-spin" /> {t("registering")}</>
+                            : <><ShieldCheck size={15} /> {t("confirm")}</>}
                     </button>
                 </div>
             </div>
         </div>
         <PinModal
             open={pinOpen}
-            title="Confirmar pagamento"
-            subtitle="Digite seu PIN de 4 dígitos para confirmar a baixa"
+            title={t("pinTitle")}
+            subtitle={t("pinSubtitle")}
             onClose={() => setPinOpen(false)}
             onSuccess={handlePinSuccess}
         />
@@ -924,10 +784,16 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
     onDelete: () => void;
     onOpenPayModal: () => void;
 }) {
-    const [showDetails, setShowDetails] = useState(false);
+    const t = useTranslations("impostos.card");
+    const tType = useTranslations("impostos.taxTypes");
+    const tDesc = useTranslations("impostos.taxTypeDesc");
+    const tFreq = useTranslations("impostos.frequency");
+    const tStatus = useTranslations("impostos.status");
+    const locale = useLocale();
     const days = daysUntil(tax.dueDate);
     const status: TaxStatus = tax._status;
     const meta = STATUS_META[status];
+    const MetaIcon = meta.icon;
     const taxMeta = getTaxMeta(tax.type);
     const TaxIcon = taxMeta.icon;
     const isUrgent = status !== "pago" && days >= 0 && days <= alertDays;
@@ -955,12 +821,12 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                     {tax.name}
                                 </p>
                                 <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-3)" }}>
-                                    {taxMeta.label} · {taxMeta.description}
+                                    {tType(tax.type)} · {tDesc(tax.type)}
                                 </p>
                             </div>
                             <span className="font-heading font-bold text-base shrink-0 mono"
                                 style={{ color: isOverdue ? "var(--neg)" : "var(--cf-text)" }}>
-                                {toBRL(tax.amount)}
+                                {toBRL(tax.amount, locale)}
                             </span>
                         </div>
 
@@ -968,11 +834,11 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                             <span className="text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1"
                                 style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
-                                <meta.icon size={11} /> {meta.label}
+                                <MetaIcon size={11} /> {tStatus(status)}
                             </span>
                             <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                                 style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
-                                {FREQUENCY_LABEL[tax.frequency]}
+                                {tFreq(tax.frequency)}
                             </span>
                             {tax.attachments?.length > 0 && (
                                 <span className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1"
@@ -983,10 +849,10 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             {(tax.paymentMethod || tax.paidPaymentMethod) && (
                                 <span className="flex items-center gap-1 flex-wrap">
                                     {tax.paidPaymentMethod && (
-                                        <PaymentMethodBadge method={tax.paidPaymentMethod as PaymentMethod} prefix="Pago:" small />
+                                        <PaymentMethodBadge method={tax.paidPaymentMethod as PaymentMethod} prefix={t("paidMethod")} small />
                                     )}
                                     {tax.paymentMethod && tax.paymentMethod !== tax.paidPaymentMethod && (
-                                        <PaymentMethodBadge method={tax.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                        <PaymentMethodBadge method={tax.paymentMethod as PaymentMethod} prefix={t("prevMethod")} small />
                                     )}
                                 </span>
                             )}
@@ -999,12 +865,12 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             <span className="text-xs font-medium"
                                 style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-2)" }}>
                                 {status === "pago"
-                                    ? `Pago em ${tax.paidAt ? labelDate(tax.paidAt) : "—"}`
+                                    ? t("paidOn", { date: tax.paidAt ? labelDate(tax.paidAt, locale) : "—" })
                                     : isOverdue
-                                        ? `Atraso de ${Math.abs(days)} dia${Math.abs(days) !== 1 ? "s" : ""}`
+                                        ? t("overdueBy", { count: Math.abs(days) })
                                         : days === 0
-                                            ? `⚠️ Vence hoje!`
-                                            : `Vence em ${days} dia${days !== 1 ? "s" : ""} · ${labelDate(tax.dueDate)}`}
+                                            ? t("dueToday")
+                                            : t("dueIn", { count: days, date: labelDate(tax.dueDate, locale) })}
                             </span>
                             {isUrgent && (
                                 <span className="ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
@@ -1015,7 +881,7 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                         {/* Estimativa */}
                         {tax.estimatedAmount && (
                             <p className="text-xs mt-1.5" style={{ color: "var(--cf-text-3)" }}>
-                                💡 Estimado: {toBRL(tax.estimatedAmount)}
+                                {t("estimated", { value: toBRL(tax.estimatedAmount, locale) })}
                             </p>
                         )}
 
@@ -1032,25 +898,25 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
                             style={{ background: `linear-gradient(135deg, ${taxMeta.color}, ${taxMeta.color}cc)`, color: "white" }}>
                             <CheckCircle2 size={13} />
-                            Marcar como pago
+                            {t("markPaid")}
                         </button>
                     ) : (
                         <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold"
                             style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
-                            <Check size={13} /> Imposto pago
+                            <Check size={13} /> {t("taxPaid")}
                         </div>
                     )}
-                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label="Editar"
+                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label={t("edit")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
-                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label="Excluir"
+                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label={t("delete")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>
                 </div>
 
-                <AuditTrail record={tax} settleLabel="Pago" />
+                <AuditTrail record={tax} settleLabel={t("settleLabel")} />
             </div>
         </div>
     );
@@ -1083,6 +949,15 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function ImpostosPage() {
+    const t = useTranslations("impostos");
+    const tStatus = useTranslations("impostos.status");
+    const tType = useTranslations("impostos.taxTypes");
+    const tSphere = useTranslations("impostos.spheres");
+    const tGroups = useTranslations("impostos.sphereGroups");
+    const tPin = useTranslations("common.pin");
+    const tNav = useTranslations("nav");
+    const locale = useLocale();
+
     const [uid, setUid] = useState<string | null>(null);
     // uid do login atual — usado para o PIN (pessoal) e para o selo de autoria,
     // separado de `uid`, que é o dono dos dados (pode ser outra conta).
@@ -1120,7 +995,7 @@ export default function ImpostosPage() {
     const saveAlertDays = (d: number) => {
         setAlertDays(d);
         localStorage.setItem("nexusfi:taxAlertDays", String(d));
-        showToast(`Alertas configurados para ${d} dia${d !== 1 ? "s" : ""} antes do vencimento`);
+        showToast(t("toast.alertsConfigured", { count: d }));
     };
 
     // Auth + Firestore realtime
@@ -1151,7 +1026,7 @@ export default function ImpostosPage() {
 
                     setUid(ownerUid);
                     setAuthUid(u.uid);
-                    setUserName(u.displayName ?? u.email ?? "Usuário");
+                    setUserName(u.displayName ?? u.email ?? "");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
                     snapUnsub = onSnapshot(
@@ -1182,17 +1057,11 @@ export default function ImpostosPage() {
 
         setTimeout(() => {
             if (overdue.length > 0) {
-                showToast(
-                    `${overdue.length} imposto${overdue.length !== 1 ? "s" : ""} em atraso — regularize!`,
-                    "err"
-                );
+                showToast(t("toast.overdueOnLoad", { count: overdue.length }), "err");
             }
             if (soon.length > 0) {
                 setTimeout(() => {
-                    showToast(
-                        `⏰ ${soon.length} imposto${soon.length !== 1 ? "s" : ""} vence${soon.length !== 1 ? "m" : ""} nos próximos ${alertDaysCurrent} dias`,
-                        "warn"
-                    );
+                    showToast(t("toast.dueSoonOnLoad", { count: soon.length, days: alertDaysCurrent }), "warn");
                 }, 600);
             }
         }, 800);
@@ -1207,7 +1076,7 @@ export default function ImpostosPage() {
     }
 
     async function handleSave(data: Omit<Tax, "id" | "userId" | "createdAt">) {
-        if (!uid) throw new Error("Não autenticado");
+        if (!uid) throw new Error(tPin("notConfigured"));
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
@@ -1221,11 +1090,11 @@ export default function ImpostosPage() {
         if (editing) {
             await updateDoc(doc(db, "users", uid, "taxes", editing.id), { ...clean, ...stampUpdate(actor) } as any);
             taxId = editing.id;
-            showToast("Imposto atualizado!");
+            showToast(t("toast.taxUpdated"));
         } else {
             const ref = await addDoc(collection(db, "users", uid, "taxes"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
             taxId = ref.id;
-            showToast("Imposto criado!");
+            showToast(t("toast.taxCreated"));
         }
 
         // Reflete no Fluxo de Caixa: com status "pago" cria/atualiza a saída
@@ -1265,7 +1134,7 @@ export default function ImpostosPage() {
             paidPaymentMethod: method,
         });
 
-        showToast("Imposto marcado como pago ✓");
+        showToast(t("toast.markedPaid"));
     }
 
     async function handleDelete() {
@@ -1281,7 +1150,7 @@ export default function ImpostosPage() {
             await syncTaxCashflow(db, uid, { id: confirmId, name: "", amount: 0, dueDate: "", status: "removido" });
             await deleteDoc(doc(db, "users", uid, "taxes", confirmId));
             setConfirmId(null);
-            showToast("Imposto removido.");
+            showToast(t("toast.taxRemoved"));
         } catch (e: any) {
             showToast(e.message, "err");
         } finally {
@@ -1293,7 +1162,7 @@ export default function ImpostosPage() {
         if (!uid) return;
         const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
-            showToast("Configure seu PIN antes de excluir.", "err");
+            showToast(tPin("notConfigured"), "err");
             return;
         }
         setPendingDeleteId(taxId);
@@ -1311,18 +1180,18 @@ export default function ImpostosPage() {
             }
         } else if (result === "locked") {
             setDeletePinOpen(false);
-            showToast("PIN bloqueado por excesso de tentativas.", "err");
+            showToast(tPin("lockedRetry"), "err");
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setDeletePinOpen(false);
-                showToast("PIN bloqueado por excesso de tentativas.", "err");
+                showToast(tPin("lockedRetry"), "err");
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setDeletePinOpen(false);
-            showToast("Configure seu PIN antes de excluir.", "err");
+            showToast(tPin("notConfigured"), "err");
         }
     }
 
@@ -1348,10 +1217,10 @@ export default function ImpostosPage() {
     }, [enriched, filterStatus, filterSphere, filterType, search, monthKey]);
 
     const sections = useMemo(() => [
-        { key: "atraso", label: "Em Atraso", color: "var(--neg)", taxes: filtered.filter(t => t._status === "atraso") },
-        { key: "nao_pago", label: "A Pagar", color: "var(--warn)", taxes: filtered.filter(t => t._status === "nao_pago") },
-        { key: "agendado", label: "Agendados", color: "var(--brand)", taxes: filtered.filter(t => t._status === "agendado") },
-        { key: "pago", label: "Pagos", color: "var(--pos)", taxes: filtered.filter(t => t._status === "pago") },
+        { key: "atraso", color: "var(--neg)", taxes: filtered.filter(t => t._status === "atraso") },
+        { key: "nao_pago", color: "var(--warn)", taxes: filtered.filter(t => t._status === "nao_pago") },
+        { key: "agendado", color: "var(--brand)", taxes: filtered.filter(t => t._status === "agendado") },
+        { key: "pago", color: "var(--pos)", taxes: filtered.filter(t => t._status === "pago") },
     ].filter(s => s.taxes.length > 0), [filtered]);
 
     const kpis = useMemo(() => {
@@ -1372,18 +1241,18 @@ export default function ImpostosPage() {
         };
     }, [enriched, alertDays]);
 
-    if (pageState === "blocked") return <AccessDenied category="Impostos" />;
+    if (pageState === "blocked") return <AccessDenied category={tNav("items.impostos")} />;
 
     if (pageState === "loading") return <PageLoader background="var(--cf-bg)" />;
 
     if (pageState === "error") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
-            <p className="font-heading text-lg font-bold text-rose-500">Erro ao conectar</p>
+            <p className="font-heading text-lg font-bold text-rose-500">{t("error.connect")}</p>
             <p className="text-xs font-mono text-rose-700 bg-rose-50 rounded-xl p-4 max-w-sm break-all">{errMsg}</p>
             <button onClick={() => window.location.reload()}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                 style={{ background: "var(--brand)", color: "white" }}>
-                Tentar novamente
+                {t("error.tryAgain")}
             </button>
         </div>
     );
@@ -1391,7 +1260,7 @@ export default function ImpostosPage() {
     return (
         <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
 
-            <Navbar user={{ displayName: userName, email: userEmail }} activePath="/impostos" onLogout={handleLogout} />
+            <Navbar user={{ displayName: userName || null, email: userEmail }} activePath="/impostos" onLogout={handleLogout} />
 
             <TaxModal
                 open={modal} editing={editing} uid={authUid}
@@ -1413,8 +1282,8 @@ export default function ImpostosPage() {
 
             <PinModal
                 open={deletePinOpen}
-                title="Excluir imposto"
-                subtitle="Digite seu PIN de 4 dígitos para confirmar a exclusão"
+                title={t("confirmDelete.pinTitle")}
+                subtitle={t("confirmDelete.pinSubtitle")}
                 onClose={() => { setDeletePinOpen(false); setPendingDeleteId(null); }}
                 onSuccess={handleDeletePinSuccess}
             />
@@ -1429,21 +1298,21 @@ export default function ImpostosPage() {
                             <Trash2 size={20} style={{ color: "var(--neg)" }} />
                         </div>
                         <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>
-                            Excluir imposto?
+                            {t("confirmDelete.title")}
                         </p>
                         <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>
-                            Esta ação não pode ser desfeita.
+                            {t("confirmDelete.body")}
                         </p>
                         <div className="flex gap-2">
                             <button onClick={() => setConfirmId(null)}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                                 style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
-                                Cancelar
+                                {t("confirmDelete.cancel")}
                             </button>
                             <button onClick={handleDelete} disabled={deleting}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
                                 style={{ background: "linear-gradient(135deg, var(--neg), var(--neg))", color: "white" }}>
-                                {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Excluir</>}
+                                {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> {t("confirmDelete.delete")}</>}
                             </button>
                         </div>
                     </div>
@@ -1458,37 +1327,37 @@ export default function ImpostosPage() {
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>
-                            Impostos
+                            {t("meta.title")}
                         </h1>
                         <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text-2)" }}>
                             {kpis.alert > 0
                                 ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "var(--warn)" }}>
                                     <AlertTriangle size={12} />
-                                    {kpis.alert} vence{kpis.alert !== 1 ? "m" : ""} nos próximos {alertDays} dias
+                                    {t("header.dueSoon", { count: kpis.alert, days: alertDays })}
                                 </span>
                                 : kpis.totalOverdue > 0
                                     ? <span className="flex items-center gap-1 font-semibold" style={{ color: "var(--neg)" }}>
                                         <AlertTriangle size={12} />
-                                        {kpis.totalOverdue} imposto{kpis.totalOverdue !== 1 ? "s" : ""} em atraso
+                                        {t("header.overdue", { count: kpis.totalOverdue })}
                                     </span>
-                                    : <span style={{ color: "var(--pos)" }}>✓ Tudo em dia!</span>
+                                    : <span style={{ color: "var(--pos)" }}>{t("header.allClear")}</span>
                             }
                         </p>
                     </div>
                     <button onClick={() => { setEditing(null); setModal(true); }}
                         className="hidden sm:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
                         style={{ background: "var(--brand)", color: "white" }}>
-                        <Plus size={14} /> Novo imposto
+                        <Plus size={14} /> {t("meta.newTax")}
                     </button>
                 </div>
 
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
-                        { label: "A Pagar", val: toBRL(kpis.aPagar), color: "var(--brand)", bg: "var(--brand-weak)", sub: `${kpis.totalNotPaid} imposto${kpis.totalNotPaid !== 1 ? "s" : ""}` },
-                        { label: "Em Atraso", val: toBRL(kpis.atraso), color: "var(--neg)", bg: "var(--neg-weak)", sub: `${kpis.totalOverdue} imposto${kpis.totalOverdue !== 1 ? "s" : ""}` },
-                        { label: "Pagos", val: toBRL(kpis.pago), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalPaid} imposto${kpis.totalPaid !== 1 ? "s" : ""}` },
-                        { label: "Estimado", val: toBRL(kpis.estimado), color: "var(--brand)", bg: "var(--brand-weak)", sub: "planejamento" },
+                        { label: t("kpi.toPay"), val: toBRL(kpis.aPagar, locale), color: "var(--brand)", bg: "var(--brand-weak)", sub: t("kpi.taxCount", { count: kpis.totalNotPaid }) },
+                        { label: t("kpi.overdue"), val: toBRL(kpis.atraso, locale), color: "var(--neg)", bg: "var(--neg-weak)", sub: t("kpi.taxCount", { count: kpis.totalOverdue }) },
+                        { label: t("kpi.paid"), val: toBRL(kpis.pago, locale), color: "var(--pos)", bg: "var(--pos-weak)", sub: t("kpi.taxCount", { count: kpis.totalPaid }) },
+                        { label: t("kpi.estimated"), val: toBRL(kpis.estimado, locale), color: "var(--brand)", bg: "var(--brand-weak)", sub: t("kpi.planning") },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
@@ -1505,7 +1374,7 @@ export default function ImpostosPage() {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
-                            placeholder="Buscar imposto ou observação…" aria-label="Buscar imposto ou observação"
+                            placeholder={t("toolbar.searchPlaceholder")} aria-label={t("toolbar.searchAria")}
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -1518,7 +1387,7 @@ export default function ImpostosPage() {
                                     style={filterStatus === f
                                         ? { background: meta?.bg ?? "var(--cf-text)", color: meta?.color ?? "var(--cf-bg)", borderColor: meta?.border ?? "transparent" }
                                         : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
-                                    {f === "todos" ? "Todos" : STATUS_META[f].label}
+                                    {f === "todos" ? t("toolbar.filterAll") : tStatus(f)}
                                 </button>
                             );
                         })}
@@ -1533,11 +1402,11 @@ export default function ImpostosPage() {
                                 }}
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
-                                    <option value="todos">Todas esferas</option>
-                                    <option value="federal">Federal</option>
-                                    <option value="estadual">Estadual</option>
-                                    <option value="municipal">Municipal</option>
-                                    <option value="outro">Outro</option>
+                                    <option value="todos">{tSphere("all")}</option>
+                                    <option value="federal">{tSphere("federal")}</option>
+                                    <option value="estadual">{tSphere("estadual")}</option>
+                                    <option value="municipal">{tSphere("municipal")}</option>
+                                    <option value="outro">{tSphere("outro")}</option>
                                 </select>
                             </div>
 
@@ -1548,43 +1417,24 @@ export default function ImpostosPage() {
                                 <select value={filterType} onChange={e => setFilterType(e.target.value)}
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
-                                    <option value="todos">Todos tipos</option>
-                                    {(filterSphere === "todos" || filterSphere === "federal") && (
-                                        <optgroup label="Federais">
-                                            {TAX_TYPES.filter(t => t.esfera === "federal").map(t => (
-                                                <option key={t.id} value={t.id}>{t.label}</option>
-                                            ))}
-                                        </optgroup>
-                                    )}
-                                    {(filterSphere === "todos" || filterSphere === "estadual") && (
-                                        <optgroup label="Estaduais">
-                                            {TAX_TYPES.filter(t => t.esfera === "estadual").map(t => (
-                                                <option key={t.id} value={t.id}>{t.label}</option>
-                                            ))}
-                                        </optgroup>
-                                    )}
-                                    {(filterSphere === "todos" || filterSphere === "municipal") && (
-                                        <optgroup label="Municipais">
-                                            {TAX_TYPES.filter(t => t.esfera === "municipal").map(t => (
-                                                <option key={t.id} value={t.id}>{t.label}</option>
-                                            ))}
-                                        </optgroup>
-                                    )}
-                                    {(filterSphere === "todos" || filterSphere === "outro") && (
-                                        <optgroup label="Outros">
-                                            {TAX_TYPES.filter(t => t.esfera === "outro").map(t => (
-                                                <option key={t.id} value={t.id}>{t.label}</option>
-                                            ))}
-                                        </optgroup>
-                                    )}
+                                    <option value="todos">{t("toolbar.allTypes")}</option>
+                                    {(["federal", "estadual", "municipal", "outro"] as TaxSphere[]).map(sph => (
+                                        (filterSphere === "todos" || filterSphere === sph) && (
+                                            <optgroup key={sph} label={tGroups(sph)}>
+                                                {TAX_TYPES.filter(tt => tt.esfera === sph).map(tt => (
+                                                    <option key={tt.id} value={tt.id}>{tType(tt.id)}</option>
+                                                ))}
+                                            </optgroup>
+                                        )
+                                    ))}
                                 </select>
                             </div>
                             <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                                title="Vencimentos deste mês — troque o mês no seletor da Navbar">
+                                title={t("toolbar.monthHint")}>
                                 {periodLabel}
                             </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
-                                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+                                {t("toolbar.resultCount", { count: filtered.length })}
                             </span>
                         </div>
                     </div>
@@ -1599,19 +1449,19 @@ export default function ImpostosPage() {
                         </div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
-                                ? "Nenhum resultado"
-                                : `Nada em ${periodLabel}`}
+                                ? t("empty.noResults")
+                                : t("empty.nothingIn", { period: periodLabel })}
                         </p>
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
-                                ? "Ajuste os filtros para ver outros impostos."
-                                : "Nenhum imposto vence neste mês. Troque o mês no seletor da Navbar ou adicione um imposto."}
+                                ? t("empty.adjustFilters")
+                                : t("empty.noneThisMonth")}
                         </p>
                         {!search && filterStatus === "todos" && filterType === "todos" && filterSphere === "todos" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}
                                 className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer mt-2"
                                 style={{ background: "var(--brand)", color: "white" }}>
-                                <Plus size={14} /> Adicionar imposto
+                                <Plus size={14} /> {t("meta.addTax")}
                             </button>
                         )}
                     </div>
@@ -1621,14 +1471,14 @@ export default function ImpostosPage() {
                             <div key={section.key}>
                                 <div className="flex items-center gap-2.5 mb-3">
                                     <div className="w-2 h-2 rounded-full shrink-0" style={{ background: section.color }} />
-                                    <p className="text-sm font-bold" style={{ color: section.color }}>{section.label}</p>
+                                    <p className="text-sm font-bold" style={{ color: section.color }}>{t(`sections.${section.key}`)}</p>
                                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                                         style={{ background: section.color + "18", color: section.color }}>
                                         {section.taxes.length}
                                     </span>
                                     <div className="flex-1 h-px" style={{ background: section.color + "30" }} />
                                     <span className="text-xs font-bold mono" style={{ color: section.color }}>
-                                        {toBRL(section.taxes.reduce((s, t) => s + t.amount, 0))}
+                                        {toBRL(section.taxes.reduce((s, t) => s + t.amount, 0), locale)}
                                     </span>
                                 </div>
 
@@ -1652,7 +1502,7 @@ export default function ImpostosPage() {
 
             {/* FAB mobile */}
             <button onClick={() => { setEditing(null); setModal(true); }}
-                aria-label="Novo imposto"
+                aria-label={t("meta.newTax")}
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                 style={{
                     bottom: 74, right: 16, width: 52, height: 52,
@@ -1665,5 +1515,3 @@ export default function ImpostosPage() {
         </div>
     );
 }
-
-import React from "react";

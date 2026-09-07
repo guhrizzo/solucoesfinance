@@ -1,1 +1,179 @@
-{}
+{
+  "meta": {
+    "title": "Impuestos",
+    "newTax": "Nuevo impuesto",
+    "addTax": "Agregar impuesto"
+  },
+  "header": {
+    "allClear": "✓ ¡Todo al día!",
+    "dueSoon": "{count, plural, one {# vence en los próximos {days} días} other {# vencen en los próximos {days} días}}",
+    "overdue": "{count, plural, one {# impuesto atrasado} other {# impuestos atrasados}}"
+  },
+  "kpi": {
+    "toPay": "Por Pagar",
+    "overdue": "Atrasados",
+    "paid": "Pagados",
+    "estimated": "Estimado",
+    "taxCount": "{count, plural, one {# impuesto} other {# impuestos}}",
+    "planning": "planificación"
+  },
+  "spheres": {
+    "all": "Todos los niveles",
+    "federal": "Federal",
+    "estadual": "Estatal",
+    "municipal": "Municipal",
+    "outro": "Otro"
+  },
+  "sphereGroups": {
+    "federal": "Federales",
+    "estadual": "Estatales",
+    "municipal": "Municipales",
+    "outro": "Otros"
+  },
+  "frequency": {
+    "mensal": "Mensual",
+    "trimestral": "Trimestral",
+    "semestral": "Semestral",
+    "anual": "Anual"
+  },
+  "status": {
+    "nao_pago": "No Pagado",
+    "pago": "Pagado",
+    "atraso": "Atrasado",
+    "agendado": "Programado"
+  },
+  "sections": {
+    "atraso": "Atrasados",
+    "nao_pago": "Por Pagar",
+    "agendado": "Programados",
+    "pago": "Pagados"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar impuesto u observación…",
+    "searchAria": "Buscar impuesto u observación",
+    "filterAll": "Todos",
+    "allTypes": "Todos los tipos",
+    "monthHint": "Vencimientos de este mes — cambia el mes en el selector de la barra",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
+  },
+  "empty": {
+    "noResults": "Sin resultados",
+    "nothingIn": "Nada en {period}",
+    "adjustFilters": "Ajusta los filtros para ver otros impuestos.",
+    "noneThisMonth": "Ningún impuesto vence este mes. Cambia el mes en el selector de la barra o agrega un impuesto."
+  },
+  "taxTypes": {
+    "simples_nacional": "Simples Nacional",
+    "irpf": "IRPF",
+    "irpj": "IRPJ",
+    "pis": "PIS",
+    "cofins": "COFINS",
+    "csll": "CSLL",
+    "ipi": "IPI",
+    "iof": "IOF",
+    "itr": "ITR",
+    "inss": "INSS",
+    "fgts": "FGTS",
+    "icms": "ICMS",
+    "ipva": "IPVA",
+    "itcmd": "ITCMD",
+    "iss": "ISS",
+    "iptu": "IPTU",
+    "itbi": "ITBI",
+    "outro": "Otro"
+  },
+  "taxTypeDesc": {
+    "simples_nacional": "Régimen unificado de impuestos (DAS)",
+    "irpf": "Impuesto a la renta de persona física",
+    "irpj": "Impuesto a la renta de persona jurídica",
+    "pis": "Contribución al Programa de Integración Social",
+    "cofins": "Contribución para el financiamiento de la seguridad social",
+    "csll": "Contribución social sobre la utilidad neta",
+    "ipi": "Impuesto sobre productos industrializados",
+    "iof": "Impuesto sobre operaciones financieras",
+    "itr": "Impuesto territorial rural",
+    "inss": "Seguridad social",
+    "fgts": "Fondo de garantía por tiempo de servicio",
+    "icms": "Impuesto sobre la circulación de mercancías y servicios",
+    "ipva": "Impuesto sobre la propiedad de vehículos automotores",
+    "itcmd": "Impuesto sobre transmisión por causa de muerte y donación",
+    "iss": "Impuesto sobre servicios",
+    "iptu": "Impuesto predial y territorial urbano",
+    "itbi": "Impuesto sobre transmisión de bienes inmuebles",
+    "outro": "Otros impuestos y tasas"
+  },
+  "card": {
+    "paidOn": "Pagado el {date}",
+    "overdueBy": "{count, plural, one {# día de atraso} other {# días de atraso}}",
+    "dueToday": "⚠️ ¡Vence hoy!",
+    "dueIn": "{count, plural, one {Vence en # día} other {Vence en # días}} · {date}",
+    "estimated": "💡 Estimado: {value}",
+    "paidMethod": "Pagado:",
+    "prevMethod": "Prev.:",
+    "markPaid": "Marcar como pagado",
+    "taxPaid": "Impuesto pagado",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "settleLabel": "Pagado"
+  },
+  "modal": {
+    "editTitle": "Editar impuesto",
+    "newTitle": "Nuevo impuesto",
+    "subtitle": "Haz seguimiento de tus impuestos y plazos",
+    "name": "Nombre/Descripción",
+    "namePlaceholder": "Ej.: IRPF 2024 - Período",
+    "taxType": "Tipo de impuesto",
+    "amount": "Valor (R$)",
+    "estimatedLabel": "Estimado (opcional)",
+    "dueDate": "Vencimiento",
+    "frequency": "Frecuencia",
+    "initialStatus": "Estado inicial",
+    "paymentMethodLabel": "Forma de pago prevista",
+    "documents": "Documentos (DARF, RPA...) — {count}",
+    "documentN": "Documento {index}",
+    "removeDocument": "Quitar documento {index}",
+    "uploading": "Enviando...",
+    "addDocument": "Agregar documento",
+    "uploadError": "Error al subir: {message}",
+    "notes": "Observaciones",
+    "notesPlaceholder": "Código, referencia, observaciones...",
+    "saving": "Guardando…",
+    "saveChanges": "Guardar cambios",
+    "createTax": "Crear impuesto",
+    "saveError": "Error al guardar",
+    "notAuthenticated": "No autenticado",
+    "pinConfirmSubtitle": "Ingresa tu PIN de 4 dígitos para confirmar"
+  },
+  "payModal": {
+    "title": "Confirmar pago",
+    "summary": "{name} · {amount}",
+    "paidDate": "Fecha de pago",
+    "paymentMethodLabel": "Forma de pago utilizada",
+    "registering": "Registrando…",
+    "confirm": "Confirmar pago",
+    "registerError": "Error al registrar el pago",
+    "pinTitle": "Confirmar pago",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para confirmar la baja"
+  },
+  "confirmDelete": {
+    "title": "¿Eliminar impuesto?",
+    "body": "Esta acción no se puede deshacer.",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "pinTitle": "Eliminar impuesto",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para confirmar la eliminación"
+  },
+  "error": {
+    "connect": "Error de conexión",
+    "tryAgain": "Reintentar"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alertas configuradas para # día antes del vencimiento} other {Alertas configuradas para # días antes del vencimiento}}",
+    "overdueOnLoad": "{count, plural, one {# impuesto atrasado — ¡regularízalo!} other {# impuestos atrasados — ¡regularízalos!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# impuesto vence en los próximos {days} días} other {# impuestos vencen en los próximos {days} días}}",
+    "taxUpdated": "¡Impuesto actualizado!",
+    "taxCreated": "¡Impuesto creado!",
+    "markedPaid": "Impuesto marcado como pagado ✓",
+    "taxRemoved": "Impuesto eliminado."
+  }
+}
