@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CATEGORY_INFO } from "@/lib/consent";
+import { alternatesFor } from "@/lib/seo";
 import { CookiePreferencesButton } from "./CookiePreferencesButton";
 
-export const metadata: Metadata = {
-  title: "Política de Privacidade — NexusFi",
-  description:
-    "Como a NexusFi coleta, usa e protege seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "legal.privacy.meta" });
+  return {
+    title: t("title"),
+    description: t("description"),
+    alternates: alternatesFor(locale, "/privacidade"),
+  };
+}
 
-const UPDATED = "3 de setembro de 2026";
 const DPO_EMAIL = "privacidade@nexusfi.com.br";
 
 function Section({
@@ -32,7 +41,10 @@ function Section({
   );
 }
 
-export default function PrivacidadePage() {
+export default async function PrivacidadePage() {
+  const t = await getTranslations("legal");
+  const tp = await getTranslations("legal.privacy");
+
   return (
     <main className="mx-auto max-w-3xl px-5 py-12 sm:py-16">
       <Link
@@ -40,14 +52,17 @@ export default function PrivacidadePage() {
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)]"
       >
         <ArrowLeft size={15} />
-        Voltar
+        {t("back")}
       </Link>
 
       <h1 className="font-heading mt-6 text-2xl font-bold text-[var(--text)] sm:text-3xl">
-        Política de Privacidade
+        {tp("title")}
       </h1>
       <p className="mt-2 text-xs text-[var(--text-subtle)]">
-        Última atualização: {UPDATED}
+        {tp("lastUpdated", { date: tp("lastUpdatedValue") })}
+      </p>
+      <p className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-subtle)]">
+        {tp("ptOnlyNotice")}
       </p>
 
       <p className="mt-6 text-sm leading-relaxed text-[var(--text-muted)]">

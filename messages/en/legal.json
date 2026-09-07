@@ -1,1 +1,58 @@
-{}
+{
+  "back": "Back",
+  "prevailNotice": "This page was machine-translated. If there is any discrepancy, the Portuguese version prevails.",
+  "privacy": {
+    "meta": {
+      "title": "Privacy Policy — NexusFi",
+      "description": "How NexusFi collects, uses and protects your personal data, in compliance with Brazil's General Data Protection Law (Law No. 13.709/2018)."
+    },
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: {date}",
+    "lastUpdatedValue": "September 3, 2026",
+    "ptOnlyNotice": "The full text of this Policy is kept in Portuguese because it cites provisions of Brazilian law (the LGPD). A reviewed version in other languages will be published later."
+  },
+  "accessibility": {
+    "meta": {
+      "title": "Accessibility Statement — NexusFi",
+      "description": "NexusFi's commitment to digital accessibility (WCAG 2.1 AA), what has been done, what is in progress and how to report a barrier."
+    },
+    "title": "Accessibility Statement",
+    "lastUpdated": "Last updated: {date}",
+    "lastUpdatedValue": "September 4, 2026 (revised after the logged-in-area audit)",
+    "intro": "NexusFi is working to make its platform — the public site and the logged-in area — usable by anyone, including people who use a screen reader, navigate by keyboard only, or rely on other assistive technologies. This follows the spirit of the <b>Brazilian Inclusion Act (Law No. 13.146/2015)</b>, which treats digital accessibility as part of the right to access information and communication.",
+    "standard": {
+      "title": "The standard we follow",
+      "body": "Our technical reference is the <b>Web Content Accessibility Guidelines (WCAG) 2.1, level AA</b> — the most widely used international standard for web accessibility and the basis for eMAG (the Brazilian e-Government accessibility model) and ABNT NBR 17225 in Brazil."
+    },
+    "done": {
+      "title": "What has been done",
+      "intro": "This work was delivered in phases, covering the public site (landing page, sign-up, login, privacy policy) and the entire logged-in area (dashboard, cash flow, payables/receivables, cost centers, inventory, sales dashboard, taxes, reports and settings):",
+      "items": [
+        "Full keyboard navigation for tables, cards, menus and filters that previously responded only to the mouse, with a visible focus indicator across the whole platform.",
+        "Windows and dialogs (modals) — including the four main entry modals (payables, receivables, taxes and cost centers) — announce their role and title to screen readers, trap focus while open and return focus exactly to whoever opened them on close, including closing with the Esc key.",
+        "Every icon-only button (close, edit, delete, navigate between photos, toggle theme, account menu, etc.) has an accessible name — more than 30 fixed during the audit — and dropdown menus report whether they are open or closed.",
+        "Sign-up, login and financial-screen forms with labels correctly tied to their fields (including option groups, using fieldset/legend).",
+        "A “Skip to content” link, visible on keyboard navigation, to skip the menu repeated on every page, with focus actually moving to the content (not just scrolling the page).",
+        "Heading order (H1 → H2 → H3) fixed on pages where a level was skipped, without changing the visual appearance.",
+        "The two hand-drawn financial charts on the dashboard have a table alternative (visually hidden, available to screen readers) with the same month-by-month values.",
+        "Reduced motion controlled by you — not by the operating system — under Settings → Appearance, with a “Reduced” option that removes transitions and turns off smooth scrolling.",
+        "A compact cookie notice, with an option to expand and see all categories before deciding.",
+        "Color contrast verified with real measurement (not just visual inspection) on all text of the reviewed screens, including the color tokens shared across the whole platform — two insufficient-contrast issues found in that measurement have already been fixed.",
+        "An automated check (lint with eslint-plugin-jsx-a11y) that now blocks, before going live, the types of accessibility problem found in this audit — today covering most of the logged-in-area pages, with the rest of the repository being added gradually."
+      ]
+    },
+    "limitations": {
+      "title": "Known limitations",
+      "items": [
+        "PDF-exported reports have not been audited yet.",
+        "Two secondary modals (editing a cost center within Cost Centers, and the auxiliary Inventory modals) do not yet have the same complete accessible-dialog treatment as the four main modals — they remain usable by mouse and keyboard, but are not as screen-reader-ready.",
+        "The screen-reader test was done by inspecting the accessibility tree and the ARIA attributes, not with a real screen reader (NVDA/Narrator) running end to end.",
+        "Some pages outside the scope of this round (Users, developer area, subscription, design system) have not been audited yet."
+      ]
+    },
+    "report": {
+      "title": "How to report a barrier",
+      "body": "If you find something on NexusFi that you couldn't use because of an accessibility barrier, write to us at <mail>{email}</mail>, describing the page, what you were trying to do and, if possible, the assistive technology you used. We'll review it and get back to you."
+    }
+  }
+}

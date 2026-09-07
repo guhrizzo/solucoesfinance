@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Sora, JetBrains_Mono, Hanken_Grotesk } from "next/font/google";
 import "../globals.css";
 import { routing } from "@/i18n/routing";
+import { SITE_URL, localePath, alternatesFor } from "@/lib/seo";
 import { ThemeInitializer } from "@/app/components/ThemeInitializer";
 import { ForceMotion } from "@/app/components/ForceMotion";
 import { AppShell } from "@/app/components/AppShell";
@@ -35,36 +36,38 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-// Metadata ainda em pt-BR fixo — a migração das strings pra mensagens acontece
-// na Fase 2 do plano de i18n (site público).
-export const metadata: Metadata = {
-  title: "NexusFi — Gestão financeira empresarial",
-  description:
-    "Centralize o financeiro da sua empresa: fluxo de caixa, contas a pagar e receber, relatórios automáticos e controle de custos.",
-  keywords: [
-    "gestão financeira",
-    "fluxo de caixa",
-    "controle financeiro",
-    "ERP financeiro",
-    "relatórios financeiros",
-    "PME",
-  ],
-  authors: [{ name: "NexusFi" }],
-  openGraph: {
-    title: "NexusFi — Gestão financeira empresarial",
-    description:
-      "Plataforma completa para organizar as finanças da sua empresa com dados em tempo real.",
-    type: "website",
-    locale: "pt_BR",
-  },
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-  },
-};
+const OG_LOCALE: Record<string, string> = { "pt-BR": "pt_BR", en: "en_US", es: "es_ES" };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "landing.meta" });
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: t("title"),
+    description: t("description"),
+    authors: [{ name: "NexusFi" }],
+    alternates: alternatesFor(locale),
+    openGraph: {
+      title: t("ogTitle"),
+      description: t("ogDescription"),
+      type: "website",
+      url: localePath(locale),
+      locale: OG_LOCALE[locale] ?? "pt_BR",
+    },
+    icons: {
+      icon: [
+        { url: "/favicon.svg", type: "image/svg+xml" },
+        { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      ],
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    },
+  };
+}
 
 export default async function LocaleLayout({
   children,

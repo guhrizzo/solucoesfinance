@@ -1,1 +1,58 @@
-{}
+{
+  "back": "Volver",
+  "prevailNotice": "Esta página fue traducida automáticamente. En caso de divergencia, prevalece la versión en portugués.",
+  "privacy": {
+    "meta": {
+      "title": "Política de Privacidad — NexusFi",
+      "description": "Cómo NexusFi recopila, usa y protege tus datos personales, en conformidad con la Ley General de Protección de Datos de Brasil (Ley n.º 13.709/2018)."
+    },
+    "title": "Política de Privacidad",
+    "lastUpdated": "Última actualización: {date}",
+    "lastUpdatedValue": "3 de septiembre de 2026",
+    "ptOnlyNotice": "El texto completo de esta Política se mantiene en portugués porque cita disposiciones de la legislación brasileña (la LGPD). Más adelante se publicará una versión revisada en otros idiomas."
+  },
+  "accessibility": {
+    "meta": {
+      "title": "Declaración de Accesibilidad — NexusFi",
+      "description": "El compromiso de NexusFi con la accesibilidad digital (WCAG 2.1 AA), lo que ya se hizo, lo que está en curso y cómo reportar una barrera."
+    },
+    "title": "Declaración de Accesibilidad",
+    "lastUpdated": "Última actualización: {date}",
+    "lastUpdatedValue": "4 de septiembre de 2026 (revisión tras la auditoría del área con sesión)",
+    "intro": "NexusFi está trabajando para que su plataforma —el sitio público y el área con sesión iniciada— sea utilizable por cualquier persona, incluidas quienes usan un lector de pantalla, navegan solo con teclado o dependen de otras tecnologías de asistencia. Esto sigue el espíritu de la <b>Ley Brasileña de Inclusión (Ley n.º 13.146/2015)</b>, que trata la accesibilidad digital como parte del derecho de acceso a la información y la comunicación.",
+    "standard": {
+      "title": "El estándar que seguimos",
+      "body": "Usamos como referencia técnica las <b>Web Content Accessibility Guidelines (WCAG) 2.1, nivel AA</b>: el estándar internacional más usado para accesibilidad web y base del eMAG (Modelo de Accesibilidad en Gobierno Electrónico) y de la ABNT NBR 17225 en Brasil."
+    },
+    "done": {
+      "title": "Lo que ya se hizo",
+      "intro": "Este trabajo se entregó en fases, cubriendo el sitio público (landing, registro, inicio de sesión, política de privacidad) y toda el área con sesión (panel, flujo de caja, cuentas por pagar/cobrar, centros de costo, inventario, panel de ventas, impuestos, informes y configuración):",
+      "items": [
+        "Navegación completa por teclado en tablas, tarjetas, menús y filtros que antes solo respondían al mouse, con indicador de foco visible en toda la plataforma.",
+        "Ventanas y diálogos (modales) —incluidos los cuatro modales principales de alta (cuentas por pagar, por cobrar, impuestos y centros de costo)— anuncian su rol y título al lector de pantalla, retienen el foco mientras están abiertos y lo devuelven exactamente a quien los abrió al cerrar, incluido el cierre con la tecla Esc.",
+        "Todo botón que solo tiene ícono (cerrar, editar, eliminar, navegar entre fotos, cambiar tema, menú de la cuenta, etc.) tiene un nombre accesible —más de 30 corregidos durante la auditoría— y los menús desplegables informan si están abiertos o cerrados.",
+        "Formularios de registro, inicio de sesión y de las pantallas financieras con etiquetas correctamente asociadas a los campos (incluidos grupos de opciones, con fieldset/legend).",
+        "Enlace de «Saltar al contenido», visible al navegar por teclado, para saltar el menú que se repite en cada página, con el foco moviéndose realmente al contenido (no solo el desplazamiento de la página).",
+        "Orden de encabezados (H1 → H2 → H3) corregido en las páginas donde se saltaba un nivel, sin cambiar la apariencia visual.",
+        "Los dos gráficos financieros dibujados a mano en el panel tienen una alternativa en tabla (oculta visualmente, disponible para lector de pantalla) con los mismos valores mes a mes.",
+        "Reducción de animaciones controlada por ti —no por el sistema operativo—, en Configuración → Apariencia, con una opción «Reducido» que elimina las transiciones y desactiva el desplazamiento suave.",
+        "Aviso de cookies en versión compacta, con opción de expandir para ver todas las categorías antes de decidir.",
+        "Contraste de color verificado con medición real (no solo visual) en todos los textos de las pantallas revisadas, incluidos los tokens de color compartidos por toda la plataforma; dos problemas de contraste insuficiente hallados en esa medición ya fueron corregidos.",
+        "Comprobación automática (lint con eslint-plugin-jsx-a11y) que ahora bloquea, antes de salir a producción, los tipos de problema de accesibilidad encontrados en esta auditoría —hoy ya cubre la mayoría de las páginas del área con sesión, y el resto del repositorio se va sumando de a poco."
+      ]
+    },
+    "limitations": {
+      "title": "Limitaciones conocidas",
+      "items": [
+        "Los informes exportados en PDF aún no fueron auditados.",
+        "Dos modales secundarios (edición de centro de costo dentro de Centros de Costo, y los modales auxiliares de Inventario) aún no tienen el mismo tratamiento completo de diálogo accesible que los cuatro modales principales: siguen siendo utilizables con mouse y teclado, pero no con la misma preparación para lector de pantalla.",
+        "La prueba con lector de pantalla se hizo por inspección del árbol de accesibilidad y de los atributos ARIA, no con un lector de pantalla real (NVDA/Narrador) de punta a punta.",
+        "Algunas páginas fuera del alcance de esta ronda (Usuarios, área de desarrollador, suscripción, design system) aún no fueron auditadas."
+      ]
+    },
+    "report": {
+      "title": "Cómo reportar una barrera",
+      "body": "Si encuentras algo en NexusFi que no pudiste usar por una barrera de accesibilidad, escríbenos a <mail>{email}</mail>, describiendo la página, lo que intentabas hacer y, si es posible, la tecnología de asistencia que usaste. Lo evaluaremos y te responderemos."
+    }
+  }
+}
