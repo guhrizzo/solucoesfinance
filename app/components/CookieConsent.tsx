@@ -262,7 +262,7 @@ export function CookieConsent() {
                       />
                       <span className="min-w-0">
                         <span className="block text-xs font-semibold text-[var(--text)]">
-                          {info.label}
+                          {t(`categories.${cat}`)}
                           {info.required && (
                             <span className="ml-1.5 font-normal text-[var(--text-subtle)]">
                               {t("alwaysOn")}

@@ -63,6 +63,11 @@
     "fullPolicy": "Ver política completa",
     "title": "Sua privacidade",
     "body": "Usamos cookies e tecnologias semelhantes para <b>manter você conectado com segurança</b>, lembrar suas preferências (como tema e layout) e entender de forma agregada como a plataforma é usada, para melhorá-la. O tratamento desses dados segue a <b>Lei Geral de Proteção de Dados (Lei nº 13.709/2018)</b>. Os cookies essenciais são sempre ativos; os demais dependem do seu consentimento, que você pode retirar quando quiser.",
-    "alwaysOn": "(sempre ativos)"
+    "alwaysOn": "(sempre ativos)",
+    "categories": {
+      "essential": "Essenciais",
+      "preferences": "Preferências",
+      "analytics": "Análise de uso"
+    }
   }
 }
