@@ -12,6 +12,7 @@
 //   window.dispatchEvent(new Event("nexusfi-open-cookie-preferences"))
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { Cookie, ChevronDown, ExternalLink } from "lucide-react";
 import {
@@ -53,6 +54,7 @@ const APP_PREFIXES = [
 const emptySubscribe = () => () => {};
 
 export function CookieConsent() {
+  const t = useTranslations("common.cookies");
   const pathname = usePathname();
   const themed = APP_PREFIXES.some((p) => pathname.startsWith(p));
 
@@ -127,7 +129,7 @@ export function CookieConsent() {
     return (
       <div
         role="dialog"
-        aria-label="Aviso de cookies e privacidade"
+        aria-label={t("ariaLabel")}
         aria-modal="false"
         style={{ zIndex: 970 }}
         className={wrapperClass}
@@ -141,14 +143,13 @@ export function CookieConsent() {
           </span>
 
           <p className="min-w-[180px] flex-1 text-xs leading-snug text-[var(--text-muted)]">
-            Usamos cookies essenciais e, com sua permissão, de preferências e
-            análise.{" "}
+            {t("miniText")}{" "}
             <button
               type="button"
               onClick={() => setExpanded(true)}
               className="font-semibold text-[var(--brand)] underline underline-offset-2"
             >
-              Saiba mais
+              {t("learnMore")}
             </button>
           </p>
 
@@ -158,14 +159,14 @@ export function CookieConsent() {
               onClick={handleRejectOptional}
               className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--sunken)]"
             >
-              Recusar
+              {t("reject")}
             </button>
             <button
               type="button"
               onClick={handleAcceptAll}
               className="rounded-lg border border-transparent bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-[var(--brand-on)] transition-colors hover:bg-[var(--brand-hover)]"
             >
-              Aceitar
+              {t("accept")}
             </button>
           </div>
         </div>
@@ -178,7 +179,7 @@ export function CookieConsent() {
   return (
     <div
       role="dialog"
-      aria-label="Aviso de cookies e privacidade"
+      aria-label={t("ariaLabel")}
       aria-modal="false"
       style={{ zIndex: 970 }}
       className={wrapperClass}
@@ -195,7 +196,7 @@ export function CookieConsent() {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <h2 className="font-heading text-sm font-semibold text-[var(--text)]">
-                Sua privacidade
+                {t("title")}
               </h2>
               {!forceOpen && (
                 <button
@@ -203,23 +204,14 @@ export function CookieConsent() {
                   onClick={() => setExpanded(false)}
                   className="shrink-0 text-xs font-semibold text-[var(--text-subtle)] hover:text-[var(--text)]"
                 >
-                  Recolher
+                  {t("collapse")}
                 </button>
               )}
             </div>
             <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
-              Usamos cookies e tecnologias semelhantes para{" "}
-              <strong className="font-semibold text-[var(--text)]">
-                manter você conectado com segurança
-              </strong>
-              , lembrar suas preferências (como tema e layout) e entender de
-              forma agregada como a plataforma é usada, para melhorá-la. O
-              tratamento desses dados segue a{" "}
-              <strong className="font-semibold text-[var(--text)]">
-                Lei Geral de Proteção de Dados (Lei nº 13.709/2018)
-              </strong>
-              . Os cookies essenciais são sempre ativos; os demais dependem do
-              seu consentimento, que você pode retirar quando quiser.
+              {t.rich("body", {
+                b: (c) => <strong className="font-semibold text-[var(--text)]">{c}</strong>,
+              })}
             </p>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -228,7 +220,7 @@ export function CookieConsent() {
                 onClick={() => setCustomize((c) => !c)}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)]"
               >
-                Personalizar
+                {t("customize")}
                 <ChevronDown
                   size={13}
                   style={{
@@ -243,7 +235,7 @@ export function CookieConsent() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] underline underline-offset-2"
               >
-                Ver política completa
+                {t("fullPolicy")}
                 <ExternalLink size={12} />
               </Link>
             </div>
@@ -273,7 +265,7 @@ export function CookieConsent() {
                           {info.label}
                           {info.required && (
                             <span className="ml-1.5 font-normal text-[var(--text-subtle)]">
-                              (sempre ativos)
+                              {t("alwaysOn")}
                             </span>
                           )}
                         </span>
@@ -293,14 +285,14 @@ export function CookieConsent() {
                 onClick={handleAcceptAll}
                 className="rounded-lg border border-transparent bg-[var(--brand)] px-4 py-2 text-xs font-semibold text-[var(--brand-on)] transition-colors hover:bg-[var(--brand-hover)]"
               >
-                Aceitar todos
+                {t("acceptAll")}
               </button>
               <button
                 type="button"
                 onClick={handleRejectOptional}
                 className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--sunken)]"
               >
-                Recusar opcionais
+                {t("rejectOptional")}
               </button>
               {customize && (
                 <button
@@ -308,7 +300,7 @@ export function CookieConsent() {
                   onClick={handleSave}
                   className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--sunken)]"
                 >
-                  Salvar preferências
+                  {t("savePreferences")}
                 </button>
               )}
             </div>

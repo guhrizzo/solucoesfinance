@@ -11,5 +11,21 @@
   "no": "Não",
   "search": "Buscar",
   "showPassword": "Mostrar senha",
-  "hidePassword": "Ocultar senha"
+  "hidePassword": "Ocultar senha",
+  "cookies": {
+    "ariaLabel": "Aviso de cookies e privacidade",
+    "miniText": "Usamos cookies essenciais e, com sua permissão, de preferências e análise.",
+    "learnMore": "Saiba mais",
+    "collapse": "Recolher",
+    "reject": "Recusar",
+    "accept": "Aceitar",
+    "acceptAll": "Aceitar todos",
+    "rejectOptional": "Recusar opcionais",
+    "savePreferences": "Salvar preferências",
+    "customize": "Personalizar",
+    "fullPolicy": "Ver política completa",
+    "title": "Sua privacidade",
+    "body": "Usamos cookies e tecnologias semelhantes para <b>manter você conectado com segurança</b>, lembrar suas preferências (como tema e layout) e entender de forma agregada como a plataforma é usada, para melhorá-la. O tratamento desses dados segue a <b>Lei Geral de Proteção de Dados (Lei nº 13.709/2018)</b>. Os cookies essenciais são sempre ativos; os demais dependem do seu consentimento, que você pode retirar quando quiser.",
+    "alwaysOn": "(sempre ativos)"
+  }
 }

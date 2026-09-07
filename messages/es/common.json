@@ -11,5 +11,21 @@
   "no": "No",
   "search": "Buscar",
   "showPassword": "Mostrar contraseña",
-  "hidePassword": "Ocultar contraseña"
+  "hidePassword": "Ocultar contraseña",
+  "cookies": {
+    "ariaLabel": "Aviso de cookies y privacidad",
+    "miniText": "Usamos cookies esenciales y, con tu permiso, de preferencias y análisis.",
+    "learnMore": "Saber más",
+    "collapse": "Contraer",
+    "reject": "Rechazar",
+    "accept": "Aceptar",
+    "acceptAll": "Aceptar todas",
+    "rejectOptional": "Rechazar opcionales",
+    "savePreferences": "Guardar preferencias",
+    "customize": "Personalizar",
+    "fullPolicy": "Ver política completa",
+    "title": "Tu privacidad",
+    "body": "Usamos cookies y tecnologías similares para <b>mantener tu sesión iniciada de forma segura</b>, recordar tus preferencias (como el tema y el diseño) y entender de forma agregada cómo se usa la plataforma, para mejorarla. El tratamiento de estos datos cumple con la Ley General de Protección de Datos de Brasil (Ley n.º 13.709/2018). Las cookies esenciales siempre están activas; las demás dependen de tu consentimiento, que puedes retirar cuando quieras.",
+    "alwaysOn": "(siempre activas)"
+  }
 }
