@@ -5,13 +5,13 @@
 // Abaixo do formulário, o histórico dos próprios envios + o retorno do time.
 
 import { useCallback, useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Bug, Lightbulb, Send, CheckCircle2, Clock } from "lucide-react";
 import { Card, Button, Input, Pill, EmptyState } from "@/app/components/ui";
 import { authedFetch } from "@/lib/authedFetch";
+import { formatDateTime } from "@/lib/format";
 import {
   FEEDBACK_LIMITS,
-  FEEDBACK_TYPE_LABEL,
-  feedbackFieldLabels,
   type FeedbackDoc,
   type FeedbackType,
 } from "@/lib/feedback";
@@ -25,16 +25,6 @@ const textareaStyle: React.CSSProperties = {
   borderRadius: "var(--radius-control)",
 };
 
-function fmtDate(ts: number): string {
-  return new Date(ts).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <label className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
@@ -44,6 +34,8 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
+  const t = useTranslations("configuracoes.feedback");
+  const locale = useLocale();
   const [type, setType] = useState<FeedbackType>("bug");
   const [local, setLocal] = useState("");
   const [atual, setAtual] = useState("");
@@ -52,7 +44,8 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
 
   const [mine, setMine] = useState<FeedbackDoc[] | null>(null);
 
-  const labels = feedbackFieldLabels(type);
+  const isBug = type === "bug";
+  const suf = isBug ? "Bug" : "Improvement";
 
   const loadMine = useCallback(async () => {
     try {
@@ -84,19 +77,16 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast(data.error || "Não foi possível enviar.", "error");
+        showToast(data.error || t("form.sendError"), "error");
         return;
       }
-      showToast(
-        type === "bug" ? "Bug enviado. Obrigado pelo reporte!" : "Sugestão enviada. Valeu!",
-        "success"
-      );
+      showToast(isBug ? t("form.sentBug") : t("form.sentImprovement"), "success");
       setLocal("");
       setAtual("");
       setEsperado("");
       loadMine();
     } catch {
-      showToast("Falha de conexão. Tente de novo.", "error");
+      showToast(t("form.connError"), "error");
     } finally {
       setSending(false);
     }
@@ -107,10 +97,10 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
       <Card padding="lg" className="space-y-5">
         <div>
           <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>
-            Encontrou um problema ou tem uma ideia?
+            {t("form.title")}
           </h2>
           <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-            Descreva com o máximo de detalhe. O time recebe na hora e te responde por e-mail quando resolver.
+            {t("form.desc")}
           </p>
         </div>
 
@@ -120,14 +110,14 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
             className="flex gap-1 rounded-xl p-1"
             style={{ background: "var(--sunken)", border: "1px solid var(--border)" }}
           >
-            {(["bug", "melhoria"] as const).map((t) => {
-              const active = type === t;
-              const Icon = t === "bug" ? Bug : Lightbulb;
+            {(["bug", "melhoria"] as const).map((ty) => {
+              const active = type === ty;
+              const Icon = ty === "bug" ? Bug : Lightbulb;
               return (
                 <button
-                  key={t}
+                  key={ty}
                   type="button"
-                  onClick={() => setType(t)}
+                  onClick={() => setType(ty)}
                   className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer"
                   style={{
                     background: active ? "var(--surface)" : "transparent",
@@ -136,24 +126,24 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
                   }}
                 >
                   <Icon size={15} />
-                  {t === "bug" ? "Reportar bug" : "Sugerir melhoria"}
+                  {ty === "bug" ? t("form.reportBug") : t("form.suggestImprovement")}
                 </button>
               );
             })}
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>{labels.local}</Label>
+            <Label>{t(`form.local${suf}`)}</Label>
             <Input
               value={local}
               onChange={(e) => setLocal(e.target.value)}
               maxLength={FEEDBACK_LIMITS.local}
-              placeholder="Ex.: Dashboard → card de Fluxo de Caixa; Contas a pagar; tela de login…"
+              placeholder={t("form.localPlaceholder")}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>{labels.atual}</Label>
+            <Label>{t(`form.atual${suf}`)}</Label>
             <textarea
               value={atual}
               onChange={(e) => setAtual(e.target.value)}
@@ -161,16 +151,12 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
               rows={3}
               className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-y"
               style={textareaStyle}
-              placeholder={
-                type === "bug"
-                  ? "O que você fez e o que apareceu de errado? Passo a passo, mensagem de erro…"
-                  : "Como isso funciona hoje (se já existe)."
-              }
+              placeholder={t(`form.atualPlaceholder${suf}`)}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>{labels.esperado}</Label>
+            <Label>{t(`form.esperado${suf}`)}</Label>
             <textarea
               value={esperado}
               onChange={(e) => setEsperado(e.target.value)}
@@ -178,17 +164,13 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
               rows={3}
               className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-y"
               style={textareaStyle}
-              placeholder={
-                type === "bug"
-                  ? "O comportamento correto esperado."
-                  : "A ideia: o que deveria acontecer e por quê."
-              }
+              placeholder={t(`form.esperadoPlaceholder${suf}`)}
             />
           </div>
 
           <div className="flex justify-end">
             <Button type="submit" icon={Send} loading={sending} disabled={!canSubmit}>
-              Enviar
+              {t("form.send")}
             </Button>
           </div>
         </form>
@@ -197,34 +179,36 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
       {/* Meus envios */}
       <div className="space-y-2">
         <h2 className="text-sm font-bold px-1" style={{ color: "var(--text)" }}>
-          Meus envios
+          {t("mine.title")}
         </h2>
         {mine === null ? (
           <p className="text-xs px-1" style={{ color: "var(--text-subtle)" }}>
-            Carregando…
+            …
           </p>
         ) : mine.length === 0 ? (
           <EmptyState
             icon={Bug}
-            title="Nada por aqui ainda"
-            description="Seus bugs e sugestões aparecem aqui com o status e a resposta do time."
+            title={t("mine.emptyTitle")}
+            description={t("mine.emptyDesc")}
           />
         ) : (
           mine.map((f) => (
             <Card key={f.id} padding="md" className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <Pill tone={f.type === "bug" ? "neg" : "info"}>{FEEDBACK_TYPE_LABEL[f.type]}</Pill>
+                <Pill tone={f.type === "bug" ? "neg" : "info"}>
+                  {f.type === "bug" ? t("typeBug") : t("typeImprovement")}
+                </Pill>
                 {f.status === "resolvido" ? (
                   <Pill tone="pos" dot>
-                    Resolvido
+                    {t("statusResolved")}
                   </Pill>
                 ) : (
                   <Pill tone="warn" dot>
-                    Em aberto
+                    {t("statusOpen")}
                   </Pill>
                 )}
                 <span className="text-xs ml-auto" style={{ color: "var(--text-subtle)" }}>
-                  {fmtDate(f.createdAt)}
+                  {formatDateTime(f.createdAt, locale)}
                 </span>
               </div>
               <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
@@ -241,14 +225,14 @@ export default function FeedbackTab({ showToast }: { showToast: ShowToast }) {
                   style={{ background: "var(--pos-weak)", color: "var(--text)" }}
                 >
                   <span className="flex items-center gap-1.5 font-semibold mb-1" style={{ color: "var(--pos)" }}>
-                    <CheckCircle2 size={13} /> O que foi feito
+                    <CheckCircle2 size={13} /> {t("mine.whatWasDone")}
                   </span>
                   {f.resolution}
                 </div>
               )}
               {f.status !== "resolvido" && (
                 <p className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-subtle)" }}>
-                  <Clock size={12} /> Aguardando o time.
+                  <Clock size={12} /> {t("mine.waiting")}
                 </p>
               )}
             </Card>

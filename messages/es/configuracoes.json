@@ -7,6 +7,39 @@
     "feedback": "Errores y sugerencias",
     "feedbackAdmin": "Tickets"
   },
+  "perfil": {
+    "fallbackUser": "Usuario",
+    "roleOwner": "Administrador de la cuenta",
+    "roleMember": "Miembro del equipo",
+    "personal": {
+      "title": "Datos personales",
+      "desc": "Cómo apareces en la app para tu equipo.",
+      "displayName": "Nombre visible",
+      "namePlaceholder": "Tu nombre",
+      "email": "Correo",
+      "loginBadge": "inicio de sesión",
+      "changeLoginHint": "Para cambiar los métodos de inicio de sesión, usa <link>Mi cuenta</link>.",
+      "nameSaved": "Nombre actualizado.",
+      "nameError": "No se pudo guardar el nombre.",
+      "sessionExpired": "Sesión expirada."
+    },
+    "company": {
+      "title": "Empresa",
+      "descOwner": "Se usa en los informes y documentos exportados.",
+      "descMember": "Solo el administrador de la cuenta puede editar estos datos.",
+      "tradeName": "Nombre comercial",
+      "tradeNamePlaceholder": "Ej.: NexusFi",
+      "legalName": "Razón social",
+      "legalNamePlaceholder": "Ej.: NexusFi Tecnologia Ltda.",
+      "cnpj": "CNPJ",
+      "industry": "Sector",
+      "industryUndefined": "Sin definir",
+      "industryHint": "Definido en el primer acceso — controla qué módulos aparecen en el menú.",
+      "saved": "Datos de la empresa guardados.",
+      "error": "No se pudieron guardar los datos de la empresa."
+    },
+    "save": "Guardar"
+  },
   "aparencia": {
     "thisDevice": "Aplica a este dispositivo.",
     "theme": {
@@ -52,6 +85,71 @@
       "line": "Línea",
       "pie": "Circular",
       "saved": "Preferencia de gráfico guardada."
+    }
+  },
+  "feedback": {
+    "typeBug": "Error",
+    "typeImprovement": "Mejora",
+    "statusResolved": "Resuelto",
+    "statusOpen": "Abierto",
+    "form": {
+      "title": "¿Encontraste un problema o tienes una idea?",
+      "desc": "Descríbelo con el mayor detalle posible. El equipo lo recibe al instante y te responde por correo cuando lo resuelve.",
+      "reportBug": "Reportar error",
+      "suggestImprovement": "Sugerir mejora",
+      "localBug": "¿Dónde ocurre?",
+      "localImprovement": "¿Dónde debería aparecer o cambiar?",
+      "atualBug": "¿Qué pasó?",
+      "atualImprovement": "¿Cómo funciona hoy? (opcional)",
+      "esperadoBug": "¿Qué debería haber pasado?",
+      "esperadoImprovement": "¿Qué debería pasar?",
+      "localPlaceholder": "Ej.: Panel → tarjeta de Flujo de caja; Cuentas por pagar; pantalla de inicio de sesión…",
+      "atualPlaceholderBug": "¿Qué hiciste y qué salió mal? Pasos, mensaje de error…",
+      "atualPlaceholderImprovement": "Cómo funciona hoy (si ya existe).",
+      "esperadoPlaceholderBug": "El comportamiento correcto esperado.",
+      "esperadoPlaceholderImprovement": "La idea: qué debería pasar y por qué.",
+      "send": "Enviar",
+      "sendError": "No se pudo enviar.",
+      "connError": "Falló la conexión. Inténtalo de nuevo.",
+      "sentBug": "Error enviado. ¡Gracias por el reporte!",
+      "sentImprovement": "Sugerencia enviada. ¡Gracias!"
+    },
+    "mine": {
+      "title": "Mis envíos",
+      "emptyTitle": "Todavía no hay nada",
+      "emptyDesc": "Tus errores y sugerencias aparecen aquí con su estado y la respuesta del equipo.",
+      "whatWasDone": "Qué se hizo",
+      "waiting": "Esperando al equipo."
+    },
+    "admin": {
+      "deniedTitle": "Acceso restringido",
+      "deniedDesc": "Esta pestaña es exclusiva del equipo de NexusFi.",
+      "filterOpen": "Abiertos",
+      "filterResolved": "Resueltos",
+      "filterAll": "Todos",
+      "emptyOpenTitle": "No hay tickets abiertos",
+      "emptyOpenDesc": "Todo resuelto por ahora.",
+      "emptyTitle": "Nada aquí",
+      "noName": "Sin nombre",
+      "noEmail": "sin correo",
+      "fieldWhere": "Dónde",
+      "fieldAtualBug": "Qué pasó",
+      "fieldAtualImprovement": "Cómo funciona hoy",
+      "fieldEsperado": "Qué debería pasar",
+      "whatWasDone": "Qué se hizo",
+      "userNotified": "Usuario avisado por correo.",
+      "userNotNotified": "Sin correo de aviso.",
+      "resolvedBy": "por {email}",
+      "reopen": "Reabrir",
+      "resolutionPlaceholder": "Qué se hizo / la decisión. Va en el correo al usuario.",
+      "notifyUser": "Avisar al usuario por correo",
+      "markResolved": "Marcar como resuelto",
+      "resolveError": "No se pudo resolver.",
+      "reopenError": "No se pudo reabrir.",
+      "connError": "Falló la conexión.",
+      "resolvedAndNotified": "Resuelto y usuario avisado.",
+      "resolved": "Resuelto.",
+      "reopened": "Ticket reabierto."
     }
   }
 }

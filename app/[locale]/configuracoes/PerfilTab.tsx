@@ -3,6 +3,7 @@
 // app/configuracoes/PerfilTab.tsx
 
 import { useEffect, useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, Lock } from "lucide-react";
 import { Avatar, Card, Button, Input } from "@/app/components/ui";
 import { useProfilePhoto } from "@/app/hooks/useProfilePhoto";
@@ -48,6 +49,7 @@ export default function PerfilTab({
   showToast: ShowToast;
   onUserChange: (u: AuthUser) => void;
 }) {
+  const t = useTranslations("configuracoes.perfil");
   const canEditCompany = !scope.loading && scope.isOwner;
 
   // ── Nome de exibição ──
@@ -113,12 +115,12 @@ export default function PerfilTab({
       const { getFirebase } = await import("@/lib/firebase");
       const { updateProfile } = await import("firebase/auth");
       const { auth } = await getFirebase();
-      if (!auth.currentUser) throw new Error("Sessão expirada.");
+      if (!auth.currentUser) throw new Error(t("personal.sessionExpired"));
       await updateProfile(auth.currentUser, { displayName: displayName.trim() });
       onUserChange({ ...user, displayName: displayName.trim() });
-      showToast("Nome atualizado.", "success");
+      showToast(t("personal.nameSaved"), "success");
     } catch (err: unknown) {
-      showToast(errMsg(err, "Não foi possível salvar o nome."), "error");
+      showToast(errMsg(err, t("personal.nameError")), "error");
     } finally {
       setSavingName(false);
     }
@@ -137,9 +139,9 @@ export default function PerfilTab({
         { merge: true }
       );
       setCompanyLoaded(company);
-      showToast("Dados da empresa salvos.", "success");
+      showToast(t("company.saved"), "success");
     } catch (err: unknown) {
-      showToast(errMsg(err, "Não foi possível salvar os dados da empresa."), "error");
+      showToast(errMsg(err, t("company.error")), "error");
     } finally {
       setSavingCompany(false);
     }
@@ -160,13 +162,13 @@ export default function PerfilTab({
         <Avatar src={photo.src} initial={photo.initial} size={56} radius={16} />
         <div className="min-w-0">
           <p className="font-bold truncate" style={{ color: "var(--db-text)" }}>
-            {user.displayName ?? "Usuário"}
+            {user.displayName ?? t("fallbackUser")}
           </p>
           <p className="text-sm truncate" style={{ color: "var(--db-text-2)" }}>
             {user.email}
           </p>
           <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-3)" }}>
-            {scope.loading ? "" : scope.isOwner ? "Administrador da conta" : "Membro de equipe"}
+            {scope.loading ? "" : scope.isOwner ? t("roleOwner") : t("roleMember")}
           </p>
         </div>
       </Card>
@@ -175,29 +177,29 @@ export default function PerfilTab({
       <Card padding="lg" className="space-y-4">
         <div>
           <h2 className="text-sm font-bold" style={{ color: "var(--db-text)" }}>
-            Dados pessoais
+            {t("personal.title")}
           </h2>
           <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-3)" }}>
-            Como você aparece no app para a sua equipe.
+            {t("personal.desc")}
           </p>
         </div>
 
         <div>
           <label htmlFor={nameId} className={labelCls} style={labelStyle}>
-            Nome de exibição
+            {t("personal.displayName")}
           </label>
           <Input
             id={nameId}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Seu nome"
+            placeholder={t("personal.namePlaceholder")}
             maxLength={80}
           />
         </div>
 
         <div>
           <label htmlFor={emailId} className={labelCls} style={labelStyle}>
-            E-mail
+            {t("personal.email")}
           </label>
           <div className="flex items-center gap-2">
             <Input id={emailId} value={user.email ?? ""} disabled style={{ opacity: 0.7 }} />
@@ -205,15 +207,17 @@ export default function PerfilTab({
               className="flex items-center gap-1 text-xs whitespace-nowrap"
               style={{ color: "var(--cf-text-3)" }}
             >
-              <Lock size={12} /> login
+              <Lock size={12} /> {t("personal.loginBadge")}
             </span>
           </div>
           <p className="text-xs mt-1.5" style={{ color: "var(--cf-text-3)" }}>
-            Para trocar métodos de login, use{" "}
-            <a href="/users" className="underline" style={{ color: "var(--brand-500)" }}>
-              Minha conta
-            </a>
-            .
+            {t.rich("personal.changeLoginHint", {
+              link: (c) => (
+                <a href="/users" className="underline" style={{ color: "var(--brand-500)" }}>
+                  {c}
+                </a>
+              ),
+            })}
           </p>
         </div>
 
@@ -225,7 +229,7 @@ export default function PerfilTab({
             disabled={!nameDirty}
             onClick={handleSaveName}
           >
-            Salvar
+            {t("save")}
           </Button>
         </div>
       </Card>
@@ -234,46 +238,44 @@ export default function PerfilTab({
       <Card padding="lg" className="space-y-4">
         <div>
           <h2 className="text-sm font-bold" style={{ color: "var(--db-text)" }}>
-            Empresa
+            {t("company.title")}
           </h2>
           <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-3)" }}>
-            {canEditCompany
-              ? "Usado nos relatórios e documentos exportados."
-              : "Somente o administrador da conta pode editar estes dados."}
+            {canEditCompany ? t("company.descOwner") : t("company.descMember")}
           </p>
         </div>
 
         <div>
           <label htmlFor={nomeFantasiaId} className={labelCls} style={labelStyle}>
-            Nome fantasia
+            {t("company.tradeName")}
           </label>
           <Input
             id={nomeFantasiaId}
             value={company.nomeFantasia}
             onChange={(e) => setCompany((c) => ({ ...c, nomeFantasia: e.target.value }))}
             disabled={!canEditCompany}
-            placeholder="Ex.: NexusFi"
+            placeholder={t("company.tradeNamePlaceholder")}
             maxLength={120}
           />
         </div>
 
         <div>
           <label htmlFor={razaoSocialId} className={labelCls} style={labelStyle}>
-            Razão social
+            {t("company.legalName")}
           </label>
           <Input
             id={razaoSocialId}
             value={company.razaoSocial}
             onChange={(e) => setCompany((c) => ({ ...c, razaoSocial: e.target.value }))}
             disabled={!canEditCompany}
-            placeholder="Ex.: NexusFi Tecnologia Ltda."
+            placeholder={t("company.legalNamePlaceholder")}
             maxLength={160}
           />
         </div>
 
         <div>
           <label htmlFor={cnpjId} className={labelCls} style={labelStyle}>
-            CNPJ
+            {t("company.cnpj")}
           </label>
           <Input
             id={cnpjId}
@@ -289,7 +291,7 @@ export default function PerfilTab({
         <div>
           {/* Não é <label> — não há campo editável associado, é só exibição. */}
           <p className={labelCls} style={labelStyle}>
-            Ramo de atuação
+            {t("company.industry")}
           </p>
           <div
             className="rounded-xl px-3.5 py-2.5 text-sm"
@@ -299,10 +301,10 @@ export default function PerfilTab({
               color: "var(--cf-text-3)",
             }}
           >
-            {ramo.length ? ramo.join(", ") : "Não definido"}
+            {ramo.length ? ramo.join(", ") : t("company.industryUndefined")}
           </div>
           <p className="text-xs mt-1.5" style={{ color: "var(--cf-text-3)" }}>
-            Definido no primeiro acesso — controla quais módulos aparecem no menu.
+            {t("company.industryHint")}
           </p>
         </div>
 
@@ -315,7 +317,7 @@ export default function PerfilTab({
               disabled={!companyDirty}
               onClick={handleSaveCompany}
             >
-              Salvar
+              {t("save")}
             </Button>
           </div>
         )}

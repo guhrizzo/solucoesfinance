@@ -7,6 +7,39 @@
     "feedback": "Bugs & suggestions",
     "feedbackAdmin": "Tickets"
   },
+  "perfil": {
+    "fallbackUser": "User",
+    "roleOwner": "Account administrator",
+    "roleMember": "Team member",
+    "personal": {
+      "title": "Personal details",
+      "desc": "How you appear in the app to your team.",
+      "displayName": "Display name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "loginBadge": "login",
+      "changeLoginHint": "To change login methods, use <link>My account</link>.",
+      "nameSaved": "Name updated.",
+      "nameError": "Couldn't save the name.",
+      "sessionExpired": "Session expired."
+    },
+    "company": {
+      "title": "Company",
+      "descOwner": "Used in exported reports and documents.",
+      "descMember": "Only the account administrator can edit these details.",
+      "tradeName": "Trade name",
+      "tradeNamePlaceholder": "e.g. NexusFi",
+      "legalName": "Legal name",
+      "legalNamePlaceholder": "e.g. NexusFi Tecnologia Ltda.",
+      "cnpj": "CNPJ",
+      "industry": "Industry",
+      "industryUndefined": "Not set",
+      "industryHint": "Set on first sign-in — controls which modules appear in the menu.",
+      "saved": "Company details saved.",
+      "error": "Couldn't save the company details."
+    },
+    "save": "Save"
+  },
   "aparencia": {
     "thisDevice": "Applies to this device.",
     "theme": {
@@ -52,6 +85,71 @@
       "line": "Line",
       "pie": "Pie",
       "saved": "Chart preference saved."
+    }
+  },
+  "feedback": {
+    "typeBug": "Bug",
+    "typeImprovement": "Improvement",
+    "statusResolved": "Resolved",
+    "statusOpen": "Open",
+    "form": {
+      "title": "Found a problem or have an idea?",
+      "desc": "Describe it in as much detail as you can. The team gets it right away and emails you back when it's resolved.",
+      "reportBug": "Report a bug",
+      "suggestImprovement": "Suggest an improvement",
+      "localBug": "Where does it happen?",
+      "localImprovement": "Where should it appear or change?",
+      "atualBug": "What happened?",
+      "atualImprovement": "How does it work today? (optional)",
+      "esperadoBug": "What should have happened?",
+      "esperadoImprovement": "What should happen?",
+      "localPlaceholder": "e.g. Dashboard → Cash flow card; Payables; login screen…",
+      "atualPlaceholderBug": "What did you do and what went wrong? Steps, error message…",
+      "atualPlaceholderImprovement": "How it works today (if it already exists).",
+      "esperadoPlaceholderBug": "The correct expected behavior.",
+      "esperadoPlaceholderImprovement": "The idea: what should happen and why.",
+      "send": "Send",
+      "sendError": "Couldn't send.",
+      "connError": "Connection failed. Try again.",
+      "sentBug": "Bug sent. Thanks for the report!",
+      "sentImprovement": "Suggestion sent. Thanks!"
+    },
+    "mine": {
+      "title": "My submissions",
+      "emptyTitle": "Nothing here yet",
+      "emptyDesc": "Your bugs and suggestions show up here with their status and the team's reply.",
+      "whatWasDone": "What was done",
+      "waiting": "Waiting on the team."
+    },
+    "admin": {
+      "deniedTitle": "Restricted access",
+      "deniedDesc": "This tab is for the NexusFi team only.",
+      "filterOpen": "Open",
+      "filterResolved": "Resolved",
+      "filterAll": "All",
+      "emptyOpenTitle": "No open tickets",
+      "emptyOpenDesc": "All resolved for now.",
+      "emptyTitle": "Nothing here",
+      "noName": "No name",
+      "noEmail": "no email",
+      "fieldWhere": "Where",
+      "fieldAtualBug": "What happened",
+      "fieldAtualImprovement": "How it works today",
+      "fieldEsperado": "What should happen",
+      "whatWasDone": "What was done",
+      "userNotified": "User notified by email.",
+      "userNotNotified": "No notification email.",
+      "resolvedBy": "by {email}",
+      "reopen": "Reopen",
+      "resolutionPlaceholder": "What was done / the decision. Goes in the email to the user.",
+      "notifyUser": "Notify the user by email",
+      "markResolved": "Mark as resolved",
+      "resolveError": "Couldn't resolve.",
+      "reopenError": "Couldn't reopen.",
+      "connError": "Connection failed.",
+      "resolvedAndNotified": "Resolved and user notified.",
+      "resolved": "Resolved.",
+      "reopened": "Ticket reopened."
     }
   }
 }

@@ -6,10 +6,12 @@
 // (por padrão) dispara o e-mail de retorno pro autor.
 
 import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Inbox, Mail, MailX, RotateCcw, Check, ShieldAlert } from "lucide-react";
 import { Card, Button, Pill, EmptyState } from "@/app/components/ui";
 import { authedFetch } from "@/lib/authedFetch";
-import { FEEDBACK_LIMITS, FEEDBACK_TYPE_LABEL, type FeedbackDoc } from "@/lib/feedback";
+import { formatDateTime } from "@/lib/format";
+import { FEEDBACK_LIMITS, type FeedbackDoc } from "@/lib/feedback";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
 type Filter = "aberto" | "resolvido" | "todos";
@@ -21,16 +23,6 @@ const textareaStyle: React.CSSProperties = {
   borderRadius: "var(--radius-control)",
 };
 
-function fmtDate(ts: number): string {
-  return new Date(ts).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function AdminRow({
   fb,
   onChanged,
@@ -40,6 +32,8 @@ function AdminRow({
   onChanged: (next: FeedbackDoc) => void;
   showToast: ShowToast;
 }) {
+  const t = useTranslations("configuracoes.feedback");
+  const locale = useLocale();
   const [resolution, setResolution] = useState(fb.resolution ?? "");
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -55,10 +49,10 @@ function AdminRow({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast(data.error || "Não foi possível resolver.", "error");
+        showToast(data.error || t("admin.resolveError"), "error");
         return;
       }
-      showToast(data.warning || (notify ? "Resolvido e usuário avisado." : "Resolvido."), data.warning ? "warning" : "success");
+      showToast(data.warning || (notify ? t("admin.resolvedAndNotified") : t("admin.resolved")), data.warning ? "warning" : "success");
       onChanged({
         ...fb,
         status: "resolvido",
@@ -67,7 +61,7 @@ function AdminRow({
         notifiedAt: data.notifiedAt ?? fb.notifiedAt,
       });
     } catch {
-      showToast("Falha de conexão.", "error");
+      showToast(t("admin.connError"), "error");
     } finally {
       setBusy(false);
     }
@@ -84,13 +78,13 @@ function AdminRow({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        showToast(data.error || "Não foi possível reabrir.", "error");
+        showToast(data.error || t("admin.reopenError"), "error");
         return;
       }
-      showToast("Chamado reaberto.", "success");
+      showToast(t("admin.reopened"), "success");
       onChanged({ ...fb, status: "aberto", resolvedAt: null });
     } catch {
-      showToast("Falha de conexão.", "error");
+      showToast(t("admin.connError"), "error");
     } finally {
       setBusy(false);
     }
@@ -111,29 +105,31 @@ function AdminRow({
   return (
     <Card padding="md" className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <Pill tone={fb.type === "bug" ? "neg" : "info"}>{FEEDBACK_TYPE_LABEL[fb.type]}</Pill>
+        <Pill tone={fb.type === "bug" ? "neg" : "info"}>
+          {fb.type === "bug" ? t("typeBug") : t("typeImprovement")}
+        </Pill>
         {fb.status === "resolvido" ? (
           <Pill tone="pos" dot>
-            Resolvido
+            {t("statusResolved")}
           </Pill>
         ) : (
           <Pill tone="warn" dot>
-            Em aberto
+            {t("statusOpen")}
           </Pill>
         )}
         <span className="text-xs ml-auto" style={{ color: "var(--text-subtle)" }}>
-          {fmtDate(fb.createdAt)}
+          {formatDateTime(fb.createdAt, locale)}
         </span>
       </div>
 
       <p className="text-xs" style={{ color: "var(--text-subtle)" }}>
-        {fb.userName || "Sem nome"} · {fb.userEmail || "sem e-mail"}
+        {fb.userName || t("admin.noName")} · {fb.userEmail || t("admin.noEmail")}
       </p>
 
       <div className="space-y-2">
-        {field("Onde", fb.local)}
-        {field(fb.type === "bug" ? "O que aconteceu" : "Como funciona hoje", fb.atual)}
-        {field("O que deveria acontecer", fb.esperado)}
+        {field(t("admin.fieldWhere"), fb.local)}
+        {field(fb.type === "bug" ? t("admin.fieldAtualBug") : t("admin.fieldAtualImprovement"), fb.atual)}
+        {field(t("admin.fieldEsperado"), fb.esperado)}
       </div>
 
       {fb.status === "resolvido" ? (
@@ -143,17 +139,17 @@ function AdminRow({
             style={{ background: "var(--pos-weak)", color: "var(--text)" }}
           >
             <span className="flex items-center gap-1.5 font-semibold mb-1" style={{ color: "var(--pos)" }}>
-              <Check size={13} /> O que foi feito
+              <Check size={13} /> {t("admin.whatWasDone")}
             </span>
             {fb.resolution}
           </div>
           <p className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-subtle)" }}>
             {fb.notifiedAt ? <Mail size={12} /> : <MailX size={12} />}
-            {fb.notifiedAt ? "Usuário avisado por e-mail." : "Sem e-mail de aviso."}
-            {fb.resolvedByEmail ? ` · por ${fb.resolvedByEmail}` : ""}
+            {fb.notifiedAt ? t("admin.userNotified") : t("admin.userNotNotified")}
+            {fb.resolvedByEmail ? ` · ${t("admin.resolvedBy", { email: fb.resolvedByEmail })}` : ""}
           </p>
           <Button variant="ghost" size="sm" icon={RotateCcw} onClick={reopen} loading={busy}>
-            Reabrir
+            {t("admin.reopen")}
           </Button>
         </div>
       ) : (
@@ -165,12 +161,12 @@ function AdminRow({
             rows={3}
             className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-y"
             style={textareaStyle}
-            placeholder="O que foi feito / a decisão. Vai no e-mail pro usuário."
+            placeholder={t("admin.resolutionPlaceholder")}
           />
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "var(--text-muted)" }}>
               <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-              Avisar o usuário por e-mail
+              {t("admin.notifyUser")}
             </label>
             <Button
               size="sm"
@@ -179,7 +175,7 @@ function AdminRow({
               loading={busy}
               disabled={!resolution.trim()}
             >
-              Marcar como resolvido
+              {t("admin.markResolved")}
             </Button>
           </div>
         </div>
@@ -189,6 +185,7 @@ function AdminRow({
 }
 
 export default function FeedbackAdminTab({ showToast }: { showToast: ShowToast }) {
+  const t = useTranslations("configuracoes.feedback");
   const [items, setItems] = useState<FeedbackDoc[] | null>(null);
   const [denied, setDenied] = useState(false);
   const [filter, setFilter] = useState<Filter>("aberto");
@@ -236,8 +233,8 @@ export default function FeedbackAdminTab({ showToast }: { showToast: ShowToast }
     return (
       <EmptyState
         icon={ShieldAlert}
-        title="Acesso restrito"
-        description="Esta aba é exclusiva da equipe NexusFi."
+        title={t("admin.deniedTitle")}
+        description={t("admin.deniedDesc")}
       />
     );
   }
@@ -249,7 +246,8 @@ export default function FeedbackAdminTab({ showToast }: { showToast: ShowToast }
       >
         {(["aberto", "resolvido", "todos"] as const).map((f) => {
           const active = filter === f;
-          const label = f === "aberto" ? "Abertos" : f === "resolvido" ? "Resolvidos" : "Todos";
+          const label =
+            f === "aberto" ? t("admin.filterOpen") : f === "resolvido" ? t("admin.filterResolved") : t("admin.filterAll");
           return (
             <button
               key={f}
@@ -275,13 +273,13 @@ export default function FeedbackAdminTab({ showToast }: { showToast: ShowToast }
 
       {items === null ? (
         <p className="text-xs px-1" style={{ color: "var(--text-subtle)" }}>
-          Carregando…
+          …
         </p>
       ) : visible.length === 0 ? (
         <EmptyState
           icon={Inbox}
-          title={filter === "aberto" ? "Nenhum chamado em aberto" : "Nada aqui"}
-          description={filter === "aberto" ? "Tudo resolvido por enquanto." : undefined}
+          title={filter === "aberto" ? t("admin.emptyOpenTitle") : t("admin.emptyTitle")}
+          description={filter === "aberto" ? t("admin.emptyOpenDesc") : undefined}
         />
       ) : (
         visible.map((fb) => <AdminRow key={fb.id} fb={fb} onChanged={patch} showToast={showToast} />)

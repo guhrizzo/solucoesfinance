@@ -7,6 +7,39 @@
     "feedback": "Bugs & sugestões",
     "feedbackAdmin": "Chamados"
   },
+  "perfil": {
+    "fallbackUser": "Usuário",
+    "roleOwner": "Administrador da conta",
+    "roleMember": "Membro de equipe",
+    "personal": {
+      "title": "Dados pessoais",
+      "desc": "Como você aparece no app para a sua equipe.",
+      "displayName": "Nome de exibição",
+      "namePlaceholder": "Seu nome",
+      "email": "E-mail",
+      "loginBadge": "login",
+      "changeLoginHint": "Para trocar métodos de login, use <link>Minha conta</link>.",
+      "nameSaved": "Nome atualizado.",
+      "nameError": "Não foi possível salvar o nome.",
+      "sessionExpired": "Sessão expirada."
+    },
+    "company": {
+      "title": "Empresa",
+      "descOwner": "Usado nos relatórios e documentos exportados.",
+      "descMember": "Somente o administrador da conta pode editar estes dados.",
+      "tradeName": "Nome fantasia",
+      "tradeNamePlaceholder": "Ex.: NexusFi",
+      "legalName": "Razão social",
+      "legalNamePlaceholder": "Ex.: NexusFi Tecnologia Ltda.",
+      "cnpj": "CNPJ",
+      "industry": "Ramo de atuação",
+      "industryUndefined": "Não definido",
+      "industryHint": "Definido no primeiro acesso — controla quais módulos aparecem no menu.",
+      "saved": "Dados da empresa salvos.",
+      "error": "Não foi possível salvar os dados da empresa."
+    },
+    "save": "Salvar"
+  },
   "aparencia": {
     "thisDevice": "Vale para este dispositivo.",
     "theme": {
@@ -52,6 +85,71 @@
       "line": "Linha",
       "pie": "Pizza",
       "saved": "Preferência de gráfico salva."
+    }
+  },
+  "feedback": {
+    "typeBug": "Bug",
+    "typeImprovement": "Melhoria",
+    "statusResolved": "Resolvido",
+    "statusOpen": "Em aberto",
+    "form": {
+      "title": "Encontrou um problema ou tem uma ideia?",
+      "desc": "Descreva com o máximo de detalhe. O time recebe na hora e te responde por e-mail quando resolver.",
+      "reportBug": "Reportar bug",
+      "suggestImprovement": "Sugerir melhoria",
+      "localBug": "Onde acontece?",
+      "localImprovement": "Onde deveria aparecer ou mudar?",
+      "atualBug": "O que aconteceu?",
+      "atualImprovement": "Como funciona hoje? (opcional)",
+      "esperadoBug": "O que deveria ter acontecido?",
+      "esperadoImprovement": "O que deveria acontecer?",
+      "localPlaceholder": "Ex.: Dashboard → card de Fluxo de Caixa; Contas a pagar; tela de login…",
+      "atualPlaceholderBug": "O que você fez e o que apareceu de errado? Passo a passo, mensagem de erro…",
+      "atualPlaceholderImprovement": "Como isso funciona hoje (se já existe).",
+      "esperadoPlaceholderBug": "O comportamento correto esperado.",
+      "esperadoPlaceholderImprovement": "A ideia: o que deveria acontecer e por quê.",
+      "send": "Enviar",
+      "sendError": "Não foi possível enviar.",
+      "connError": "Falha de conexão. Tente de novo.",
+      "sentBug": "Bug enviado. Obrigado pelo reporte!",
+      "sentImprovement": "Sugestão enviada. Valeu!"
+    },
+    "mine": {
+      "title": "Meus envios",
+      "emptyTitle": "Nada por aqui ainda",
+      "emptyDesc": "Seus bugs e sugestões aparecem aqui com o status e a resposta do time.",
+      "whatWasDone": "O que foi feito",
+      "waiting": "Aguardando o time."
+    },
+    "admin": {
+      "deniedTitle": "Acesso restrito",
+      "deniedDesc": "Esta aba é exclusiva da equipe NexusFi.",
+      "filterOpen": "Abertos",
+      "filterResolved": "Resolvidos",
+      "filterAll": "Todos",
+      "emptyOpenTitle": "Nenhum chamado em aberto",
+      "emptyOpenDesc": "Tudo resolvido por enquanto.",
+      "emptyTitle": "Nada aqui",
+      "noName": "Sem nome",
+      "noEmail": "sem e-mail",
+      "fieldWhere": "Onde",
+      "fieldAtualBug": "O que aconteceu",
+      "fieldAtualImprovement": "Como funciona hoje",
+      "fieldEsperado": "O que deveria acontecer",
+      "whatWasDone": "O que foi feito",
+      "userNotified": "Usuário avisado por e-mail.",
+      "userNotNotified": "Sem e-mail de aviso.",
+      "resolvedBy": "por {email}",
+      "reopen": "Reabrir",
+      "resolutionPlaceholder": "O que foi feito / a decisão. Vai no e-mail pro usuário.",
+      "notifyUser": "Avisar o usuário por e-mail",
+      "markResolved": "Marcar como resolvido",
+      "resolveError": "Não foi possível resolver.",
+      "reopenError": "Não foi possível reabrir.",
+      "connError": "Falha de conexão.",
+      "resolvedAndNotified": "Resolvido e usuário avisado.",
+      "resolved": "Resolvido.",
+      "reopened": "Chamado reaberto."
     }
   }
 }
