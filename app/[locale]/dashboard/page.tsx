@@ -17,6 +17,7 @@ import { Badge, PageLoader, Sensitive } from "@/app/components/ui";
 import AccessDenied from "@/app/components/AccessDenied";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney, formatDateTime } from "@/lib/format";
+import { categoryLabel } from "@/lib/cashflowCategories";
 import "./dashboard.css";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ export default function Dashboard() {
   const locale = useLocale();
   const t = useTranslations("dashboard");
   const tNav = useTranslations("nav");
+  const tCat = useTranslations("categories");
   const toBRL = useCallback((n: number) => formatMoney(n, locale), [locale]);
   const months = useMemo(() => {
     const f = new Intl.DateTimeFormat(locale, { month: "short" });
@@ -920,7 +922,7 @@ export default function Dashboard() {
                   <div key={cc.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cc.color }} />
-                      <span className="text-xs truncate max-w-[80px]" style={{ color: "var(--db-text-2)" }} title={cc.name}>{cc.name}</span>
+                      <span className="text-xs truncate max-w-[80px]" style={{ color: "var(--db-text-2)" }} title={categoryLabel(cc.name, tCat)}>{categoryLabel(cc.name, tCat)}</span>
                     </div>
                     <div className="flex items-center gap-2 md:gap-3">
                       <div className="w-16 md:w-20 h-1.5 rounded-full overflow-hidden db-progress-bg">

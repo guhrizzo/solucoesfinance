@@ -20,6 +20,7 @@ import legal from './legal.json';
 import errors from './errors.json';
 import plans from './plans.json';
 import billing from './billing.json';
+import categories from './categories.json';
 
 const messages = {
   common,
@@ -41,6 +42,7 @@ const messages = {
   errors,
   plans,
   billing,
+  categories,
 };
 
 export default messages;

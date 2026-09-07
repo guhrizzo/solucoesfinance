@@ -46,3 +46,45 @@ export const CUSTOM_CATEGORY = "__custom__";
 export function isCustomCategory(category: string, type: TxType): boolean {
   return !!category && !CASHFLOW_CATEGORIES[type].includes(category);
 }
+
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+// O VALOR das categorias acima é o que fica GRAVADO no Firestore (`tx.category`)
+// e o que costCenterSync/relatorios/dashboard casam por string — NÃO traduzir.
+// Só a exibição é traduzida: cada valor tem uma `key` estável que indexa
+// messages/*/categories.json.
+export const CATEGORY_KEY: Record<string, string> = {
+  "Vendas": "vendas",
+  "Vendas Mercado Livre": "vendasML",
+  "Vendas Shopee": "vendasShopee",
+  "Serviços prestados": "servicosPrestados",
+  "Recebimento de clientes": "recebimentoClientes",
+  "Rendimentos financeiros": "rendimentosFinanceiros",
+  "Investimentos": "investimentos",
+  "Aporte de sócios": "aporteSocios",
+  "Empréstimos recebidos": "emprestimosRecebidos",
+  "Estorno / Reembolso": "estornoReembolso",
+  "Transferência mesma titularidade": "transferenciaMesmaTitularidade",
+  "Fornecedores": "fornecedores",
+  "Folha de pagamento": "folhaPagamento",
+  "Pró-labore": "proLabore",
+  "Aluguel": "aluguel",
+  "Energia / Água / Internet": "energiaAguaInternet",
+  "Transporte / Frete": "transporteFrete",
+  "Manutenção": "manutencao",
+  "Marketing": "marketing",
+  "TI / Software": "tiSoftware",
+  "Impostos": "impostos",
+  "Taxas bancárias": "taxasBancarias",
+  "Taxas Marketplace": "taxasMarketplace",
+  "Empréstimos / Financiamentos": "emprestimosFinanciamentos",
+};
+
+/**
+ * Rótulo traduzido de uma categoria. `storedValue` é o que está no Firestore;
+ * categoria customizada / legada (sem key) é exibida como está.
+ * `t` deve ser um `useTranslations("categories")` (ou `getTranslations`).
+ */
+export function categoryLabel(storedValue: string, t: (key: string) => string): string {
+  const key = CATEGORY_KEY[storedValue];
+  return key ? t(key) : storedValue;
+}

@@ -76,6 +76,31 @@ for (const ns of namespaces) {
   }
 }
 
+// ── Categorias: todo valor gravado (CASHFLOW_CATEGORIES) precisa de key em
+//    CATEGORY_KEY, e toda key precisa existir em categories.json. Parseado do
+//    texto do .ts (Node não importa TS sem loader). ──────────────────────────
+try {
+  const libPath = join(MESSAGES_DIR, "..", "lib", "cashflowCategories.ts");
+  const src = readFileSync(libPath, "utf8");
+  const catKeys = new Set(Object.keys(load(SOURCE, "categories.json")));
+
+  const catBlock = src.slice(src.indexOf("CASHFLOW_CATEGORIES"), src.indexOf("CUSTOM_CATEGORY"));
+  const storedValues = [...catBlock.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+
+  const keyBlock = src.slice(src.indexOf("CATEGORY_KEY"));
+  const keyMap = Object.fromEntries(
+    [...keyBlock.matchAll(/"([^"]+)":\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]),
+  );
+
+  for (const v of new Set(storedValues)) {
+    if (!keyMap[v]) fail(`CATEGORY_KEY: falta a key pro valor gravado "${v}"`);
+    else if (!catKeys.has(keyMap[v]))
+      fail(`categories.json: falta a chave "${keyMap[v]}" (valor "${v}")`);
+  }
+} catch (e) {
+  fail(`checagem de categorias falhou: ${e.message}`);
+}
+
 if (errors) {
   console.error(`\ni18n-check: ${errors} problema(s).`);
   process.exit(1);
