@@ -363,21 +363,28 @@ de autoria) foram pra `common.pin` / `common.auditTrail`.
 
 ---
 
-## Fase 6 — Estoque + Vendas
+## Fase 6 — Estoque + Vendas ✅ concluída
 
-Namespaces: `estoque`, `vendas`.
+Namespaces: `estoque`, `vendas`. Commits `35a4256` (parte 1: vendas +
+ConfirmModal) e `092f2e4` (parte 2: estoque).
 
-- [ ] **`app/[locale]/estoque/page.tsx`** (~87 KB) — produtos, movimentações,
-      integração Mercado Livre / Shopee (telas de config, status de sync,
-      repasse/escrow), estados de erro das integrações.
-- [ ] **`app/[locale]/vendas/page.tsx`** (~42 KB) — painel de vendas, origem
-      (ML/Shopee/manual), vínculo com caixa.
-- [ ] Mensagens de erro das integrações que hoje vêm de `lib/mercadolivre.ts`
-      / `lib/shopee.ts` / rotas `api/` — decidir por caso: string de UI →
-      `errors.json`; erro cru de API externa → não traduzir (logar como está).
-- [ ] `locale` real em `lib/format.ts`.
-- [ ] `i18n:check` + `tsc` + `lint`.
-- [ ] Navegador: estoque/vendas nos 3 idiomas; telas de integração traduzidas.
+- [x] **`app/[locale]/vendas/page.tsx`** + `vendas.json` — KPIs, split por
+      canal, gráfico, top produtos, controle de estoque, vendas recentes,
+      aba de precificação. Os 2 `<a href="/estoque">` viraram `<Link>`;
+      vendas saiu do override `no-html-link-for-pages`.
+- [x] **`ConfirmModal.tsx`** — defaults + aria "Fechar" via `common.*`
+      (usado também por costCenter, Fase 7).
+- [x] **`app/[locale]/estoque/page.tsx`** + `estoque.json` — KPIs, painel
+      Shopee, tabela, filtros, sync ML/Shopee, 4 modais (produto,
+      integrações, vínculos, simulador), toasts + retornos de OAuth.
+      `platformName.*` p/ interpolar nome de plataforma; badges de marca
+      ("MERCADO LIVRE"/"SHOPEE", "ML · id") hardcoded.
+- [x] Erro cru de API externa (`data.error`/`data.message`) NÃO traduzido —
+      só os fallbacks de UI foram pro namespace.
+- [x] `locale` real: datas e moeda (BRL) via helper `toBRL(n, locale)` /
+      `toLocale*(locale)`.
+- [x] `i18n:check` (20 ns × 3), `tsc`, build limpos; eslint sem regressão.
+- [ ] Navegador: bloqueado por login — validado por build + tsc + i18n:check.
 
 ---
 
