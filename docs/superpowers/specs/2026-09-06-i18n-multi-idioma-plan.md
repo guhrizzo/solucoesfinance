@@ -261,10 +261,12 @@ Commits: `703923c` (2a), `d9313cb` (2b), `7858cd2` (2c+2d).
 
 ---
 
-## Fase 3 — Chrome da área logada 🚧 em andamento
+## Fase 3 — Chrome da área logada ✅ concluída
 
-Namespaces: `nav`, `common`, `configuracoes`, `onboarding`.
-Commits: `e9d4911` (3a), `5d6ee6b` (3b), `0c93f63` (3c parcial).
+Namespaces: `nav`, `common`, `configuracoes`, `onboarding`, `billing` (novo),
+`plans` (reusado).
+Commits: `e9d4911` (3a), `5d6ee6b` (3b), `0c93f63`/`9bc32bb`/`a9aec00` (3c),
+`b7b9875`/`d2175b6` (3d).
 
 - [x] **3a — `Navbar.tsx`** — sidebar, rótulos de rota (por `key` estável, não
       pelo texto), menu do usuário, notificações demo, `aria-label`s, rodapé
@@ -278,23 +280,31 @@ Commits: `e9d4911` (3a), `5d6ee6b` (3b), `0c93f63` (3c parcial).
 - [x] **3c — `CookieConsent.tsx`** — banner curto + card expandido + botões
       → `common.cookies`. `CATEGORY_INFO` (label/descrição das 3 categorias,
       citam art. da LGPD) segue em pt-BR, como `/privacidade`.
-- [ ] **Falta na Fase 3:**
-  - `PerfilTab.tsx`, `FeedbackTab.tsx`, `FeedbackAdminTab.tsx`
-  - `OnboardingModal.tsx` → `onboarding.json` (cuidado: as respostas do
-    onboarding — ex. "Serviço" — são gravadas no Firestore e comparadas por
-    string; migrar como os `key` da Navbar)
-  - `Paywall.tsx`, `SubscriptionGate.tsx`, `CreatePasswordGate.tsx`
-    (`passwordRules.label` → `auth.passwordRules`)
-  - `AccessibilityWidget.tsx` (textos do painel)
-  - restante de `components/ui/**` (pouco texto — `EmptyState`/`Table` usam
-    `empty` via prop, sem literal próprio)
-  - **Persistência do idioma no Firestore** (`users/{authUid}/profile/settings`
-    `{locale}` — regra `profile/{doc}` já permite; falta o write no
-    `useLocalePreference` + sync Firestore→cookie no bootstrap de auth) +
-    teste ao vivo com conta logada
-- [x] `i18n:check` + `tsc` + `build` limpos; `eslint app/` 162/79.
-  Navbar/Configurações não testados ao vivo (atrás de login); CookieConsent
-  verificado no site público (en).
+- [x] **3c — `SubscriptionGate.tsx`** (banner de trial, plural ICU) +
+      **`Paywall.tsx`** (títulos por status, planos via `plans.json`,
+      preços/datas via `lib/format`) → `billing.json` (novo namespace,
+      compartilhado com `/assinatura`).
+- [x] **3c — `CreatePasswordGate.tsx`** → `auth.createPasswordGate` +
+      `auth.passwordRules`. **`AccessibilityWidget.tsx`** painel →
+      `common.a11yWidget`.
+- [x] **3c — Persistência do idioma no Firestore:** `useLocalePreference`
+      grava `users/{authUid}/profile/settings.locale` (best-effort);
+      `app/components/LocaleSync.tsx` (novo, no layout) aplica o do Firestore
+      no bootstrap de auth se diferir do ativo. `LOCALE_COOKIE` exportado de
+      `i18n/routing.ts`. Regra `profile/{doc}` já permitia o write.
+      **Sync cross-device não testado ao vivo** (precisa conta logada).
+- [x] **3d — `PerfilTab.tsx`** (`configuracoes.perfil`),
+      **`FeedbackTab.tsx` / `FeedbackAdminTab.tsx`** (`configuracoes.feedback`;
+      `FEEDBACK_TYPE_LABEL`/`feedbackFieldLabels` de `lib/feedback` ficaram sem
+      uso — retomam na Fase 8 p/ e-mail de retorno).
+- [x] **3d — `OnboardingModal.tsx`** → `onboarding.json`; STEPS reestruturado
+      com `value` (gravado no Firestore, não traduzido) + `key` de tradução.
+- [x] `i18n:check` + `tsc` + `build` limpos; `eslint app/` 162/77.
+      Navbar/Configurações/Paywall/Onboarding não testados ao vivo (atrás de
+      login); CookieConsent e AccessibilityWidget verificados no site público.
+- [ ] **Não migrado (fica pra Fase 8):** `app/[locale]/users/page.tsx`
+      ("Minha conta", 37 KB) ainda usa `passwordRules.label`; `CATEGORY_INFO`
+      de `lib/consent` segue em pt-BR.
 
 ---
 
