@@ -1,1 +1,7 @@
-{}
+{
+  "breakdown": {
+    "byCategory": "Desglose por categoría ({withSpend}/{total})",
+    "noneWithSpend": "Ninguna categoría con gastos registrados",
+    "emptyCount": "{count, plural, one {+# categoría sin movimiento} other {+# categorías sin movimiento}}"
+  }
+}

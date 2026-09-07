@@ -22,5 +22,7 @@
   "impostos": "Impuestos",
   "taxasBancarias": "Comisiones bancarias",
   "taxasMarketplace": "Comisiones de marketplace",
-  "emprestimosFinanciamentos": "Préstamos / Financiamiento"
+  "emprestimosFinanciamentos": "Préstamos / Financiamiento",
+  "outrosRecebimentos": "Otros ingresos",
+  "outrosGastos": "Otros gastos"
 }

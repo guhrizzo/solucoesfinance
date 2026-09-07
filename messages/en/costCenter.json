@@ -1,1 +1,7 @@
-{}
+{
+  "breakdown": {
+    "byCategory": "Category breakdown ({withSpend}/{total})",
+    "noneWithSpend": "No categories with recorded spend",
+    "emptyCount": "{count, plural, one {+# category with no activity} other {+# categories with no activity}}"
+  }
+}

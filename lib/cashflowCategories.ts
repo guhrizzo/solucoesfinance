@@ -77,6 +77,10 @@ export const CATEGORY_KEY: Record<string, string> = {
   "Taxas bancárias": "taxasBancarias",
   "Taxas Marketplace": "taxasMarketplace",
   "Empréstimos / Financiamentos": "emprestimosFinanciamentos",
+  // Valores fora de CASHFLOW_CATEGORIES que a normalização da importação por IA
+  // pode produzir — mapeados só pra exibição.
+  "Outros recebimentos": "outrosRecebimentos",
+  "Outros gastos": "outrosGastos",
 };
 
 /**

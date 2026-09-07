@@ -22,5 +22,7 @@
   "impostos": "Taxes",
   "taxasBancarias": "Bank fees",
   "taxasMarketplace": "Marketplace fees",
-  "emprestimosFinanciamentos": "Loans / Financing"
+  "emprestimosFinanciamentos": "Loans / Financing",
+  "outrosRecebimentos": "Other income",
+  "outrosGastos": "Other expenses"
 }
