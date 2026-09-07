@@ -4,8 +4,9 @@
 // Rodapé discreto que mostra quem criou / editou / deu baixa no registro e
 // quando. Registros antigos (sem os campos) simplesmente não renderizam nada.
 
+import { useLocale, useTranslations } from "next-intl";
 import { UserRound, PencilLine, BadgeCheck, type LucideIcon } from "lucide-react";
-import { fmtDateTime } from "@/lib/audit";
+import { formatDateTime } from "@/lib/format";
 
 export interface AuditFields {
     createdByName?: string;
@@ -16,29 +17,39 @@ export interface AuditFields {
     settledAt?: number;
 }
 
-export function AuditTrail({ record, settleLabel = "Baixa" }: {
+export function AuditTrail({ record, settleLabel }: {
     record: AuditFields;
-    /** Rótulo da baixa: "Pago", "Recebido"… */
+    /** Rótulo da baixa já traduzido: "Pago", "Recebido"… Default: t("settled"). */
     settleLabel?: string;
 }) {
+    const t = useTranslations("common.auditTrail");
+    const locale = useLocale();
+    const when = (ts?: number) => (ts && Number.isFinite(ts) ? formatDateTime(ts, locale) : "");
+
     const rows: { icon: LucideIcon; text: string }[] = [];
 
     if (record.createdByName) {
         rows.push({
             icon: UserRound,
-            text: `Criado por ${record.createdByName}${record.createdAt ? ` · ${fmtDateTime(record.createdAt)}` : ""}`,
+            text: record.createdAt
+                ? t("createdByAt", { name: record.createdByName, when: when(record.createdAt) })
+                : t("createdBy", { name: record.createdByName }),
         });
     }
     if (record.updatedByName && record.updatedAt) {
         rows.push({
             icon: PencilLine,
-            text: `Editado por ${record.updatedByName} · ${fmtDateTime(record.updatedAt)}`,
+            text: t("updatedByAt", { name: record.updatedByName, when: when(record.updatedAt) }),
         });
     }
     if (record.settledByName && record.settledAt) {
         rows.push({
             icon: BadgeCheck,
-            text: `${settleLabel} por ${record.settledByName} · ${fmtDateTime(record.settledAt)}`,
+            text: t("settledByAt", {
+                label: settleLabel ?? t("settled"),
+                name: record.settledByName,
+                when: when(record.settledAt),
+            }),
         });
     }
 

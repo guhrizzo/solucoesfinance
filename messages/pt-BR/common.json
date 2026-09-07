@@ -29,6 +29,13 @@
     "lockedRetry": "PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.",
     "wrong": "PIN incorreto. Tente novamente."
   },
+  "auditTrail": {
+    "settled": "Baixa",
+    "createdBy": "Criado por {name}",
+    "createdByAt": "Criado por {name} · {when}",
+    "updatedByAt": "Editado por {name} · {when}",
+    "settledByAt": "{label} por {name} · {when}"
+  },
   "a11yWidget": {
     "options": "Opções de acessibilidade",
     "close": "Fechar opções de acessibilidade",

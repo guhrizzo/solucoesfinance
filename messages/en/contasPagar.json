@@ -1,1 +1,182 @@
-{}
+{
+  "meta": {
+    "title": "Accounts payable",
+    "newBill": "New bill",
+    "newBillFab": "New account payable"
+  },
+  "header": {
+    "allClear": "✓ All caught up!",
+    "dueSoon": "{count, plural, one {# due in the next {days} days} other {# due in the next {days} days}}",
+    "overdue": "{count, plural, one {# overdue bill} other {# overdue bills}}"
+  },
+  "alertButton": {
+    "title": "Alerts: {days} days",
+    "aria": "Configure due-date alerts — currently {days} days ahead"
+  },
+  "kpi": {
+    "toPay": "To pay",
+    "overdue": "Overdue",
+    "paid": "Paid",
+    "alert": "Alert ({days}d)",
+    "billCount": "{count, plural, one {# bill} other {# bills}}",
+    "dueSoon": "due soon"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search title or note…",
+    "searchAria": "Search title or note",
+    "filterAll": "All",
+    "categoryAll": "All",
+    "monthHint": "Due dates this month — change the month in the Navbar selector",
+    "resultCount": "{count, plural, one {# result} other {# results}}"
+  },
+  "sections": {
+    "vencido": "Overdue",
+    "pendente": "Pending",
+    "agendado": "Scheduled",
+    "pago": "Paid"
+  },
+  "status": {
+    "pendente": "Pending",
+    "pago": "Paid",
+    "vencido": "Overdue",
+    "agendado": "Scheduled"
+  },
+  "categories": {
+    "aluguel": "Rent",
+    "fornecedores": "Suppliers",
+    "folha": "Payroll",
+    "impostos": "Taxes",
+    "servicos": "Services",
+    "outros": "Other"
+  },
+  "empty": {
+    "noResults": "No results",
+    "nothingIn": "Nothing in {period}",
+    "adjustFilters": "Adjust the filters to see other bills.",
+    "noneThisMonth": "No bill is due this month. Change the month in the Navbar selector or add a bill.",
+    "addBill": "Add bill"
+  },
+  "card": {
+    "installment": "Installment {index}/{count}",
+    "photoCount": "{count, plural, one {# photo} other {# photos}}",
+    "viewPhotos": "{count, plural, one {View # attached photo} other {View # attached photos}}",
+    "paidOn": "Paid on {date}",
+    "overdueBy": "{count, plural, one {Overdue by # day} other {Overdue by # days}} · {date}",
+    "dueToday": "⚠️ Due today! · {date}",
+    "dueIn": "{count, plural, one {Due in # day} other {Due in # days}} · {date}",
+    "prevMethod": "Est.:",
+    "paidMethod": "Paid:",
+    "markPaid": "Mark as paid",
+    "billPaid": "Bill paid",
+    "edit": "Edit",
+    "delete": "Delete",
+    "settleLabel": "Paid"
+  },
+  "modal": {
+    "editTitle": "Edit bill",
+    "newTitle": "New account payable",
+    "autoPost": "When paid, it's automatically posted to Cash Flow",
+    "tabBillEditing": "Bill",
+    "tabBillNew": "New bill",
+    "tabCadastro": "Contact",
+    "fieldTitle": "Title",
+    "fieldTitlePlaceholder": "e.g. Office rent",
+    "amountPerInstallment": "Amount per installment (R$)",
+    "amount": "Amount (R$)",
+    "firstDueDate": "1st due date",
+    "dueDate": "Due date",
+    "category": "Category",
+    "recurrence": "Recurrence",
+    "recurrenceUnica": "One-off",
+    "recurrenceNumeral": "Installments",
+    "numeralDisabled": "Installments can only be set when creating a new bill",
+    "monthlyInstallments": "Monthly installments",
+    "fixedAfterCreate": "(fixed after creation)",
+    "installmentsRange": "Enter 2 to 60 installments.",
+    "installmentsPreview": "{count} installments of {amount} · total {total}",
+    "initialStatus": "Initial status",
+    "seriesStartsPending": "Every series starts pending. Settle each installment when you pay it.",
+    "photos": "Photos (invoice, tax note...) — {count}",
+    "photoAlt": "Photo {index}",
+    "removePhoto": "Remove photo {index}",
+    "uploading": "Uploading...",
+    "addPhoto": "Add photo",
+    "uploadError": "Upload error: {message}",
+    "paymentMethodLabel": "Expected payment method",
+    "notes": "Note (optional)",
+    "notesPlaceholder": "Invoice number, supplier...",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "createBill": "Create bill",
+    "notAuthenticated": "Not authenticated",
+    "pinConfirmEditTitle": "Confirm edit",
+    "pinConfirmCreateTitle": "Confirm creation",
+    "pinConfirmSaveSubtitle": "Enter your 4-digit PIN to save",
+    "saveError": "Error saving"
+  },
+  "alertSettings": {
+    "title": "Due-date alerts",
+    "question": "How many days before the due date should we alert you?",
+    "oneDay": "1 day",
+    "thirtyDays": "30 days",
+    "dayShort": "{days}d",
+    "preview": "You'll see a menu badge and a toast when you open the page if a bill is due within <strong>{count, plural, one {# day} other {# days}}</strong>.",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "gallery": {
+    "counterAria": "Photo {index} of {total}",
+    "photoAlt": "Photo {index}",
+    "prev": "Previous photo",
+    "next": "Next photo"
+  },
+  "payModal": {
+    "title": "Record payment",
+    "summary": "{title} · {amount}",
+    "paymentDate": "Payment date",
+    "paymentMethodLabel": "Payment method used",
+    "registering": "Recording…",
+    "confirm": "Confirm payment",
+    "registerError": "Error recording payment",
+    "pinTitle": "Confirm payment",
+    "pinSubtitle": "Enter your 4-digit PIN to confirm the settlement"
+  },
+  "seriesDelete": {
+    "title": "Delete installment",
+    "message": "\"{title}\" — installment {index}/{count}. Installments already paid are never removed.",
+    "action": "Delete"
+  },
+  "seriesEdit": {
+    "title": "Apply to which installments?",
+    "message": "You edited installment {index}/{count} of \"{title}\".",
+    "action": "Saving"
+  },
+  "confirmDelete": {
+    "title": "Delete bill?",
+    "body": "This action can't be undone. Your PIN will be requested.",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "pinTitle": "Confirm deletion",
+    "pinSubtitle": "Enter your 4-digit PIN to delete"
+  },
+  "error": {
+    "connect": "Connection error",
+    "tryAgain": "Try again"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alerts set to # day before the due date} other {Alerts set to # days before the due date}}",
+    "overdueOnLoad": "{count, plural, one {# overdue bill — settle it as soon as possible!} other {# overdue bills — settle them as soon as possible!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# bill due in the next {days} days} other {# bills due in the next {days} days}}",
+    "installmentsCreated": "{count} installments created ({from} → {to})",
+    "billUpdated": "Bill updated!",
+    "billCreated": "Bill created!",
+    "futureInstallmentsUpdated": "{count, plural, one {# future installment updated} other {# future installments updated}}",
+    "noFutureInstallments": "No pending future installments",
+    "paidPosted": "Paid! Posted to Cash Flow ✓",
+    "categoryUpdatedBoth": "Category updated in bills and cash flow",
+    "categoryUpdated": "Category updated!",
+    "installmentsRemoved": "{count, plural, one {# installment removed.} other {# installments removed.}}",
+    "billRemoved": "Bill removed.",
+    "seriesUpdateError": "Error updating the series"
+  }
+}

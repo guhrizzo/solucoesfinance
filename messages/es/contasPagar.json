@@ -1,1 +1,182 @@
-{}
+{
+  "meta": {
+    "title": "Cuentas por pagar",
+    "newBill": "Nueva cuenta",
+    "newBillFab": "Nueva cuenta por pagar"
+  },
+  "header": {
+    "allClear": "✓ ¡Todo al día!",
+    "dueSoon": "{count, plural, one {# vence en los próximos {days} días} other {# vencen en los próximos {days} días}}",
+    "overdue": "{count, plural, one {# cuenta vencida} other {# cuentas vencidas}}"
+  },
+  "alertButton": {
+    "title": "Alertas: {days} días",
+    "aria": "Configurar alertas de vencimiento — hoy en {days} días"
+  },
+  "kpi": {
+    "toPay": "Por pagar",
+    "overdue": "Vencidas",
+    "paid": "Pagadas",
+    "alert": "Alerta ({days}d)",
+    "billCount": "{count, plural, one {# cuenta} other {# cuentas}}",
+    "dueSoon": "vence pronto"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar título u observación…",
+    "searchAria": "Buscar título u observación",
+    "filterAll": "Todos",
+    "categoryAll": "Todas",
+    "monthHint": "Vencimientos de este mes — cambia el mes en el selector de la barra",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
+  },
+  "sections": {
+    "vencido": "Vencidas",
+    "pendente": "Pendientes",
+    "agendado": "Programadas",
+    "pago": "Pagadas"
+  },
+  "status": {
+    "pendente": "Pendiente",
+    "pago": "Pagada",
+    "vencido": "Vencida",
+    "agendado": "Programada"
+  },
+  "categories": {
+    "aluguel": "Alquiler",
+    "fornecedores": "Proveedores",
+    "folha": "Nómina",
+    "impostos": "Impuestos",
+    "servicos": "Servicios",
+    "outros": "Otros"
+  },
+  "empty": {
+    "noResults": "Sin resultados",
+    "nothingIn": "Nada en {period}",
+    "adjustFilters": "Ajusta los filtros para ver otras cuentas.",
+    "noneThisMonth": "Ninguna cuenta vence este mes. Cambia el mes en el selector de la barra o agrega una cuenta.",
+    "addBill": "Agregar cuenta"
+  },
+  "card": {
+    "installment": "Cuota {index}/{count}",
+    "photoCount": "{count, plural, one {# foto} other {# fotos}}",
+    "viewPhotos": "{count, plural, one {Ver # foto adjunta} other {Ver # fotos adjuntas}}",
+    "paidOn": "Pagada el {date}",
+    "overdueBy": "{count, plural, one {Venció hace # día} other {Venció hace # días}} · {date}",
+    "dueToday": "⚠️ ¡Vence hoy! · {date}",
+    "dueIn": "{count, plural, one {Vence en # día} other {Vence en # días}} · {date}",
+    "prevMethod": "Prev.:",
+    "paidMethod": "Pagado:",
+    "markPaid": "Marcar como pagada",
+    "billPaid": "Cuenta pagada",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "settleLabel": "Pagada"
+  },
+  "modal": {
+    "editTitle": "Editar cuenta",
+    "newTitle": "Nueva cuenta por pagar",
+    "autoPost": "Al pagar, se registra automáticamente en el Flujo de Caja",
+    "tabBillEditing": "Cuenta",
+    "tabBillNew": "Nueva cuenta",
+    "tabCadastro": "Contacto",
+    "fieldTitle": "Título",
+    "fieldTitlePlaceholder": "Ej.: Alquiler de la oficina",
+    "amountPerInstallment": "Valor por cuota (R$)",
+    "amount": "Valor (R$)",
+    "firstDueDate": "1.er vencimiento",
+    "dueDate": "Vencimiento",
+    "category": "Categoría",
+    "recurrence": "Recurrencia",
+    "recurrenceUnica": "Única",
+    "recurrenceNumeral": "En cuotas",
+    "numeralDisabled": "Las cuotas solo se definen al crear una cuenta nueva",
+    "monthlyInstallments": "Cuotas mensuales",
+    "fixedAfterCreate": "(fijo tras crear)",
+    "installmentsRange": "Indica de 2 a 60 cuotas.",
+    "installmentsPreview": "{count} cuotas de {amount} · total {total}",
+    "initialStatus": "Estado inicial",
+    "seriesStartsPending": "Toda serie empieza pendiente. Salda cada cuota al pagarla.",
+    "photos": "Fotos (boleta, factura...) — {count}",
+    "photoAlt": "Foto {index}",
+    "removePhoto": "Quitar foto {index}",
+    "uploading": "Enviando...",
+    "addPhoto": "Agregar foto",
+    "uploadError": "Error al subir: {message}",
+    "paymentMethodLabel": "Forma de pago prevista",
+    "notes": "Observación (opcional)",
+    "notesPlaceholder": "Número de boleta, proveedor...",
+    "saving": "Guardando…",
+    "saveChanges": "Guardar cambios",
+    "createBill": "Crear cuenta",
+    "notAuthenticated": "No autenticado",
+    "pinConfirmEditTitle": "Confirmar edición",
+    "pinConfirmCreateTitle": "Confirmar creación",
+    "pinConfirmSaveSubtitle": "Ingresa tu PIN de 4 dígitos para guardar",
+    "saveError": "Error al guardar"
+  },
+  "alertSettings": {
+    "title": "Alertas de vencimiento",
+    "question": "¿Cuántos días antes del vencimiento avisar?",
+    "oneDay": "1 día",
+    "thirtyDays": "30 días",
+    "dayShort": "{days}d",
+    "preview": "Verás un distintivo en el menú y un aviso al abrir la página cuando una cuenta venza en hasta <strong>{count, plural, one {# día} other {# días}}</strong>.",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "gallery": {
+    "counterAria": "Foto {index} de {total}",
+    "photoAlt": "Foto {index}",
+    "prev": "Foto anterior",
+    "next": "Foto siguiente"
+  },
+  "payModal": {
+    "title": "Registrar pago",
+    "summary": "{title} · {amount}",
+    "paymentDate": "Fecha del pago",
+    "paymentMethodLabel": "Forma de pago utilizada",
+    "registering": "Registrando…",
+    "confirm": "Confirmar pago",
+    "registerError": "Error al registrar el pago",
+    "pinTitle": "Confirmar pago",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para confirmar la baja"
+  },
+  "seriesDelete": {
+    "title": "Eliminar cuota",
+    "message": "\"{title}\" — cuota {index}/{count}. Las cuotas ya pagadas nunca se eliminan.",
+    "action": "Eliminar"
+  },
+  "seriesEdit": {
+    "title": "¿Aplicar a qué cuotas?",
+    "message": "Editaste la cuota {index}/{count} de \"{title}\".",
+    "action": "Guardando"
+  },
+  "confirmDelete": {
+    "title": "¿Eliminar cuenta?",
+    "body": "Esta acción no se puede deshacer. Se solicitará tu PIN.",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "pinTitle": "Confirmar eliminación",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para eliminar"
+  },
+  "error": {
+    "connect": "Error de conexión",
+    "tryAgain": "Reintentar"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alertas configuradas para # día antes del vencimiento} other {Alertas configuradas para # días antes del vencimiento}}",
+    "overdueOnLoad": "{count, plural, one {# cuenta vencida — ¡regularízala cuanto antes!} other {# cuentas vencidas — ¡regularízalas cuanto antes!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# cuenta vence en los próximos {days} días} other {# cuentas vencen en los próximos {days} días}}",
+    "installmentsCreated": "{count} cuotas creadas ({from} → {to})",
+    "billUpdated": "¡Cuenta actualizada!",
+    "billCreated": "¡Cuenta creada!",
+    "futureInstallmentsUpdated": "{count, plural, one {# cuota futura actualizada} other {# cuotas futuras actualizadas}}",
+    "noFutureInstallments": "Sin cuotas futuras pendientes",
+    "paidPosted": "¡Pagada! Registrada en el Flujo de Caja ✓",
+    "categoryUpdatedBoth": "Categoría actualizada en cuentas y flujo de caja",
+    "categoryUpdated": "¡Categoría actualizada!",
+    "installmentsRemoved": "{count, plural, one {# cuota eliminada.} other {# cuotas eliminadas.}}",
+    "billRemoved": "Cuenta eliminada.",
+    "seriesUpdateError": "Error al actualizar la serie"
+  }
+}

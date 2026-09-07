@@ -1,1 +1,182 @@
-{}
+{
+  "meta": {
+    "title": "Contas a pagar",
+    "newBill": "Nova conta",
+    "newBillFab": "Nova conta a pagar"
+  },
+  "header": {
+    "allClear": "✓ Tudo em dia!",
+    "dueSoon": "{count, plural, one {# vence nos próximos {days} dias} other {# vencem nos próximos {days} dias}}",
+    "overdue": "{count, plural, one {# conta vencida} other {# contas vencidas}}"
+  },
+  "alertButton": {
+    "title": "Alertas: {days} dias",
+    "aria": "Configurar alertas de vencimento — hoje em {days} dias"
+  },
+  "kpi": {
+    "toPay": "A pagar",
+    "overdue": "Vencidas",
+    "paid": "Pagas",
+    "alert": "Alerta ({days}d)",
+    "billCount": "{count, plural, one {# conta} other {# contas}}",
+    "dueSoon": "vence em breve"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar título ou observação…",
+    "searchAria": "Buscar título ou observação",
+    "filterAll": "Todos",
+    "categoryAll": "Todas",
+    "monthHint": "Vencimentos deste mês — troque o mês no seletor da Navbar",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
+  },
+  "sections": {
+    "vencido": "Vencidas",
+    "pendente": "Pendentes",
+    "agendado": "Agendadas",
+    "pago": "Pagas"
+  },
+  "status": {
+    "pendente": "Pendente",
+    "pago": "Pago",
+    "vencido": "Vencido",
+    "agendado": "Agendado"
+  },
+  "categories": {
+    "aluguel": "Aluguel",
+    "fornecedores": "Fornecedores",
+    "folha": "Folha",
+    "impostos": "Impostos",
+    "servicos": "Serviços",
+    "outros": "Outros"
+  },
+  "empty": {
+    "noResults": "Nenhum resultado",
+    "nothingIn": "Nada em {period}",
+    "adjustFilters": "Ajuste os filtros para ver outras contas.",
+    "noneThisMonth": "Nenhuma conta vence neste mês. Troque o mês no seletor da Navbar ou adicione uma conta.",
+    "addBill": "Adicionar conta"
+  },
+  "card": {
+    "installment": "Parcela {index}/{count}",
+    "photoCount": "{count, plural, one {# foto} other {# fotos}}",
+    "viewPhotos": "{count, plural, one {Ver # foto anexada} other {Ver # fotos anexadas}}",
+    "paidOn": "Pago em {date}",
+    "overdueBy": "{count, plural, one {Venceu há # dia} other {Venceu há # dias}} · {date}",
+    "dueToday": "⚠️ Vence hoje! · {date}",
+    "dueIn": "{count, plural, one {Vence em # dia} other {Vence em # dias}} · {date}",
+    "prevMethod": "Prev:",
+    "paidMethod": "Pago:",
+    "markPaid": "Marcar como pago",
+    "billPaid": "Conta paga",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "settleLabel": "Pago"
+  },
+  "modal": {
+    "editTitle": "Editar conta",
+    "newTitle": "Nova conta a pagar",
+    "autoPost": "Ao pagar, lança automaticamente no Fluxo de Caixa",
+    "tabBillEditing": "Conta",
+    "tabBillNew": "Nova conta",
+    "tabCadastro": "Cadastro",
+    "fieldTitle": "Título",
+    "fieldTitlePlaceholder": "Ex: Aluguel do escritório",
+    "amountPerInstallment": "Valor por parcela (R$)",
+    "amount": "Valor (R$)",
+    "firstDueDate": "1º vencimento",
+    "dueDate": "Vencimento",
+    "category": "Categoria",
+    "recurrence": "Recorrência",
+    "recurrenceUnica": "Única",
+    "recurrenceNumeral": "Numeral",
+    "numeralDisabled": "Parcelamento só na criação de uma conta nova",
+    "monthlyInstallments": "Parcelas mensais",
+    "fixedAfterCreate": "(fixo após criar)",
+    "installmentsRange": "Informe de 2 a 60 parcelas.",
+    "installmentsPreview": "{count} parcelas de {amount} · total {total}",
+    "initialStatus": "Status inicial",
+    "seriesStartsPending": "Toda série começa pendente. Baixe cada parcela ao pagá-la.",
+    "photos": "Fotos (boleto, nota fiscal...) — {count}",
+    "photoAlt": "Foto {index}",
+    "removePhoto": "Remover foto {index}",
+    "uploading": "Enviando...",
+    "addPhoto": "Adicionar foto",
+    "uploadError": "Erro ao upload: {message}",
+    "paymentMethodLabel": "Forma de pagamento prevista",
+    "notes": "Observação (opcional)",
+    "notesPlaceholder": "Número do boleto, fornecedor...",
+    "saving": "Salvando…",
+    "saveChanges": "Salvar alterações",
+    "createBill": "Criar conta",
+    "notAuthenticated": "Não autenticado",
+    "pinConfirmEditTitle": "Confirmar edição",
+    "pinConfirmCreateTitle": "Confirmar criação",
+    "pinConfirmSaveSubtitle": "Digite seu PIN de 4 dígitos para salvar",
+    "saveError": "Erro ao salvar"
+  },
+  "alertSettings": {
+    "title": "Alertas de vencimento",
+    "question": "Quantos dias antes do vencimento alertar?",
+    "oneDay": "1 dia",
+    "thirtyDays": "30 dias",
+    "dayShort": "{days}d",
+    "preview": "Você verá um badge no menu e um toast ao entrar na página quando uma conta vencer em até <strong>{count, plural, one {# dia} other {# dias}}</strong>.",
+    "cancel": "Cancelar",
+    "save": "Salvar"
+  },
+  "gallery": {
+    "counterAria": "Foto {index} de {total}",
+    "photoAlt": "Foto {index}",
+    "prev": "Foto anterior",
+    "next": "Próxima foto"
+  },
+  "payModal": {
+    "title": "Registrar pagamento",
+    "summary": "{title} · {amount}",
+    "paymentDate": "Data do pagamento",
+    "paymentMethodLabel": "Forma de pagamento utilizada",
+    "registering": "Registrando…",
+    "confirm": "Confirmar pagamento",
+    "registerError": "Erro ao registrar pagamento",
+    "pinTitle": "Confirmar pagamento",
+    "pinSubtitle": "Digite seu PIN de 4 dígitos para confirmar a baixa"
+  },
+  "seriesDelete": {
+    "title": "Excluir parcela",
+    "message": "\"{title}\" — parcela {index}/{count}. Parcelas já pagas nunca são removidas.",
+    "action": "Excluir"
+  },
+  "seriesEdit": {
+    "title": "Aplicar em quais parcelas?",
+    "message": "Você editou a parcela {index}/{count} de \"{title}\".",
+    "action": "Salvando"
+  },
+  "confirmDelete": {
+    "title": "Excluir conta?",
+    "body": "Esta ação não pode ser desfeita. Será solicitado o seu PIN.",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "pinTitle": "Confirmar exclusão",
+    "pinSubtitle": "Digite seu PIN de 4 dígitos para excluir"
+  },
+  "error": {
+    "connect": "Erro ao conectar",
+    "tryAgain": "Tentar novamente"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alertas configurados para # dia antes do vencimento} other {Alertas configurados para # dias antes do vencimento}}",
+    "overdueOnLoad": "{count, plural, one {# conta vencida — regularize o quanto antes!} other {# contas vencidas — regularize o quanto antes!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# conta vence nos próximos {days} dias} other {# contas vencem nos próximos {days} dias}}",
+    "installmentsCreated": "{count} parcelas criadas ({from} → {to})",
+    "billUpdated": "Conta atualizada!",
+    "billCreated": "Conta criada!",
+    "futureInstallmentsUpdated": "{count, plural, one {# parcela futura atualizada} other {# parcelas futuras atualizadas}}",
+    "noFutureInstallments": "Nenhuma parcela futura pendente",
+    "paidPosted": "Pago! Lançado no Fluxo de Caixa ✓",
+    "categoryUpdatedBoth": "Categoria atualizada em contas e fluxo de caixa",
+    "categoryUpdated": "Categoria atualizada!",
+    "installmentsRemoved": "{count, plural, one {# parcela removida.} other {# parcelas removidas.}}",
+    "billRemoved": "Conta removida.",
+    "seriesUpdateError": "Erro ao atualizar a série"
+  }
+}

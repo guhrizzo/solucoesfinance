@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useMemo, useCallback, useId, useRef } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
     Plus, X, Check, Trash2, Edit3, AlertTriangle,
     CalendarClock, Loader2, Search, Filter,
@@ -20,6 +21,7 @@ import { CadastroManager, CadastroField, formatDoc, onlyDigits } from "@/app/com
 import type { PaymentMethod } from "@/app/types/payment";
 import { verifyPin, loadPinHash, getPinLockStatus } from "@/app/hooks/usePin";
 import { usePeriod } from "@/app/hooks/usePeriod";
+import { formatMoney } from "@/lib/format";
 import { syncBillCashflow } from "@/lib/billTaxSync";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "@/app/components/AuditTrail";
@@ -73,20 +75,23 @@ interface Bill {
 
 const TODAY = new Date().toISOString().split("T")[0];
 
-const CATEGORIES: { label: string; icon: LucideIcon; color: string }[] = [
-    { label: "Aluguel", icon: Building2, color: "var(--brand)" },
-    { label: "Fornecedores", icon: Receipt, color: "var(--warn)" },
-    { label: "Folha", icon: CircleDollarSign, color: "var(--pos)" },
-    { label: "Impostos", icon: Tag, color: "var(--neg)" },
-    { label: "Serviços", icon: Zap, color: "var(--brand)" },
-    { label: "Outros", icon: ArrowDownRight, color: "var(--brand)" },
+// `label` é o VALOR gravado no Firestore (`bill.category`) e casado por string
+// no billTaxSync — NÃO traduzir. `key` indexa contasPagar.categories p/ exibição.
+const CATEGORIES: { label: string; key: string; icon: LucideIcon; color: string }[] = [
+    { label: "Aluguel", key: "aluguel", icon: Building2, color: "var(--brand)" },
+    { label: "Fornecedores", key: "fornecedores", icon: Receipt, color: "var(--warn)" },
+    { label: "Folha", key: "folha", icon: CircleDollarSign, color: "var(--pos)" },
+    { label: "Impostos", key: "impostos", icon: Tag, color: "var(--neg)" },
+    { label: "Serviços", key: "servicos", icon: Zap, color: "var(--brand)" },
+    { label: "Outros", key: "outros", icon: ArrowDownRight, color: "var(--brand)" },
 ];
 
-const STATUS_META: Record<BillStatus, { label: string; bg: string; color: string; border: string }> = {
-    pendente: { label: "Pendente", bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)" },
-    pago: { label: "Pago", bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)" },
-    vencido: { label: "Vencido", bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)" },
-    agendado: { label: "Agendado", bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)" },
+// Só tokens de cor por status — o rótulo vem de contasPagar.status.<key>.
+const STATUS_META: Record<BillStatus, { bg: string; color: string; border: string }> = {
+    pendente: { bg: "var(--warn-weak)", color: "var(--warn)", border: "var(--warn-weak)" },
+    pago: { bg: "var(--pos-weak)", color: "var(--pos)", border: "var(--pos-weak)" },
+    vencido: { bg: "var(--neg-weak)", color: "var(--neg)", border: "var(--neg-weak)" },
+    agendado: { bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)" },
 };
 
 // Mapeamento de categoria → cashflow vive em lib/billTaxSync.ts (CAT_TO_CASHFLOW),
@@ -94,12 +99,11 @@ const STATUS_META: Record<BillStatus, { label: string; bg: string; color: string
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const toBRL = (n: number) =>
-    n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
-const labelDate = (d: string) =>
+const labelDate = (d: string, locale: string) =>
     new Date(d + "T12:00:00")
-        .toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+        .toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" })
         .replace(/\./g, "");
 
 const daysUntil = (d: string): number => {
@@ -130,17 +134,17 @@ function parseAmount(raw: string): number {
 function formatAmount(raw: string): string {
     // Remove tudo que não é número, vírgula ou ponto
     let s = raw.replace(/[^\d,.]/g, "");
-    
+
     // Se estiver vazio, retorna vazio
     if (!s) return "";
-    
+
     // Se tem vírgula (formato brasileiro), separa inteiros e decimais
     if (s.includes(",")) {
         const [intPart, decPart] = s.split(",");
         const formatted = intPart.replace(/\./g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         return decPart !== undefined ? formatted + "," + decPart : formatted;
     }
-    
+
     // Se não tem vírgula, retorna apenas os dígitos sem formatação de milhares
     // Isso permite o usuário digitar valores sem separadores
     return s;
@@ -180,6 +184,11 @@ interface BillModalProps {
 }
 
 function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
+    const t = useTranslations("contasPagar.modal");
+    const tCat = useTranslations("contasPagar.categories");
+    const tStatus = useTranslations("contasPagar.status");
+    const tPin = useTranslations("common.pin");
+    const locale = useLocale();
     const [title, setTitle] = useState("");
     const [rawAmt, setRawAmt] = useState("");
     const [dueDate, setDueDate] = useState(TODAY);
@@ -302,14 +311,14 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
             const timestamp = Date.now();
             const filename = `${timestamp}-${file.name}`;
             const storageRef = ref(storage, `bills/${filename}`);
-            
+
             await uploadBytes(storageRef, file);
             const url = await getDownloadURL(storageRef);
-            
+
             setPhotos(prev => [...prev, url]);
             setErr("");
         } catch (e: any) {
-            setErr(`Erro ao upload: ${e.message}`);
+            setErr(t("uploadError", { message: e.message }));
         } finally {
             setUploadingPhoto(false);
         }
@@ -321,11 +330,11 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
     async function submit() {
         if (!canSave || saving) return;
-        if (!uid) { setErr("Não autenticado"); return; }
+        if (!uid) { setErr(t("notAuthenticated")); return; }
         // Verifica se PIN está configurado
         const pinHash = await loadPinHash(uid);
         if (!pinHash) {
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
             return;
         }
         // Abre modal de PIN
@@ -355,23 +364,23 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                 });
                 onClose();
             } catch (e: any) {
-                setErr(e?.message ?? "Erro ao salvar");
+                setErr(e?.message ?? t("saveError"));
                 setSaving(false);
             }
         } else if (result === "locked") {
             setPinOpen(false);
-            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            setErr(tPin("lockedRetry"));
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setPinOpen(false);
-                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+                setErr(tPin("lockedRetry"));
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setPinOpen(false);
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
         }
     }
 
@@ -396,14 +405,14 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                 <div className="flex items-center justify-between px-5 py-4">
                     <div>
                         <p id={billTitleId} className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-                            {editing ? "Editar conta" : "Nova conta a pagar"}
+                            {editing ? t("editTitle") : t("newTitle")}
                         </p>
                         <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--pos)" }}>
-                            <Check size={11} /> Ao pagar, lança automaticamente no Fluxo de Caixa
+                            <Check size={11} /> {t("autoPost")}
                         </p>
                     </div>
                     <button onClick={() => !saving && onClose()}
-                        aria-label="Fechar"
+                        aria-label={tPin("close")}
                         className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
@@ -412,10 +421,10 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                 {/* Abas */}
                 <div className="flex gap-1 px-5" style={{ borderBottom: "1px solid var(--cf-border)" }}>
-                    {([["conta", editing ? "Conta" : "Nova conta"], ["cadastro", "Cadastro"]] as const).map(([t, label]) => (
-                        <button key={t} onClick={() => setTab(t)} type="button"
+                    {([["conta", editing ? t("tabBillEditing") : t("tabBillNew")], ["cadastro", t("tabCadastro")]] as const).map(([tabKey, label]) => (
+                        <button key={tabKey} onClick={() => setTab(tabKey)} type="button"
                             className="px-3 py-2.5 text-xs font-bold cursor-pointer -mb-px"
-                            style={tab === t
+                            style={tab === tabKey
                                 ? { color: "var(--brand)", borderBottom: "2px solid var(--brand)" }
                                 : { color: "var(--cf-text-2)", borderBottom: "2px solid transparent" }}>
                             {label}
@@ -451,8 +460,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         uid={uid}
                         kind="fornecedor"
                         accent="var(--brand)"
-                        label="Título"
-                        placeholder="Ex: Aluguel do escritório"
+                        label={t("fieldTitle")}
+                        placeholder={t("fieldTitlePlaceholder")}
                         title={title}
                         partyDoc={partyDoc}
                         onChange={v => { setTitle(v.title); setPartyName(v.partyName ?? ""); setPartyDoc(v.partyDoc ?? ""); }}
@@ -463,7 +472,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                             <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                                {isSeries ? "Valor por parcela (R$)" : "Valor (R$)"}
+                                {isSeries ? t("amountPerInstallment") : t("amount")}
                             </label>
                             <input id={amtId} inputMode="decimal" value={rawAmt} onChange={e => setRawAmt(formatAmount(e.target.value))}
                                 placeholder="0,00"
@@ -472,7 +481,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         </div>
                         <div className="space-y-2">
                             <label htmlFor={dueDateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                                {isSeries ? "1º vencimento" : "Vencimento"}
+                                {isSeries ? t("firstDueDate") : t("dueDate")}
                             </label>
                             <input id={dueDateId} type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
@@ -482,7 +491,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Categoria */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Categoria</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("category")}</legend>
                         <div className="grid grid-cols-3 gap-2">
                             {CATEGORIES.map(cat => {
                                 const sel = category === cat.label;
@@ -493,7 +502,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                             ? { borderColor: cat.color, background: cat.color + "18", color: cat.color }
                                             : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
                                         <cat.icon size={13} />
-                                        {cat.label}
+                                        {tCat(cat.key)}
                                     </button>
                                 );
                             })}
@@ -502,15 +511,15 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Recorrência */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Recorrência</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("recurrence")}</legend>
                         <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
-                            {([["unica", "Única"], ["numeral", "Numeral"]] as [Recurrence, string][]).map(([r, label]) => {
+                            {([["unica", t("recurrenceUnica")], ["numeral", t("recurrenceNumeral")]] as [Recurrence, string][]).map(([r, label]) => {
                                 const disabled = r === "numeral" && !numeralAllowed;
                                 return (
                                     <button key={r} type="button"
                                         onClick={() => !disabled && setRecurrence(r)}
                                         disabled={disabled}
-                                        title={disabled ? "Parcelamento só na criação de uma conta nova" : undefined}
+                                        title={disabled ? t("numeralDisabled") : undefined}
                                         className="py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                         style={recurrence === r
                                             ? { background: "var(--cf-card)", color: "var(--cf-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", cursor: "pointer" }
@@ -525,7 +534,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                             <div className="pt-1 space-y-2">
                                 <div className="flex items-center gap-3">
                                     <label htmlFor={installmentsId} className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>
-                                        Parcelas mensais
+                                        {t("monthlyInstallments")}
                                     </label>
                                     <input
                                         id={installmentsId}
@@ -536,15 +545,15 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                         style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                                     {editing && (
                                         <span className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                                            (fixo após criar)
+                                            {t("fixedAfterCreate")}
                                         </span>
                                     )}
                                 </div>
                                 {!installmentsOk ? (
-                                    <p className="text-[11px]" style={{ color: "var(--neg)" }}>Informe de 2 a 60 parcelas.</p>
+                                    <p className="text-[11px]" style={{ color: "var(--neg)" }}>{t("installmentsRange")}</p>
                                 ) : amount > 0 ? (
                                     <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                                        {installments} parcelas de {toBRL(amount)} · total {toBRL(amount * installments)}
+                                        {t("installmentsPreview", { count: installments, amount: toBRL(amount, locale), total: toBRL(amount * installments, locale) })}
                                     </p>
                                 ) : null}
                             </div>
@@ -553,7 +562,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 
                     {/* Status */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>Status inicial</legend>
+                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("initialStatus")}</legend>
                         <div className="grid grid-cols-2 gap-2">
                             {(["pendente", "pago", "agendado", "vencido"] as BillStatus[]).map(s => {
                                 const meta = STATUS_META[s];
@@ -564,14 +573,14 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                         style={status === s
                                             ? { background: meta.bg, borderColor: meta.border, color: meta.color, cursor: isSeries ? "not-allowed" : "pointer" }
                                             : { background: "transparent", borderColor: "var(--cf-border)", color: "var(--cf-text-2)", cursor: isSeries ? "not-allowed" : "pointer" }}>
-                                        {meta.label}
+                                        {tStatus(s)}
                                     </button>
                                 );
                             })}
                         </div>
                         {isSeries && (
                             <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-                                Toda série começa pendente. Baixe cada parcela ao pagá-la.
+                                {t("seriesStartsPending")}
                             </p>
                         )}
                     </fieldset>
@@ -581,18 +590,18 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         {/* Não é <label> — não há um único campo associado (galeria +
                             botão de upload logo abaixo). */}
                         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                            Fotos (boleto, nota fiscal...) — {photos.length}
+                            {t("photos", { count: photos.length })}
                         </p>
-                        
+
                         {/* Gallery de fotos */}
                         {photos.length > 0 && (
                             <div className="grid grid-cols-3 gap-2 mb-2">
                                 {photos.map((url, idx) => (
                                     <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-[var(--sunken)]">
-                                        <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                                        <img src={url} alt={t("photoAlt", { index: idx + 1 })} className="w-full h-full object-cover" />
                                         <button
                                             onClick={() => removePhoto(idx)}
-                                            aria-label={`Remover foto ${idx + 1}`}
+                                            aria-label={t("removePhoto", { index: idx + 1 })}
                                             className="absolute top-1 right-1 p-1 rounded-lg cursor-pointer"
                                             style={{ background: "rgba(0,0,0,0.6)" }}>
                                             <Trash size={12} style={{ color: "white" }} />
@@ -606,7 +615,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         <label className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border-2 border-dashed cursor-pointer transition-all"
                             style={{ borderColor: "var(--cf-border)", background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                             <ImageIcon size={16} />
-                            {uploadingPhoto ? "Enviando..." : "Adicionar foto"}
+                            {uploadingPhoto ? t("uploading") : t("addPhoto")}
                             <input
                                 type="file"
                                 accept="image/*"
@@ -621,15 +630,15 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     <PaymentMethodSelector
                         value={paymentMethod}
                         onChange={setPaymentMethod}
-                        label="Forma de pagamento prevista"
+                        label={t("paymentMethodLabel")}
                         required
                     />
 
                     {/* Observação */}
                     <div className="space-y-2">
-                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
+                        <label htmlFor={notesId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("notes")}</label>
                         <input id={notesId} value={notes} onChange={e => setNotes(e.target.value)}
-                            placeholder="Número do boleto, fornecedor..."
+                            placeholder={t("notesPlaceholder")}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -640,8 +649,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                             ? { background: "var(--brand)", color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
-                            ? <><Loader2 size={15} className="animate-spin" /> Salvando…</>
-                            : <><ShieldCheck size={15} /> {editing ? "Salvar alterações" : "Criar conta"}</>}
+                            ? <><Loader2 size={15} className="animate-spin" /> {t("saving")}</>
+                            : <><ShieldCheck size={15} /> {editing ? t("saveChanges") : t("createBill")}</>}
                     </button>
                     </>
                     )}
@@ -651,8 +660,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
             {/* Modal de PIN para confirmar criação/edição */}
             <PinModal
                 open={pinOpen}
-                title={editing ? "Confirmar edição" : "Confirmar criação"}
-                subtitle="Digite seu PIN de 4 dígitos para salvar"
+                title={editing ? t("pinConfirmEditTitle") : t("pinConfirmCreateTitle")}
+                subtitle={t("pinConfirmSaveSubtitle")}
                 onClose={() => setPinOpen(false)}
                 onSuccess={handlePinSuccess}
             />
@@ -665,6 +674,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
 function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
     open: boolean; alertDays: number; onClose: () => void; onSave: (d: number) => void;
 }) {
+    const t = useTranslations("contasPagar.alertSettings");
+    const tPin = useTranslations("common.pin");
     const [val, setVal] = useState(alertDays);
     useEffect(() => { if (open) setVal(alertDays); }, [open, alertDays]);
     if (!open) return null;
@@ -676,13 +687,13 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                 <div className="flex items-start justify-between mb-5">
                     <div>
                         <h3 className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-                            Alertas de vencimento
+                            {t("title")}
                         </h3>
                         <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>
-                            Quantos dias antes do vencimento alertar?
+                            {t("question")}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" aria-label="Fechar"
+                    <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" aria-label={tPin("close")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -691,9 +702,9 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                 {/* Slider visual */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>1 dia</span>
-                        <span className="font-heading text-2xl font-bold" style={{ color: "var(--cf-text)" }}>{val}d</span>
-                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>30 dias</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>{t("oneDay")}</span>
+                        <span className="font-heading text-2xl font-bold" style={{ color: "var(--cf-text)" }}>{t("dayShort", { days: val })}</span>
+                        <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>{t("thirtyDays")}</span>
                     </div>
                     <input type="range" min={1} max={30} value={val} onChange={e => setVal(Number(e.target.value))}
                         className="w-full cursor-pointer accent-blue-500" />
@@ -704,7 +715,7 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                                 style={val === d
                                     ? { background: "var(--brand)", borderColor: "transparent", color: "white" }
                                     : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}>
-                                {d}d
+                                {t("dayShort", { days: d })}
                             </button>
                         ))}
                     </div>
@@ -715,19 +726,19 @@ function AlertSettingsModal({ open, alertDays, onClose, onSave }: {
                     style={{ background: "var(--warn-weak)", border: "1px solid var(--warn-weak)" }}>
                     <Bell size={15} style={{ color: "var(--warn)", flexShrink: 0 }} />
                     <p className="text-xs" style={{ color: "var(--warn)" }}>
-                        Você verá um badge no menu e um toast ao entrar na página quando uma conta vencer em até <strong>{val} dia{val !== 1 ? "s" : ""}</strong>.
+                        {t.rich("preview", { count: val, strong: (c) => <strong>{c}</strong> })}
                     </p>
                 </div>
 
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold cursor-pointer"
                         style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
-                        Cancelar
+                        {t("cancel")}
                     </button>
                     <button onClick={() => { onSave(val); onClose(); }}
                         className="flex-1 py-3 rounded-xl text-sm font-bold cursor-pointer"
                         style={{ background: "var(--brand)", color: "white" }}>
-                        Salvar
+                        {t("save")}
                     </button>
                 </div>
             </div>
@@ -742,6 +753,8 @@ function PhotoGalleryModal({ open, photos, onClose }: {
     photos: string[];
     onClose: () => void;
 }) {
+    const t = useTranslations("contasPagar.gallery");
+    const tPin = useTranslations("common.pin");
     const [currentIndex, setCurrentIndex] = useState(0);
     const dialogRef = useRef<HTMLDivElement>(null);
     const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -811,25 +824,25 @@ function PhotoGalleryModal({ open, photos, onClose }: {
                 ref={dialogRef}
                 role="dialog"
                 aria-modal="true"
-                aria-label={`Foto ${currentIndex + 1} de ${photos.length}`}
+                aria-label={t("counterAria", { index: currentIndex + 1, total: photos.length })}
                 tabIndex={-1}
                 className="relative w-full h-full flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}>
                 {/* Imagem principal */}
                 <div className="relative max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center">
-                    <img src={current} alt={`Foto ${currentIndex + 1}`}
+                    <img src={current} alt={t("photoAlt", { index: currentIndex + 1 })}
                         className="max-w-full max-h-full object-contain rounded-xl" />
                 </div>
 
                 {/* Navegação */}
                 {photos.length > 1 && (
                     <>
-                        <button onClick={handlePrev} aria-label="Foto anterior"
+                        <button onClick={handlePrev} aria-label={t("prev")}
                             className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
                             style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                             <ChevronLeft size={24} />
                         </button>
-                        <button onClick={handleNext} aria-label="Próxima foto"
+                        <button onClick={handleNext} aria-label={t("next")}
                             className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full cursor-pointer transition-all hover:scale-110"
                             style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                             <ChevronRight size={24} />
@@ -846,7 +859,7 @@ function PhotoGalleryModal({ open, photos, onClose }: {
                 </div>
 
                 {/* Botão fechar */}
-                <button onClick={onClose} aria-label="Fechar"
+                <button onClick={onClose} aria-label={tPin("close")}
                     className="absolute top-4 right-4 p-2 rounded-lg cursor-pointer transition-all hover:scale-110"
                     style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
                     <X size={20} />
@@ -865,6 +878,9 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
     onClose: () => void;
     onConfirm: (paidAt: string, method: PaymentMethod) => Promise<void>;
 }) {
+    const t = useTranslations("contasPagar.payModal");
+    const tPin = useTranslations("common.pin");
+    const locale = useLocale();
     const [paidAt, setPaidAt] = useState(TODAY);
     const [method, setMethod] = useState<PaymentMethod | null>(null);
     const [pinOpen, setPinOpen] = useState(false);
@@ -889,7 +905,7 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
         if (!canConfirm || !uid) return;
         const pinHash = await loadPinHash(uid);
         if (!pinHash) {
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
             return;
         }
         setErr("");
@@ -906,23 +922,23 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
                 await onConfirm(paidAt, method!);
                 onClose();
             } catch (e: any) {
-                setErr(e?.message ?? "Erro ao registrar pagamento");
+                setErr(e?.message ?? t("registerError"));
                 setSaving(false);
             }
         } else if (result === "locked") {
             setPinOpen(false);
-            setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+            setErr(tPin("lockedRetry"));
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setPinOpen(false);
-                setErr("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.");
+                setErr(tPin("lockedRetry"));
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setPinOpen(false);
-            setErr("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.");
+            setErr(tPin("notConfigured"));
         }
     }
 
@@ -939,10 +955,10 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
 
                 <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
                     <div>
-                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Registrar pagamento</p>
-                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{bill.title} · {toBRL(bill.amount)}</p>
+                        <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
+                        <p className="text-xs mt-1 font-medium truncate" style={{ color: "var(--cf-text-2)" }}>{t("summary", { title: bill.title, amount: toBRL(bill.amount, locale) })}</p>
                     </div>
-                    <button onClick={() => !saving && onClose()} aria-label="Fechar" className="p-1.5 rounded-lg cursor-pointer"
+                    <button onClick={() => !saving && onClose()} aria-label={tPin("close")} className="p-1.5 rounded-lg cursor-pointer"
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <X size={16} />
                     </button>
@@ -958,7 +974,7 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
 
                     {/* Data do pagamento */}
                     <div className="space-y-2">
-                        <label htmlFor={paidAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data do pagamento</label>
+                        <label htmlFor={paidAtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("paymentDate")}</label>
                         <input id={paidAtId} type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
                             className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -968,7 +984,7 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
                     <PaymentMethodSelector
                         value={method}
                         onChange={setMethod}
-                        label="Forma de pagamento utilizada"
+                        label={t("paymentMethodLabel")}
                         required
                     />
 
@@ -978,16 +994,16 @@ function PayModal({ open, bill, uid, onClose, onConfirm }: {
                             ? { background: "var(--pos)", color: "white" }
                             : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         {saving
-                            ? <><Loader2 size={15} className="animate-spin" /> Registrando…</>
-                            : <><ShieldCheck size={15} /> Confirmar pagamento</>}
+                            ? <><Loader2 size={15} className="animate-spin" /> {t("registering")}</>
+                            : <><ShieldCheck size={15} /> {t("confirm")}</>}
                     </button>
                 </div>
             </div>
         </div>
         <PinModal
             open={pinOpen}
-            title="Confirmar pagamento"
-            subtitle="Digite seu PIN de 4 dígitos para confirmar a baixa"
+            title={t("pinTitle")}
+            subtitle={t("pinSubtitle")}
             onClose={() => setPinOpen(false)}
             onSuccess={handlePinSuccess}
         />
@@ -1004,6 +1020,9 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
     onDelete: () => void;
     onOpenPayModal: () => void;
 }) {
+    const t = useTranslations("contasPagar.card");
+    const tStatus = useTranslations("contasPagar.status");
+    const locale = useLocale();
     const [showPhotos, setShowPhotos] = useState(false);
     const days = daysUntil(bill.dueDate);
     const status: BillStatus = bill._status;
@@ -1042,11 +1061,11 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                                         style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
-                                        {meta.label}
+                                        {tStatus(status)}
                                     </span>
                                     {bill.seriesId && bill.installmentCount && (
                                         <span className="flex items-center gap-1 text-xs" style={{ color: "var(--cf-text-3)" }}>
-                                            <Repeat size={10} /> Parcela {bill.installmentIndex}/{bill.installmentCount}
+                                            <Repeat size={10} /> {t("installment", { index: bill.installmentIndex ?? 0, count: bill.installmentCount })}
                                         </span>
                                     )}
                                     {bill?.photos?.length > 0 && (
@@ -1060,17 +1079,17 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                             }}
                                             role="button"
                                             tabIndex={0}
-                                            aria-label={`Ver ${bill?.photos?.length} foto${bill?.photos?.length !== 1 ? "s" : ""} anexada${bill?.photos?.length !== 1 ? "s" : ""}`}
+                                            aria-label={t("viewPhotos", { count: bill.photos.length })}
                                             className="nxfi-clickable-focus flex items-center gap-1 text-xs px-2 py-0.5 rounded-full cursor-pointer transition-all hover:opacity-80"
                                             style={{ background: "var(--brand-weak)", color: "var(--brand)" }}>
-                                            <ImageIcon size={10} /> {bill?.photos?.length} foto{bill?.photos?.length !== 1 ? "s" : ""}
+                                            <ImageIcon size={10} /> {t("photoCount", { count: bill.photos.length })}
                                         </span>
                                     )}
                                 </div>
                             </div>
                             <span className="font-heading font-bold text-base shrink-0 mono"
                                 style={{ color: isOverdue ? "var(--neg)" : "var(--cf-text)" }}>
-                                {toBRL(bill.amount)}
+                                {toBRL(bill.amount, locale)}
                             </span>
                         </div>
 
@@ -1081,12 +1100,12 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             <span className="text-xs font-medium"
                                 style={{ color: isOverdue ? "var(--neg)" : isUrgent ? "var(--warn)" : "var(--cf-text-2)" }}>
                                 {status === ("pago" as const)
-                                    ? `Pago em ${bill.paidAt ? labelDate(bill.paidAt) : "—"}`
+                                    ? t("paidOn", { date: bill.paidAt ? labelDate(bill.paidAt, locale) : "—" })
                                     : isOverdue
-                                        ? `Venceu há ${Math.abs(days)} dia${Math.abs(days) !== 1 ? "s" : ""} · ${labelDate(bill.dueDate)}`
+                                        ? t("overdueBy", { count: Math.abs(days), date: labelDate(bill.dueDate, locale) })
                                         : days === 0
-                                            ? `⚠️ Vence hoje! · ${labelDate(bill.dueDate)}`
-                                            : `Vence em ${days} dia${days !== 1 ? "s" : ""} · ${labelDate(bill.dueDate)}`}
+                                            ? t("dueToday", { date: labelDate(bill.dueDate, locale) })
+                                            : t("dueIn", { count: days, date: labelDate(bill.dueDate, locale) })}
                             </span>
                             {isUrgent && (
                                 <span className="ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
@@ -1100,12 +1119,12 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                 {bill.paidPaymentMethod ? (
                                     <>
                                         {bill.paymentMethod && bill.paymentMethod !== bill.paidPaymentMethod && (
-                                            <PaymentMethodBadge method={bill.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                            <PaymentMethodBadge method={bill.paymentMethod as PaymentMethod} prefix={t("prevMethod")} small />
                                         )}
-                                        <PaymentMethodBadge method={bill.paidPaymentMethod as PaymentMethod} prefix="Pago:" small />
+                                        <PaymentMethodBadge method={bill.paidPaymentMethod as PaymentMethod} prefix={t("paidMethod")} small />
                                     </>
                                 ) : bill.paymentMethod && (
-                                    <PaymentMethodBadge method={bill.paymentMethod as PaymentMethod} prefix="Prev:" small />
+                                    <PaymentMethodBadge method={bill.paymentMethod as PaymentMethod} prefix={t("prevMethod")} small />
                                 )}
                             </div>
                         )}
@@ -1123,25 +1142,25 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all"
                             style={{ background: "var(--pos)", color: "white" }}>
                             <CheckCircle2 size={13} />
-                            Marcar como pago
+                            {t("markPaid")}
                         </button>
                     ) : (
                         <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold"
                             style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
-                            <Check size={13} /> Conta paga
+                            <Check size={13} /> {t("billPaid")}
                         </div>
                     )}
-                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label="Editar"
+                    <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label={t("edit")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Edit3 size={14} />
                     </button>
-                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label="Excluir"
+                    <button onClick={onDelete} className="p-2 rounded-xl cursor-pointer" aria-label={t("delete")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
                         <Trash2 size={14} />
                     </button>
                 </div>
 
-                <AuditTrail record={bill} settleLabel="Pago" />
+                <AuditTrail record={bill} settleLabel={t("settleLabel")} />
             </div>
             <PhotoGalleryModal open={showPhotos} photos={bill?.photos ?? []} onClose={() => setShowPhotos(false)} />
         </div>
@@ -1175,6 +1194,10 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function ContasPagarPage() {
+    const t = useTranslations("contasPagar");
+    const tPin = useTranslations("common.pin");
+    const tNav = useTranslations("nav");
+    const locale = useLocale();
     const [uid, setUid] = useState<string | null>(null);
     // uid do login atual — usado para o PIN (pessoal) e para o selo de autoria,
     // separado de `uid`, que é o dono dos dados (pode ser outra conta).
@@ -1222,7 +1245,7 @@ export default function ContasPagarPage() {
     const saveAlertDays = (d: number) => {
         setAlertDays(d);
         localStorage.setItem("nexusfi:alertDays", String(d));
-        showToast(`Alertas configurados para ${d} dia${d !== 1 ? "s" : ""} antes do vencimento`);
+        showToast(t("toast.alertsConfigured", { count: d }));
     };
 
     // Auth + Firestore realtime
@@ -1253,7 +1276,7 @@ export default function ContasPagarPage() {
 
                     setUid(ownerUid);
                     setAuthUid(u.uid);
-                    setUserName(u.displayName ?? u.email ?? "Usuário");
+                    setUserName(u.displayName ?? u.email ?? "");
                     setUserEmail(u.email ?? "");
                     snapUnsub?.();
                     snapUnsub = onSnapshot(
@@ -1269,7 +1292,7 @@ export default function ContasPagarPage() {
 
     // ── Toast de alerta ao entrar na página ───────────────────────────────────
     // Dispara uma única vez quando os dados carregam
-    const alertsShownRef = React.useRef(false);
+    const alertsShownRef = useRef(false);
     useEffect(() => {
         if (pageState !== "ready" || alertsShownRef.current) return;
         alertsShownRef.current = true;
@@ -1285,17 +1308,11 @@ export default function ContasPagarPage() {
 
         setTimeout(() => {
             if (overdue.length > 0) {
-                showToast(
-                    `${overdue.length} conta${overdue.length !== 1 ? "s" : ""} vencida${overdue.length !== 1 ? "s" : ""} — regularize o quanto antes!`,
-                    "err"
-                );
+                showToast(t("toast.overdueOnLoad", { count: overdue.length }), "err");
             }
             if (soon.length > 0) {
                 setTimeout(() => {
-                    showToast(
-                        `⏰ ${soon.length} conta${soon.length !== 1 ? "s" : ""} vence${soon.length !== 1 ? "m" : ""} nos próximos ${alertDaysCurrent} dias`,
-                        "warn"
-                    );
+                    showToast(t("toast.dueSoonOnLoad", { count: soon.length, days: alertDaysCurrent }), "warn");
                 }, 600);
             }
         }, 800);
@@ -1312,7 +1329,7 @@ export default function ContasPagarPage() {
 
     // ── Salvar conta ───────────────────────────────────────────────────────────
     async function handleSave(data: Omit<Bill, "id" | "userId" | "createdAt">) {
-        if (!uid) throw new Error("Não autenticado");
+        if (!uid) throw new Error(tPin("notConfigured"));
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc, writeBatch }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
@@ -1347,7 +1364,7 @@ export default function ContasPagarPage() {
             }
             await batch.commit();
             const last = addMonthsClamped(data.dueDate, n - 1);
-            showToast(`${n} parcelas criadas (${monthLabel(data.dueDate)} → ${monthLabel(last)})`);
+            showToast(t("toast.installmentsCreated", { count: n, from: monthLabel(data.dueDate), to: monthLabel(last) }));
             return;
         }
 
@@ -1362,11 +1379,11 @@ export default function ContasPagarPage() {
         if (editing) {
             await updateDoc(doc(db, "users", uid, "bills", editing.id), { ...clean, ...stampUpdate(actor) } as any);
             billId = editing.id;
-            showToast("Conta atualizada!");
+            showToast(t("toast.billUpdated"));
         } else {
             const ref = await addDoc(collection(db, "users", uid, "bills"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
             billId = ref.id;
-            showToast("Conta criada!");
+            showToast(t("toast.billCreated"));
         }
 
         // Reflete no Fluxo de Caixa: com status "pago" cria/atualiza a saída
@@ -1424,9 +1441,9 @@ export default function ContasPagarPage() {
                 count++;
             });
             if (count) await batch.commit();
-            showToast(count ? `${count} parcela(s) futura(s) atualizada(s)` : "Nenhuma parcela futura pendente");
+            showToast(count ? t("toast.futureInstallmentsUpdated", { count }) : t("toast.noFutureInstallments"));
         } catch (e: any) {
-            showToast(e?.message ?? "Erro ao atualizar a série", "err");
+            showToast(e?.message ?? t("toast.seriesUpdateError"), "err");
         } finally {
             setSeriesBusy(false);
             setSeriesEdit(null);
@@ -1454,13 +1471,13 @@ export default function ContasPagarPage() {
             paidPaymentMethod: method,
         });
 
-        showToast("Pago! Lançado no Fluxo de Caixa ✓");
+        showToast(t("toast.paidPosted"));
     }
 
     // ── Atualizar categoria e sincronizar cashflow se a conta já está no fluxo ──
     async function handleUpdateCategory(billId: string, oldCategory: string, newCategory: string, bill: Bill) {
         if (!uid || oldCategory === newCategory) return;
-        
+
         const [{ getFirebase }, { doc, updateDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
@@ -1473,8 +1490,8 @@ export default function ContasPagarPage() {
         // Reflete a nova categoria no Fluxo de Caixa (só age se a conta está paga).
         await syncBillCashflow(db, uid, { ...bill, category: newCategory });
         showToast(bill.status === "pago"
-            ? "Categoria atualizada em contas e fluxo de caixa"
-            : "Categoria atualizada!");
+            ? t("toast.categoryUpdatedBoth")
+            : t("toast.categoryUpdated"));
     }
 
     // ── Excluir conta ──────────────────────────────────────────────────────────
@@ -1489,7 +1506,7 @@ export default function ContasPagarPage() {
         if (!uid) return;
         const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
-            showToast("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.", "err");
+            showToast(tPin("notConfigured"), "err");
             return;
         }
         setDeleteScope(scope);
@@ -1502,7 +1519,7 @@ export default function ContasPagarPage() {
         if (!confirmId || !uid || deleting) return;
         const pinHash = await loadPinHash(authUid ?? uid);
         if (!pinHash) {
-            showToast("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.", "err");
+            showToast(tPin("notConfigured"), "err");
             return;
         }
         setDeletePinOpen(true);
@@ -1540,12 +1557,12 @@ export default function ContasPagarPage() {
                             syncBillCashflow(db, uid, { id: d.id, title: "", amount: 0, dueDate: "", category: "", status: "removido" })
                         )
                     );
-                    showToast(`${alvo.length} parcela(s) removida(s).`);
+                    showToast(t("toast.installmentsRemoved", { count: alvo.length }));
                 } else {
                     // ── Conta única ou "só esta parcela" ──
                     await syncBillCashflow(db, uid, { id: confirmId, title: "", amount: 0, dueDate: "", category: "", status: "removido" });
                     await deleteDoc(doc(db, "users", uid, "bills", confirmId));
-                    showToast("Conta removida.");
+                    showToast(t("toast.billRemoved"));
                 }
 
                 setConfirmId(null);
@@ -1557,18 +1574,18 @@ export default function ContasPagarPage() {
             }
         } else if (result === "locked") {
             setDeletePinOpen(false);
-            showToast("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.", "err");
+            showToast(tPin("lockedRetry"), "err");
         } else if (result === "wrong") {
             const { locked } = getPinLockStatus();
             if (locked) {
                 setDeletePinOpen(false);
-                showToast("PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.", "err");
+                showToast(tPin("lockedRetry"), "err");
             } else {
-                (window as any).__pinModalShake?.("PIN incorreto. Tente novamente.");
+                (window as any).__pinModalShake?.(tPin("wrong"));
             }
         } else if (result === "no_pin") {
             setDeletePinOpen(false);
-            showToast("Configure seu PIN de 4 dígitos na página de Perfil antes de continuar.", "err");
+            showToast(tPin("notConfigured"), "err");
         }
     }
 
@@ -1592,10 +1609,10 @@ export default function ContasPagarPage() {
 
     // Agrupa em seções ordenadas por prioridade
     const sections = useMemo(() => [
-        { key: "vencido", label: "Vencidas", color: "var(--neg)", bills: filtered.filter(b => b._status === ("vencido" as const)) },
-        { key: "pendente", label: "Pendentes", color: "var(--warn)", bills: filtered.filter(b => b._status === ("pendente" as const)) },
-        { key: "agendado", label: "Agendadas", color: "var(--brand)", bills: filtered.filter(b => b._status === ("agendado" as const)) },
-        { key: "pago", label: "Pagas", color: "var(--pos)", bills: filtered.filter(b => b._status === ("pago" as const)) },
+        { key: "vencido", color: "var(--neg)", bills: filtered.filter(b => b._status === ("vencido" as const)) },
+        { key: "pendente", color: "var(--warn)", bills: filtered.filter(b => b._status === ("pendente" as const)) },
+        { key: "agendado", color: "var(--brand)", bills: filtered.filter(b => b._status === ("agendado" as const)) },
+        { key: "pago", color: "var(--pos)", bills: filtered.filter(b => b._status === ("pago" as const)) },
     ].filter(s => s.bills.length > 0), [filtered]);
 
     // KPIs
@@ -1618,18 +1635,18 @@ export default function ContasPagarPage() {
 
     // ── Loading / Error ────────────────────────────────────────────────────────
 
-    if (pageState === "blocked") return <AccessDenied category="Contas a Pagar" />;
+    if (pageState === "blocked") return <AccessDenied category={tNav("items.contasPagar")} />;
 
     if (pageState === "loading") return <PageLoader background="var(--cf-bg)" />;
 
     if (pageState === "error") return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
-            <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>Erro ao conectar</p>
+            <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>{t("error.connect")}</p>
             <p className="text-xs font-mono rounded-xl p-4 max-w-sm break-all" style={{ color: "var(--neg)", background: "var(--neg-weak)" }}>{errMsg}</p>
             <button onClick={() => window.location.reload()}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                 style={{ background: "var(--brand)", color: "white" }}>
-                Tentar novamente
+                {t("error.tryAgain")}
             </button>
         </div>
     );
@@ -1637,7 +1654,7 @@ export default function ContasPagarPage() {
     return (
         <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
 
-            <Navbar user={{ displayName: userName, email: userEmail }} activePath="/contas-pagar" onLogout={handleLogout} />
+            <Navbar user={{ displayName: userName || null, email: userEmail }} activePath="/contas-pagar" onLogout={handleLogout} />
 
             {/* Modais */}
             <BillModal
@@ -1659,13 +1676,13 @@ export default function ContasPagarPage() {
             {/* Escopo de exclusão de série (parcela) */}
             <SeriesScopeDialog
                 open={!!seriesDelete}
-                title="Excluir parcela"
+                title={t("seriesDelete.title")}
                 message={
                     seriesDelete
-                        ? `"${seriesDelete.title}" — parcela ${seriesDelete.installmentIndex}/${seriesDelete.installmentCount}. Parcelas já pagas nunca são removidas.`
+                        ? t("seriesDelete.message", { title: seriesDelete.title, index: seriesDelete.installmentIndex ?? 0, count: seriesDelete.installmentCount ?? 0 })
                         : ""
                 }
-                actionLabel="Excluir"
+                actionLabel={t("seriesDelete.action")}
                 onPick={(scope) => seriesDelete && startSeriesDelete(seriesDelete, scope)}
                 onCancel={() => setSeriesDelete(null)}
             />
@@ -1673,13 +1690,13 @@ export default function ContasPagarPage() {
             {/* Escopo de edição de série (parcela) */}
             <SeriesScopeDialog
                 open={!!seriesEdit}
-                title="Aplicar em quais parcelas?"
+                title={t("seriesEdit.title")}
                 message={
                     seriesEdit
-                        ? `Você editou a parcela ${seriesEdit.base.installmentIndex}/${seriesEdit.base.installmentCount} de "${seriesEdit.base.title}".`
+                        ? t("seriesEdit.message", { index: seriesEdit.base.installmentIndex ?? 0, count: seriesEdit.base.installmentCount ?? 0, title: seriesEdit.base.title })
                         : ""
                 }
-                actionLabel="Salvando"
+                actionLabel={t("seriesEdit.action")}
                 loading={seriesBusy}
                 onPick={applySeriesEdit}
                 onCancel={() => setSeriesEdit(null)}
@@ -1696,31 +1713,31 @@ export default function ContasPagarPage() {
                             <Trash2 size={20} style={{ color: "var(--neg)" }} />
                         </div>
                         <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>
-                            Excluir conta?
+                            {t("confirmDelete.title")}
                         </p>
                         <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>
-                            Esta ação não pode ser desfeita. Será solicitado o seu PIN.
+                            {t("confirmDelete.body")}
                         </p>
                         <div className="flex gap-2">
                             <button onClick={() => setConfirmId(null)}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                                 style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
-                                Cancelar
+                                {t("confirmDelete.cancel")}
                             </button>
                             <button onClick={handleDeleteClick} disabled={deleting}
                                 className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
                                 style={{ background: "var(--neg)", color: "white" }}>
-                                {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Excluir</>}
+                                {deleting ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> {t("confirmDelete.delete")}</>}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
-            
+
             <PinModal
                 open={deletePinOpen}
-                title="Confirmar exclusão"
-                subtitle="Digite seu PIN de 4 dígitos para excluir"
+                title={t("confirmDelete.pinTitle")}
+                subtitle={t("confirmDelete.pinSubtitle")}
                 onClose={() => { setDeletePinOpen(false); setConfirmId(null); setDeleteScope("one"); }}
                 onSuccess={handleDeleteConfirm}
             />
@@ -1734,20 +1751,20 @@ export default function ContasPagarPage() {
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>
-                            Contas a pagar
+                            {t("meta.title")}
                         </h1>
                         <p className="text-xs mt-1 flex items-center gap-2" style={{ color: "var(--cf-text-2)" }}>
                             {kpis.alert > 0
                                 ? <span className="flex items-center gap-1 font-semibold animate-pulse" style={{ color: "var(--warn)" }}>
                                     <AlertTriangle size={12} />
-                                    {kpis.alert} vence{kpis.alert !== 1 ? "m" : ""} nos próximos {alertDays} dias
+                                    {t("header.dueSoon", { count: kpis.alert, days: alertDays })}
                                 </span>
                                 : kpis.totalOverdue > 0
                                     ? <span className="flex items-center gap-1 font-semibold" style={{ color: "var(--neg)" }}>
                                         <AlertTriangle size={12} />
-                                        {kpis.totalOverdue} conta{kpis.totalOverdue !== 1 ? "s" : ""} vencida{kpis.totalOverdue !== 1 ? "s" : ""}
+                                        {t("header.overdue", { count: kpis.totalOverdue })}
                                     </span>
-                                    : <span style={{ color: "var(--pos)" }}>✓ Tudo em dia!</span>
+                                    : <span style={{ color: "var(--pos)" }}>{t("header.allClear")}</span>
                             }
                         </p>
                     </div>
@@ -1755,8 +1772,8 @@ export default function ContasPagarPage() {
                         <button onClick={() => setSettingsOpen(true)}
                             className="relative p-2 rounded-xl cursor-pointer"
                             style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                            title={`Alertas: ${alertDays} dias`}
-                            aria-label={`Configurar alertas de vencimento — hoje em ${alertDays} dias`}>
+                            title={t("alertButton.title", { days: alertDays })}
+                            aria-label={t("alertButton.aria", { days: alertDays })}>
                             <Settings2 size={16} />
                             {/* Indicador do prazo configurado */}
                             <span className="absolute -top-1 -right-1 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
@@ -1767,7 +1784,7 @@ export default function ContasPagarPage() {
                         <button onClick={() => { setEditing(null); setModal(true); }}
                             className="hidden sm:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
                             style={{ background: "var(--brand)", color: "white" }}>
-                            <Plus size={14} /> Nova conta
+                            <Plus size={14} /> {t("meta.newBill")}
                         </button>
                     </div>
                 </div>
@@ -1775,10 +1792,10 @@ export default function ContasPagarPage() {
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
-                        { label: "A pagar", val: toBRL(kpis.aPagar), color: "var(--brand)", bg: "var(--brand-weak)", sub: `${kpis.totalNotPaid} conta${kpis.totalNotPaid !== 1 ? "s" : ""}` },
-                        { label: "Vencidas", val: toBRL(kpis.vencido), color: "var(--neg)", bg: "var(--neg-weak)", sub: `${kpis.totalOverdue} conta${kpis.totalOverdue !== 1 ? "s" : ""}` },
-                        { label: "Pagas", val: toBRL(kpis.pago), color: "var(--pos)", bg: "var(--pos-weak)", sub: `${kpis.totalPaid} conta${kpis.totalPaid !== 1 ? "s" : ""}` },
-                        { label: `Alerta (${alertDays}d)`, val: String(kpis.alert), color: "var(--warn)", bg: "var(--warn-weak)", sub: "vence em breve" },
+                        { label: t("kpi.toPay"), val: toBRL(kpis.aPagar, locale), color: "var(--brand)", bg: "var(--brand-weak)", sub: t("kpi.billCount", { count: kpis.totalNotPaid }) },
+                        { label: t("kpi.overdue"), val: toBRL(kpis.vencido, locale), color: "var(--neg)", bg: "var(--neg-weak)", sub: t("kpi.billCount", { count: kpis.totalOverdue }) },
+                        { label: t("kpi.paid"), val: toBRL(kpis.pago, locale), color: "var(--pos)", bg: "var(--pos-weak)", sub: t("kpi.billCount", { count: kpis.totalPaid }) },
+                        { label: t("kpi.alert", { days: alertDays }), val: String(kpis.alert), color: "var(--warn)", bg: "var(--warn-weak)", sub: t("kpi.dueSoon") },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
@@ -1795,7 +1812,7 @@ export default function ContasPagarPage() {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
                             style={{ color: "var(--cf-text-3)" }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
-                            placeholder="Buscar título ou observação…" aria-label="Buscar título ou observação"
+                            placeholder={t("toolbar.searchPlaceholder")} aria-label={t("toolbar.searchAria")}
                             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
                             style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                     </div>
@@ -1808,7 +1825,7 @@ export default function ContasPagarPage() {
                                     style={filterStatus === f
                                         ? { background: meta?.bg ?? "var(--cf-text)", color: meta?.color ?? "var(--cf-bg)", borderColor: meta?.border ?? "transparent" }
                                         : { background: "transparent", color: "var(--cf-text-2)", borderColor: "var(--cf-border)" }}>
-                                    {f === "todos" ? "Todos" : STATUS_META[f].label}
+                                    {f === "todos" ? t("toolbar.filterAll") : t(`status.${f}`)}
                                 </button>
                             );
                         })}
@@ -1819,16 +1836,16 @@ export default function ContasPagarPage() {
                                 <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
-                                    <option value="todas">Todas</option>
-                                    {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
+                                    <option value="todas">{t("toolbar.categoryAll")}</option>
+                                    {CATEGORIES.map(c => <option key={c.label} value={c.label}>{t(`categories.${c.key}`)}</option>)}
                                 </select>
                             </div>
                             <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                                title="Vencimentos deste mês — troque o mês no seletor da Navbar">
+                                title={t("toolbar.monthHint")}>
                                 {periodLabel}
                             </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
-                                {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+                                {t("toolbar.resultCount", { count: filtered.length })}
                             </span>
                         </div>
                     </div>
@@ -1843,19 +1860,19 @@ export default function ContasPagarPage() {
                         </div>
                         <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
-                                ? "Nenhum resultado"
-                                : `Nada em ${periodLabel}`}
+                                ? t("empty.noResults")
+                                : t("empty.nothingIn", { period: periodLabel })}
                         </p>
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
-                                ? "Ajuste os filtros para ver outras contas."
-                                : "Nenhuma conta vence neste mês. Troque o mês no seletor da Navbar ou adicione uma conta."}
+                                ? t("empty.adjustFilters")
+                                : t("empty.noneThisMonth")}
                         </p>
                         {!search && filterStatus === "todos" && filterCategory === "todas" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}
                                 className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer mt-2"
                                 style={{ background: "var(--brand)", color: "white" }}>
-                                <Plus size={14} /> Adicionar conta
+                                <Plus size={14} /> {t("empty.addBill")}
                             </button>
                         )}
                     </div>
@@ -1866,14 +1883,14 @@ export default function ContasPagarPage() {
                                 {/* Separador de seção */}
                                 <div className="flex items-center gap-2.5 mb-3">
                                     <div className="w-2 h-2 rounded-full shrink-0" style={{ background: section.color }} />
-                                    <p className="text-sm font-bold" style={{ color: section.color }}>{section.label}</p>
+                                    <p className="text-sm font-bold" style={{ color: section.color }}>{t(`sections.${section.key}`)}</p>
                                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                                         style={{ background: section.color + "18", color: section.color }}>
                                         {section.bills.length}
                                     </span>
                                     <div className="flex-1 h-px" style={{ background: section.color + "30" }} />
                                     <span className="text-xs font-bold mono" style={{ color: section.color }}>
-                                        {toBRL(section.bills.reduce((s, b) => s + b.amount, 0))}
+                                        {toBRL(section.bills.reduce((s, b) => s + b.amount, 0), locale)}
                                     </span>
                                 </div>
 
@@ -1897,7 +1914,7 @@ export default function ContasPagarPage() {
 
             {/* FAB mobile */}
             <button onClick={() => { setEditing(null); setModal(true); }}
-                aria-label="Nova conta a pagar"
+                aria-label={t("meta.newBillFab")}
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                 style={{
                     bottom: 74, right: 16, width: 52, height: 52,
@@ -1910,6 +1927,3 @@ export default function ContasPagarPage() {
         </div>
     );
 }
-
-// Necessário para o useRef dentro do useEffect sem import
-import React from "react";
