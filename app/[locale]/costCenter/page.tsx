@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useId, useRef } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   TrendingUp,
   CreditCard,
@@ -27,6 +28,7 @@ import { syncExpenseCashflow } from "@/lib/costCenterSync";
 import { resolveAccountScope, hasPermission } from "@/lib/accountScope";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader } from "@/app/components/ui";
+import { formatMoney } from "@/lib/format";
 import "./costCenter.css";
 
 const FOCUSABLE_SELECTOR =
@@ -64,19 +66,17 @@ interface Expense {
 
 // ─── Período (mês/ano) ────────────────────────────────────────────────────────
 
-const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
 function monthKeyOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Data completa por extenso curto, ex: "21 de mai de 2026" — aceita Timestamp do Firestore, Date ou string/número. */
-function formatFullDate(value: unknown): string {
+/** Data completa por extenso curto — aceita Timestamp do Firestore, Date ou string/número. */
+function formatFullDate(value: unknown, locale: string): string {
   const hasToDate = (v: unknown): v is { toDate: () => Date } =>
     typeof v === "object" && v !== null && typeof (v as { toDate?: unknown }).toDate === "function";
   const d = hasToDate(value) ? value.toDate() : value instanceof Date ? value : new Date(value as string | number);
   if (isNaN(d.getTime())) return "—";
-  return `${d.getDate()} de ${MONTH_LABELS[d.getMonth()].toLowerCase()} de ${d.getFullYear()}`;
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
 }
 
 /** Converte Timestamp do Firestore, Date ou string/número pro formato "YYYY-MM-DD" que o <input type="date"> espera. */
@@ -114,7 +114,7 @@ function centerSpentForMonth(expenses: Expense[], centerName: string, monthKey: 
 
 // ─── Constantes e Helpers ─────────────────────────────────────────────────────
 
-const fmt = (n: number) => `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+const fmt = (n: number, locale: string) => formatMoney(n, locale);
 
 const COLORS = [
   "var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)",
@@ -123,7 +123,9 @@ const COLORS = [
 
 // Lista genérica — usada só como fallback pra quem ainda não respondeu o
 // "ramo de atuação" no onboarding (ou cujo ramo não bate com nenhum dos
-// 4 segmentos abaixo).
+// 4 segmentos abaixo). Os VALORES abaixo ficam GRAVADOS no Firestore
+// (exp.category / center.categories[].name) e são casados por string em
+// costCenterSync — NÃO traduzir. Só a exibição traduz, via EXPENSE_CATEGORY_KEY.
 const DEFAULT_CATEGORIES = [
   "Alimentação",
   "Transporte",
@@ -164,6 +166,45 @@ const CATEGORY_SETS: Record<string, string[]> = {
 function categoriesForSegment(ramo: string | null): string[] {
   if (ramo && CATEGORY_SETS[ramo]) return CATEGORY_SETS[ramo];
   return DEFAULT_CATEGORIES;
+}
+
+// storedValue → key de costCenter.expenseCategories (só exibição).
+const EXPENSE_CATEGORY_KEY: Record<string, string> = {
+  "Alimentação": "alimentacao",
+  "Transporte": "transporte",
+  "Hospedagem": "hospedagem",
+  "Comunicação": "comunicacao",
+  "Equipamentos": "equipamentos",
+  "Consultoria": "consultoria",
+  "Treinamento": "treinamento",
+  "Marketing": "marketing",
+  "Utilities": "utilities",
+  "Manutenção": "manutencao",
+  "Outros": "outros",
+  "Fornecedores": "fornecedores",
+  "Frete e logística": "freteLogistica",
+  "Aluguel do ponto": "aluguelPonto",
+  "Folha de pagamento": "folhaPagamento",
+  "Embalagens": "embalagens",
+  "Impostos": "impostos",
+  "TI / Software": "tiSoftware",
+  "Plataforma / Marketplace": "plataformaMarketplace",
+  "Marketing digital": "marketingDigital",
+  "Devoluções": "devolucoes",
+  "Matéria-prima": "materiaPrima",
+  "Mão de obra": "maoDeObra",
+  "Manutenção de máquinas": "manutencaoMaquinas",
+  "Energia": "energia",
+  "Logística": "logistica",
+  "Segurança do trabalho": "segurancaTrabalho",
+  "Ferramentas e equipamentos": "ferramentasEquipamentos",
+  "Deslocamento": "deslocamento",
+};
+
+/** Rótulo traduzido de uma categoria de despesa (valor gravado → texto). */
+function expenseCategoryLabel(storedValue: string, t: (key: string) => string): string {
+  const key = EXPENSE_CATEGORY_KEY[storedValue];
+  return key ? t(key) : storedValue;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -217,6 +258,7 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
 interface ChartCenter { id: string; name: string; budget: number; spent: number }
 
 function BarChart({ centers }: { centers: ChartCenter[] }) {
+  const t = useTranslations("costCenter.chart");
   if (centers.length === 0) return null;
   const maxVal = Math.max(...centers.map(c => Math.max(c.budget, c.spent, 1)));
   const W = Math.max(centers.length * 90 + 60, 320);
@@ -226,7 +268,7 @@ function BarChart({ centers }: { centers: ChartCenter[] }) {
       <svg
         viewBox={`0 0 ${W} 180`} style={{ width: "100%", minWidth: W, height: 180 }}
         role="img"
-        aria-label="Gráfico de barras: orçamento vs. gasto real por centro de custo — detalhamento na lista abaixo"
+        aria-label={t("ariaLabel")}
       >
         {[0, 0.5, 1].map(pct => {
           const y = 20 + (1 - pct) * 120;
@@ -241,9 +283,9 @@ function BarChart({ centers }: { centers: ChartCenter[] }) {
           );
         })}
         <rect x="52" y="162" width="10" height="8" rx="2" fill="var(--primary-light)" />
-        <text x="66" y="170" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">Orçamento</text>
+        <text x="66" y="170" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">{t("budget")}</text>
         <rect x="138" y="162" width="10" height="8" rx="2" fill="var(--primary)" />
-        <text x="152" y="170" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">Real</text>
+        <text x="152" y="170" fontSize="9" fill="var(--db-text-2)" fillOpacity="0.85">{t("real")}</text>
         {centers.map((c, i) => {
           const x = 52 + i * 90;
           const bw = 24;
@@ -282,13 +324,14 @@ function ConfirmModal({
   open,
   title,
   message,
-  confirmText = "Confirmar",
-  cancelText = "Cancelar",
+  confirmText,
+  cancelText,
   isDangerous = false,
   loading = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  const tc = useTranslations("common");
   if (!open) return null;
 
   return (
@@ -309,7 +352,7 @@ function ConfirmModal({
             onClick={onCancel}
             disabled={loading}
             className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
-            aria-label="Fechar"
+            aria-label={tc("close")}
           >
             <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
@@ -331,7 +374,7 @@ function ConfirmModal({
             className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-50"
             style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}
           >
-            {cancelText}
+            {cancelText ?? tc("cancel")}
           </button>
           <button
             type="button"
@@ -343,7 +386,7 @@ function ConfirmModal({
             }}
           >
             {loading ? <Loader size={14} className="animate-spin" /> : null}
-            {confirmText}
+            {confirmText ?? tc("confirm")}
           </button>
         </div>
       </div>
@@ -364,6 +407,10 @@ interface ExpenseModalProps {
 }
 
 function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSaved }: ExpenseModalProps) {
+  const t = useTranslations("costCenter.expenseModal");
+  const tCat = useTranslations("costCenter.expenseCategories");
+  const tStatus = useTranslations("costCenter.status");
+  const tc = useTranslations("common");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [center, setCenter] = useState("");
@@ -457,20 +504,20 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           description, category, center, amount: parsedAmount, date, status,
         });
         await syncExpenseCashflow(db, uid, editing.id, { description, category, center, amount: parsedAmount, date, status });
-        onSaved("Despesa atualizada!");
+        onSaved(t("expenseUpdated"));
       } else {
         const expRef = await addDoc(collection(db, "expenses"), {
           description, category, center, amount: parsedAmount, date, status,
           userId: uid, createdAt: new Date(),
         });
         await syncExpenseCashflow(db, uid, expRef.id, { description, category, center, amount: parsedAmount, date, status });
-        onSaved(status === "pago" ? "Despesa criada e lançada no fluxo de caixa!" : "Despesa criada!");
+        onSaved(status === "pago" ? t("expenseCreatedPosted") : t("expenseCreated"));
       }
 
       onClose();
     } catch (e: any) {
       console.error("SAVE EXPENSE ERROR:", e.code, e.message, e);
-      setErr(e.message || "Erro ao salvar");
+      setErr(e.message || t("saveError"));
     } finally {
       setSaving(false);
     }
@@ -492,13 +539,13 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
         <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
           <div>
             <h3 id={expenseTitleId} className="font-bold text-base" style={{ color: "var(--db-text)" }}>
-              {editing ? "Editar despesa" : "Nova despesa"}
+              {editing ? t("editTitle") : t("newTitle")}
             </h3>
             <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--success)" }}>
-              <Check size={11} /> Despesas "Pago" sincronizam com fluxo de caixa
+              <Check size={11} /> {t("syncNote")}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer" aria-label="Fechar">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer" aria-label={tc("close")}>
             <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
         </div>
@@ -515,10 +562,10 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           {/* Descrição */}
           <div>
             <label htmlFor={descriptionId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
-              Descrição <span style={{ color: "var(--db-text-3)" }}>(opcional)</span>
+              {t("description")} <span style={{ color: "var(--db-text-3)" }}>{t("optional")}</span>
             </label>
             <input id={descriptionId} type="text" value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="Ex: Almoço com cliente"
+              placeholder={t("descriptionPlaceholder")}
               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
           </div>
@@ -526,18 +573,18 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           {/* Categoria */}
           <div>
             <label htmlFor={categoryId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
-              Categoria <span style={{ color: "var(--danger)" }}>*</span>
+              {t("category")} <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             <select id={categoryId} value={category} onChange={e => setCategory(e.target.value)} required
               className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
               style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
-              <option value="">— Selecione uma categoria —</option>
-              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              <option value="">{t("selectCategory")}</option>
+              {categories.map(cat => <option key={cat} value={cat}>{expenseCategoryLabel(cat, tCat)}</option>)}
             </select>
             {category && (
               <div className="mt-2 flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ background: CATEGORY_COLORS[category] || "var(--cat-8)" }} />
-                <span className="text-xs font-semibold" style={{ color: CATEGORY_COLORS[category] || "var(--cat-8)" }}>{category}</span>
+                <span className="text-xs font-semibold" style={{ color: CATEGORY_COLORS[category] || "var(--cat-8)" }}>{expenseCategoryLabel(category, tCat)}</span>
               </div>
             )}
           </div>
@@ -545,18 +592,18 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           {/* Centro de custo */}
           <div>
             <label htmlFor={centerId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
-              Centro de custo <span style={{ color: "var(--danger)" }}>*</span>
+              {t("center")} <span style={{ color: "var(--danger)" }}>*</span>
             </label>
             {centers.length === 0 ? (
               <p className="text-xs px-3 py-2.5 rounded-xl"
                 style={{ background: "var(--db-sub)", border: "1px solid var(--db-border)", color: "var(--db-text-3)" }}>
-                Crie um centro de custo primeiro.
+                {t("createCenterFirst")}
               </p>
             ) : (
               <select id={centerId} value={center} onChange={e => setCenter(e.target.value)} required
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
-                <option value="">— Selecione um centro —</option>
+                <option value="">{t("selectCenter")}</option>
                 {centers.map(cc => <option key={cc.id} value={cc.name}>{cc.name}</option>)}
               </select>
             )}
@@ -566,7 +613,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor={amountId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
-                Valor (R$) <span style={{ color: "var(--danger)" }}>*</span>
+                {t("amount")} <span style={{ color: "var(--danger)" }}>*</span>
               </label>
               <input id={amountId} type="number" value={amount} onChange={e => setAmount(e.target.value)}
                 placeholder="0,00" required min="0.01" step="0.01"
@@ -575,7 +622,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
             </div>
             <div>
               <label htmlFor={dateId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
-                Data <span style={{ color: "var(--danger)" }}>*</span>
+                {t("date")} <span style={{ color: "var(--danger)" }}>*</span>
               </label>
               <input id={dateId} type="date" value={date} onChange={e => setDate(e.target.value)} required
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
@@ -586,7 +633,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
           {/* Status */}
           <fieldset className="border-0 p-0 m-0 min-w-0">
             <legend className="text-xs font-semibold block mb-2 p-0" style={{ color: "var(--db-text-2)" }}>
-              Status <span style={{ color: "var(--danger)" }}>*</span>
+              {t("status")} <span style={{ color: "var(--danger)" }}>*</span>
             </legend>
             <div className="grid grid-cols-3 gap-2">
               {(["pago", "pendente", "agendado"] as const).map(s => (
@@ -600,13 +647,13 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
                         : { background: "var(--brand-weak)", borderColor: "var(--brand-weak)", color: "var(--brand)" }
                     : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text-2)" }
                   }>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {tStatus(s)}
                 </button>
               ))}
             </div>
             {status === "pago" && (
               <p className="text-xs mt-2 flex items-center gap-1" style={{ color: "var(--success)" }}>
-                <ArrowDownRight size={11} /> Lançado como saída no fluxo de caixa
+                <ArrowDownRight size={11} /> {t("paidCashflowNote")}
               </p>
             )}
           </fieldset>
@@ -616,13 +663,13 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
             <button type="button" onClick={onClose}
               className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
               style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
-              Cancelar
+              {t("cancel")}
             </button>
             <button type="submit" disabled={!canSave || saving || centers.length === 0}
               className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--primary)" }}>
               {saving ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
-              {editing ? "Atualizar" : "Criar"}
+              {editing ? t("update") : t("create")}
             </button>
           </div>
         </form>
@@ -638,6 +685,13 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
 // partir das despesas reais do mês, não de um acumulador armazenado.)
 
 export default function CostCenterPage() {
+  const t = useTranslations("costCenter");
+  const tCat = useTranslations("costCenter.expenseCategories");
+  const tStatus = useTranslations("costCenter.status");
+  const tc = useTranslations("common");
+  const tNav = useTranslations("nav");
+  const locale = useLocale();
+
   // Mês em foco = mês global compartilhado (usePeriod), o mesmo do stepper
   // na Navbar e das demais telas. `selectedDate` (usada só como data padrão
   // ao cadastrar um novo centro) é o dia de hoje quando o mês em foco é o
@@ -781,7 +835,7 @@ export default function CostCenterPage() {
       const budget = budgetStr ? parseFloat(budgetStr.replace(",", ".")) : NaN;
 
       if (!name || !budgetStr || isNaN(budget) || budget <= 0 || !createdAtStr) {
-        showToast("Preencha todos os campos corretamente", "err"); return;
+        showToast(t("centerModal.fillAll"), "err"); return;
       }
 
       // Data escolhida no calendário do modal — construída a partir das
@@ -790,7 +844,7 @@ export default function CostCenterPage() {
       const [cy, cm, cd] = createdAtStr.split("-").map(Number);
       const createdAt = new Date(cy, cm - 1, cd);
       if (isNaN(createdAt.getTime())) {
-        showToast("Data de cadastro inválida", "err"); return;
+        showToast(t("centerModal.invalidDate"), "err"); return;
       }
 
       const { getFirebase } = await import("@/lib/firebase");
@@ -802,7 +856,7 @@ export default function CostCenterPage() {
         // mescla com os outros meses já definidos, nunca sobrescreve todos.
         const budgetsByMonth = { ...(editingCenter.budgetsByMonth ?? {}), [selectedMonth]: budget };
         await updateDoc(doc(db, "costCenters", editingCenter.id), { name, budgetsByMonth, createdAt });
-        showToast("Centro atualizado!");
+        showToast(t("centerModal.centerUpdated"));
       } else {
         const initialCategories = activeCategories.map((cat, idx) => ({
           id: `cat_${Date.now()}_${idx}`,
@@ -815,12 +869,12 @@ export default function CostCenterPage() {
           userId: uid, createdAt,
           categories: initialCategories,
         });
-        showToast("Centro criado!");
+        showToast(t("centerModal.centerCreated"));
       }
       setShowCenterModal(false);
       setEditingCenter(null);
     } catch (err: any) {
-      showToast(err.message || "Erro ao salvar", "err");
+      showToast(err.message || t("centerModal.saveError"), "err");
     } finally {
       setSavingCenter(false);
     }
@@ -839,10 +893,10 @@ export default function CostCenterPage() {
       const { db } = await getFirebase();
       const { deleteDoc, doc } = await import("firebase/firestore");
       await deleteDoc(doc(db, "costCenters", confirmModal.id));
-      showToast("Centro removido!");
+      showToast(t("centerModal.centerRemoved"));
       setConfirmModal({ open: false, type: null, id: "", loading: false });
     } catch (err: any) {
-      showToast(err.message || "Erro", "err");
+      showToast(err.message || t("centerModal.genericError"), "err");
       setConfirmModal(prev => ({ ...prev, loading: false }));
     }
   };
@@ -868,11 +922,11 @@ export default function CostCenterPage() {
       await Promise.all(cfSnap.docs.map(d => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
 
       await deleteDoc(doc(db, "expenses", confirmModal.id));
-      showToast("Despesa removida!");
+      showToast(t("toast.expenseRemoved"));
       setConfirmModal({ open: false, type: null, id: "", loading: false });
     } catch (err: any) {
       console.error("DELETE EXPENSE ERROR:", err.code, err.message, err);
-      showToast(err.message || "Erro", "err");
+      showToast(err.message || t("centerModal.genericError"), "err");
       setConfirmModal(prev => ({ ...prev, loading: false }));
     }
   };
@@ -892,9 +946,9 @@ export default function CostCenterPage() {
         description: exp.description, category: exp.category, center: exp.center,
         amount: exp.amount, date: exp.date, status: "pago",
       });
-      showToast("Despesa paga! Lançada no fluxo de caixa ✓");
+      showToast(t("toast.expensePaid"));
     } catch (err: any) {
-      showToast(err.message || "Erro ao marcar como paga", "err");
+      showToast(err.message || t("toast.markPaidError"), "err");
     } finally {
       setPayingExpenseId(null);
     }
@@ -923,13 +977,13 @@ export default function CostCenterPage() {
   }));
 
   const kpis = [
-    { label: "Orçamento total", value: fmt(totalBudget), change: `${costCenters.length}`, up: true, sub: `${costCenters.length} centros`, icon: Wallet, color: "blue" },
-    { label: "Custo real", value: fmt(totalSpent), change: "+3.1%", up: false, sub: "vs. mês anterior", icon: CreditCard, color: "rose" },
-    { label: "Disponível", value: fmt(Math.max(totalBudget - totalSpent, 0)), change: `${100 - utilizationPct}%`, up: true, sub: "de margem", icon: TrendingUp, color: "emerald" },
-    { label: "Centros ativos", value: String(costCenters.length), change: "+0", up: true, sub: "ativos agora", icon: BarChart2, color: "amber" },
+    { label: t("kpi.budgetTotal"), value: fmt(totalBudget, locale), change: `${costCenters.length}`, up: true, sub: t("kpi.centersCount", { count: costCenters.length }), icon: Wallet, color: "blue" },
+    { label: t("kpi.realCost"), value: fmt(totalSpent, locale), change: "+3.1%", up: false, sub: t("kpi.vsPrevMonth"), icon: CreditCard, color: "rose" },
+    { label: t("kpi.available"), value: fmt(Math.max(totalBudget - totalSpent, 0), locale), change: `${100 - utilizationPct}%`, up: true, sub: t("kpi.ofMargin"), icon: TrendingUp, color: "emerald" },
+    { label: t("kpi.activeCenters"), value: String(costCenters.length), change: "+0", up: true, sub: t("kpi.activeNow"), icon: BarChart2, color: "amber" },
   ];
 
-  if (blocked) return <AccessDenied category="Centro de Custos" />;
+  if (blocked) return <AccessDenied category={tNav("items.centroCustos")} />;
 
   if (loading) return <PageLoader />;
 
@@ -950,16 +1004,16 @@ export default function CostCenterPage() {
         open={confirmModal.open}
         title={
           confirmModal.type === "delete-center"
-            ? "Deletar centro de custo?"
-            : "Deletar despesa?"
+            ? t("confirm.deleteCenterTitle")
+            : t("confirm.deleteExpenseTitle")
         }
         message={
           confirmModal.type === "delete-center"
-            ? "Esta ação não pode ser desfeita. O centro de custo e todos os seus dados serão removidos permanentemente."
-            : "Esta ação não pode ser desfeita. A despesa será removida permanentemente."
+            ? t("confirm.deleteCenterMsg")
+            : t("confirm.deleteExpenseMsg")
         }
-        confirmText="Deletar"
-        cancelText="Cancelar"
+        confirmText={t("confirm.delete")}
+        cancelText={t("expenseModal.cancel")}
         isDangerous={true}
         loading={confirmModal.loading}
         onConfirm={
@@ -987,7 +1041,7 @@ export default function CostCenterPage() {
         {/* Título da página não aparece visualmente aqui (só via item ativo
             da Navbar) — h1 sr-only pra dar um ponto de partida de navegação
             por heading pra quem usa leitor de tela, sem mudar o layout. */}
-        <h1 className="sr-only">Centro de custos</h1>
+        <h1 className="sr-only">{t("meta.srTitle")}</h1>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
@@ -1019,8 +1073,8 @@ export default function CostCenterPage() {
         <div className="chart-card p-4 md:p-6">
           <div className="flex items-start md:items-center justify-between mb-3 gap-2 flex-wrap">
             <div>
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Centros de custo</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>Com detalhamento por categoria</p>
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("centers.title")}</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("centers.subtitle")}</p>
             </div>
             <div className="flex items-center gap-2">
               {/* O mês em foco vem do seletor global na Navbar (‹ {period} ›). */}
@@ -1030,7 +1084,7 @@ export default function CostCenterPage() {
               <button onClick={() => { setEditingCenter(null); setShowCenterModal(true); }}
                 className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                 style={{ background: "var(--primary)" }}>
-                <Plus size={14} /> Novo
+                <Plus size={14} /> {t("centers.new")}
               </button>
             </div>
           </div>
@@ -1038,10 +1092,10 @@ export default function CostCenterPage() {
           {costCenters.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <BarChart2 size={32} style={{ color: "var(--db-text-2)", marginBottom: "1rem", opacity: 0.4 }} />
-              <p style={{ color: "var(--db-text-2)" }}>Nenhum centro de custo criado</p>
+              <p style={{ color: "var(--db-text-2)" }}>{t("centers.empty")}</p>
               <button onClick={() => setShowCenterModal(true)} className="mt-3 text-xs font-semibold cursor-pointer transition-colors"
                 style={{ color: "var(--primary)" }}>
-                Criar primeiro centro
+                {t("centers.createFirst")}
               </button>
             </div>
           ) : (
@@ -1083,7 +1137,7 @@ export default function CostCenterPage() {
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ background: center.color }} />
                           <div className="text-left min-w-0 flex-1">
                             <p className="text-xs font-bold" style={{ color: "var(--db-text)" }}>{center.name}</p>
-                            <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>Criado em {formatFullDate(center.createdAt)} • {(center.categories || []).length} categorias</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>{t("centers.createdOn", { date: formatFullDate(center.createdAt, locale) })} • {t("centers.categoriesCount", { count: (center.categories || []).length })}</p>
                           </div>
                         </div>
 
@@ -1100,16 +1154,16 @@ export default function CostCenterPage() {
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 text-xs">
-                                <span className="mono font-semibold" style={{ color: "var(--db-text)" }}>{fmt(spentThisMonth)}</span>
-                                <span style={{ color: "var(--db-text-3)" }}>de</span>
-                                <span className="mono font-semibold" style={{ color: "var(--db-text-2)" }}>{fmt(budgetThisMonth)}</span>
+                                <span className="mono font-semibold" style={{ color: "var(--db-text)" }}>{fmt(spentThisMonth, locale)}</span>
+                                <span style={{ color: "var(--db-text-3)" }}>{t("centers.of")}</span>
+                                <span className="mono font-semibold" style={{ color: "var(--db-text-2)" }}>{fmt(budgetThisMonth, locale)}</span>
                               </div>
                             </div>
                           ) : (
                             <div className="flex flex-col items-end gap-1">
                               <span className="mono text-xs font-bold px-2 py-0.5 rounded-full"
                                 style={{ background: "var(--db-sub)", color: "var(--db-text-3)" }}>
-                                {fmt(0)}
+                                {fmt(0, locale)}
                               </span>
                               {/* span, não button — já está dentro do botão de expandir/recolher o centro */}
                               <span
@@ -1120,7 +1174,7 @@ export default function CostCenterPage() {
                                 className="text-xs font-semibold cursor-pointer hover:underline"
                                 style={{ color: "var(--primary)" }}
                               >
-                                Orçamento não definido · Definir
+                                {t("centers.budgetUndefined")}
                               </span>
                             </div>
                           )}
@@ -1139,7 +1193,7 @@ export default function CostCenterPage() {
                       {isExpanded && (
                         <div className="px-4 py-4 space-y-2" style={{ background: "var(--db-sub)" }}>
                           {(center.categories || []).length === 0 ? (
-                            <p className="text-xs text-center py-4" style={{ color: "var(--db-text-3)" }}>Nenhuma categoria com lançamentos</p>
+                            <p className="text-xs text-center py-4" style={{ color: "var(--db-text-3)" }}>{t("centers.noCategories")}</p>
                           ) : (
                             (center.categories || []).map(cat => {
                               // Gasto por categoria também é derivado das despesas pagas do mês selecionado.
@@ -1154,12 +1208,12 @@ export default function CostCenterPage() {
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
                                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cat.color }} />
                                       <div className="text-left min-w-0 flex-1">
-                                        <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{cat.name}</p>
-                                        <p className="text-xs mt-0.5" style={{ color: "var(--db-text-3)" }}>{catCount} lançamento{catCount !== 1 ? "s" : ""}</p>
+                                        <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{expenseCategoryLabel(cat.name, tCat)}</p>
+                                        <p className="text-xs mt-0.5" style={{ color: "var(--db-text-3)" }}>{t("centers.entriesCount", { count: catCount })}</p>
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0">
-                                      <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(catSpent)}</span>
+                                      <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(catSpent, locale)}</span>
                                       <span className="text-xs font-semibold px-1.5" style={{ color: "var(--db-text-2)" }}>
                                         {budgetThisMonth > 0 ? ((catSpent / budgetThisMonth) * 100).toFixed(1) : "0.0"}%
                                       </span>
@@ -1175,12 +1229,12 @@ export default function CostCenterPage() {
                       {/* Botões de ação */}
                       <div className="px-4 py-3 flex items-center gap-1.5 border-t" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
                         <button onClick={() => { setEditingCenter(center); setShowCenterModal(true); }}
-                          aria-label={`Editar ${center.name}`}
+                          aria-label={t("centers.editAria", { name: center.name })}
                           className="p-1.5 rounded hover:opacity-70 cursor-pointer transition-colors">
                           <Edit2 size={12} style={{ color: "var(--primary)" }} />
                         </button>
                         <button onClick={() => handleDeleteCenter(center.id)}
-                          aria-label={`Excluir ${center.name}`}
+                          aria-label={t("centers.deleteAria", { name: center.name })}
                           className="p-1.5 rounded hover:opacity-70 cursor-pointer transition-colors">
                           <Trash2 size={12} style={{ color: "var(--danger)" }} />
                         </button>
@@ -1197,31 +1251,31 @@ export default function CostCenterPage() {
         <div className="chart-card p-4 md:p-6">
           <div className="flex items-start md:items-center justify-between mb-4 gap-2 flex-wrap">
             <div>
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>Despesas de {period}</h2>
+              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("expenses.title", { period })}</h2>
               <p className="text-xs mt-0.5 flex items-center gap-2" style={{ color: "var(--db-text-2)" }}>
-                Total: {fmt(filteredExpenses.reduce((s, e) => s + e.amount, 0))}
-                <span className="cf-badge">✓ Sincroniza com fluxo de caixa</span>
+                {t("expenses.total", { value: fmt(filteredExpenses.reduce((s, e) => s + e.amount, 0), locale) })}
+                <span className="cf-badge">{t("expenses.syncBadge")}</span>
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative hidden sm:flex">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--db-text-2)" }} />
-                <input type="text" placeholder="Buscar..." aria-label="Buscar despesas" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                <input type="text" placeholder={t("expenses.searchPlaceholder")} aria-label={t("expenses.searchAria")} value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                   className="pl-9 pr-3 py-1.5 text-xs rounded-lg border"
                   style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }} />
               </div>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
                 className="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors"
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
-                <option value="todos">Todos</option>
-                <option value="pago">Pago</option>
-                <option value="pendente">Pendente</option>
-                <option value="agendado">Agendado</option>
+                <option value="todos">{tStatus("todos")}</option>
+                <option value="pago">{tStatus("pago")}</option>
+                <option value="pendente">{tStatus("pendente")}</option>
+                <option value="agendado">{tStatus("agendado")}</option>
               </select>
               <button onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
                 className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                 style={{ background: "var(--primary)" }}>
-                <Plus size={14} /> Novo
+                <Plus size={14} /> {t("expenses.new")}
               </button>
             </div>
           </div>
@@ -1229,9 +1283,9 @@ export default function CostCenterPage() {
           {filteredExpenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <CreditCard size={32} style={{ color: "var(--db-text-2)", marginBottom: "1rem", opacity: 0.4 }} />
-              <p style={{ color: "var(--db-text-2)" }}>Nenhuma despesa encontrada</p>
+              <p style={{ color: "var(--db-text-2)" }}>{t("expenses.empty")}</p>
               {costCenters.length === 0 && (
-                <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>Crie um centro de custo primeiro</p>
+                <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>{t("expenses.emptyHintNoCenters")}</p>
               )}
             </div>
           ) : (
@@ -1242,14 +1296,14 @@ export default function CostCenterPage() {
                   <div key={exp.id} className="p-3 rounded-xl flex items-center justify-between gap-3"
                     style={{ border: "1px solid var(--db-border)" }}>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || exp.category}</p>
+                      <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || expenseCategoryLabel(exp.category, tCat)}</p>
                       <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{exp.center} · {exp.date}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span>
+                      <span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount, locale)}</span>
                       <div className="flex items-center gap-1">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
-                          {exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
+                          {tStatus(exp.status)}
                         </span>
                         {exp.status === "pago" && <span className="cf-badge">FC✓</span>}
                       </div>
@@ -1257,7 +1311,7 @@ export default function CostCenterPage() {
                     <div className="flex flex-col gap-1 shrink-0">
                       {exp.status !== "pago" && (
                         <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
-                          title="Marcar como pago" aria-label={`Marcar ${exp.description || "despesa"} como pago`}
+                          title={t("expenses.markPaidTitle")} aria-label={t("expenses.markPaidAria", { name: exp.description || t("expenses.expenseFallback") })}
                           className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors disabled:opacity-50">
                           {payingExpenseId === exp.id
                             ? <Loader size={12} className="animate-spin" style={{ color: "var(--success)" }} />
@@ -1265,12 +1319,12 @@ export default function CostCenterPage() {
                         </button>
                       )}
                       <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
-                        aria-label={`Editar ${exp.description || "despesa"}`}
+                        aria-label={t("expenses.editAria", { name: exp.description || t("expenses.expenseFallback") })}
                         className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors">
                         <Edit2 size={12} style={{ color: "var(--primary)" }} />
                       </button>
                       <button onClick={() => handleDeleteExpense(exp.id)}
-                        aria-label={`Excluir ${exp.description || "despesa"}`}
+                        aria-label={t("expenses.deleteAria", { name: exp.description || t("expenses.expenseFallback") })}
                         className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors">
                         <Trash2 size={12} style={{ color: "var(--danger)" }} />
                       </button>
@@ -1284,8 +1338,8 @@ export default function CostCenterPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "var(--db-border)" }}>
-                      {["Descrição", "Categoria", "Centro", "Valor", "Data", "Status", ""].map(h => (
-                        <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap"
+                      {[t("expenses.colDescription"), t("expenses.colCategory"), t("expenses.colCenter"), t("expenses.colAmount"), t("expenses.colDate"), t("expenses.colStatus"), ""].map((h, hi) => (
+                        <th key={hi} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap"
                           style={{ color: "var(--db-text-2)" }}>{h}</th>
                       ))}
                     </tr>
@@ -1296,23 +1350,23 @@ export default function CostCenterPage() {
                         <td className="py-3 pr-4 max-w-[150px]">
                           <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{exp.description || "—"}</p>
                         </td>
-                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text-2)" }}>{exp.category}</span></td>
+                        <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text-2)" }}>{expenseCategoryLabel(exp.category, tCat)}</span></td>
                         <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text-2)" }}>{exp.center}</span></td>
-                        <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount)}</span></td>
+                        <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: "var(--db-text)" }}>{fmt(exp.amount, locale)}</span></td>
                         <td className="py-3 pr-4"><span className="text-xs" style={{ color: "var(--db-text-2)" }}>{exp.date}</span></td>
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-1.5">
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
-                              {exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
+                              {tStatus(exp.status)}
                             </span>
-                            {exp.status === "pago" && <span className="cf-badge" title="Lançado no fluxo de caixa">FC ✓</span>}
+                            {exp.status === "pago" && <span className="cf-badge" title={t("expenses.fcBadgeTitle")}>{t("expenses.fcBadge")}</span>}
                           </div>
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-1.5">
                             {exp.status !== "pago" && (
                               <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
-                                title="Marcar como pago" aria-label={`Marcar ${exp.description || "despesa"} como pago`}
+                                title={t("expenses.markPaidTitle")} aria-label={t("expenses.markPaidAria", { name: exp.description || t("expenses.expenseFallback") })}
                                 className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors disabled:opacity-50">
                                 {payingExpenseId === exp.id
                                   ? <Loader size={12} className="animate-spin" style={{ color: "var(--success)" }} />
@@ -1320,12 +1374,12 @@ export default function CostCenterPage() {
                               </button>
                             )}
                             <button onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}
-                              aria-label={`Editar ${exp.description || "despesa"}`}
+                              aria-label={t("expenses.editAria", { name: exp.description || t("expenses.expenseFallback") })}
                               className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors">
                               <Edit2 size={12} style={{ color: "var(--primary)" }} />
                             </button>
                             <button onClick={() => handleDeleteExpense(exp.id)}
-                              aria-label={`Excluir ${exp.description || "despesa"}`}
+                              aria-label={t("expenses.deleteAria", { name: exp.description || t("expenses.expenseFallback") })}
                               className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors">
                               <Trash2 size={12} style={{ color: "var(--danger)" }} />
                             </button>
@@ -1349,17 +1403,17 @@ export default function CostCenterPage() {
             style={{ background: "var(--db-card)", borderColor: "var(--db-border)" }}>
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "var(--db-border)" }}>
               <h3 className="font-bold" style={{ color: "var(--db-text)" }}>
-                {editingCenter ? "Editar centro" : "Novo centro de custo"}
+                {editingCenter ? t("centerModal.editTitle") : t("centerModal.newTitle")}
               </h3>
-              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} aria-label="Fechar" className="p-1.5 rounded-lg cursor-pointer hover:opacity-70 transition-opacity">
+              <button onClick={() => { setShowCenterModal(false); setEditingCenter(null); }} aria-label={tc("close")} className="p-1.5 rounded-lg cursor-pointer hover:opacity-70 transition-opacity">
                 <X size={16} style={{ color: "var(--db-text-2)" }} />
               </button>
             </div>
             <form onSubmit={handleSaveCenter} className="p-5 space-y-4">
               {[
-                { name: "name", label: "Nome", placeholder: "Ex: Operações", type: "text", defaultValue: editingCenter?.name, min: undefined, step: undefined },
-                { name: "budget", label: `Orçamento de ${period} (R$)`, placeholder: "10000", type: "number", defaultValue: editingCenter ? (getBudgetForMonth(editingCenter, selectedMonth, currentMonthKey) || undefined) : undefined, min: "1", step: "0.01" },
-                { name: "createdAt", label: "Data de cadastro", placeholder: undefined, type: "date", defaultValue: editingCenter ? toDateInputValue(editingCenter.createdAt) : selectedDate, min: undefined, step: undefined },
+                { name: "name", label: t("centerModal.name"), placeholder: t("centerModal.namePlaceholder"), type: "text", defaultValue: editingCenter?.name, min: undefined, step: undefined },
+                { name: "budget", label: t("centerModal.budgetLabel", { period }), placeholder: "10000", type: "number", defaultValue: editingCenter ? (getBudgetForMonth(editingCenter, selectedMonth, currentMonthKey) || undefined) : undefined, min: "1", step: "0.01" },
+                { name: "createdAt", label: t("centerModal.createdAtLabel"), placeholder: undefined, type: "date", defaultValue: editingCenter ? toDateInputValue(editingCenter.createdAt) : selectedDate, min: undefined, step: undefined },
               ].map(f => (
                 <div key={f.name}>
                   <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>{f.label}</label>
@@ -1373,13 +1427,13 @@ export default function CostCenterPage() {
                 <button type="button" onClick={() => { setShowCenterModal(false); setEditingCenter(null); }}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70"
                   style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}>
-                  Cancelar
+                  {t("centerModal.cancel")}
                 </button>
                 <button type="submit" disabled={savingCenter}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
                   style={{ background: "var(--primary)" }}>
                   {savingCenter ? <Loader size={14} className="animate-spin" /> : <Check size={14} />}
-                  {editingCenter ? "Atualizar" : "Criar"}
+                  {editingCenter ? t("centerModal.update") : t("centerModal.create")}
                 </button>
               </div>
             </form>
