@@ -336,23 +336,30 @@ Commits: `3f65a15` (4a), `ad35ec7` (categorias), `4e9f0dc` (4b).
 
 ---
 
-## Fase 5 — Contas a Pagar + Contas a Receber
+## Fase 5 — Contas a Pagar + Contas a Receber ✅ concluída
 
-Namespaces: `contasPagar`, `contasReceber` (compartilham muita chave — o que
-for idêntico vai pra `common` ou um `contas` comum).
+Namespaces: `contasPagar`, `contasReceber`. Chaves compartilhadas (PIN, selo
+de autoria) foram pra `common.pin` / `common.auditTrail`.
 
-- [ ] **`app/[locale]/contasPagar/page.tsx`** (~104 KB) — quebrar a extração
-      em blocos: tabela/colunas, filtros, modal de cadastro/edição, badges de
-      status, recorrência/parcelas, anexos de nota fiscal, toasts. Cada bloco
-      é um commit.
-- [ ] **`app/[locale]/contasReceber/page.tsx`** (~100 KB) — idem; reaproveitar
-      chaves comuns.
-- [ ] `locale` real em `lib/format.ts`; datas de vencimento localizadas.
-- [ ] Termos financeiros/fiscais (regime, competência, baixa, conciliação) —
-      traduzir com cuidado; marcar no PR os que precisam de revisão.
-- [ ] `i18n:check` + `tsc` + `lint`.
-- [ ] Navegador: criar/editar uma conta nos 3 idiomas; modal, validações e
-      toasts traduzidos.
+- [x] **`common.pin`** + `PinModal.tsx` traduzido (título/subtítulo padrão,
+      bloqueio, erros). Commit `cd111aa`.
+- [x] **`AuditTrail.tsx`** → `common.auditTrail` (criado/editado/baixa por;
+      data no locale); `settleLabel` agora é string já traduzida. Usado
+      também por `impostos` (Fase 7). Commit `d5ce73e`.
+- [x] **`app/[locale]/contasPagar/page.tsx`** inteira + `contasPagar.json`
+      (3 idiomas): modal de conta, séries/parcelas, PayModal, galeria,
+      alertas, filtros, KPIs, seções, toasts. `STATUS_META` sem `label`;
+      `CATEGORIES` ganhou `key`; categoria/status keyed por valor (Firestore
+      + `billTaxSync` intactos). Commit `d5ce73e`.
+- [x] **`app/[locale]/contasReceber/page.tsx`** inteira + `contasReceber.json`
+      — mesma estrutura; `CAT_TO_CASHFLOW` intacto; nota do lançamento no
+      Fluxo de Caixa via `cashflowNote.*` (congela no idioma do autor).
+      Commit `c292534`.
+- [x] `locale` real: datas de vencimento e moeda (travada em BRL) seguem o
+      locale via helpers de módulo `toBRL(n, locale)` / `labelDate(d, locale)`.
+- [x] `i18n:check` (20 ns × 3), `tsc`, build limpos; eslint sem regressão.
+- [ ] Navegador: criar/editar uma conta nos 3 idiomas (bloqueado por login —
+      validado por build + tsc + i18n:check).
 
 ---
 
