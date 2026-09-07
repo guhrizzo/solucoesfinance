@@ -80,6 +80,7 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "common" });
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -141,7 +142,7 @@ export default async function LocaleLayout({
         style={{ margin: 0, padding: 0 }}
       >
         <a href="#conteudo-principal" className="skip-link">
-          Pular para o conteúdo
+          {t("skipToContent")}
         </a>
         <NextIntlClientProvider>
           <LocaleSync />
