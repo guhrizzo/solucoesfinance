@@ -1,1 +1,57 @@
-{}
+{
+  "title": "Configuración",
+  "subtitle": "Preferencias de tu cuenta y de la aplicación.",
+  "tabs": {
+    "perfil": "Perfil y Empresa",
+    "aparencia": "Apariencia",
+    "feedback": "Errores y sugerencias",
+    "feedbackAdmin": "Tickets"
+  },
+  "aparencia": {
+    "thisDevice": "Aplica a este dispositivo.",
+    "theme": {
+      "title": "Tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "toDark": "Modo oscuro activado.",
+      "toLight": "Modo claro activado."
+    },
+    "menuPosition": {
+      "title": "Posición del menú",
+      "desc": "Barra de navegación arriba o en el lateral izquierdo.",
+      "top": "Arriba",
+      "side": "Lateral",
+      "toSide": "Menú lateral activado.",
+      "toTop": "Menú arriba activado."
+    },
+    "motion": {
+      "title": "Movimiento",
+      "desc": "Anima transiciones y efectos de desplazamiento. Reducir hace la navegación más directa, sin depender de la configuración del sistema.",
+      "default": "Estándar",
+      "reduced": "Reducido",
+      "toReduced": "Animaciones reducidas.",
+      "toDefault": "Animaciones estándar."
+    },
+    "a11yWidget": {
+      "title": "Widget de accesibilidad",
+      "desc": "Botón flotante en la esquina inferior derecha con tamaño de texto, subrayado de enlaces, reducción de animaciones y Libras (lengua de señas brasileña). Aplica a este dispositivo.",
+      "on": "Activado",
+      "off": "Desactivado",
+      "toOn": "Widget de accesibilidad activado.",
+      "toOff": "Widget de accesibilidad desactivado."
+    },
+    "language": {
+      "title": "Idioma",
+      "desc": "Idioma de la interfaz. Acompaña tu cuenta en cualquier dispositivo.",
+      "changed": "Idioma cambiado."
+    },
+    "chart": {
+      "title": "Gráfico predeterminado del panel",
+      "desc": "Estilo inicial del gráfico «Ingresos vs. Gastos».",
+      "bar": "Barras",
+      "line": "Línea",
+      "pie": "Circular",
+      "saved": "Preferencia de gráfico guardada."
+    }
+  }
+}

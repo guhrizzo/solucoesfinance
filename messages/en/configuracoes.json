@@ -1,1 +1,57 @@
-{}
+{
+  "title": "Settings",
+  "subtitle": "Preferences for your account and the app.",
+  "tabs": {
+    "perfil": "Profile & Company",
+    "aparencia": "Appearance",
+    "feedback": "Bugs & suggestions",
+    "feedbackAdmin": "Tickets"
+  },
+  "aparencia": {
+    "thisDevice": "Applies to this device.",
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "toDark": "Dark mode on.",
+      "toLight": "Light mode on."
+    },
+    "menuPosition": {
+      "title": "Menu position",
+      "desc": "Navigation bar at the top or on the left side.",
+      "top": "Top",
+      "side": "Side",
+      "toSide": "Side menu on.",
+      "toTop": "Top menu on."
+    },
+    "motion": {
+      "title": "Motion",
+      "desc": "Animates transitions and scroll effects. Reducing makes navigation more direct, independent of your system setting.",
+      "default": "Default",
+      "reduced": "Reduced",
+      "toReduced": "Animations reduced.",
+      "toDefault": "Animations back to default."
+    },
+    "a11yWidget": {
+      "title": "Accessibility widget",
+      "desc": "Floating button in the bottom-right corner with text size, link underlining, reduced motion and Libras (Brazilian Sign Language). Applies to this device.",
+      "on": "On",
+      "off": "Off",
+      "toOn": "Accessibility widget enabled.",
+      "toOff": "Accessibility widget disabled."
+    },
+    "language": {
+      "title": "Language",
+      "desc": "Interface language. Follows your account on any device.",
+      "changed": "Language changed."
+    },
+    "chart": {
+      "title": "Default dashboard chart",
+      "desc": "Initial style of the \"Revenue vs. Expenses\" chart.",
+      "bar": "Bars",
+      "line": "Line",
+      "pie": "Pie",
+      "saved": "Chart preference saved."
+    }
+  }
+}

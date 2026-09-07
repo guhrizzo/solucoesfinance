@@ -3,12 +3,18 @@
 // app/configuracoes/AparenciaTab.tsx
 
 import { useEffect, useState } from "react";
-import { Sun, Moon, PanelLeft, PanelTop, BarChart2, LineChart, PieChart, Zap, ZapOff, Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
+import {
+  Sun, Moon, PanelLeft, PanelTop, BarChart2, LineChart, PieChart,
+  Zap, ZapOff, Eye, EyeOff,
+} from "lucide-react";
 import { Card } from "@/app/components/ui";
 import { useTheme } from "@/app/hooks/useTheme";
 import { useNavbarLayout } from "@/app/hooks/useNavbarLayout";
 import { useReducedMotion } from "@/app/hooks/useReducedMotion";
 import { useAccessibilityWidget } from "@/app/hooks/useAccessibilityWidget";
+import { useLocalePreference } from "@/app/hooks/useLocalePreference";
+import type { AppLocale } from "@/i18n/routing";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
 
@@ -18,7 +24,7 @@ const CHART_KEY = "dashboard_chart_type";
 interface Option<T extends string> {
   value: T;
   label: string;
-  icon: React.ElementType;
+  icon?: React.ElementType;
 }
 
 function Segmented<T extends string>({
@@ -48,7 +54,7 @@ function Segmented<T extends string>({
               boxShadow: active ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
             }}
           >
-            <o.icon size={15} />
+            {o.icon && <o.icon size={15} />}
             {o.label}
           </button>
         );
@@ -81,11 +87,15 @@ function Row({
   );
 }
 
+const Divider = () => <div style={{ height: 1, background: "var(--cf-border)" }} />;
+
 export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
+  const t = useTranslations("configuracoes.aparencia");
   const { dark, setTheme } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
   const { reduced, setReducedMotion } = useReducedMotion();
   const { enabled: a11yWidget, setEnabled: setA11yWidget } = useAccessibilityWidget();
+  const { locale, locales, setLocale } = useLocalePreference();
 
   const [chartType, setChartType] = useState<ChartType>("bar");
 
@@ -99,122 +109,124 @@ export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
     }
   }, []);
 
-  const changeChart = (t: ChartType) => {
-    setChartType(t);
+  const changeChart = (next: ChartType) => {
+    setChartType(next);
     try {
-      localStorage.setItem(CHART_KEY, t);
+      localStorage.setItem(CHART_KEY, next);
     } catch {
       /* noop */
     }
-    showToast("Preferência de gráfico salva.", "success");
+    showToast(t("chart.saved"), "success");
   };
 
   const changeTheme = (next: "light" | "dark") => {
     if ((next === "dark") === dark) return;
     setTheme(next === "dark");
-    showToast(next === "dark" ? "Modo escuro ativado." : "Modo claro ativado.", "success");
+    showToast(next === "dark" ? t("theme.toDark") : t("theme.toLight"), "success");
   };
 
   const changeLayout = (next: "horizontal" | "vertical") => {
     if (next === layout) return;
     toggleLayout();
-    showToast(
-      next === "vertical" ? "Menu lateral ativado." : "Menu no topo ativado.",
-      "success"
-    );
+    showToast(next === "vertical" ? t("menuPosition.toSide") : t("menuPosition.toTop"), "success");
   };
 
   const changeMotion = (next: "padrao" | "reduzido") => {
     const nextReduced = next === "reduzido";
     if (nextReduced === reduced) return;
     setReducedMotion(nextReduced);
-    showToast(
-      nextReduced ? "Animações reduzidas." : "Animações no padrão.",
-      "success"
-    );
+    showToast(nextReduced ? t("motion.toReduced") : t("motion.toDefault"), "success");
   };
 
   const changeA11yWidget = (next: "ativado" | "desativado") => {
     const on = next === "ativado";
     if (on === a11yWidget) return;
     setA11yWidget(on);
-    showToast(
-      on ? "Widget de acessibilidade ativado." : "Widget de acessibilidade desativado.",
-      "success"
-    );
+    showToast(on ? t("a11yWidget.toOn") : t("a11yWidget.toOff"), "success");
+  };
+
+  const LOCALE_LABEL: Record<AppLocale, string> = {
+    "pt-BR": "Português",
+    en: "English",
+    es: "Español",
   };
 
   return (
     <Card padding="lg" className="space-y-6">
-      <Row title="Tema" desc="Vale para este dispositivo.">
+      <Row title={t("theme.title")} desc={t("thisDevice")}>
         <Segmented
           value={dark ? "dark" : "light"}
           onChange={changeTheme}
           options={[
-            { value: "light", label: "Claro", icon: Sun },
-            { value: "dark", label: "Escuro", icon: Moon },
+            { value: "light", label: t("theme.light"), icon: Sun },
+            { value: "dark", label: t("theme.dark"), icon: Moon },
           ]}
         />
       </Row>
 
-      <div style={{ height: 1, background: "var(--cf-border)" }} />
+      <Divider />
 
-      <Row title="Posição do menu" desc="Barra de navegação no topo ou na lateral esquerda.">
+      <Row title={t("menuPosition.title")} desc={t("menuPosition.desc")}>
         <Segmented
           value={layout}
           onChange={changeLayout}
           options={[
-            { value: "horizontal", label: "Topo", icon: PanelTop },
-            { value: "vertical", label: "Lateral", icon: PanelLeft },
+            { value: "horizontal", label: t("menuPosition.top"), icon: PanelTop },
+            { value: "vertical", label: t("menuPosition.side"), icon: PanelLeft },
           ]}
         />
       </Row>
 
-      <div style={{ height: 1, background: "var(--cf-border)" }} />
+      <Divider />
 
-      <Row
-        title="Movimento"
-        desc="Anima transições e efeitos de rolagem. Reduzir deixa a navegação mais direta, sem depender da configuração do sistema."
-      >
+      <Row title={t("motion.title")} desc={t("motion.desc")}>
         <Segmented
           value={reduced ? "reduzido" : "padrao"}
           onChange={changeMotion}
           options={[
-            { value: "padrao", label: "Padrão", icon: Zap },
-            { value: "reduzido", label: "Reduzido", icon: ZapOff },
+            { value: "padrao", label: t("motion.default"), icon: Zap },
+            { value: "reduzido", label: t("motion.reduced"), icon: ZapOff },
           ]}
         />
       </Row>
 
-      <div style={{ height: 1, background: "var(--cf-border)" }} />
+      <Divider />
 
-      <Row
-        title="Widget de acessibilidade"
-        desc="Botão flutuante no canto inferior direito com tamanho do texto, sublinhado de links, redução de animações e Libras. Vale para este dispositivo."
-      >
+      <Row title={t("a11yWidget.title")} desc={t("a11yWidget.desc")}>
         <Segmented
           value={a11yWidget ? "ativado" : "desativado"}
           onChange={changeA11yWidget}
           options={[
-            { value: "ativado", label: "Ativado", icon: Eye },
-            { value: "desativado", label: "Desativado", icon: EyeOff },
+            { value: "ativado", label: t("a11yWidget.on"), icon: Eye },
+            { value: "desativado", label: t("a11yWidget.off"), icon: EyeOff },
           ]}
         />
       </Row>
 
-      <div style={{ height: 1, background: "var(--cf-border)" }} />
+      <Divider />
 
-      <Row
-        title="Gráfico padrão do dashboard"
-        desc='Estilo inicial do gráfico "Receita vs. Despesas".'
-      >
+      <Row title={t("language.title")} desc={t("language.desc")}>
+        <Segmented
+          value={locale}
+          onChange={(next) => {
+            if (next === locale) return;
+            showToast(t("language.changed"), "success");
+            setLocale(next as AppLocale);
+          }}
+          options={locales.map((l) => ({ value: l, label: LOCALE_LABEL[l] ?? l }))}
+        />
+      </Row>
+
+      <Divider />
+
+      <Row title={t("chart.title")} desc={t("chart.desc")}>
         <Segmented
           value={chartType}
           onChange={changeChart}
           options={[
-            { value: "bar", label: "Barras", icon: BarChart2 },
-            { value: "line", label: "Linha", icon: LineChart },
-            { value: "pie", label: "Pizza", icon: PieChart },
+            { value: "bar", label: t("chart.bar"), icon: BarChart2 },
+            { value: "line", label: t("chart.line"), icon: LineChart },
+            { value: "pie", label: t("chart.pie"), icon: PieChart },
           ]}
         />
       </Row>

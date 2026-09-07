@@ -4,6 +4,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { User as UserIcon, Palette, MessageSquarePlus, Inbox } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import { PageLoader } from "@/app/components/ui";
@@ -24,15 +25,16 @@ interface AuthUser {
 
 type TabId = "perfil" | "aparencia" | "feedback" | "feedbackAdmin";
 
-const BASE_TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: "perfil", label: "Perfil & Empresa", icon: UserIcon },
-  { id: "aparencia", label: "Aparência", icon: Palette },
-  { id: "feedback", label: "Bugs & sugestões", icon: MessageSquarePlus },
+const BASE_TABS: { id: TabId; icon: React.ElementType }[] = [
+  { id: "perfil", icon: UserIcon },
+  { id: "aparencia", icon: Palette },
+  { id: "feedback", icon: MessageSquarePlus },
 ];
 
-const ADMIN_TAB = { id: "feedbackAdmin" as TabId, label: "Chamados", icon: Inbox };
+const ADMIN_TAB = { id: "feedbackAdmin" as TabId, icon: Inbox };
 
 export default function ConfiguracoesPage() {
+  const tc = useTranslations("configuracoes");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabId>("perfil");
@@ -89,10 +91,10 @@ export default function ConfiguracoesPage() {
         <div className="max-w-3xl mx-auto space-y-5">
           <div>
             <h1 className="text-xl md:text-2xl font-extrabold" style={{ color: "var(--db-text)" }}>
-              Configurações
+              {tc("title")}
             </h1>
             <p className="text-sm mt-1" style={{ color: "var(--db-text-2)" }}>
-              Preferências da sua conta e do aplicativo.
+              {tc("subtitle")}
             </p>
           </div>
 
@@ -102,14 +104,14 @@ export default function ConfiguracoesPage() {
             style={{ background: "var(--cf-input)", border: "1.5px solid var(--cf-border)" }}
             role="tablist"
           >
-            {tabs.map((t) => {
-              const active = tab === t.id;
+            {tabs.map((tb) => {
+              const active = tab === tb.id;
               return (
                 <button
-                  key={t.id}
+                  key={tb.id}
                   role="tab"
                   aria-selected={active}
-                  onClick={() => setTab(t.id)}
+                  onClick={() => setTab(tb.id)}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all cursor-pointer"
                   style={{
                     background: active ? "var(--cf-card)" : "transparent",
@@ -117,8 +119,8 @@ export default function ConfiguracoesPage() {
                     boxShadow: active ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
                   }}
                 >
-                  <t.icon size={15} />
-                  {t.label}
+                  <tb.icon size={15} />
+                  {tc(`tabs.${tb.id}`)}
                 </button>
               );
             })}
