@@ -1,1 +1,57 @@
-{}
+{
+  "stepOf": "Step {current} of {total}",
+  "back": "Back",
+  "next": "Next",
+  "goToDashboard": "Go to dashboard",
+  "skip": "Skip setup for now",
+  "close": "Close",
+  "serviceWarning": "<b>Note:</b> If you choose <b>Services</b>, inventory control won't be available.",
+  "steps": {
+    "cargo": {
+      "title": "What's your role at the company?",
+      "subtitle": "Pick one:",
+      "options": {
+        "funcionario": "Employee",
+        "dono": "Owner / Partner",
+        "terceiro": "External (consultant, BPO…)",
+        "outros": "Other"
+      }
+    },
+    "faturamento": {
+      "title": "What's your company's average monthly revenue?",
+      "subtitle": "Pick one:",
+      "options": {
+        "ate7k": "Up to R$ 7k",
+        "7a30k": "R$ 7k to R$ 30k",
+        "30a200k": "R$ 30k to R$ 200k",
+        "acima200k": "Over R$ 200k"
+      }
+    },
+    "desafio": {
+      "title": "What's your biggest challenge with financial management?",
+      "subtitle": "Pick one:",
+      "options": {
+        "decidir": "I have the data, but I don't know how to decide",
+        "comecar": "I don't know where to start",
+        "mentor": "I need help from a financial mentor",
+        "lucroPrejuizo": "I don't know whether I'm profitable or not",
+        "semDepender": "I want management to work without depending only on me",
+        "entenderNumeros": "I record everything, but I don't understand the numbers"
+      }
+    },
+    "ramo": {
+      "title": "Setting your industry",
+      "subtitle": "Which area is most of your business's operation?",
+      "options": {
+        "comercio": "Retail",
+        "ecommerce": "E-commerce",
+        "industria": "Manufacturing",
+        "servico": "Services"
+      }
+    },
+    "boas_vindas": {
+      "title": "All set! 🎉",
+      "description": "Your profile is configured. NexusFi will now tailor reports, targets and financial insights to your business. Ready to start?"
+    }
+  }
+}

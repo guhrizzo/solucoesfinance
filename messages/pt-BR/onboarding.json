@@ -1,1 +1,57 @@
-{}
+{
+  "stepOf": "Etapa {current} de {total}",
+  "back": "Voltar",
+  "next": "Próximo",
+  "goToDashboard": "Acessar o painel",
+  "skip": "Pular configuração por agora",
+  "close": "Fechar",
+  "serviceWarning": "<b>Aviso:</b> Ao escolher a opção de <b>Serviço</b>, a funcionalidade de controle de estoque não estará disponível.",
+  "steps": {
+    "cargo": {
+      "title": "Qual o seu cargo na empresa?",
+      "subtitle": "Selecione uma opção:",
+      "options": {
+        "funcionario": "Funcionário",
+        "dono": "Dono / Sócio",
+        "terceiro": "Terceiro (Consultor, BPO…)",
+        "outros": "Outros"
+      }
+    },
+    "faturamento": {
+      "title": "Qual é o faturamento mensal médio da sua empresa?",
+      "subtitle": "Selecione uma opção:",
+      "options": {
+        "ate7k": "Até R$ 7 mil",
+        "7a30k": "De R$ 7 mil a R$ 30 mil",
+        "30a200k": "De R$ 30 mil a R$ 200 mil",
+        "acima200k": "Acima de R$ 200 mil"
+      }
+    },
+    "desafio": {
+      "title": "Qual é o seu maior desafio com a gestão financeira?",
+      "subtitle": "Selecione uma opção:",
+      "options": {
+        "decidir": "Tenho os dados, mas não sei como decidir",
+        "comecar": "Não sei por onde começar",
+        "mentor": "Preciso de ajuda de um mentor financeiro",
+        "lucroPrejuizo": "Não sei se tenho lucro ou prejuízo",
+        "semDepender": "Quero que a gestão funcione sem depender só de mim",
+        "entenderNumeros": "Registro tudo, mas não entendo os números"
+      }
+    },
+    "ramo": {
+      "title": "Definindo seu ramo de atuação",
+      "subtitle": "Qual área representa a maior parte da operação do seu negócio?",
+      "options": {
+        "comercio": "Comércio",
+        "ecommerce": "E-commerce",
+        "industria": "Indústria",
+        "servico": "Serviço"
+      }
+    },
+    "boas_vindas": {
+      "title": "Tudo pronto! 🎉",
+      "description": "Seu perfil foi configurado. Agora o NexusFi vai personalizar relatórios, metas e insights financeiros de acordo com o seu negócio. Vamos começar?"
+    }
+  }
+}

@@ -1,1 +1,57 @@
-{}
+{
+  "stepOf": "Paso {current} de {total}",
+  "back": "Volver",
+  "next": "Siguiente",
+  "goToDashboard": "Acceder al panel",
+  "skip": "Omitir la configuración por ahora",
+  "close": "Cerrar",
+  "serviceWarning": "<b>Aviso:</b> Al elegir <b>Servicios</b>, el control de inventario no estará disponible.",
+  "steps": {
+    "cargo": {
+      "title": "¿Cuál es tu cargo en la empresa?",
+      "subtitle": "Elige una opción:",
+      "options": {
+        "funcionario": "Empleado",
+        "dono": "Dueño / Socio",
+        "terceiro": "Externo (consultor, BPO…)",
+        "outros": "Otro"
+      }
+    },
+    "faturamento": {
+      "title": "¿Cuál es la facturación mensual promedio de tu empresa?",
+      "subtitle": "Elige una opción:",
+      "options": {
+        "ate7k": "Hasta R$ 7 mil",
+        "7a30k": "De R$ 7 mil a R$ 30 mil",
+        "30a200k": "De R$ 30 mil a R$ 200 mil",
+        "acima200k": "Más de R$ 200 mil"
+      }
+    },
+    "desafio": {
+      "title": "¿Cuál es tu mayor desafío con la gestión financiera?",
+      "subtitle": "Elige una opción:",
+      "options": {
+        "decidir": "Tengo los datos, pero no sé cómo decidir",
+        "comecar": "No sé por dónde empezar",
+        "mentor": "Necesito ayuda de un mentor financiero",
+        "lucroPrejuizo": "No sé si tengo ganancia o pérdida",
+        "semDepender": "Quiero que la gestión funcione sin depender solo de mí",
+        "entenderNumeros": "Registro todo, pero no entiendo los números"
+      }
+    },
+    "ramo": {
+      "title": "Definiendo tu sector",
+      "subtitle": "¿Qué área representa la mayor parte de la operación de tu negocio?",
+      "options": {
+        "comercio": "Comercio",
+        "ecommerce": "E-commerce",
+        "industria": "Industria",
+        "servico": "Servicios"
+      }
+    },
+    "boas_vindas": {
+      "title": "¡Todo listo! 🎉",
+      "description": "Tu perfil quedó configurado. Ahora NexusFi personalizará informes, metas e insights financieros según tu negocio. ¿Empezamos?"
+    }
+  }
+}
