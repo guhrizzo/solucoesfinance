@@ -14,13 +14,15 @@ import {
   Eye, EyeOff,
   type LucideIcon,
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import Navbar from "./Navbar";
 import { usePeriod } from "../hooks/usePeriod";
 import { Modal, Button, MoneyInput, parseAmount, Sensitive } from "./ui";
 import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
 import AccessDenied from "./AccessDenied";
 import { PageLoader } from "./ui";
-import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
+import { formatMoney } from "@/lib/format";
 import "./cashflow.css";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -94,6 +96,8 @@ const TODAY = new Date().toISOString().split("T")[0];
 
 const CAT = CASHFLOW_CATEGORIES;
 
+// Ícone por categoria — chaveado pelo VALOR gravado (mesmo dos consumidores
+// costCenterSync/relatorios). CAT_ICON não precisa cobrir todas: fallback = seta.
 const CAT_ICON: Record<string, LucideIcon> = {
   "Vendas": ShoppingCart,
   "Serviços prestados": Briefcase,
@@ -109,22 +113,21 @@ const CAT_ICON: Record<string, LucideIcon> = {
   "Outros gastos": Package,
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers de formatação (recebem o locale) ─────────────────────────────────
 
-const toBRL = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
-const labelDate = (d: string) =>
-  new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).replace(/\./g, "");
+const labelDate = (d: string, locale: string) =>
+  new Date(d + "T12:00:00").toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" }).replace(/\./g, "");
 
-const labelMonthYear = (yearMonth: string) => {
+const labelMonthYear = (yearMonth: string, locale: string) => {
   const [year, month] = yearMonth.split("-");
   const date = new Date(`${year}-${month}-01T12:00:00`);
-  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(/^\w/, c => c.toUpperCase());
+  return date.toLocaleDateString(locale, { month: "long", year: "numeric" }).replace(/^\w/, c => c.toUpperCase());
 };
 
-const shortDate = (d: string) =>
-  new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "numeric" });
+const shortDate = (d: string, locale: string) =>
+  new Date(d + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "numeric" });
 
 if (typeof window !== "undefined") {
   import("@/lib/firebase");
@@ -181,6 +184,9 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
   open: boolean; editing: Tx | null; uid: string | null; costCenters: CostCenterOption[];
   onClose: () => void; onSave: (data: Omit<Tx, "id">) => Promise<void>;
 }) {
+  const t = useTranslations("fluxoCaixa.modal");
+  const tf = useTranslations("fluxoCaixa");
+  const tCat = useTranslations("categories");
   const [type, setType] = useState<TxType>("entrada");
   const [desc, setDesc] = useState("");
   const [cat, setCat] = useState("");
@@ -242,7 +248,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
       const base64 = await new Promise<string>((res, rej) => {
         const r = new FileReader();
         r.onload = () => res((r.result as string).split(",")[1]);
-        r.onerror = () => rej(new Error("Falha ao ler arquivo"));
+        r.onerror = () => rej(new Error(t("errReadFile")));
         r.readAsDataURL(nfFile);
       });
       const isXml = nfFile.name.toLowerCase().endsWith(".xml");
@@ -255,7 +261,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
       }
       const res = await fetch("/api/analyze-nf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
+      if (!res.ok || data.error) throw new Error(data.error ?? t("errApi"));
       if (data.description) setDesc(data.description.slice(0, 60));
       if (data.amount) setRawAmt(String(data.amount).replace(".", ","));
       if (data.date) setDate(data.date);
@@ -263,13 +269,13 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
       const cats = type === "entrada" ? CAT.entrada : CAT.saida;
       const match = cats.find(c => c.toLowerCase().includes((data.category ?? "").toLowerCase()) || (data.category ?? "").toLowerCase().includes(c.toLowerCase()));
       if (match) setCat(match);
-    } catch (e: any) { setErr(`Erro ao ler NF: ${e.message}`); }
+    } catch (e: any) { setErr(t("errReadInvoice", { message: e.message })); }
     setScanning(false);
   };
 
   const uploadNf = async (): Promise<{ url: string; name: string }> => {
     if (!nfFile || !uid) return { url: nfUrl, name: nfName };
-    const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Timeout: Firebase Storage pode não estar ativado.")), 15000));
+    const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error(t("errStorageTimeout"))), 15000));
     const upload = async () => {
       const [{ getFirebase }, { ref, uploadBytes, getDownloadURL }] = await Promise.all([import("@/lib/firebase"), import("firebase/storage")]);
       const { storage } = await getFirebase();
@@ -288,7 +294,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
       if (nfFile) {
         try { nfData = await uploadNf(); }
         catch (uploadErr: any) {
-          setErr(`NF não anexada: ${uploadErr.message}. Salvando sem arquivo.`);
+          setErr(t("errInvoiceNotAttached", { message: uploadErr.message }));
           await new Promise(r => setTimeout(r, 2500));
           setErr("");
         }
@@ -306,7 +312,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
       }
       await onSave(saveData);
       onClose();
-    } catch (e: any) { setErr(e?.message ?? "Erro ao salvar"); setSaving(false); }
+    } catch (e: any) { setErr(e?.message ?? t("errSave")); setSaving(false); }
   }
 
   const hasNf = nfPreview || nfUrl;
@@ -316,8 +322,8 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
       <>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
           <div>
-            <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{editing ? "Editar transação" : "Nova transação"}</p>
-            <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>Preencha ou anexe uma nota fiscal</p>
+            <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{editing ? t("editTitle") : t("newTitle")}</p>
+            <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>{t("fillOrAttach")}</p>
           </div>
           <button onClick={() => !saving && onClose()} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer"
             style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
@@ -337,7 +343,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
                 anexado x área de upload), sem um único controle fixo pra
                 associar. */}
             <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--cf-text-2)" }}>
-              <Paperclip size={12} /> Anexar nota fiscal
+              <Paperclip size={12} /> {t("attachInvoice")}
             </p>
             {hasNf ? (
               <div className="flex items-center gap-3 p-3.5 rounded-xl" style={{ background: "var(--status-info-bg)", border: "1px solid var(--status-info-border)" }}>
@@ -345,12 +351,12 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
                   <FileText size={16} style={{ color: "var(--status-info-text)" }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate" style={{ color: "var(--status-info-text)" }}>{nfName || "Nota Fiscal"}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>Anexada ✓</p>
+                  <p className="text-xs font-semibold truncate" style={{ color: "var(--status-info-text)" }}>{nfName || t("invoiceFallbackName")}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>{t("attached")}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {(nfPreview || nfUrl) && (
-                    <a href={nfPreview || nfUrl} target="_blank" rel="noreferrer" aria-label="Ver nota fiscal anexada (abre em nova aba)"
+                    <a href={nfPreview || nfUrl} target="_blank" rel="noreferrer" aria-label={t("viewInvoiceAria")}
                       className="p-1.5 rounded-lg hover:bg-opacity-70 cursor-pointer"
                       style={{ background: "var(--status-info-bg)", color: "var(--status-info-text)" }}>
                       <ExternalLink size={12} />
@@ -371,8 +377,8 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
                   <Upload size={15} style={{ color: "var(--cf-text-2)" }} />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>PDF, imagem ou XML</p>
-                  <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>Clique para anexar</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{t("uploadHint")}</p>
+                  <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{t("clickToAttach")}</p>
                 </div>
                 <input ref={nfRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.xml" className="hidden" onChange={handleNfSelect} />
               </button>
@@ -381,34 +387,34 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
               <button onClick={scanNf} disabled={scanning}
                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${scanning ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                 style={{ borderColor: "color-mix(in srgb, var(--brand) 45%, var(--surface))", background: "var(--brand-weak)", color: "var(--brand)" }}>
-                {scanning ? <><Loader2 size={14} className="animate-spin" /> Analisando…</> : <><FileScan size={14} /> Extrair dados com IA</>}
+                {scanning ? <><Loader2 size={14} className="animate-spin" /> {t("analyzing")}</> : <><FileScan size={14} /> {t("extractWithAi")}</>}
               </button>
             )}
           </div>
           <div className="h-px" style={{ background: "var(--cf-border)" }} />
           {/* Tipo */}
           <div className="grid grid-cols-2 gap-2 p-1.5 rounded-xl" style={{ background: "var(--cf-input)" }}>
-            {(["entrada", "saida"] as TxType[]).map((t) => (
-              <button key={t} onClick={() => { setType(t); setCat(""); }}
+            {(["entrada", "saida"] as TxType[]).map((tp) => (
+              <button key={tp} onClick={() => { setType(tp); setCat(""); }}
                 className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer"
-                style={type === t
-                  ? { background: t === "entrada" ? "var(--pos)" : "var(--neg)", color: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }
+                style={type === tp
+                  ? { background: tp === "entrada" ? "var(--pos)" : "var(--neg)", color: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }
                   : { background: "transparent", color: "var(--cf-text-2)" }}>
-                {t === "entrada" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
-                {t === "entrada" ? "Entrada" : "Saída"}
+                {tp === "entrada" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
+                {tp === "entrada" ? tf("type.inflow") : tf("type.outflow")}
               </button>
             ))}
           </div>
           {/* Descrição */}
           <div className="space-y-2">
-            <label htmlFor={descId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Descrição</label>
-            <input id={descId} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Cliente XYZ, Aluguel…"
+            <label htmlFor={descId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("descriptionLabel")}</label>
+            <input id={descId} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={t("descriptionPlaceholder")}
               className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
           {/* Categoria */}
           <div className="space-y-2">
-            <label htmlFor={catId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Categoria</label>
+            <label htmlFor={catId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("categoryLabel")}</label>
             <div className="relative">
               <select
                 id={catId}
@@ -419,14 +425,14 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
                 }}
                 className="w-full appearance-none rounded-xl px-4 py-3 pr-9 text-sm outline-none cursor-pointer transition-colors"
                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
-                <option value="">— Selecione —</option>
-                {CAT[type].map((c) => <option key={c} value={c}>{c}</option>)}
-                <option value={CUSTOM_CATEGORY}>Descrição (especificar)…</option>
+                <option value="">{t("categorySelect")}</option>
+                {CAT[type].map((c) => <option key={c} value={c}>{categoryLabel(c, tCat)}</option>)}
+                <option value={CUSTOM_CATEGORY}>{t("categoryCustom")}</option>
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-2)" }} />
             </div>
             {catMode === "custom" && (
-              <input value={cat} onChange={(e) => setCat(e.target.value)} placeholder="Descreva a categoria"
+              <input value={cat} onChange={(e) => setCat(e.target.value)} placeholder={t("categoryCustomPlaceholder")}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
             )}
@@ -437,20 +443,20 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           {type === "saida" && costCenters.length > 0 && (
             <div className="space-y-2">
               <label htmlFor={costCenterFieldId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
-                Centro de custo <span className="normal-case font-normal">(opcional)</span>
+                {t("costCenterLabel")} <span className="normal-case font-normal">{t("optional")}</span>
               </label>
               <div className="relative">
                 <select id={costCenterFieldId} value={costCenterId} onChange={(e) => setCostCenterId(e.target.value)}
                   className="w-full appearance-none rounded-xl px-4 py-3 pr-9 text-sm outline-none cursor-pointer transition-colors"
                   style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
-                  <option value="">— Nenhum —</option>
+                  <option value="">{t("costCenterNone")}</option>
                   {costCenters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-2)" }} />
               </div>
               {costCenterId && (
                 <p className="text-xs flex items-center gap-1" style={{ color: "var(--success)" }}>
-                  <Check size={11} /> Lança a despesa automaticamente nesse centro
+                  <Check size={11} /> {t("costCenterHint")}
                 </p>
               )}
             </div>
@@ -458,11 +464,11 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           {/* Valor + Data */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Valor (R$)</label>
+              <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("amountLabel")}</label>
               <MoneyInput id={amtId} value={rawAmt} onValueChange={setRawAmt} />
             </div>
             <div className="space-y-2">
-              <label htmlFor={dateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Data</label>
+              <label htmlFor={dateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("dateLabel")}</label>
               <input id={dateId} type="date" value={date} onChange={(e) => setDate(e.target.value)}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none cursor-pointer transition-colors"
                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -470,8 +476,8 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
           </div>
           {/* Observação */}
           <div className="space-y-2">
-            <label htmlFor={noteId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Observação (opcional)</label>
-            <input id={noteId} value={note} onChange={(e) => setNote(e.target.value)} placeholder="NF nº 123, parcela 1/5…"
+            <label htmlFor={noteId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("noteLabel")}</label>
+            <input id={noteId} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("notePlaceholder")}
               className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
@@ -484,7 +490,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
             size="lg"
             className="w-full"
           >
-            {editing ? "Salvar alterações" : type === "entrada" ? "Registrar entrada" : "Registrar saída"}
+            {editing ? t("saveChanges") : type === "entrada" ? t("registerInflow") : t("registerOutflow")}
           </Button>
         </div>
       </>
@@ -499,6 +505,9 @@ type ImportStep = "input" | "loading" | "preview" | "saving" | "done";
 function ImportModal({ open, onClose, onImport }: {
   open: boolean; onClose: () => void; onImport: (txs: ImportedTx[]) => Promise<void>;
 }) {
+  const t = useTranslations("fluxoCaixa.import");
+  const tCat = useTranslations("categories");
+  const locale = useLocale();
   const [step, setStep] = useState<ImportStep>("input");
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<ImportedTx[]>([]);
@@ -549,23 +558,23 @@ function ImportModal({ open, onClose, onImport }: {
     try {
       const res = await fetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error ?? "Erro na API");
+      if (!res.ok || data.error) throw new Error(data.error ?? t("errApi"));
       const rawText = (data.content as any[])?.map((c: any) => c.text || "").join("") ?? "";
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
-      if (!parsed.transactions?.length) { setErrMsg("Nenhuma transação encontrada."); setStep("input"); return; }
-      const normalized: ImportedTx[] = parsed.transactions.map((t: any) => ({
-        type: (t.type === "entrada" || t.type === "saida") ? t.type : "saida",
-        description: String(t.description ?? "Sem descrição").slice(0, 60),
-        category: normalizeCategory(String(t.category ?? ""), t.type === "entrada" ? "entrada" : "saida"),
-        amount: Math.abs(Number(t.amount) || 0),
-        date: String(t.date ?? TODAY),
-        note: String(t.note ?? ""),
+      if (!parsed.transactions?.length) { setErrMsg(t("noneFound")); setStep("input"); return; }
+      const normalized: ImportedTx[] = parsed.transactions.map((row: any) => ({
+        type: (row.type === "entrada" || row.type === "saida") ? row.type : "saida",
+        description: String(row.description ?? t("noDescription")).slice(0, 60),
+        category: normalizeCategory(String(row.category ?? ""), row.type === "entrada" ? "entrada" : "saida"),
+        amount: Math.abs(Number(row.amount) || 0),
+        date: String(row.date ?? TODAY),
+        note: String(row.note ?? ""),
       }));
       setPreview(normalized);
       setSelected(new Set(normalized.map((_, i) => i)));
       setStep("preview");
-    } catch (e: any) { setErrMsg(`Erro ao interpretar: ${e.message}`); setStep("input"); }
+    } catch (e: any) { setErrMsg(t("errParse", { message: e.message })); setStep("input"); }
   };
 
   const confirmImport = async () => {
@@ -588,18 +597,18 @@ function ImportModal({ open, onClose, onImport }: {
               <Sparkles size={16} className="text-white" />
             </div>
             <div>
-              <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Importar com IA</p>
+              <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
               <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
-                {step === "input" && "Cole ou faça upload de seu extrato"}
-                {step === "loading" && "Analisando transações…"}
-                {step === "preview" && `${preview.length} transações encontradas`}
-                {step === "saving" && "Salvando…"}
-                {step === "done" && "Importação concluída!"}
+                {step === "input" && t("stepInput")}
+                {step === "loading" && t("stepLoading")}
+                {step === "preview" && t("stepPreview", { count: preview.length })}
+                {step === "saving" && t("stepSaving")}
+                {step === "done" && t("stepDone")}
               </p>
             </div>
           </div>
           {step !== "saving" && (
-            <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer" aria-label="Fechar"
+            <button onClick={onClose} className="p-1.5 hover:bg-opacity-50 rounded-lg transition-colors cursor-pointer" aria-label={t("close")}
               style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
               <X size={16} />
             </button>
@@ -620,22 +629,22 @@ function ImportModal({ open, onClose, onImport }: {
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--cf-input)" }}>
                   <Upload size={18} style={{ color: "var(--cf-text-2)" }} />
                 </div>
-                <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>Fazer upload</p>
-                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>.txt ou .csv do seu banco</p>
+                <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{t("upload")}</p>
+                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{t("uploadHint")}</p>
                 <input ref={fileRef} type="file" accept=".txt,.csv" className="hidden" onChange={handleFile} />
               </button>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px" style={{ background: "var(--cf-border)" }} />
-                <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>ou cole o texto</span>
+                <span className="text-xs font-medium" style={{ color: "var(--cf-text-2)" }}>{t("orPasteText")}</span>
                 <div className="flex-1 h-px" style={{ background: "var(--cf-border)" }} />
               </div>
               <div className="space-y-2">
-                <label htmlFor={extractTextId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Extrato bancário</label>
+                <label htmlFor={extractTextId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("bankStatement")}</label>
                 <textarea id={extractTextId} value={text} onChange={(e) => setText(e.target.value)} rows={8}
                   placeholder={`01/03/2026  PIX RECEBIDO ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA         DB  R$ 2.200,00`}
                   className="w-full rounded-xl px-4 py-3 text-xs font-mono outline-none resize-none cursor-text"
                   style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
-                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{text.length} caracteres</p>
+                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{t("charCount", { count: text.length })}</p>
               </div>
             </>
           )}
@@ -647,8 +656,8 @@ function ImportModal({ open, onClose, onImport }: {
                 </div>
               </div>
               <div className="text-center">
-                <p className="font-heading text-sm font-bold" style={{ color: "var(--cf-text)" }}>Analisando…</p>
-                <p className="text-xs mt-2" style={{ color: "var(--cf-text-2)" }}>Extraindo transações, valores e categorias</p>
+                <p className="font-heading text-sm font-bold" style={{ color: "var(--cf-text)" }}>{t("analyzingTitle")}</p>
+                <p className="text-xs mt-2" style={{ color: "var(--cf-text-2)" }}>{t("analyzingHint")}</p>
               </div>
             </div>
           )}
@@ -656,9 +665,9 @@ function ImportModal({ open, onClose, onImport }: {
             <>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Entradas", val: preview.filter(t => t.type === "entrada").length, color: "var(--pos)", bg: "var(--pos-weak)" },
-                  { label: "Saídas", val: preview.filter(t => t.type === "saida").length, color: "var(--neg)", bg: "var(--neg-weak)" },
-                  { label: "Selecionados", val: selected.size, color: "var(--brand)", bg: "var(--brand-weak)" },
+                  { label: t("summaryInflows"), val: preview.filter(x => x.type === "entrada").length, color: "var(--pos)", bg: "var(--pos-weak)" },
+                  { label: t("summaryOutflows"), val: preview.filter(x => x.type === "saida").length, color: "var(--neg)", bg: "var(--neg-weak)" },
+                  { label: t("summarySelected"), val: selected.size, color: "var(--brand)", bg: "var(--brand-weak)" },
                 ].map(({ label, val, color, bg }) => (
                   <div key={label} className="rounded-xl p-3 text-center" style={{ background: bg }}>
                     <p className="text-lg font-heading font-bold" style={{ color }}>{val}</p>
@@ -673,7 +682,7 @@ function ImportModal({ open, onClose, onImport }: {
                   style={selected.size === preview.length ? { background: "var(--brand)", borderColor: "var(--brand)" } : { borderColor: "var(--cf-border)" }}>
                   {selected.size === preview.length && <Check size={10} className="text-white" />}
                 </div>
-                {selected.size === preview.length ? "Desmarcar todos" : "Selecionar todos"}
+                {selected.size === preview.length ? t("deselectAll") : t("selectAll")}
                 <span className="ml-auto text-xs font-normal" style={{ color: "var(--cf-text-2)" }}>{selected.size}/{preview.length}</span>
               </button>
               <div className="space-y-1.5">
@@ -696,10 +705,10 @@ function ImportModal({ open, onClose, onImport }: {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</p>
-                        <p className="text-xs truncate" style={{ color: "var(--cf-text-2)" }}>{tx.category} · {shortDate(tx.date)}</p>
+                        <p className="text-xs truncate" style={{ color: "var(--cf-text-2)" }}>{categoryLabel(tx.category, tCat)} · {shortDate(tx.date, locale)}</p>
                       </div>
                       <span className="text-xs font-mono font-bold shrink-0" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
-                        {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount)}
+                        {tx.type === "entrada" ? "+" : "-"}{toBRL(tx.amount, locale)}
                       </span>
                     </button>
                   );
@@ -712,9 +721,9 @@ function ImportModal({ open, onClose, onImport }: {
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "var(--pos-weak)" }}>
                 <CheckCircle2 size={32} style={{ color: "var(--pos)" }} />
               </div>
-              <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>Pronto!</p>
+              <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("doneTitle")}</p>
               <p className="text-sm text-center" style={{ color: "var(--cf-text-2)" }}>
-                {selected.size} transação{selected.size !== 1 ? "ões" : ""} importada{selected.size !== 1 ? "s" : ""}.
+                {t("doneBody", { count: selected.size })}
               </p>
             </div>
           )}
@@ -722,21 +731,21 @@ function ImportModal({ open, onClose, onImport }: {
         <div className="px-5 py-4 shrink-0 flex gap-2" style={{ borderTop: "1px solid var(--cf-border)" }}>
           {step === "input" && (
             <>
-              <Button variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-              <Button variant="primary" icon={Sparkles} onClick={analyze} disabled={!text.trim()} className="flex-1">Analisar</Button>
+              <Button variant="secondary" onClick={onClose} className="flex-1">{t("cancel")}</Button>
+              <Button variant="primary" icon={Sparkles} onClick={analyze} disabled={!text.trim()} className="flex-1">{t("analyze")}</Button>
             </>
           )}
           {step === "preview" && (
             <>
-              <Button variant="secondary" onClick={() => setStep("input")} className="flex-1">← Voltar</Button>
-              <Button variant="success" icon={Check} onClick={confirmImport} disabled={selected.size === 0} className="flex-1">Importar</Button>
+              <Button variant="secondary" onClick={() => setStep("input")} className="flex-1">{t("back")}</Button>
+              <Button variant="success" icon={Check} onClick={confirmImport} disabled={selected.size === 0} className="flex-1">{t("doImport")}</Button>
             </>
           )}
           {step === "saving" && (
-            <Button variant="secondary" disabled loading className="flex-1">Salvando…</Button>
+            <Button variant="secondary" disabled loading className="flex-1">{t("saving")}</Button>
           )}
           {step === "done" && (
-            <Button variant="primary" icon={Check} onClick={onClose} className="flex-1">Concluir</Button>
+            <Button variant="primary" icon={Check} onClick={onClose} className="flex-1">{t("finish")}</Button>
           )}
         </div>
       </div>
@@ -752,11 +761,12 @@ function ImportModal({ open, onClose, onImport }: {
 
 type LineStatus = "pago" | "aberto" | "vencido" | "agendado";
 
-const STATUS_META: Record<LineStatus, { label: string; fg: string; bg: string }> = {
-  pago:     { label: "Pago",      fg: "var(--pos)", bg: "var(--pos-weak)" },
-  aberto:   { label: "Em aberto", fg: "var(--warn)", bg: "var(--warn-weak)" },
-  vencido:  { label: "Vencido",   fg: "var(--neg)", bg: "var(--neg-weak)" },
-  agendado: { label: "Agendado",  fg: "var(--brand)", bg: "var(--brand-weak)" },
+// Cores por status; o rótulo vem de fluxoCaixa.status.<status>.
+const STATUS_META: Record<LineStatus, { fg: string; bg: string }> = {
+  pago:     { fg: "var(--pos)", bg: "var(--pos-weak)" },
+  aberto:   { fg: "var(--warn)", bg: "var(--warn-weak)" },
+  vencido:  { fg: "var(--neg)", bg: "var(--neg-weak)" },
+  agendado: { fg: "var(--brand)", bg: "var(--brand-weak)" },
 };
 
 const normalizeBillStatus = (s: string): LineStatus =>
@@ -764,13 +774,14 @@ const normalizeBillStatus = (s: string): LineStatus =>
 const normalizeTaxStatus = (s: string): LineStatus =>
   s === "pago" ? "pago" : s === "atraso" ? "vencido" : s === "agendado" ? "agendado" : "aberto";
 
-// type do imposto → esfera, pro agrupamento (a esfera não é gravada no doc).
-const TAX_SPHERE: Record<string, string> = {
-  simples_nacional: "Federais", irpf: "Federais", irpj: "Federais", pis: "Federais",
-  cofins: "Federais", csll: "Federais", ipi: "Federais", iof: "Federais", itr: "Federais",
-  inss: "Federais", fgts: "Federais",
-  icms: "Estaduais", ipva: "Estaduais", itcmd: "Estaduais",
-  iss: "Municipais", iptu: "Municipais", itbi: "Municipais",
+type Sphere = "federal" | "state" | "municipal";
+// type do imposto → esfera (key), pro agrupamento (a esfera não é gravada no doc).
+const TAX_SPHERE: Record<string, Sphere> = {
+  simples_nacional: "federal", irpf: "federal", irpj: "federal", pis: "federal",
+  cofins: "federal", csll: "federal", ipi: "federal", iof: "federal", itr: "federal",
+  inss: "federal", fgts: "federal",
+  icms: "state", ipva: "state", itcmd: "state",
+  iss: "municipal", iptu: "municipal", itbi: "municipal",
 };
 
 interface BudgetLine {
@@ -780,10 +791,14 @@ interface BudgetLine {
   amount: number;
   status: LineStatus;
   href: string;
+  /** chave de agrupamento (valor gravado da categoria, sphere key, ou sentinela) */
   category: string;
+  /** rótulo já traduzido pra exibir */
+  categoryLabel: string;
 }
 interface BudgetCatGroup {
   category: string;
+  categoryLabel: string;
   total: number;
   pago: number;
   items: BudgetLine[];
@@ -799,6 +814,7 @@ function groupBudgetLines(rows: BudgetLine[]): BudgetCatGroup[] {
   return [...m.entries()]
     .map(([category, items]) => ({
       category,
+      categoryLabel: items[0]?.categoryLabel ?? category,
       items: items.sort((a, b) => (a.sub ?? "").localeCompare(b.sub ?? "")),
       total: items.reduce((s, i) => s + i.amount, 0),
       pago: items.filter(i => i.status === "pago").reduce((s, i) => s + i.amount, 0),
@@ -807,15 +823,17 @@ function groupBudgetLines(rows: BudgetLine[]): BudgetCatGroup[] {
 }
 
 function StatusBadge({ status }: { status: LineStatus }) {
+  const t = useTranslations("fluxoCaixa.status");
   const m = STATUS_META[status];
   return (
     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: m.bg, color: m.fg }}>
-      {m.label}
+      {t(status)}
     </span>
   );
 }
 
 function BudgetLineRow({ line, hideValues }: { line: BudgetLine; hideValues: boolean }) {
+  const locale = useLocale();
   return (
     <a
       href={line.href}
@@ -830,7 +848,7 @@ function BudgetLineRow({ line, hideValues }: { line: BudgetLine; hideValues: boo
         {line.sub && <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{line.sub}</p>}
       </div>
       <span className="text-sm font-semibold mono shrink-0" style={{ color: "var(--cf-text)" }}>
-        <Sensitive hidden={hideValues}>{toBRL(line.amount)}</Sensitive>
+        <Sensitive hidden={hideValues}>{toBRL(line.amount, locale)}</Sensitive>
       </span>
       <ExternalLink size={12} className="shrink-0" style={{ color: "var(--cf-text-3)" }} />
     </a>
@@ -838,12 +856,13 @@ function BudgetLineRow({ line, hideValues }: { line: BudgetLine; hideValues: boo
 }
 
 function BudgetCategoryBlock({ group, hideValues }: { group: BudgetCatGroup; hideValues: boolean }) {
+  const locale = useLocale();
   return (
     <div className="cf-card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2" style={{ background: "var(--cf-txhdr)", borderBottom: "1px solid var(--cf-border)" }}>
-        <span className="text-xs font-bold" style={{ color: "var(--cf-text-2)" }}>{group.category} · {group.items.length}</span>
+        <span className="text-xs font-bold" style={{ color: "var(--cf-text-2)" }}>{group.categoryLabel} · {group.items.length}</span>
         <span className="text-xs font-bold mono" style={{ color: "var(--cf-text-2)" }}>
-          <Sensitive hidden={hideValues}>{toBRL(group.total)}</Sensitive>
+          <Sensitive hidden={hideValues}>{toBRL(group.total, locale)}</Sensitive>
         </span>
       </div>
       {group.items.map(it => <BudgetLineRow key={it.key} line={it} hideValues={hideValues} />)}
@@ -855,6 +874,8 @@ function BudgetSection({ icon: Icon, title, hint, subtotal, pago, hideValues, ch
   icon: LucideIcon; title: string; hint: string; subtotal: number; pago: number;
   hideValues: boolean; children: React.ReactNode;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("fluxoCaixa.budgetModal");
   const aberto = subtotal - pago;
   return (
     <div className="space-y-2">
@@ -864,13 +885,13 @@ function BudgetSection({ icon: Icon, title, hint, subtotal, pago, hideValues, ch
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{title}</span>
         </div>
         <span className="text-sm font-bold mono" style={{ color: "var(--cf-text)" }}>
-          <Sensitive hidden={hideValues}>{toBRL(subtotal)}</Sensitive>
+          <Sensitive hidden={hideValues}>{toBRL(subtotal, locale)}</Sensitive>
         </span>
       </div>
       <div className="flex items-center gap-3 text-[11px]">
         <span style={{ color: "var(--cf-text-3)" }}>{hint}</span>
-        <span className="ml-auto shrink-0" style={{ color: "var(--pos)" }}>Pago <Sensitive hidden={hideValues}>{toBRL(pago)}</Sensitive></span>
-        <span className="shrink-0" style={{ color: "var(--warn)" }}>Aberto <Sensitive hidden={hideValues}>{toBRL(aberto)}</Sensitive></span>
+        <span className="ml-auto shrink-0" style={{ color: "var(--pos)" }}>{t("paid")} <Sensitive hidden={hideValues}>{toBRL(pago, locale)}</Sensitive></span>
+        <span className="shrink-0" style={{ color: "var(--warn)" }}>{t("open")} <Sensitive hidden={hideValues}>{toBRL(aberto, locale)}</Sensitive></span>
       </div>
       {children}
     </div>
@@ -880,6 +901,8 @@ function BudgetSection({ icon: Icon, title, hint, subtotal, pago, hideValues, ch
 function CenterBudgetRow({ name, orcado, realizado, hideValues }: {
   name: string; orcado: number; realizado: number; hideValues: boolean;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("fluxoCaixa.budgetModal");
   const pct = orcado > 0 ? Math.min((realizado / orcado) * 100, 100) : 0;
   const over = orcado > 0 && realizado > orcado;
   const restante = orcado - realizado;
@@ -888,16 +911,16 @@ function CenterBudgetRow({ name, orcado, realizado, hideValues }: {
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <p className="text-sm font-medium truncate" style={{ color: "var(--cf-text)" }}>{name}</p>
         <span className="text-sm font-semibold mono shrink-0" style={{ color: "var(--cf-text)" }}>
-          <Sensitive hidden={hideValues}>{toBRL(orcado)}</Sensitive>
+          <Sensitive hidden={hideValues}>{toBRL(orcado, locale)}</Sensitive>
         </span>
       </div>
       <div className="cf-progress">
         <div className="cf-progress-fill" style={{ width: `${pct}%`, background: over ? "var(--neg)" : "var(--brand)" }} />
       </div>
       <div className="flex items-center justify-between mt-1 text-[11px]" style={{ color: "var(--cf-text-3)" }}>
-        <span>Realizado <b style={{ color: over ? "var(--neg)" : "var(--pos)" }}><Sensitive hidden={hideValues}>{toBRL(realizado)}</Sensitive></b></span>
-        <span>{over ? "Estourou " : "Falta "}
-          <b style={{ color: over ? "var(--neg)" : "var(--cf-text-2)" }}><Sensitive hidden={hideValues}>{toBRL(Math.abs(restante))}</Sensitive></b>
+        <span>{t("budgeted")} <b style={{ color: over ? "var(--neg)" : "var(--pos)" }}><Sensitive hidden={hideValues}>{toBRL(realizado, locale)}</Sensitive></b></span>
+        <span>{over ? `${t("overBudget")} ` : `${t("remaining")} `}
+          <b style={{ color: over ? "var(--neg)" : "var(--cf-text-2)" }}><Sensitive hidden={hideValues}>{toBRL(Math.abs(restante), locale)}</Sensitive></b>
         </span>
       </div>
     </div>
@@ -907,6 +930,10 @@ function CenterBudgetRow({ name, orcado, realizado, hideValues }: {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
+  const t = useTranslations("fluxoCaixa");
+  const tNav = useTranslations("nav");
+  const tCat = useTranslations("categories");
+  const locale = useLocale();
   const [uid, setUid] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -999,7 +1026,7 @@ export default function CashFlowPage() {
             const ownerUid = scope.ownerUid;
 
             setUid(ownerUid);
-            setUserName(u.displayName ?? u.email ?? "Usuário");
+            setUserName(u.displayName ?? u.email ?? "");
             setUserEmail(u.email ?? "");
 
             // ── Listener de transações ──
@@ -1076,7 +1103,7 @@ export default function CashFlowPage() {
                   const x = d.data();
                   return {
                     id: d.id,
-                    name: (x.name as string) || "Imposto",
+                    name: (x.name as string) || "",
                     type: (x.type as string) || "outro",
                     status: String(x.status || ""),
                     amount: x.amount || 0,
@@ -1125,7 +1152,7 @@ export default function CashFlowPage() {
   }
 
   async function handleSave(data: Omit<Tx, "id">) {
-    if (!uid) throw new Error("Usuário não autenticado");
+    if (!uid) throw new Error(t("notAuthenticated"));
     const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
     const clean: Record<string, unknown> = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
@@ -1193,7 +1220,7 @@ export default function CashFlowPage() {
   }
 
   async function handleImport(importedTxs: ImportedTx[]) {
-    if (!uid) throw new Error("Usuário não autenticado");
+    if (!uid) throw new Error(t("notAuthenticated"));
     const [{ getFirebase }, { collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
     await Promise.all(importedTxs.map(async (tx) => {
@@ -1270,31 +1297,39 @@ export default function CashFlowPage() {
     // Contas a pagar do mês, agrupadas por categoria, com status por item.
     const contasLines: BudgetLine[] = bills
       .filter(b => doMes(b.dueDate))
-      .map(b => ({
-        key: `b-${b.id}`,
-        label: b.title || "Conta a pagar",
-        sub: labelDate(b.dueDate) + (b.installmentIndex ? ` · Parcela ${b.installmentIndex}/${b.installmentCount}` : ""),
-        amount: b.amount,
-        status: normalizeBillStatus(b.status),
-        href: "/contasPagar",
-        category: b.category || "Sem categoria",
-      }));
+      .map(b => {
+        const cat = b.category || "__uncat__";
+        return {
+          key: `b-${b.id}`,
+          label: b.title || t("budgetModal.billFallback"),
+          sub: labelDate(b.dueDate, locale) + (b.installmentIndex ? ` · ${t("budgetModal.installment", { index: b.installmentIndex, count: b.installmentCount ?? 0 })}` : ""),
+          amount: b.amount,
+          status: normalizeBillStatus(b.status),
+          href: "/contasPagar",
+          category: cat,
+          categoryLabel: cat === "__uncat__" ? t("budgetModal.uncategorized") : categoryLabel(cat, tCat),
+        };
+      });
     const contas = groupBudgetLines(contasLines);
     const contasTotal = contasLines.reduce((s, l) => s + l.amount, 0);
     const contasPago = contasLines.filter(l => l.status === "pago").reduce((s, l) => s + l.amount, 0);
 
     // Impostos do mês, agrupados por esfera (Federais / Estaduais / Municipais).
     const impostosLines: BudgetLine[] = taxes
-      .filter(t => doMes(t.dueDate))
-      .map((t, i) => ({
-        key: `t-${t.id || i}`,
-        label: t.name || "Imposto",
-        sub: labelDate(t.dueDate),
-        amount: t.amount,
-        status: normalizeTaxStatus(t.status),
-        href: "/impostos",
-        category: TAX_SPHERE[t.type] || "Outros",
-      }));
+      .filter(tx => doMes(tx.dueDate))
+      .map((tx, i) => {
+        const sphere = TAX_SPHERE[tx.type];
+        return {
+          key: `t-${tx.id || i}`,
+          label: tx.name || t("budgetModal.taxFallback"),
+          sub: labelDate(tx.dueDate, locale),
+          amount: tx.amount,
+          status: normalizeTaxStatus(tx.status),
+          href: "/impostos",
+          category: sphere || "__other__",
+          categoryLabel: sphere ? t(`taxSphere.${sphere}`) : t("budgetModal.otherSphere"),
+        };
+      });
     const impostos = groupBudgetLines(impostosLines);
     const impostosTotal = impostosLines.reduce((s, l) => s + l.amount, 0);
     const impostosPago = impostosLines.filter(l => l.status === "pago").reduce((s, l) => s + l.amount, 0);
@@ -1304,7 +1339,7 @@ export default function CashFlowPage() {
       contas, contasTotal, contasPago,
       impostos, impostosTotal, impostosPago,
     };
-  }, [costCenters, bills, taxes, expenses, monthKey, currentMonthKey]);
+  }, [costCenters, bills, taxes, expenses, monthKey, currentMonthKey, locale, t, tCat]);
 
   // ─── Lançamentos PREVISTOS (informativo) ────────────────────────────────────
   // Só parcelas de série "numeral" ainda não quitadas, com vencimento no mês em
@@ -1364,34 +1399,34 @@ export default function CashFlowPage() {
     return result;
   }, [filtered]);
 
-  const displayValue = (val: number) => <Sensitive hidden={hideValues}>{toBRL(val)}</Sensitive>;
+  const displayValue = (val: number) => <Sensitive hidden={hideValues}>{toBRL(val, locale)}</Sensitive>;
 
   const kpis = [
-    { label: "Orçamento", val: previsao, Icon: ClipboardList, ibg: "var(--brand-weak)", color: "var(--brand)" },
-    { label: "Entradas", val: entradas, Icon: ArrowUpRight, ibg: "var(--pos-weak)", color: "var(--pos)", sub: `${monthTxs.filter(t => t.type === "entrada").length} lançamentos` },
-    { label: "Saídas", val: saidas, Icon: ArrowDownRight, ibg: "var(--neg-weak)", color: "var(--neg)", sub: `${monthTxs.filter(t => t.type === "saida").length} lançamentos` },
-    { label: "Saldo", val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "var(--brand-weak)" : "var(--neg-weak)", color: saldo >= 0 ? "var(--brand)" : "var(--neg)", sub: saldo >= 0 ? "Positivo" : "Negativo" },
-    { label: "Resultado", val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "var(--pos-weak)" : "var(--neg-weak)", color: superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)", sub: superavitDeficit >= 0 ? "Acima da meta" : "Abaixo da meta" },
+    { key: "budget", label: t("kpi.budget"), val: previsao, Icon: ClipboardList, ibg: "var(--brand-weak)", color: "var(--brand)" },
+    { key: "inflows", label: t("kpi.inflows"), val: entradas, Icon: ArrowUpRight, ibg: "var(--pos-weak)", color: "var(--pos)", sub: t("kpi.entries", { count: monthTxs.filter(x => x.type === "entrada").length }) },
+    { key: "outflows", label: t("kpi.outflows"), val: saidas, Icon: ArrowDownRight, ibg: "var(--neg-weak)", color: "var(--neg)", sub: t("kpi.entries", { count: monthTxs.filter(x => x.type === "saida").length }) },
+    { key: "balance", label: t("kpi.balance"), val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "var(--brand-weak)" : "var(--neg-weak)", color: saldo >= 0 ? "var(--brand)" : "var(--neg)", sub: saldo >= 0 ? t("kpi.positive") : t("kpi.negative") },
+    { key: "result", label: t("kpi.result"), val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "var(--pos-weak)" : "var(--neg-weak)", color: superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)", sub: superavitDeficit >= 0 ? t("kpi.aboveTarget") : t("kpi.belowTarget") },
   ];
 
-  if (pageState === "blocked") return <AccessDenied category="Fluxo de Caixa" />;
+  if (pageState === "blocked") return <AccessDenied category={tNav("items.fluxoCaixa")} />;
 
   if (pageState === "loading") return <PageLoader background="var(--cf-bg)" />;
 
   if (pageState === "error") return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ background: "var(--cf-bg)" }}>
-      <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>Erro ao conectar</p>
+      <p className="font-heading text-lg font-bold" style={{ color: "var(--neg)" }}>{t("errorConnect")}</p>
       <div className="rounded-xl p-4 max-w-sm w-full text-left cf-card" style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)" }}>
-        <p className="text-xs font-mono break-all" style={{ color: "var(--neg)" }}>{errMsg || "Erro desconhecido"}</p>
+        <p className="text-xs font-mono break-all" style={{ color: "var(--neg)" }}>{errMsg || t("unknownError")}</p>
       </div>
-      <Button variant="primary" onClick={() => window.location.reload()} className="mt-2">Tentar novamente</Button>
+      <Button variant="primary" onClick={() => window.location.reload()} className="mt-2">{t("tryAgain")}</Button>
     </div>
   );
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--cf-bg)" }}>
 
-      <Navbar user={{ displayName: userName, email: userEmail }} activePath="/fluxo-caixa" onLogout={handleLogout} />
+      <Navbar user={{ displayName: userName || null, email: userEmail }} activePath="/fluxo-caixa" onLogout={handleLogout} />
 
       <TransactionModal open={modal} editing={editing} uid={uid} costCenters={costCenters} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
@@ -1401,11 +1436,11 @@ export default function CashFlowPage() {
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "var(--status-danger-bg)" }}>
             <Trash2 size={20} style={{ color: "var(--status-danger-text)" }} />
           </div>
-          <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>Excluir transação?</p>
-          <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>Esta ação não pode ser desfeita.</p>
+          <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>{t("deleteConfirm.title")}</p>
+          <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>{t("deleteConfirm.body")}</p>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setConfirmId(null)} className="flex-1">Cancelar</Button>
-            <Button variant="danger" icon={Trash2} onClick={handleDelete} loading={deleting} className="flex-1">Excluir</Button>
+            <Button variant="secondary" onClick={() => setConfirmId(null)} className="flex-1">{t("deleteConfirm.cancel")}</Button>
+            <Button variant="danger" icon={Trash2} onClick={handleDelete} loading={deleting} className="flex-1">{t("deleteConfirm.delete")}</Button>
           </div>
         </div>
       </Modal>
@@ -1419,8 +1454,8 @@ export default function CashFlowPage() {
                 <ClipboardList size={16} style={{ color: "var(--brand)" }} />
               </div>
               <div className="min-w-0">
-                <p className="font-heading text-base font-bold truncate" style={{ color: "var(--cf-text)" }}>Orçamento · {periodLabel}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>Tudo que compõe o valor previsto do mês</p>
+                <p className="font-heading text-base font-bold truncate" style={{ color: "var(--cf-text)" }}>{t("budgetModal.title", { period: periodLabel })}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>{t("budgetModal.subtitle")}</p>
               </div>
             </div>
             <button onClick={() => setBudgetOpen(false)} className="p-1.5 rounded-lg cursor-pointer shrink-0"
@@ -1431,7 +1466,7 @@ export default function CashFlowPage() {
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
             {previsao === 0 ? (
               <p className="text-sm text-center py-10" style={{ color: "var(--cf-text-2)" }}>
-                Sem orçamento de centro de custo, contas a pagar ou impostos com vencimento em {periodLabel}.
+                {t("budgetModal.empty", { period: periodLabel })}
               </p>
             ) : (
               <>
@@ -1440,16 +1475,16 @@ export default function CashFlowPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Building2 size={14} style={{ color: "var(--cf-text-2)" }} />
-                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>Centros de custo</span>
+                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("budgetModal.costCenters")}</span>
                       </div>
                       <span className="text-sm font-bold mono" style={{ color: "var(--cf-text)" }}>
-                        <Sensitive hidden={hideValues}>{toBRL(previsaoDetalhe.centrosOrcado)}</Sensitive>
+                        <Sensitive hidden={hideValues}>{toBRL(previsaoDetalhe.centrosOrcado, locale)}</Sensitive>
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-[11px]">
-                      <span style={{ color: "var(--cf-text-3)" }}>Orçado do mês × já gasto (despesas pagas)</span>
+                      <span style={{ color: "var(--cf-text-3)" }}>{t("budgetModal.costCentersHint")}</span>
                       <span className="ml-auto shrink-0" style={{ color: "var(--pos)" }}>
-                        Realizado <Sensitive hidden={hideValues}>{toBRL(previsaoDetalhe.centrosRealizado)}</Sensitive>
+                        {t("budgetModal.realized")} <Sensitive hidden={hideValues}>{toBRL(previsaoDetalhe.centrosRealizado, locale)}</Sensitive>
                       </span>
                     </div>
                     <div className="cf-card overflow-hidden">
@@ -1458,14 +1493,14 @@ export default function CashFlowPage() {
                       ))}
                     </div>
                     <a href="/costCenter" className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: "var(--brand)" }}>
-                      Abrir centros de custo <ExternalLink size={11} />
+                      {t("budgetModal.openCostCenters")} <ExternalLink size={11} />
                     </a>
                   </div>
                 )}
 
                 {previsaoDetalhe.contas.length > 0 && (
                   <BudgetSection
-                    icon={Truck} title="Contas a pagar" hint="Vencem neste mês"
+                    icon={Truck} title={t("budgetModal.bills")} hint={t("budgetModal.dueThisMonth")}
                     subtotal={previsaoDetalhe.contasTotal} pago={previsaoDetalhe.contasPago} hideValues={hideValues}
                   >
                     {previsaoDetalhe.contas.map(g => <BudgetCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
@@ -1474,7 +1509,7 @@ export default function CashFlowPage() {
 
                 {previsaoDetalhe.impostos.length > 0 && (
                   <BudgetSection
-                    icon={Receipt} title="Impostos" hint="Vencem neste mês"
+                    icon={Receipt} title={t("budgetModal.taxes")} hint={t("budgetModal.dueThisMonth")}
                     subtotal={previsaoDetalhe.impostosTotal} pago={previsaoDetalhe.impostosPago} hideValues={hideValues}
                   >
                     {previsaoDetalhe.impostos.map(g => <BudgetCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
@@ -1484,7 +1519,7 @@ export default function CashFlowPage() {
             )}
           </div>
           <div className="px-5 py-4 shrink-0 flex items-center justify-between" style={{ borderTop: "1px solid var(--cf-border)" }}>
-            <span className="text-sm font-semibold" style={{ color: "var(--cf-text-2)" }}>Total do orçamento</span>
+            <span className="text-sm font-semibold" style={{ color: "var(--cf-text-2)" }}>{t("budgetModal.total")}</span>
             <span className="font-heading text-lg font-bold mono" style={{ color: "var(--brand)" }}>{displayValue(previsao)}</span>
           </div>
         </div>
@@ -1493,33 +1528,33 @@ export default function CashFlowPage() {
       <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 overflow-y-auto overflow-x-hidden pb-24 lg:pb-8">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>Fluxo de caixa</h1>
+            <h1 className="font-heading text-2xl font-bold leading-tight" style={{ color: "var(--cf-text)" }}>{t("title")}</h1>
             <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>
-              {periodLabel} · troque o mês no seletor da Navbar
+              {t("subtitle", { period: periodLabel })}
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={() => setHideValues(!hideValues)}
               className="p-2 hover:bg-opacity-50 rounded-xl transition-colors cursor-pointer"
-              style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }} title="Ocultar valores">
+              style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }} title={t("hideValues")}>
               {hideValues ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
-            <Button variant="primary" size="sm" icon={Sparkles} onClick={() => setImportOpen(true)}>Importar extrato</Button>
-            <Button variant="success" size="sm" icon={Plus} onClick={() => { setEditing(null); setModal(true); }}>Nova transação</Button>
+            <Button variant="primary" size="sm" icon={Sparkles} onClick={() => setImportOpen(true)}>{t("importStatement")}</Button>
+            <Button variant="success" size="sm" icon={Plus} onClick={() => { setEditing(null); setModal(true); }}>{t("newTransaction")}</Button>
           </div>
         </div>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-          {kpis.map(({ label, val, Icon, ibg, color, sub}) => {
+          {kpis.map(({ key, label, val, Icon, ibg, color, sub}) => {
             const total = entradas + saidas;
             const pct = total > 0 ? (Math.abs(val) / total) * 100 : 0;
-            const showBar = label === "Entradas" || label === "Saídas";
-            const isSaldo = label === "Saldo" || label === "Resultado";
-            const clickable = label === "Orçamento";
+            const showBar = key === "inflows" || key === "outflows";
+            const isSaldo = key === "balance" || key === "result";
+            const clickable = key === "budget";
             return (
               <div
-                key={label}
+                key={key}
                 className={`cf-kpi kin p-3 sm:p-4 flex flex-col gap-2 ${clickable ? "clickable" : ""}`}
                 onClick={clickable ? () => setBudgetOpen(true) : undefined}
                 role={clickable ? "button" : undefined}
@@ -1537,7 +1572,7 @@ export default function CashFlowPage() {
                     {isSaldo && val > 0 ? "+" : ""}{displayValue(val)}
                   </p>
                   <p className="text-xs mt-1" style={{ color: clickable ? "var(--brand)" : "var(--cf-text-3)" }}>
-                    {clickable ? "Ver detalhamento →" : sub}
+                    {clickable ? t("kpi.seeBreakdown") : sub}
                   </p>
                 </div>
                 {showBar && total > 0 && (
@@ -1556,8 +1591,8 @@ export default function CashFlowPage() {
             <Sparkles size={16} className="text-white" />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-sm font-heading font-bold" style={{ color: "var(--cf-text)" }}>Importar com IA</p>
-            <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>Extraia dados do seu extrato automaticamente</p>
+            <p className="text-sm font-heading font-bold" style={{ color: "var(--cf-text)" }}>{t("importBanner.title")}</p>
+            <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{t("importBanner.desc")}</p>
           </div>
           <ArrowUpRight size={16} style={{ color: "var(--cf-text-3)" }} />
         </button>
@@ -1568,13 +1603,13 @@ export default function CashFlowPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--cf-text-3)" }} />
             <input className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none cursor-text"
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}
-              placeholder="Buscar descrição ou categoria…" aria-label="Buscar descrição ou categoria" value={search} onChange={(e) => setSearch(e.target.value)} />
+              placeholder={t("toolbar.searchPlaceholder")} aria-label={t("toolbar.searchAria")} value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {([
-              { f: "all" as const, label: "Todos", icon: null as LucideIcon | null },
-              { f: "entrada" as const, label: "Entradas", icon: BanknoteArrowUp as LucideIcon },
-              { f: "saida" as const, label: "Saídas", icon: BanknoteArrowDown as LucideIcon },
+              { f: "all" as const, label: t("toolbar.filterAll"), icon: null as LucideIcon | null },
+              { f: "entrada" as const, label: t("toolbar.filterInflows"), icon: BanknoteArrowUp as LucideIcon },
+              { f: "saida" as const, label: t("toolbar.filterOutflows"), icon: BanknoteArrowDown as LucideIcon },
             ]).map(({ f, label, icon: Icon }) => (
               <button key={f} onClick={() => setFilter(f)}
                 className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-all select-none"
@@ -1590,7 +1625,7 @@ export default function CashFlowPage() {
               </button>
             ))}
             <span className="ml-auto text-xs shrink-0 pl-2 font-medium" style={{ color: "var(--cf-text-3)" }}>
-              {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+              {t("toolbar.resultCount", { count: filtered.length })}
             </span>
           </div>
         </div>
@@ -1602,15 +1637,15 @@ export default function CashFlowPage() {
               <TrendingUp size={24} style={{ color: "var(--cf-text-3)" }} />
             </div>
             <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>
-              {search || filter !== "all" ? "Nenhum resultado" : `Nada em ${periodLabel}`}
+              {search || filter !== "all" ? t("list.noResults") : t("list.nothingIn", { period: periodLabel })}
             </p>
             <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
-              {search || filter !== "all" ? "Tente ajustar os filtros." : "Nenhuma movimentação neste mês. Troque o mês no seletor da Navbar, adicione manualmente ou importe do extrato."}
+              {search || filter !== "all" ? t("list.adjustFilters") : t("list.noMovement")}
             </p>
             {!search && filter === "all" && (
               <div className="flex gap-2 mt-2">
-                <Button variant="primary" icon={Plus} onClick={() => { setEditing(null); setModal(true); }}>Adicionar</Button>
-                <Button variant="secondary" icon={Sparkles} onClick={() => setImportOpen(true)}>Importar</Button>
+                <Button variant="primary" icon={Plus} onClick={() => { setEditing(null); setModal(true); }}>{t("list.add")}</Button>
+                <Button variant="secondary" icon={Sparkles} onClick={() => setImportOpen(true)}>{t("list.import")}</Button>
               </div>
             )}
           </div>
@@ -1648,9 +1683,9 @@ export default function CashFlowPage() {
                         <Calendar size={18} style={{ color: "var(--cf-text-2)" }} />
                       </div>
                       <div>
-                        <p className="text-base font-heading font-bold" style={{ color: "var(--cf-text)" }}>{labelMonthYear(yearMonth)}</p>
+                        <p className="text-base font-heading font-bold" style={{ color: "var(--cf-text)" }}>{labelMonthYear(yearMonth, locale)}</p>
                         <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
-                          {totalTxs} {totalTxs === 1 ? "transação" : "transações"}
+                          {t("list.txCount", { count: totalTxs })}
                         </p>
                       </div>
                     </div>
@@ -1670,7 +1705,7 @@ export default function CashFlowPage() {
                       </div>
                       <div className="text-right">
                         <span className="mono text-sm font-bold block" style={{ color: monthTotal >= 0 ? "var(--pos)" : "var(--neg)" }}>
-                          <Sensitive hidden={hideValues}>{(monthTotal >= 0 ? "+" : "") + toBRL(monthTotal)}</Sensitive>
+                          <Sensitive hidden={hideValues}>{(monthTotal >= 0 ? "+" : "") + toBRL(monthTotal, locale)}</Sensitive>
                         </span>
                       </div>
                       <ChevronDown
@@ -1711,9 +1746,9 @@ export default function CashFlowPage() {
                                   <Calendar size={14} style={{ color: "var(--cf-text-3)" }} />
                                 </div>
                                 <div className="text-left">
-                                  <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{labelDate(date)}</p>
+                                  <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{labelDate(date, locale)}</p>
                                   <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
-                                    {items.length} {items.length === 1 ? "transação" : "transações"}
+                                    {t("list.txCount", { count: items.length })}
                                   </p>
                                 </div>
                               </div>
@@ -1733,7 +1768,7 @@ export default function CashFlowPage() {
                                 </div>
                                 <div className="text-right">
                                   <span className="mono text-xs font-bold block" style={{ color: dayNet >= 0 ? "var(--pos)" : "var(--neg)" }}>
-                                    <Sensitive hidden={hideValues}>{(dayNet >= 0 ? "+" : "") + toBRL(dayNet)}</Sensitive>
+                                    <Sensitive hidden={hideValues}>{(dayNet >= 0 ? "+" : "") + toBRL(dayNet, locale)}</Sensitive>
                                   </span>
                                 </div>
                                 <ChevronDown
@@ -1762,12 +1797,12 @@ export default function CashFlowPage() {
                                         <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{tx.description}</span>
                                         <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
                                           style={{ background: tx.type === "entrada" ? "var(--pos-weak)" : "var(--neg-weak)", color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
-                                          {tx.category}
+                                          {categoryLabel(tx.category, tCat)}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-2 flex-wrap">
                                         {tx.costCenterName && (
-                                          <span className="text-xs font-medium truncate" style={{ color: "var(--cf-text-2)" }} title="Centro de custo vinculado">
+                                          <span className="text-xs font-medium truncate" style={{ color: "var(--cf-text-2)" }} title={t("list.linkedCostCenter")}>
                                             🏷 {tx.costCenterName}
                                           </span>
                                         )}
@@ -1775,7 +1810,7 @@ export default function CashFlowPage() {
                                         {tx.nfUrl && (
                                           <a href={tx.nfUrl} target="_blank" rel="noreferrer"
                                             className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors hover:opacity-70 cursor-pointer"
-                                            style={{ color: "var(--brand)" }} title={tx.nfName ?? "Ver Nota Fiscal"}>
+                                            style={{ color: "var(--brand)" }} title={tx.nfName ?? t("list.viewInvoice")}>
                                             <Paperclip size={11} />
                                             <span className="hidden sm:inline truncate max-w-24">{tx.nfName ?? "NF"}</span>
                                             <span className="sm:hidden">NF</span>
@@ -1784,7 +1819,7 @@ export default function CashFlowPage() {
                                       </div>
                                     </div>
                                     <span className="mono text-sm font-bold shrink-0" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
-                                      <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
+                                      <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount, locale)}</Sensitive>
                                     </span>
                                     <div className="cf-txa flex items-center gap-1 shrink-0">
                                       <button onClick={() => { setEditing(tx); setModal(true); }}
@@ -1818,13 +1853,13 @@ export default function CashFlowPage() {
       {/* FAB mobile */}
       <div className="lg:hidden fixed z-20 flex flex-col gap-2" style={{ bottom: 74, right: 16 }}>
         <button onClick={() => setImportOpen(true)}
-          aria-label="Importar extrato"
+          aria-label={t("importStatement")}
           className="w-11 h-11 rounded-xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
           style={{ background: "var(--cf-card)", border: "1px solid var(--cf-border)", color: "var(--brand)" }}>
           <Sparkles size={17} />
         </button>
         <button onClick={() => { setEditing(null); setModal(true); }}
-          aria-label="Nova transação"
+          aria-label={t("newTransaction")}
           className="rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
           style={{ width: 52, height: 52, background: "var(--pos)", color: "white", boxShadow: "0 8px 24px rgba(16, 185, 129, 0.35)" }}>
           <Plus size={22} />

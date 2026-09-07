@@ -1,0 +1,35 @@
+{
+  "trialBanner": {
+    "endsToday": "Seu teste grátis termina <strong>hoje</strong>.",
+    "endsIn": "Seu teste grátis termina <strong>em {days, plural, one {# dia} other {# dias}}</strong>.",
+    "ownerCta": "Assine para não perder o acesso.",
+    "memberNote": "Fale com o titular da conta.",
+    "subscribeNow": "Assinar agora",
+    "dismiss": "Dispensar"
+  },
+  "paywall": {
+    "titleComped": "Acesso cortesia",
+    "titleExpired": "Seu acesso expirou",
+    "titleRenew": "Renovar assinatura",
+    "titleTrial": "Teste grátis — {days, plural, one {# dia restante} other {# dias restantes}}",
+    "titleActive": "Sua assinatura está ativa",
+    "subComped": "Sua conta tem acesso completo e ilimitado, sem cobrança. Nada a pagar.",
+    "subExpiredOwner": "Escolha um plano pra continuar usando o NexusFi. Pagamento via Pix ou cartão em até 12x.",
+    "subExpiredMember": "A assinatura desta conta está pendente. Fale com o titular pra regularizar o pagamento.",
+    "subTrialOwner": "Assine agora e não perca o acesso quando o teste acabar.",
+    "subTrialMember": "Conta em período de teste. O titular pode assinar a qualquer momento.",
+    "subActive": "Plano {plan} · acesso até {date}.",
+    "choosePayment": "Escolha como pagar",
+    "choosePaymentHint": "Comece pelo mensal e mude quando quiser.",
+    "billingPeriod": "Período de cobrança",
+    "annualBadge": "-2 meses",
+    "mostComplete": "Mais completo",
+    "perYear": "/ano",
+    "perMonth": "/mês",
+    "annualSavings": "Economize {value} por ano",
+    "subscribe": "Assinar",
+    "subscribeNow": "Assinar agora",
+    "processedBy": "Pagamento processado pela InfinitePay.",
+    "logout": "Sair da conta"
+  }
+}

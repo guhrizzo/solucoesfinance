@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { X, Loader2 } from "lucide-react";
 
 const FOCUSABLE_SELECTOR =
@@ -27,13 +28,14 @@ export default function ConfirmModal({
   open,
   title,
   message,
-  confirmText = "Confirmar",
-  cancelText = "Cancelar",
+  confirmText,
+  cancelText,
   isDangerous = false,
   loading = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  const t = useTranslations("common");
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -115,7 +117,7 @@ export default function ConfirmModal({
             onClick={onCancel}
             disabled={loading}
             className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer disabled:opacity-50"
-            aria-label="Fechar"
+            aria-label={t("close")}
           >
             <X size={16} style={{ color: "var(--db-text-2)" }} />
           </button>
@@ -137,7 +139,7 @@ export default function ConfirmModal({
             className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border cursor-pointer transition-opacity hover:opacity-70 disabled:opacity-50"
             style={{ borderColor: "var(--db-border)", color: "var(--db-text-2)" }}
           >
-            {cancelText}
+            {cancelText ?? t("cancel")}
           </button>
           <button
             type="button"
@@ -147,7 +149,7 @@ export default function ConfirmModal({
             style={{ background: isDangerous ? "var(--danger)" : "var(--primary)" }}
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : null}
-            {confirmText}
+            {confirmText ?? t("confirm")}
           </button>
         </div>
       </div>

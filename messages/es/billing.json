@@ -1,0 +1,35 @@
+{
+  "trialBanner": {
+    "endsToday": "Tu prueba gratis termina <strong>hoy</strong>.",
+    "endsIn": "Tu prueba gratis termina <strong>en {days, plural, one {# día} other {# días}}</strong>.",
+    "ownerCta": "Suscríbete para no perder el acceso.",
+    "memberNote": "Habla con el titular de la cuenta.",
+    "subscribeNow": "Suscribirse ahora",
+    "dismiss": "Descartar"
+  },
+  "paywall": {
+    "titleComped": "Acceso de cortesía",
+    "titleExpired": "Tu acceso expiró",
+    "titleRenew": "Renovar suscripción",
+    "titleTrial": "Prueba gratis — {days, plural, one {# día restante} other {# días restantes}}",
+    "titleActive": "Tu suscripción está activa",
+    "subComped": "Tu cuenta tiene acceso completo e ilimitado, sin cargo. Nada que pagar.",
+    "subExpiredOwner": "Elige un plan para seguir usando NexusFi. Pago con Pix o tarjeta en hasta 12 cuotas.",
+    "subExpiredMember": "La suscripción de esta cuenta está pendiente. Habla con el titular para regularizar el pago.",
+    "subTrialOwner": "Suscríbete ahora y no pierdas el acceso cuando termine la prueba.",
+    "subTrialMember": "La cuenta está en período de prueba. El titular puede suscribirse en cualquier momento.",
+    "subActive": "Plan {plan} · acceso hasta {date}.",
+    "choosePayment": "Elige cómo pagar",
+    "choosePaymentHint": "Empieza con el mensual y cambia cuando quieras.",
+    "billingPeriod": "Período de facturación",
+    "annualBadge": "-2 meses",
+    "mostComplete": "Más completo",
+    "perYear": "/año",
+    "perMonth": "/mes",
+    "annualSavings": "Ahorra {value} por año",
+    "subscribe": "Suscribirse",
+    "subscribeNow": "Suscribirse ahora",
+    "processedBy": "Pago procesado por InfinitePay.",
+    "logout": "Cerrar sesión"
+  }
+}

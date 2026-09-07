@@ -20,6 +20,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useLocale } from "next-intl";
 
 const STORAGE_KEY = "nexusfi-period"; // formato "YYYY-MM"
 
@@ -83,10 +84,12 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
   );
   const setMonth = useCallback((d: Date) => setRefDate(startOfMonth(d)), []);
 
+  const locale = useLocale();
+
   const value = useMemo<PeriodContextValue>(() => {
     const now = new Date();
     const label = refDate
-      .toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+      .toLocaleDateString(locale, { month: "short", year: "numeric" })
       .replace(/^\w/, (c) => c.toUpperCase())
       .replace(/\./g, "");
     return {
@@ -100,7 +103,7 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
       goNextMonth,
       setMonth,
     };
-  }, [refDate, goPrevMonth, goNextMonth, setMonth]);
+  }, [refDate, locale, goPrevMonth, goNextMonth, setMonth]);
 
   return (
     <PeriodContext.Provider value={value}>{children}</PeriodContext.Provider>

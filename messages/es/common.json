@@ -1,0 +1,68 @@
+{
+  "loading": "Cargando…",
+  "save": "Guardar",
+  "cancel": "Cancelar",
+  "close": "Cerrar",
+  "confirm": "Confirmar",
+  "delete": "Eliminar",
+  "edit": "Editar",
+  "back": "Volver",
+  "yes": "Sí",
+  "no": "No",
+  "search": "Buscar",
+  "showPassword": "Mostrar contraseña",
+  "hidePassword": "Ocultar contraseña",
+  "accessDenied": {
+    "title": "Acceso restringido",
+    "body": "Tu cuenta no tiene permiso para acceder a <b>{category}</b>. Habla con el administrador de la cuenta para habilitarlo.",
+    "goToAccount": "Ir a Mi cuenta"
+  },
+  "pin": {
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "enterDigits": "Ingresa los 4 dígitos",
+    "locked": "PIN bloqueado",
+    "lockedBody": "Demasiados intentos incorrectos. Espera <strong>{time}</strong>",
+    "defaultTitle": "Ingresa tu PIN",
+    "defaultSubtitle": "Escribe los 4 dígitos para confirmar",
+    "notConfigured": "Configura tu PIN de 4 dígitos en la página de Perfil antes de continuar.",
+    "lockedRetry": "PIN bloqueado por demasiados intentos. Espera 5 minutos.",
+    "wrong": "PIN incorrecto. Inténtalo de nuevo."
+  },
+  "auditTrail": {
+    "settled": "Baja",
+    "createdBy": "Creado por {name}",
+    "createdByAt": "Creado por {name} · {when}",
+    "updatedByAt": "Editado por {name} · {when}",
+    "settledByAt": "{label} por {name} · {when}"
+  },
+  "a11yWidget": {
+    "options": "Opciones de accesibilidad",
+    "close": "Cerrar opciones de accesibilidad",
+    "heading": "Accesibilidad",
+    "textSize": "Tamaño del texto",
+    "decrease": "Reducir tamaño del texto",
+    "reset100": "Restablecer el tamaño del texto al valor predeterminado (100%)",
+    "increase": "Aumentar tamaño del texto",
+    "underlineLinks": "Subrayar enlaces",
+    "reduceMotion": "Reducir animaciones",
+    "libras": "Traducción a Libras (lengua de señas brasileña)",
+    "restoreDefaults": "Restablecer valores predeterminados"
+  },
+  "cookies": {
+    "ariaLabel": "Aviso de cookies y privacidad",
+    "miniText": "Usamos cookies esenciales y, con tu permiso, de preferencias y análisis.",
+    "learnMore": "Saber más",
+    "collapse": "Contraer",
+    "reject": "Rechazar",
+    "accept": "Aceptar",
+    "acceptAll": "Aceptar todas",
+    "rejectOptional": "Rechazar opcionales",
+    "savePreferences": "Guardar preferencias",
+    "customize": "Personalizar",
+    "fullPolicy": "Ver política completa",
+    "title": "Tu privacidad",
+    "body": "Usamos cookies y tecnologías similares para <b>mantener tu sesión iniciada de forma segura</b>, recordar tus preferencias (como el tema y el diseño) y entender de forma agregada cómo se usa la plataforma, para mejorarla. El tratamiento de estos datos cumple con la Ley General de Protección de Datos de Brasil (Ley n.º 13.709/2018). Las cookies esenciales siempre están activas; las demás dependen de tu consentimiento, que puedes retirar cuando quieras.",
+    "alwaysOn": "(siempre activas)"
+  }
+}

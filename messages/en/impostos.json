@@ -1,0 +1,179 @@
+{
+  "meta": {
+    "title": "Taxes",
+    "newTax": "New tax",
+    "addTax": "Add tax"
+  },
+  "header": {
+    "allClear": "✓ All caught up!",
+    "dueSoon": "{count, plural, one {# due in the next {days} days} other {# due in the next {days} days}}",
+    "overdue": "{count, plural, one {# tax overdue} other {# taxes overdue}}"
+  },
+  "kpi": {
+    "toPay": "To Pay",
+    "overdue": "Overdue",
+    "paid": "Paid",
+    "estimated": "Estimated",
+    "taxCount": "{count, plural, one {# tax} other {# taxes}}",
+    "planning": "planning"
+  },
+  "spheres": {
+    "all": "All levels",
+    "federal": "Federal",
+    "estadual": "State",
+    "municipal": "Municipal",
+    "outro": "Other"
+  },
+  "sphereGroups": {
+    "federal": "Federal",
+    "estadual": "State",
+    "municipal": "Municipal",
+    "outro": "Other"
+  },
+  "frequency": {
+    "mensal": "Monthly",
+    "trimestral": "Quarterly",
+    "semestral": "Semiannual",
+    "anual": "Annual"
+  },
+  "status": {
+    "nao_pago": "Unpaid",
+    "pago": "Paid",
+    "atraso": "Overdue",
+    "agendado": "Scheduled"
+  },
+  "sections": {
+    "atraso": "Overdue",
+    "nao_pago": "To Pay",
+    "agendado": "Scheduled",
+    "pago": "Paid"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search tax or note…",
+    "searchAria": "Search tax or note",
+    "filterAll": "All",
+    "allTypes": "All types",
+    "monthHint": "Due dates this month — change the month in the Navbar selector",
+    "resultCount": "{count, plural, one {# result} other {# results}}"
+  },
+  "empty": {
+    "noResults": "No results",
+    "nothingIn": "Nothing in {period}",
+    "adjustFilters": "Adjust the filters to see other taxes.",
+    "noneThisMonth": "No tax is due this month. Change the month in the Navbar selector or add a tax."
+  },
+  "taxTypes": {
+    "simples_nacional": "Simples Nacional",
+    "irpf": "IRPF",
+    "irpj": "IRPJ",
+    "pis": "PIS",
+    "cofins": "COFINS",
+    "csll": "CSLL",
+    "ipi": "IPI",
+    "iof": "IOF",
+    "itr": "ITR",
+    "inss": "INSS",
+    "fgts": "FGTS",
+    "icms": "ICMS",
+    "ipva": "IPVA",
+    "itcmd": "ITCMD",
+    "iss": "ISS",
+    "iptu": "IPTU",
+    "itbi": "ITBI",
+    "outro": "Other"
+  },
+  "taxTypeDesc": {
+    "simples_nacional": "Unified tax regime (DAS)",
+    "irpf": "Individual income tax",
+    "irpj": "Corporate income tax",
+    "pis": "Social Integration Program contribution",
+    "cofins": "Social Security financing contribution",
+    "csll": "Social contribution on net profit",
+    "ipi": "Tax on industrialized products",
+    "iof": "Tax on financial operations",
+    "itr": "Rural land tax",
+    "inss": "Social security",
+    "fgts": "Severance guarantee fund",
+    "icms": "Tax on the movement of goods and services",
+    "ipva": "Motor vehicle property tax",
+    "itcmd": "Inheritance and gift tax",
+    "iss": "Service tax",
+    "iptu": "Urban property tax",
+    "itbi": "Real estate transfer tax",
+    "outro": "Other taxes and fees"
+  },
+  "card": {
+    "paidOn": "Paid on {date}",
+    "overdueBy": "{count, plural, one {# day overdue} other {# days overdue}}",
+    "dueToday": "⚠️ Due today!",
+    "dueIn": "{count, plural, one {Due in # day} other {Due in # days}} · {date}",
+    "estimated": "💡 Estimated: {value}",
+    "paidMethod": "Paid:",
+    "prevMethod": "Est.:",
+    "markPaid": "Mark as paid",
+    "taxPaid": "Tax paid",
+    "edit": "Edit",
+    "delete": "Delete",
+    "settleLabel": "Paid"
+  },
+  "modal": {
+    "editTitle": "Edit tax",
+    "newTitle": "New tax",
+    "subtitle": "Track your taxes and deadlines",
+    "name": "Name/Description",
+    "namePlaceholder": "e.g. IRPF 2024 - Period",
+    "taxType": "Tax type",
+    "amount": "Amount (R$)",
+    "estimatedLabel": "Estimated (optional)",
+    "dueDate": "Due date",
+    "frequency": "Frequency",
+    "initialStatus": "Initial status",
+    "paymentMethodLabel": "Expected payment method",
+    "documents": "Documents (DARF, RPA...) — {count}",
+    "documentN": "Document {index}",
+    "removeDocument": "Remove document {index}",
+    "uploading": "Uploading...",
+    "addDocument": "Add document",
+    "uploadError": "Upload error: {message}",
+    "notes": "Notes",
+    "notesPlaceholder": "Code, reference, notes...",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "createTax": "Create tax",
+    "saveError": "Error saving",
+    "notAuthenticated": "Not authenticated",
+    "pinConfirmSubtitle": "Enter your 4-digit PIN to confirm"
+  },
+  "payModal": {
+    "title": "Confirm payment",
+    "summary": "{name} · {amount}",
+    "paidDate": "Payment date",
+    "paymentMethodLabel": "Payment method used",
+    "registering": "Recording…",
+    "confirm": "Confirm payment",
+    "registerError": "Error recording payment",
+    "pinTitle": "Confirm payment",
+    "pinSubtitle": "Enter your 4-digit PIN to confirm the settlement"
+  },
+  "confirmDelete": {
+    "title": "Delete tax?",
+    "body": "This action can't be undone.",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "pinTitle": "Delete tax",
+    "pinSubtitle": "Enter your 4-digit PIN to confirm deletion"
+  },
+  "error": {
+    "connect": "Connection error",
+    "tryAgain": "Try again"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alerts set to # day before the due date} other {Alerts set to # days before the due date}}",
+    "overdueOnLoad": "{count, plural, one {# tax overdue — settle it!} other {# taxes overdue — settle them!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# tax due in the next {days} days} other {# taxes due in the next {days} days}}",
+    "taxUpdated": "Tax updated!",
+    "taxCreated": "Tax created!",
+    "markedPaid": "Tax marked as paid ✓",
+    "taxRemoved": "Tax removed."
+  }
+}

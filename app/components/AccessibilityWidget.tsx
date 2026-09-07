@@ -17,6 +17,7 @@
 // ANTES da hidratação, pra não piscar no recarregamento da página.
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { Accessibility, Type, Underline, Zap, ZapOff, Hand, X, RotateCcw } from "lucide-react";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useAccessibilityWidget } from "../hooks/useAccessibilityWidget";
@@ -143,6 +144,7 @@ export function AccessibilityWidget() {
   const [vlibras, setVlibras] = useState(false);
   const { reduced, setReducedMotion } = useReducedMotion();
   const { enabled } = useAccessibilityWidget();
+  const t = useTranslations("common.a11yWidget");
 
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -263,7 +265,7 @@ export function AccessibilityWidget() {
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="Opções de acessibilidade"
+        aria-label={t("options")}
         onClick={() => setOpen((v) => !v)}
         className="a11y-widget-btn"
         style={{ bottom: (cookieBarVisible ? 88 : 20) + vlibrasGap }}
@@ -275,15 +277,15 @@ export function AccessibilityWidget() {
         <div
           ref={panelRef}
           role="dialog"
-          aria-label="Opções de acessibilidade"
+          aria-label={t("options")}
           className="a11y-widget-panel"
           style={{ bottom: (cookieBarVisible ? 136 : 68) + vlibrasGap }}
         >
           <div className="a11y-widget-header">
-            <strong>Acessibilidade</strong>
+            <strong>{t("heading")}</strong>
             <button
               type="button"
-              aria-label="Fechar opções de acessibilidade"
+              aria-label={t("close")}
               onClick={() => {
                 setOpen(false);
                 btnRef.current?.focus();
@@ -297,12 +299,12 @@ export function AccessibilityWidget() {
           <div className="a11y-widget-row">
             <span className="a11y-widget-row-label">
               <Type size={15} aria-hidden="true" />
-              Tamanho do texto
+              {t("textSize")}
             </span>
             <div className="a11y-widget-steppers">
               <button
                 type="button"
-                aria-label="Diminuir tamanho do texto"
+                aria-label={t("decrease")}
                 onClick={() => changeFontScale(fontScale - FONT_STEP)}
                 disabled={fontScale <= FONT_MIN}
               >
@@ -310,7 +312,7 @@ export function AccessibilityWidget() {
               </button>
               <button
                 type="button"
-                aria-label="Restaurar tamanho do texto padrão (100%)"
+                aria-label={t("reset100")}
                 onClick={() => changeFontScale(FONT_DEFAULT)}
                 className="a11y-widget-stepper-value"
               >
@@ -318,7 +320,7 @@ export function AccessibilityWidget() {
               </button>
               <button
                 type="button"
-                aria-label="Aumentar tamanho do texto"
+                aria-label={t("increase")}
                 onClick={() => changeFontScale(fontScale + FONT_STEP)}
                 disabled={fontScale >= FONT_MAX}
               >
@@ -327,18 +329,18 @@ export function AccessibilityWidget() {
             </div>
           </div>
 
-          <ToggleRow icon={Underline} label="Sublinhar links" active={underline} onClick={toggleUnderline} />
+          <ToggleRow icon={Underline} label={t("underlineLinks")} active={underline} onClick={toggleUnderline} />
           <ToggleRow
             icon={reduced ? ZapOff : Zap}
-            label="Reduzir animações"
+            label={t("reduceMotion")}
             active={reduced}
             onClick={() => setReducedMotion(!reduced)}
           />
-          <ToggleRow icon={Hand} label="Tradução em Libras" active={vlibras} onClick={toggleVlibras} />
+          <ToggleRow icon={Hand} label={t("libras")} active={vlibras} onClick={toggleVlibras} />
 
           <button type="button" className="a11y-widget-reset" onClick={resetAll}>
             <RotateCcw size={13} aria-hidden="true" />
-            Restaurar padrões
+            {t("restoreDefaults")}
           </button>
         </div>
       )}

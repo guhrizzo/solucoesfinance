@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "title": "Cuentas por cobrar",
+    "newBill": "Nuevo cobro",
+    "newBillFab": "Nueva cuenta por cobrar"
+  },
+  "header": {
+    "allClear": "✓ ¡Todo al día!",
+    "dueSoon": "{count, plural, one {# vence en los próximos {days} días} other {# vencen en los próximos {days} días}}",
+    "overdue": "{count, plural, one {# cobro atrasado} other {# cobros atrasados}}"
+  },
+  "alertButton": {
+    "title": "Alertas: {days} días",
+    "aria": "Configurar alertas de plazo — hoy en {days} días"
+  },
+  "kpi": {
+    "toReceive": "Por cobrar",
+    "overdue": "Atrasados",
+    "received": "Cobrados",
+    "alert": "Alerta ({days}d)",
+    "billCount": "{count, plural, one {# cobro} other {# cobros}}",
+    "dueSoon": "vence pronto"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar descripción u observación…",
+    "searchAria": "Buscar descripción u observación",
+    "filterAll": "Todos",
+    "categoryAll": "Todas",
+    "monthHint": "Vencimientos de este mes — cambia el mes en el selector de la barra",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
+  },
+  "sections": {
+    "atrasado": "Atrasados",
+    "pendente": "Pendientes",
+    "agendado": "Programados",
+    "recebido": "Cobrados"
+  },
+  "status": {
+    "pendente": "Pendiente",
+    "recebido": "Cobrado",
+    "atrasado": "Atrasado",
+    "agendado": "Programado"
+  },
+  "categories": {
+    "clientes": "Clientes",
+    "servicos": "Servicios",
+    "produtos": "Productos",
+    "devolucoes": "Devoluciones",
+    "emprestimos": "Préstamos",
+    "outros": "Otros"
+  },
+  "empty": {
+    "noResults": "Sin resultados",
+    "nothingIn": "Nada en {period}",
+    "adjustFilters": "Ajusta los filtros para ver otros cobros.",
+    "noneThisMonth": "Ningún cobro vence este mes. Cambia el mes en el selector de la barra o agrega un cobro.",
+    "addBill": "Agregar cobro"
+  },
+  "card": {
+    "installment": "Cuota {index}/{count}",
+    "photoCount": "{count, plural, one {# foto} other {# fotos}}",
+    "viewPhotos": "{count, plural, one {Ver # foto adjunta} other {Ver # fotos adjuntas}}",
+    "receivedOn": "Cobrado el {date}",
+    "overdueBy": "{count, plural, one {Atrasado hace # día} other {Atrasado hace # días}} · {date}",
+    "dueToday": "⚠️ ¡Vence hoy! · {date}",
+    "dueIn": "{count, plural, one {Vence en # día} other {Vence en # días}} · {date}",
+    "prevMethod": "Prev.:",
+    "receivedMethod": "Cobr.:",
+    "markReceived": "Marcar como cobrado",
+    "received": "Cobrado",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "settleLabel": "Cobrado"
+  },
+  "modal": {
+    "editTitle": "Editar cobro",
+    "newTitle": "Nuevo cobro",
+    "autoPost": "Al cobrar, se registra automáticamente en el Flujo de Caja",
+    "tabBillEditing": "Cobro",
+    "tabBillNew": "Nuevo cobro",
+    "tabCadastro": "Contacto",
+    "fieldTitle": "Descripción",
+    "fieldTitlePlaceholder": "Ej.: Venta a Empresa X",
+    "amountPerInstallment": "Valor por cuota (R$)",
+    "amount": "Valor (R$)",
+    "firstDueDate": "1.er plazo",
+    "dueDate": "Plazo",
+    "category": "Categoría",
+    "recurrence": "Recurrencia",
+    "recurrenceUnica": "Única",
+    "recurrenceNumeral": "En cuotas",
+    "numeralDisabled": "Las cuotas solo se definen al crear un cobro nuevo",
+    "monthlyInstallments": "Cuotas mensuales",
+    "fixedAfterCreate": "(fijo tras crear)",
+    "installmentsRange": "Indica de 2 a 60 cuotas.",
+    "installmentsPreview": "{count} cuotas de {amount} · total {total}",
+    "initialStatus": "Estado inicial",
+    "seriesStartsPending": "Toda serie empieza pendiente. Salda cada cuota al cobrarla.",
+    "photos": "Fotos (factura, recibo...) — {count}",
+    "photoAlt": "Foto {index}",
+    "removePhoto": "Quitar foto {index}",
+    "uploading": "Enviando...",
+    "addPhoto": "Agregar foto",
+    "uploadError": "Error al subir: {message}",
+    "paymentMethodLabel": "Forma de cobro prevista",
+    "notes": "Observación (opcional)",
+    "notesPlaceholder": "Nombre del cliente, referencia…",
+    "saving": "Guardando…",
+    "saveChanges": "Guardar cambios",
+    "createBill": "Crear cobro",
+    "notAuthenticated": "No autenticado",
+    "pinConfirmEditTitle": "Confirmar edición",
+    "pinConfirmCreateTitle": "Confirmar creación",
+    "pinConfirmSaveSubtitle": "Ingresa tu PIN de 4 dígitos para guardar",
+    "saveError": "Error al guardar"
+  },
+  "alertSettings": {
+    "title": "Alertas de cobro",
+    "question": "¿Cuántos días antes del plazo avisar?",
+    "oneDay": "1 día",
+    "thirtyDays": "30 días",
+    "dayShort": "{days}d",
+    "preview": "Verás un distintivo en el menú y un aviso al abrir la página cuando un cobro venza en hasta <strong>{count, plural, one {# día} other {# días}}</strong>.",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "gallery": {
+    "counterAria": "Foto {index} de {total}",
+    "photoAlt": "Foto {index}",
+    "prev": "Foto anterior",
+    "next": "Foto siguiente"
+  },
+  "receiveModal": {
+    "title": "Registrar cobro",
+    "summary": "{title} · {amount}",
+    "receiveDate": "Fecha del cobro",
+    "paymentMethodLabel": "Forma de cobro utilizada",
+    "registering": "Registrando…",
+    "confirm": "Confirmar cobro",
+    "registerError": "Error al registrar el cobro",
+    "pinTitle": "Confirmar cobro",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para confirmar la baja"
+  },
+  "cashflowNote": {
+    "installment": "Cobro · Cuota {index}/{count}",
+    "single": "Cobro · {recurrence}",
+    "recurrenceUnica": "Única",
+    "recurrenceNumeral": "En cuotas"
+  },
+  "seriesDelete": {
+    "title": "Eliminar cuota",
+    "message": "\"{title}\" — cuota {index}/{count}. Las cuotas ya cobradas nunca se eliminan.",
+    "action": "Eliminar"
+  },
+  "seriesEdit": {
+    "title": "¿Aplicar a qué cuotas?",
+    "message": "Editaste la cuota {index}/{count} de \"{title}\".",
+    "action": "Guardando"
+  },
+  "confirmDelete": {
+    "pinTitle": "Confirmar eliminación",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para eliminar este cobro."
+  },
+  "error": {
+    "connect": "Error de conexión",
+    "tryAgain": "Reintentar"
+  },
+  "toast": {
+    "alertsConfigured": "{count, plural, one {Alertas configuradas para # día antes del plazo} other {Alertas configuradas para # días antes del plazo}}",
+    "overdueOnLoad": "{count, plural, one {# cobro atrasado — ¡haz seguimiento!} other {# cobros atrasados — ¡haz seguimiento!}}",
+    "dueSoonOnLoad": "⏰ {count, plural, one {# cobro vence en los próximos {days} días} other {# cobros vencen en los próximos {days} días}}",
+    "installmentsCreated": "{count} cuotas creadas ({from} → {to})",
+    "billUpdated": "¡Cobro actualizado!",
+    "billCreated": "¡Cobro creado!",
+    "futureInstallmentsUpdated": "{count, plural, one {# cuota futura actualizada} other {# cuotas futuras actualizadas}}",
+    "noFutureInstallments": "Sin cuotas futuras pendientes",
+    "receivedPosted": "¡Cobrado! Registrado en el Flujo de Caja ✓",
+    "installmentsRemoved": "{count, plural, one {# cuota eliminada.} other {# cuotas eliminadas.}}",
+    "billRemoved": "Cobro eliminado.",
+    "seriesUpdateError": "Error al actualizar la serie"
+  }
+}

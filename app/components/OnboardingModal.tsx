@@ -3,20 +3,26 @@
 // components/OnboardingModal.tsx
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
-  X, ChevronRight, Check, Building2, TrendingUp,
-  Lightbulb, Store, Settings, Users, BarChart3,
+  X, ChevronRight, Check, Building2,
+  Store, Settings, Users,
   Briefcase, ArrowRight, Sparkles, ShoppingCart,
 } from "lucide-react";
+
+interface StepOption {
+  /** valor GRAVADO no Firestore (não traduzir — a Navbar/PerfilTab comparam
+   *  por string, ex.: `ramo.includes("Serviço")`). */
+  value: string;
+  /** chave de tradução: steps.<stepId>.options.<key> */
+  key: string;
+  icon?: React.ReactNode;
+}
 
 interface Step {
   id: string;
   type: "question" | "info";
-  title: string;
-  subtitle?: string;
-  description?: string;
-  icon?: React.ReactNode;
-  options?: { label: string; icon?: React.ReactNode }[];
+  options?: StepOption[];
   multi?: boolean;
 }
 
@@ -24,61 +30,46 @@ const STEPS: Step[] = [
   {
     id: "cargo",
     type: "question",
-    title: "Qual o seu cargo na empresa?",
-    subtitle: "Selecione uma opção:",
     options: [
-      { label: "Funcionário",                icon: <Users size={16} /> },
-      { label: "Dono / Sócio",               icon: <Briefcase size={16} /> },
-      { label: "Terceiro (Consultor, BPO…)", icon: <Settings size={16} /> },
-      { label: "Outros",                      icon: <Sparkles size={16} /> },
+      { value: "Funcionário",                key: "funcionario", icon: <Users size={16} /> },
+      { value: "Dono / Sócio",               key: "dono",        icon: <Briefcase size={16} /> },
+      { value: "Terceiro (Consultor, BPO…)", key: "terceiro",    icon: <Settings size={16} /> },
+      { value: "Outros",                     key: "outros",      icon: <Sparkles size={16} /> },
     ],
   },
   {
     id: "faturamento",
     type: "question",
-    title: "Qual é o faturamento mensal médio da sua empresa?",
-    subtitle: "Selecione uma opção:",
     options: [
-      { label: "Até R$ 7 mil" },
-      { label: "De R$ 7 mil a R$ 30 mil" },
-      { label: "De R$ 30 mil a R$ 200 mil" },
-      { label: "Acima de R$ 200 mil" },
+      { value: "Até R$ 7 mil",             key: "ate7k" },
+      { value: "De R$ 7 mil a R$ 30 mil",  key: "7a30k" },
+      { value: "De R$ 30 mil a R$ 200 mil", key: "30a200k" },
+      { value: "Acima de R$ 200 mil",      key: "acima200k" },
     ],
   },
   {
     id: "desafio",
     type: "question",
-    title: "Qual é o seu maior desafio com a gestão financeira?",
-    subtitle: "Selecione uma opção:",
     options: [
-      { label: "Tenho os dados, mas não sei como decidir" },
-      { label: "Não sei por onde começar" },
-      { label: "Preciso de ajuda de um mentor financeiro" },
-      { label: "Não sei se tenho lucro ou prejuízo" },
-      { label: "Quero que a gestão funcione sem depender só de mim" },
-      { label: "Registro tudo, mas não entendo os números" },
+      { value: "Tenho os dados, mas não sei como decidir",              key: "decidir" },
+      { value: "Não sei por onde começar",                              key: "comecar" },
+      { value: "Preciso de ajuda de um mentor financeiro",              key: "mentor" },
+      { value: "Não sei se tenho lucro ou prejuízo",                    key: "lucroPrejuizo" },
+      { value: "Quero que a gestão funcione sem depender só de mim",    key: "semDepender" },
+      { value: "Registro tudo, mas não entendo os números",            key: "entenderNumeros" },
     ],
   },
   {
     id: "ramo",
     type: "question",
-    title: "Definindo seu ramo de atuação",
-    subtitle: "Qual área representa a maior parte da operação do seu negócio?",
     options: [
-      { label: "Comércio",    icon: <Store size={16} /> },
-      { label: "E-commerce",  icon: <ShoppingCart size={16} /> },
-      { label: "Indústria",   icon: <Building2 size={16} /> },
-      { label: "Serviço",     icon: <Settings size={16} /> },
+      { value: "Comércio",   key: "comercio",  icon: <Store size={16} /> },
+      { value: "E-commerce", key: "ecommerce", icon: <ShoppingCart size={16} /> },
+      { value: "Indústria",  key: "industria", icon: <Building2 size={16} /> },
+      { value: "Serviço",    key: "servico",   icon: <Settings size={16} /> },
     ],
   },
-  {
-    id: "boas_vindas",
-    type: "info",
-    title: "Tudo pronto! 🎉",
-    icon: <BarChart3 size={48} strokeWidth={1.5} className="text-blue-500" />,
-    description:
-      "Seu perfil foi configurado. Agora o NexusFi vai personalizar relatórios, metas e insights financeiros de acordo com o seu negócio. Vamos começar?",
-  },
+  { id: "boas_vindas", type: "info" },
 ];
 
 function IllustrationInfo({ dark }: { dark: boolean }) {
@@ -106,6 +97,7 @@ interface OnboardingModalProps {
 }
 
 export default function OnboardingModal({ open, onClose, onComplete }: OnboardingModalProps) {
+  const tr = useTranslations("onboarding");
   const [step, setStep]           = useState(0);
   const [answers, setAnswers]     = useState<Record<string, string[]>>({});
   const [selected, setSelected]   = useState<string[]>([]);
@@ -129,13 +121,13 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
   const progress  = (step / (STEPS.length - 1)) * 100;
   const hasAnswer = selected.length > 0 || current.type === "info";
 
-  const toggleOption = (label: string) => {
+  const toggleOption = (value: string) => {
     if (current.multi) {
       setSelected((prev) =>
-        prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+        prev.includes(value) ? prev.filter((l) => l !== value) : [...prev, value]
       );
     } else {
-      setSelected([label]);
+      setSelected([value]);
     }
   };
 
@@ -334,7 +326,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
               </div>
               <button
                 onClick={() => { setVisible(false); setTimeout(onClose, 300); }}
-                aria-label="Fechar"
+                aria-label={tr("close")}
                 style={{ background: t.closeBg, border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.closeColor }}
               >
                 <X size={16} />
@@ -346,7 +338,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
             </div>
 
             <p style={{ fontSize: 11, color: t.text3, marginTop: 8, fontFamily: "Sora, sans-serif" }}>
-              Etapa {step + 1} de {STEPS.length}
+              {tr("stepOf", { current: step + 1, total: STEPS.length })}
             </p>
           </div>
 
@@ -358,28 +350,27 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
                   <IllustrationInfo dark={dark} />
                 </div>
                 <h2 style={{ fontSize: 22, fontWeight: 800, color: t.text, margin: "0 0 12px", fontFamily: "Sora, sans-serif" }}>
-                  {current.title}
+                  {tr("steps.boas_vindas.title")}
                 </h2>
                 <p style={{ fontSize: 14, color: t.text2, lineHeight: 1.6, margin: "0 0 28px", fontFamily: "Sora, sans-serif" }}>
-                  {current.description}
+                  {tr("steps.boas_vindas.description")}
                 </p>
               </div>
             ) : (
               <>
                 <h2 style={{ fontSize: 18, fontWeight: 800, color: t.text, margin: "0 0 4px", fontFamily: "Sora, sans-serif", lineHeight: 1.3 }}>
-                  {current.title}
+                  {tr(`steps.${current.id}.title`)}
                 </h2>
-                {current.subtitle && (
-                  <p style={{ fontSize: 12, color: t.text3, margin: "0 0 16px", fontFamily: "Sora, sans-serif" }}>
-                    {current.subtitle}
-                  </p>
-                )}
+                <p style={{ fontSize: 12, color: t.text3, margin: "0 0 16px", fontFamily: "Sora, sans-serif" }}>
+                  {tr(`steps.${current.id}.subtitle`)}
+                </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {current.options?.map((opt) => {
-                    const isSel = selected.includes(opt.label);
+                    const isSel = selected.includes(opt.value);
+                    const label = tr(`steps.${current.id}.options.${opt.key}`);
                     return (
                       <button
-                        key={opt.label}
+                        key={opt.key}
                         className="ob-option"
                         style={{
                           border: `1.5px solid ${isSel ? t.optionSelBorder : t.border}`,
@@ -399,7 +390,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
                             e.currentTarget.style.background  = t.optionBg;
                           }
                         }}
-                        onClick={() => toggleOption(opt.label)}
+                        onClick={() => toggleOption(opt.value)}
                       >
                         {opt.icon && (
                           <span style={{
@@ -413,7 +404,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
                             {opt.icon}
                           </span>
                         )}
-                        <span style={{ flex: 1 }}>{opt.label}</span>
+                        <span style={{ flex: 1 }}>{label}</span>
                         <span style={{
                           marginLeft: "auto",
                           width: 20, height: 20, borderRadius: "50%",
@@ -441,7 +432,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
                   }}>
                     <span style={{ color: "#d97706", fontSize: 16, lineHeight: 1 }}>⚠️</span>
                     <p style={{ margin: 0, fontSize: 11, color: dark ? "#fbbf24" : "#b45309", lineHeight: 1.4, fontFamily: "Sora, sans-serif" }}>
-                      <strong>Aviso:</strong> Ao escolher a opção de <strong>Serviço</strong>, a funcionalidade de controle de estoque não estará disponível.
+                      {tr.rich("serviceWarning", { b: (c) => <strong>{c}</strong> })}
                     </p>
                   </div>
                 )}
@@ -463,14 +454,14 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.ghostHoverBorder; e.currentTarget.style.color = t.ghostHoverColor; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.ghostBorder; e.currentTarget.style.color = t.ghostColor; }}
                 >
-                  Voltar
+                  {tr("back")}
                 </button>
               ) : (
                 <div />
               )}
 
               <button className="ob-btn-primary" onClick={goNext} disabled={!hasAnswer}>
-                {isLast ? <><span>Acessar o painel</span> <ArrowRight size={15} /></> : <><span>Próximo</span> <ChevronRight size={15} /></>}
+                {isLast ? <><span>{tr("goToDashboard")}</span> <ArrowRight size={15} /></> : <><span>{tr("next")}</span> <ChevronRight size={15} /></>}
               </button>
             </div>
 
@@ -480,7 +471,7 @@ export default function OnboardingModal({ open, onClose, onComplete }: Onboardin
                   onClick={() => { setVisible(false); setTimeout(onClose, 300); }}
                   style={{ background: "none", border: "none", fontSize: 12, color: t.skipColor, cursor: "pointer", fontFamily: "Sora, sans-serif" }}
                 >
-                  Pular configuração por agora
+                  {tr("skip")}
                 </button>
               </div>
             )}

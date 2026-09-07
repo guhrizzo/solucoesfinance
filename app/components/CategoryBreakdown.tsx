@@ -3,8 +3,10 @@
 "use client";
 
 import React from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import type { CostCenterExpanded, CategorySpend } from "@/lib/cost-center-categories";
+import { formatMoney } from "@/lib/format";
+import type { CostCenterExpanded } from "@/lib/cost-center-categories";
 
 interface CategoryBreakdownProps {
   center: CostCenterExpanded;
@@ -13,6 +15,8 @@ interface CategoryBreakdownProps {
 }
 
 export default function CategoryBreakdown({ center, isExpanded, onToggle }: CategoryBreakdownProps) {
+  const t = useTranslations("costCenter.breakdown");
+  const locale = useLocale();
   const categories = center.categories || [];
   const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
   
@@ -29,7 +33,7 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
         className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold hover:bg-opacity-50 transition-all"
         style={{ color: "var(--db-text-2)", background: "var(--db-sub)" }}
       >
-        <span>Breakdown por categoria ({withSpend.length}/{categories.length})</span>
+        <span>{t("byCategory", { withSpend: withSpend.length, total: categories.length })}</span>
         {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
       </button>
 
@@ -58,7 +62,7 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
                       />
                     </div>
                     <p className="text-xs mt-0.5" style={{ color: "var(--db-text-3)" }}>
-                      R$ {cat.spent.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {formatMoney(cat.spent, locale)}
                     </p>
                   </div>
                 </div>
@@ -66,12 +70,12 @@ export default function CategoryBreakdown({ center, isExpanded, onToggle }: Cate
             })
           ) : (
             <p className="text-xs text-center" style={{ color: "var(--db-text-3)" }}>
-              Nenhuma categoria com gastos registrados
+              {t("noneWithSpend")}
             </p>
           )}
           {empty > 0 && (
             <p className="text-xs px-2 py-1 rounded text-center" style={{ background: "var(--db-input)", color: "var(--db-text-3)" }}>
-              +{empty} categorias sem movimento
+              {t("emptyCount", { count: empty })}
             </p>
           )}
         </div>

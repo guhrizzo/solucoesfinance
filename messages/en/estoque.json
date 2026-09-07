@@ -1,0 +1,197 @@
+{
+  "platformName": {
+    "mercadolivre": "Mercado Livre",
+    "shopee": "Shopee"
+  },
+  "meta": {
+    "title": "Centralized Inventory",
+    "subtitle": "Manage your stock in one place and integrate with Mercado Livre and Shopee."
+  },
+  "actions": {
+    "simulateSale": "Simulate Sale (Test)",
+    "integrations": "Integrations ({count})",
+    "newProduct": "New Product"
+  },
+  "kpi": {
+    "total": "Total in Stock",
+    "totalHint": "Physical units",
+    "lowStock": "Low Stock",
+    "lowStockHint": "Products needing restock",
+    "linkedAds": "Linked Listings",
+    "linkedAdsHint": "On active platforms",
+    "activeChannels": "Active Channels",
+    "channelsConnected": "{count} Connected",
+    "channelsNone": "None",
+    "channelsHint": "Mercado Livre & Shopee"
+  },
+  "shopeePanel": {
+    "title": "Shopee — stock and payout",
+    "simulated": "SIMULATED",
+    "refresh": "Refresh",
+    "loading": "Querying Shopee…",
+    "empty": "Click Refresh to load the Shopee data.",
+    "itemsRegistered": "Items registered",
+    "skus": "{count} SKU(s)",
+    "unitsShopee": "Units on Shopee",
+    "netReceivable": "Net receivable",
+    "escrowNote": "escrow not yet released",
+    "released60d": "Released (60d)",
+    "fees": "fees: {value}"
+  },
+  "tabs": {
+    "todos": "All",
+    "filterML": "Filter by Mercado Livre",
+    "filterShopee": "Filter by Shopee",
+    "local": "Local Only",
+    "lowStock": "Low Stock"
+  },
+  "search": {
+    "placeholder": "Search by SKU or Name...",
+    "aria": "Search by SKU or name"
+  },
+  "sync": {
+    "pullML": "Pull from ML",
+    "pullMLTitle": "Pull stock and price from your Mercado Livre listings (ML wins)",
+    "syncTitle": "Sync: push the central stock to the channels",
+    "syncAria": "Sync stock with the channels",
+    "pullingML": "Pulling stock from Mercado Livre...",
+    "syncing": "Syncing stock with the platforms...",
+    "complete": "Sync complete!",
+    "failed": "Sync failed",
+    "serverError": "Error connecting to the sync server"
+  },
+  "channelAccount": {
+    "label": "Account:",
+    "adsLinked": "{count, plural, one {# linked listing} other {# linked listings}}"
+  },
+  "table": {
+    "colSku": "Code/SKU",
+    "colProduct": "Product",
+    "colBasePrice": "Base Price",
+    "colQty": "Quantity",
+    "colChannels": "Active Channels",
+    "colActions": "Actions",
+    "empty": "No product registered or matching the filter.",
+    "lastUpdate": "Last update: {date} at {time}",
+    "unitsShort": "{count} units",
+    "lowBadge": "Low",
+    "localOnly": "Local Only",
+    "manageLinks": "Manage Listing Links",
+    "manageLinksAria": "Manage listing links for {name}",
+    "editProduct": "Edit Product",
+    "editAria": "Edit {name}",
+    "deleteProduct": "Delete Product",
+    "deleteAria": "Delete {name}"
+  },
+  "productModal": {
+    "editTitle": "Edit Product",
+    "newTitle": "New Product in Inventory",
+    "sku": "Code / SKU",
+    "skuPlaceholder": "E.G. PROD-1001",
+    "name": "Product Name",
+    "namePlaceholder": "E.G. SoundMax Headphones",
+    "basePrice": "Base Price (R$)",
+    "quantity": "Physical Quantity",
+    "minQuantity": "Low Stock Alert (Minimum Quantity)",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "integrationsModal": {
+    "title": "Manage Channel Integrations",
+    "available": "Available for Integration",
+    "mlDesc": "Real integration via OAuth 2.0",
+    "shopeeDesc": "Real listing and sales integration",
+    "connectAccount": "Connect Account",
+    "yourAccounts": "Your Integrated Accounts ({count})",
+    "noneConnected": "No account connected right now.",
+    "reconnect": "Reconnect",
+    "reconnectTitle": "Redo the OAuth authorization for this account",
+    "disconnect": "Disconnect",
+    "connectedOn": " · connected on {date}"
+  },
+  "tokenStatus": {
+    "simMode": "Simulated mode",
+    "connected": "Connected",
+    "validUntil": "Token valid until {date} · auto-renews",
+    "renewsNext": "Token renews on the next sync"
+  },
+  "accountsSummary": {
+    "one": "Connected as {name}",
+    "many": "{count} connected accounts"
+  },
+  "linksModal": {
+    "title": "Multi-channel Links for SKU:",
+    "subtitle": "Connect listings from your integrated accounts to this code for automatic sync.",
+    "linkedAds": "Linked Listings",
+    "noneLinked": "No listing linked to this product.",
+    "noneLinkedHint": "Link a listing in the form on the side to sync stock.",
+    "removeLinkAria": "Remove link with {platform}",
+    "idLabel": "ID: {id}",
+    "newLink": "Link New Listing",
+    "platform": "Platform",
+    "adId": "Listing ID",
+    "adIdPlaceholder": "E.G. MLB40001001",
+    "adTitle": "Listing Title",
+    "adTitlePlaceholder": "E.G. SoundMax Pro Bluetooth Headphones",
+    "channelPrice": "Channel Price (R$)",
+    "currentStock": "Current Stock",
+    "linkAd": "Link Listing"
+  },
+  "simulatorModal": {
+    "title": "Sales Simulator",
+    "whatItDoes": "What the simulation does:",
+    "step1": "1. Deducts the sold quantity from the central stock for the SKU (and mirrors it to linked listings, if any).",
+    "step2": "2. Posts the sale as a <b>Cash Flow inflow</b> in the Sales category.",
+    "step3": "3. The sale then shows up in the <b>Sales Dashboard</b> and the Dashboard.",
+    "productSold": "Product sold",
+    "choose": "-- Choose a product --",
+    "optionLabel": "{name} (SKU: {sku} | Stock: {qty})",
+    "saleChannel": "Sale channel",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price (R$)",
+    "close": "Close",
+    "submit": "Record simulated sale"
+  },
+  "toast": {
+    "productUpdated": "Product updated successfully!",
+    "skuInUse": "This SKU is already used by another product!",
+    "productCreated": "Product registered successfully!",
+    "productSaveError": "Error saving product",
+    "productRemoved": "Product and its links removed successfully!",
+    "productRemoveError": "Error removing product",
+    "adAlreadyLinked": "This listing is already linked to a SKU in your inventory!",
+    "adLinked": "Listing linked successfully!",
+    "adLinkError": "Error adding link",
+    "linkRemoved": "Link removed.",
+    "linkRemoveError": "Error removing link",
+    "integrationRemoved": "Integration and links removed.",
+    "disconnectError": "Error disconnecting account",
+    "productNotFound": "Product not found in inventory",
+    "simRunning": "Recording simulated sale...",
+    "simDone": "Simulated sale: {qty}x {name} · SKU {sku} now at {stock} units. Check the Sales Dashboard.",
+    "simFailed": "Failed to simulate sale",
+    "mlConnectedLimited": "Mercado Livre account connected, but without permission to import listings automatically. Link manually or review the application scopes.",
+    "mlIntegratedImported": "Mercado Livre integrated! {count} listing(s) imported.",
+    "mlIntegrated": "Mercado Livre account integrated successfully!",
+    "shopeeConnectedLimited": "Shopee store connected, but without permission to import items automatically. Link manually or review the app scopes.",
+    "shopeeIntegratedImported": "Shopee integrated! {count} item(s) imported.",
+    "shopeeIntegrated": "Shopee store integrated successfully!",
+    "integrationError": "Integration error: {message}",
+    "integrationErrorGeneric": "Check your credentials",
+    "shopeeConnectFail": "Could not start the connection to Shopee",
+    "shopeeConnectError": "Error connecting to Shopee",
+    "shopeeRepasseFail": "Failed to query the Shopee payout",
+    "shopeeRepasseError": "Error querying the Shopee payout"
+  },
+  "confirm": {
+    "removeProductTitle": "Remove product",
+    "removeProductMsg": "Do you really want to remove product {sku} and all its listing links?",
+    "removeProductAction": "Remove",
+    "disconnectTitle": "Disconnect integration",
+    "disconnectMsg": "Disconnect the integrated account for platform {platform}? Your linked listings will no longer be synced.",
+    "disconnectAction": "Disconnect",
+    "unlinkTitle": "Unlink listing",
+    "unlinkMsg": "Do you really want to unlink this listing from the central product?",
+    "unlinkAction": "Unlink"
+  }
+}

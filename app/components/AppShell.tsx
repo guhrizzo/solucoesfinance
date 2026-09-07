@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { useEffect } from "react";
 import { PeriodProvider } from "../hooks/usePeriod";
 import { SubscriptionGate } from "./SubscriptionGate";
