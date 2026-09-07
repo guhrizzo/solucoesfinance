@@ -308,29 +308,31 @@ Commits: `e9d4911` (3a), `5d6ee6b` (3b), `0c93f63`/`9bc32bb`/`a9aec00` (3c),
 
 ---
 
-## Fase 4 — Dashboard + Fluxo de Caixa 🚧 em andamento
+## Fase 4 — Dashboard + Fluxo de Caixa ✅ concluída
 
-Namespaces: `dashboard`, `fluxoCaixa`.
-Commit: `3f65a15` (4a).
+Namespaces: `dashboard`, `fluxoCaixa`, `categories` (novo, compartilhado).
+Commits: `3f65a15` (4a), `ad35ec7` (categorias), `4e9f0dc` (4b).
 
 - [x] **4a — `app/[locale]/dashboard/page.tsx`** → `dashboard.json` — KPIs,
       gráfico Receita vs Despesas (+ tabela `sr-only` + `aria-label`s),
       vencimentos, transações, centro de custos, projeção. `toBRL`/`months`/
       datas seguem o locale. **`AccessDenied.tsx`** → `common.accessDenied`
       (o `category` chega já traduzido).
-- [ ] **4b — `app/components/CashFlow.tsx`** (1834 linhas, ~142 sites de
-      string + modal de transação, importação CSV, scan de NF por IA, bloco
-      de orçamento, previstos) → `fluxoCaixa.json`. Ainda NÃO feito.
-- [ ] **Categorias (`lib/cashflowCategories.ts`, 25 nomes)** — decisão
-      transversal: são valores GRAVADOS no Firestore (`tx.category`) e casados
-      por string em `costCenterSync`, `contasPagar`, `relatorios`, e agrupados
-      no dashboard. Migrar pra `{key, storedValue}` + namespace `categories`
-      compartilhado, feito de uma vez junto com Fase 5/7 (ou num passo
-      dedicado antes da 4b). Enquanto isso, os nomes de categoria aparecem em
-      pt-BR mesmo nas outras línguas.
-- [ ] **`app/components/CategoryBreakdown.tsx`** (80 linhas) → pendente.
-- [x] `dashboard` verificado: `i18n:check` + `tsc` + `build` limpos;
-      `eslint app/` 162/76. Não testado ao vivo (atrás de login).
+- [x] **Categorias (`lib/cashflowCategories.ts`)** — `CASHFLOW_CATEGORIES`
+      segue sendo o VALOR gravado no Firestore (casado por string em
+      `costCenterSync`/`relatorios`/`dashboard`). Novo `CATEGORY_KEY`
+      (valor→key) + `categoryLabel(stored, t)`; namespace `categories.json`
+      (26 chaves). `scripts/i18n-check.mjs` valida a cobertura. Dashboard
+      donut já usa `categoryLabel`.
+- [x] **4b — `app/components/CashFlow.tsx`** → `fluxoCaixa.json` — tela
+      principal (KPIs por `key`), modal de transação, importação por IA,
+      modal de detalhamento do Orçamento (contas por categoria, impostos por
+      esfera), lista mês/dia, toolbar, filtros. `STATUS_META`/`TAX_SPHERE`
+      viram chaves. `toBRL`/`labelDate`/etc. recebem `locale`; sub-componentes
+      usam `useLocale`/`useTranslations`.
+- [x] **`app/components/CategoryBreakdown.tsx`** → `costCenter.breakdown`.
+- [x] `i18n:check` + `tsc` + `build` limpos; `eslint app/` 162/75.
+      Nada testado ao vivo (dashboard/fluxo atrás de login).
 
 ---
 
