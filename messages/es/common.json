@@ -69,5 +69,13 @@
       "preferences": "Preferencias",
       "analytics": "Análisis de uso"
     }
+  },
+  "notFound": {
+    "badge": "Página no encontrada",
+    "title": "Te perdiste en el sistema",
+    "subtitle": "La ruta a la que intentaste acceder no existe o se movió. Verifica la dirección o vuelve al inicio.",
+    "goDashboard": "Ir al Panel",
+    "requestedRoute": "ruta solicitada",
+    "fallbackRoute": "/ruta-inexistente"
   }
 }

@@ -69,5 +69,13 @@
       "preferences": "Preferências",
       "analytics": "Análise de uso"
     }
+  },
+  "notFound": {
+    "badge": "Página não encontrada",
+    "title": "Você se perdeu no sistema",
+    "subtitle": "A rota que você tentou acessar não existe ou foi movida. Verifique o endereço ou volte para o início.",
+    "goDashboard": "Ir para o Dashboard",
+    "requestedRoute": "rota solicitada",
+    "fallbackRoute": "/rota-inexistente"
   }
 }
