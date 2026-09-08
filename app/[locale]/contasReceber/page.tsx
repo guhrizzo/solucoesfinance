@@ -23,6 +23,7 @@ import { verifyPin, loadPinHash, getPinLockStatus } from "@/app/hooks/usePin";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney } from "@/lib/format";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
+import { syncReceivableCashflow } from "@/lib/receivableCashflowSync";
 import { AuditTrail } from "@/app/components/AuditTrail";
 import SeriesScopeDialog, { type SeriesScope } from "@/app/components/SeriesScopeDialog";
 import { addMonthsClamped, monthLabel } from "@/lib/dateSeries";
@@ -94,16 +95,9 @@ const STATUS_META: Record<ReceivableStatus, { bg: string; color: string; border:
     agendado: { bg: "var(--brand-weak)", color: "var(--brand)", border: "var(--brand-weak)" },
 };
 
-// Mapeamento de categoria (valor gravado) → categoria do Fluxo de Caixa
-// (também valor gravado, casado por string no cashflow) — NÃO traduzir.
-const CAT_TO_CASHFLOW: Record<string, string> = {
-    "Clientes": "Vendas",
-    "Serviços": "Serviços",
-    "Produtos": "Vendas",
-    "Devoluções": "Devoluções",
-    "Empréstimos": "Empréstimos",
-    "Outros": "Outros ganhos",
-};
+// Mapeamento de categoria (valor gravado) → categoria do Fluxo de Caixa vive em
+// lib/receivableCashflowSync.ts (CAT_TO_CASHFLOW), compartilhado com a
+// sincronização do espelho no cashflow.
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1368,19 +1362,48 @@ export default function ContasReceberPage() {
         }
 
         // ── Cobrança única (ou edição de uma parcela) ──────────────────────────
+        // Cobrança que já nasce/fica "recebida" precisa de data e forma do
+        // recebimento pro espelho no Fluxo de Caixa.
+        const isReceived = data.status === "recebido";
+        const receivedAt = isReceived ? (data.receivedAt || TODAY) : data.receivedAt;
+        const paidPaymentMethod = isReceived
+            ? (data.paidPaymentMethod || data.paymentMethod)
+            : data.paidPaymentMethod;
+
         const clean = Object.fromEntries(
-            Object.entries({ ...data, userId: uid }).filter(([, v]) => v !== undefined)
+            Object.entries({ ...data, userId: uid, receivedAt, paidPaymentMethod })
+                .filter(([, v]) => v !== undefined)
         );
         if (data.recurrence !== "numeral") delete (clean as Record<string, unknown>).installmentCount;
 
+        let receivableId: string;
         if (editing) {
             await updateDoc(doc(db, "users", uid, "receivables", editing.id), { ...clean, ...stampUpdate(actor) } as any);
+            receivableId = editing.id;
             showToast(t("toast.billUpdated"));
-            if (editing.seriesId) setSeriesEdit({ base: editing, data });
         } else {
-            await addDoc(collection(db, "users", uid, "receivables"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
+            const ref = await addDoc(collection(db, "users", uid, "receivables"), { ...clean, createdAt: Date.now(), ...stampCreate(actor) });
+            receivableId = ref.id;
             showToast(t("toast.billCreated"));
         }
+
+        // Reflete no Fluxo de Caixa: com status "recebido" cria/atualiza a
+        // entrada espelho; com qualquer outro status, remove se existir.
+        await syncReceivableCashflow(db, uid, {
+            id: receivableId,
+            title: data.title,
+            amount: data.amount,
+            dueDate: data.dueDate,
+            category: data.category,
+            status: data.status,
+            recurrence: data.recurrence,
+            installmentIndex: editing?.installmentIndex,
+            installmentCount: editing?.installmentCount,
+            receivedAt: receivedAt as string | undefined,
+            paidPaymentMethod: paidPaymentMethod as string | undefined,
+        });
+
+        if (editing?.seriesId) setSeriesEdit({ base: editing, data });
     }
 
     // ── Propaga a edição de uma parcela pras próximas não recebidas da série ──
@@ -1428,7 +1451,7 @@ export default function ContasReceberPage() {
     // ── Marcar como recebido + lançar no cashflow ──────────────────────────────
     async function handleReceive(receivedAt: string, method: PaymentMethod) {
         if (!uid || !receiveTarget) return;
-        const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([
+        const [{ getFirebase }, { doc, updateDoc }] = await Promise.all([
             import("@/lib/firebase"),
             import("firebase/firestore"),
         ]);
@@ -1443,24 +1466,12 @@ export default function ContasReceberPage() {
             ...stampSettle(actor),
         });
 
-        const recurrenceLabel = receiveTarget.recurrence === "numeral"
-            ? t("cashflowNote.recurrenceNumeral")
-            : t("cashflowNote.recurrenceUnica");
-
-        await addDoc(collection(db, "users", uid, "cashflow"), {
-            type: "entrada",
-            description: receiveTarget.title,
-            category: CAT_TO_CASHFLOW[receiveTarget.category] ?? "Outros ganhos",
-            amount: receiveTarget.amount,
-            date: receivedAt,
-            note:
-                receiveTarget.installmentIndex && receiveTarget.installmentCount
-                    ? t("cashflowNote.installment", { index: receiveTarget.installmentIndex, count: receiveTarget.installmentCount })
-                    : t("cashflowNote.single", { recurrence: recurrenceLabel }),
-            sourceReceivableId: receiveTarget.id,
-            paymentMethod: method,
-            createdAt: Date.now(),
-            ...stampCreate(actor),
+        // Espelho no Fluxo de Caixa (idempotente — não duplica se já existir).
+        await syncReceivableCashflow(db, uid, {
+            ...receiveTarget,
+            status: "recebido",
+            receivedAt,
+            paidPaymentMethod: method,
         });
 
         showToast(t("toast.receivedPosted"));
@@ -1516,6 +1527,9 @@ export default function ContasReceberPage() {
                     showToast(t("toast.installmentsRemoved", { count: alvo.length }));
                 } else {
                     await deleteDoc(doc(db, "users", uid, "receivables", confirmId));
+                    // Remove a entrada espelho no Fluxo de Caixa, se a cobrança
+                    // já tinha sido recebida.
+                    await syncReceivableCashflow(db, uid, { id: confirmId, status: "removido" });
                     showToast(t("toast.billRemoved"));
                 }
                 setConfirmId(null);
