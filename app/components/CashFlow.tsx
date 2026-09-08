@@ -508,6 +508,7 @@ function ImportModal({ open, onClose, onImport }: {
   const locale = useLocale();
   const [step, setStep] = useState<ImportStep>("input");
   const [text, setText] = useState("");
+  const [pdf, setPdf] = useState<{ base64: string; name: string } | null>(null);
   const [preview, setPreview] = useState<ImportedTx[]>([]);
   const [errMsg, setErrMsg] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -515,7 +516,7 @@ function ImportModal({ open, onClose, onImport }: {
   const extractTextId = useId();
 
   useEffect(() => {
-    if (!open) { setStep("input"); setText(""); setPreview([]); setErrMsg(""); setSelected(new Set()); }
+    if (!open) { setStep("input"); setText(""); setPdf(null); setPreview([]); setErrMsg(""); setSelected(new Set()); }
   }, [open]);
 
   if (!open) return null;
@@ -523,9 +524,23 @@ function ImportModal({ open, onClose, onImport }: {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setText(ev.target?.result as string ?? "");
-    reader.readAsText(file, "UTF-8");
+    setErrMsg("");
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (isPdf) {
+      if (file.size > 3 * 1024 * 1024) { setErrMsg(t("pdfTooBig")); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64 = String(ev.target?.result ?? "").split(",")[1] ?? "";
+        setPdf({ base64, name: file.name });
+        setText("");
+      };
+      reader.onerror = () => setErrMsg(t("errReadFile"));
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => { setText(ev.target?.result as string ?? ""); setPdf(null); };
+      reader.readAsText(file, "UTF-8");
+    }
   };
 
   const normalizeCategory = (raw: string, type: TxType): string => {
@@ -551,10 +566,11 @@ function ImportModal({ open, onClose, onImport }: {
   };
 
   const analyze = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() && !pdf) return;
     setStep("loading"); setErrMsg("");
     try {
-      const res = await fetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const body = pdf ? { pdf: pdf.base64 } : { text };
+      const res = await fetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? t("errApi"));
       const rawText = (data.content as any[])?.map((c: any) => c.text || "").join("") ?? "";
@@ -623,13 +639,13 @@ function ImportModal({ open, onClose, onImport }: {
               )}
               <button onClick={() => fileRef.current?.click()}
                 className="w-full border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 transition-all hover:border-opacity-100 cursor-pointer"
-                style={{ borderColor: "var(--cf-border)" }}>
+                style={{ borderColor: pdf ? "var(--brand)" : "var(--cf-border)" }}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--cf-input)" }}>
-                  <Upload size={18} style={{ color: "var(--cf-text-2)" }} />
+                  {pdf ? <FileText size={18} style={{ color: "var(--brand)" }} /> : <Upload size={18} style={{ color: "var(--cf-text-2)" }} />}
                 </div>
-                <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{t("upload")}</p>
-                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{t("uploadHint")}</p>
-                <input ref={fileRef} type="file" accept=".txt,.csv" className="hidden" onChange={handleFile} />
+                <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>{pdf ? pdf.name : t("upload")}</p>
+                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{pdf ? t("pdfReady") : t("uploadHint")}</p>
+                <input ref={fileRef} type="file" accept=".txt,.csv,.pdf" className="hidden" onChange={handleFile} />
               </button>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px" style={{ background: "var(--cf-border)" }} />
@@ -638,7 +654,7 @@ function ImportModal({ open, onClose, onImport }: {
               </div>
               <div className="space-y-2">
                 <label htmlFor={extractTextId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("bankStatement")}</label>
-                <textarea id={extractTextId} value={text} onChange={(e) => setText(e.target.value)} rows={8}
+                <textarea id={extractTextId} value={text} onChange={(e) => { setText(e.target.value); if (e.target.value) setPdf(null); }} rows={8}
                   placeholder={`01/03/2026  PIX RECEBIDO ABC    CR  R$ 3.500,00\n05/03/2026  ALUGUEL SALA         DB  R$ 2.200,00`}
                   className="w-full rounded-xl px-4 py-3 text-xs font-mono outline-none resize-none cursor-text"
                   style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
@@ -730,7 +746,7 @@ function ImportModal({ open, onClose, onImport }: {
           {step === "input" && (
             <>
               <Button variant="secondary" onClick={onClose} className="flex-1">{t("cancel")}</Button>
-              <Button variant="primary" icon={Sparkles} onClick={analyze} disabled={!text.trim()} className="flex-1">{t("analyze")}</Button>
+              <Button variant="primary" icon={Sparkles} onClick={analyze} disabled={!text.trim() && !pdf} className="flex-1">{t("analyze")}</Button>
             </>
           )}
           {step === "preview" && (

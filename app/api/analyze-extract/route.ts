@@ -21,7 +21,12 @@ Regras:
 - note: vazio ("") sempre
 Seja conciso. Extraia todas as transações sem omitir nenhuma.`;
 
-async function analyzeChunk(chunk: string): Promise<any[]> {
+// Teto do PDF em base64: ~4 MB de base64 ≈ 3 MB de arquivo. Fica abaixo do
+// limite de corpo de requisição da hospedagem serverless (~4,5 MB) e segura o
+// custo por chamada — extratos bancários reais são bem menores que isso.
+const MAX_PDF_BASE64 = 4_000_000;
+
+async function callAnthropic(userContent: any, maxTokens: number): Promise<any[]> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -31,9 +36,9 @@ async function analyzeChunk(chunk: string): Promise<any[]> {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: `Extrato bancário:\n\n${chunk}` }],
+      messages: [{ role: "user", content: userContent }],
     }),
   });
 
@@ -48,6 +53,20 @@ async function analyzeChunk(chunk: string): Promise<any[]> {
   const parsed = JSON.parse(clean);
   return parsed.transactions ?? [];
 }
+
+const analyzeChunk = (chunk: string) =>
+  callAnthropic(`Extrato bancário:\n\n${chunk}`, 4096);
+
+// PDF do banco: manda o arquivo inteiro como documento; o Claude lê o texto (ou
+// faz OCR se for escaneado) e extrai as transações numa única chamada.
+const analyzePdf = (base64: string) =>
+  callAnthropic(
+    [
+      { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+      { type: "text", text: "Extraia TODAS as transações deste extrato bancário." },
+    ],
+    8192
+  );
 
 // Divide o texto em chunks de ~8000 chars, quebrando em linhas
 function splitIntoChunks(text: string, maxChars = 8000): string[] {
@@ -77,26 +96,38 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { text } = await req.json();
+    const { text, pdf } = await req.json();
 
-    if (!text?.trim()) {
-      return NextResponse.json({ error: "Texto vazio" }, { status: 400 });
-    }
-
-    const chunks = splitIntoChunks(text, 8000);
-    if (chunks.length > MAX_CHUNKS) {
-      return NextResponse.json(
-        { error: `Extrato muito grande (${chunks.length} blocos). Envie em partes menores.` },
-        { status: 413 }
-      );
-    }
-
-    // Processa chunks em paralelo (máx 3 simultâneos para não sobrecarregar)
     const allTransactions: any[] = [];
-    for (let i = 0; i < chunks.length; i += 3) {
-      const batch = chunks.slice(i, i + 3);
-      const results = await Promise.all(batch.map(analyzeChunk));
-      results.forEach(txs => allTransactions.push(...txs));
+
+    if (typeof pdf === "string" && pdf.length > 0) {
+      // Caminho PDF: um único documento, uma única chamada.
+      if (pdf.length > MAX_PDF_BASE64) {
+        return NextResponse.json(
+          { error: "PDF muito grande. Envie um extrato menor (até ~3 MB) ou cole o texto." },
+          { status: 413 }
+        );
+      }
+      allTransactions.push(...await analyzePdf(pdf));
+    } else {
+      if (!text?.trim()) {
+        return NextResponse.json({ error: "Texto vazio" }, { status: 400 });
+      }
+
+      const chunks = splitIntoChunks(text, 8000);
+      if (chunks.length > MAX_CHUNKS) {
+        return NextResponse.json(
+          { error: `Extrato muito grande (${chunks.length} blocos). Envie em partes menores.` },
+          { status: 413 }
+        );
+      }
+
+      // Processa chunks em paralelo (máx 3 simultâneos para não sobrecarregar)
+      for (let i = 0; i < chunks.length; i += 3) {
+        const batch = chunks.slice(i, i + 3);
+        const results = await Promise.all(batch.map(analyzeChunk));
+        results.forEach(txs => allTransactions.push(...txs));
+      }
     }
 
     // Remove duplicatas por descrição + data + valor
