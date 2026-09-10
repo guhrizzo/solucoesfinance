@@ -19,9 +19,35 @@ import { Modal, Button, MoneyInput, parseAmount, Sensitive } from "./ui";
 import { syncCashflowExpense, settleCenterIfBudgetReached, budgetForCenterMonth } from "@/lib/costCenterSync";
 import AccessDenied from "./AccessDenied";
 import { PageLoader } from "./ui";
+import PinModal from "./PinModal";
+import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
+import { stampCreate, stampUpdate } from "@/lib/audit";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import "./cashflow.css";
+
+// ─── Verificação de PIN compartilhada pelos modais desta tela ────────────────
+// Toda ação que grava (criar, editar, excluir, importar) passa por aqui antes
+// de escrever. O PIN validado é o do usuário LOGADO (authUid), não o do dono
+// dos dados — mesmo padrão de Contas a Pagar / Receber / Impostos, ver
+// lib/audit.ts e a memória auditoria-pin.
+type PinOutcome =
+  | { ok: true }
+  | { ok: false; kind: "locked" | "wrong" | "no_pin" };
+
+async function runPinCheck(who: string, pin: string): Promise<PinOutcome> {
+  const result = await verifyPin(who, pin);
+  if (result === "ok") return { ok: true };
+  // Tentativa errada que estourou o limite → já entra bloqueado.
+  if (result === "wrong" && getPinLockStatus().locked) return { ok: false, kind: "locked" };
+  return { ok: false, kind: result };
+}
+
+// PinModal expõe a animação de "chacoalhar" (PIN errado) via window — mesma
+// convenção de Contas a Pagar / Receber / Impostos, só que aqui tipada.
+function shakePinModal(msg: string) {
+  (window as unknown as { __pinModalShake?: (m: string) => void }).__pinModalShake?.(msg);
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -178,13 +204,16 @@ async function autoSettleMatchingCostCenterExpense(
 
 // ─── Modal de transação ───────────────────────────────────────────────────────
 
-function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: {
-  open: boolean; editing: Tx | null; uid: string | null; costCenters: CostCenterOption[];
+function TransactionModal({ open, editing, uid, authUid, costCenters, onClose, onSave }: {
+  open: boolean; editing: Tx | null; uid: string | null; authUid: string | null; costCenters: CostCenterOption[];
   onClose: () => void; onSave: (data: Omit<Tx, "id">) => Promise<void>;
 }) {
   const t = useTranslations("fluxoCaixa.modal");
   const tf = useTranslations("fluxoCaixa");
   const tCat = useTranslations("categories");
+  const tPin = useTranslations("common.pin");
+  const tGate = useTranslations("fluxoCaixa.pin");
+  const [pinOpen, setPinOpen] = useState(false);
   const [type, setType] = useState<TxType>("entrada");
   const [desc, setDesc] = useState("");
   const [cat, setCat] = useState("");
@@ -220,7 +249,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
     setNote(editing?.note ?? "");
     setCostCenterId(editing?.costCenterId ?? "");
     setNfFile(null); setNfPreview(""); setNfUrl(editing?.nfUrl ?? ""); setNfName(editing?.nfName ?? "");
-    setSaving(false); setErr("");
+    setSaving(false); setErr(""); setPinOpen(false);
   }, [open]);
 
   if (!open) return null;
@@ -313,9 +342,31 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
     } catch (e: any) { setErr(e?.message ?? t("errSave")); setSaving(false); }
   }
 
+  // Botão de salvar → pede o PIN antes de gravar (criação e edição).
+  async function requestPin() {
+    if (!canSave || saving) return;
+    const who = authUid ?? uid;
+    if (!who) { setErr(tPin("notConfigured")); return; }
+    const hash = await loadPinHash(who);
+    if (!hash) { setErr(tPin("notConfigured")); return; }
+    setErr("");
+    setPinOpen(true);
+  }
+
+  async function handlePinSuccess(pin: string) {
+    const who = authUid ?? uid;
+    if (!who) return;
+    const res = await runPinCheck(who, pin);
+    if (res.ok) { setPinOpen(false); submit(); return; }
+    if (res.kind === "wrong") { shakePinModal(tPin("wrong")); return; }
+    setPinOpen(false);
+    setErr(res.kind === "locked" ? tPin("lockedRetry") : tPin("notConfigured"));
+  }
+
   const hasNf = nfPreview || nfUrl;
 
   return (
+    <>
     <Modal open={open} onClose={onClose} size="md" mobileSheet closeDisabled={saving}>
       <>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
@@ -480,7 +531,7 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
               style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
           </div>
           <Button
-            onClick={submit}
+            onClick={requestPin}
             disabled={!canSave}
             loading={saving}
             icon={Check}
@@ -493,6 +544,14 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
         </div>
       </>
     </Modal>
+    <PinModal
+      open={pinOpen}
+      title={editing ? tGate("editTitle") : tGate("createTitle")}
+      subtitle={editing ? tGate("editSubtitle") : tGate("createSubtitle")}
+      onClose={() => setPinOpen(false)}
+      onSuccess={handlePinSuccess}
+    />
+    </>
   );
 }
 
@@ -500,12 +559,15 @@ function TransactionModal({ open, editing, uid, costCenters, onClose, onSave }: 
 
 type ImportStep = "input" | "loading" | "preview" | "saving" | "done";
 
-function ImportModal({ open, onClose, onImport }: {
-  open: boolean; onClose: () => void; onImport: (txs: ImportedTx[]) => Promise<void>;
+function ImportModal({ open, authUid, onClose, onImport }: {
+  open: boolean; authUid: string | null; onClose: () => void; onImport: (txs: ImportedTx[]) => Promise<void>;
 }) {
   const t = useTranslations("fluxoCaixa.import");
   const tCat = useTranslations("categories");
+  const tPin = useTranslations("common.pin");
+  const tGate = useTranslations("fluxoCaixa.pin");
   const locale = useLocale();
+  const [pinOpen, setPinOpen] = useState(false);
   const [step, setStep] = useState<ImportStep>("input");
   const [text, setText] = useState("");
   const [pdf, setPdf] = useState<{ base64: string; name: string } | null>(null);
@@ -516,7 +578,7 @@ function ImportModal({ open, onClose, onImport }: {
   const extractTextId = useId();
 
   useEffect(() => {
-    if (!open) { setStep("input"); setText(""); setPdf(null); setPreview([]); setErrMsg(""); setSelected(new Set()); }
+    if (!open) { setStep("input"); setText(""); setPdf(null); setPreview([]); setErrMsg(""); setSelected(new Set()); setPinOpen(false); }
   }, [open]);
 
   if (!open) return null;
@@ -591,6 +653,26 @@ function ImportModal({ open, onClose, onImport }: {
     } catch (e: any) { setErrMsg(t("errParse", { message: e.message })); setStep("input"); }
   };
 
+  // Botão "Importar" → pede o PIN antes de gravar os lançamentos.
+  const requestImportPin = async () => {
+    const toImport = preview.filter((_, i) => selected.has(i));
+    if (!toImport.length) return;
+    if (!authUid) { setErrMsg(tPin("notConfigured")); return; }
+    const hash = await loadPinHash(authUid);
+    if (!hash) { setErrMsg(tPin("notConfigured")); return; }
+    setErrMsg("");
+    setPinOpen(true);
+  };
+
+  const handleImportPinSuccess = async (pin: string) => {
+    if (!authUid) return;
+    const res = await runPinCheck(authUid, pin);
+    if (res.ok) { setPinOpen(false); confirmImport(); return; }
+    if (res.kind === "wrong") { shakePinModal(tPin("wrong")); return; }
+    setPinOpen(false);
+    setErrMsg(res.kind === "locked" ? tPin("lockedRetry") : tPin("notConfigured"));
+  };
+
   const confirmImport = async () => {
     const toImport = preview.filter((_, i) => selected.has(i));
     if (!toImport.length) return;
@@ -603,6 +685,7 @@ function ImportModal({ open, onClose, onImport }: {
   const toggle = (i: number) => { const s = new Set(selected); s.has(i) ? s.delete(i) : s.add(i); setSelected(s); };
 
   return (
+    <>
     <Modal open={open} onClose={onClose} size="md" mobileSheet closeDisabled={step === "saving"}>
       <div style={{ maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--cf-border)" }}>
@@ -752,7 +835,7 @@ function ImportModal({ open, onClose, onImport }: {
           {step === "preview" && (
             <>
               <Button variant="secondary" onClick={() => setStep("input")} className="flex-1">{t("back")}</Button>
-              <Button variant="success" icon={Check} onClick={confirmImport} disabled={selected.size === 0} className="flex-1">{t("doImport")}</Button>
+              <Button variant="success" icon={Check} onClick={requestImportPin} disabled={selected.size === 0} className="flex-1">{t("doImport")}</Button>
             </>
           )}
           {step === "saving" && (
@@ -764,6 +847,14 @@ function ImportModal({ open, onClose, onImport }: {
         </div>
       </div>
     </Modal>
+    <PinModal
+      open={pinOpen}
+      title={tGate("importTitle")}
+      subtitle={tGate("importSubtitle")}
+      onClose={() => setPinOpen(false)}
+      onSuccess={handleImportPinSuccess}
+    />
+    </>
   );
 }
 
@@ -947,8 +1038,14 @@ export default function CashFlowPage() {
   const t = useTranslations("fluxoCaixa");
   const tNav = useTranslations("nav");
   const tCat = useTranslations("categories");
+  const tPin = useTranslations("common.pin");
+  const tGate = useTranslations("fluxoCaixa.pin");
   const locale = useLocale();
   const [uid, setUid] = useState<string | null>(null);
+  // authUid = usuário logado no Firebase Auth. Separado de `uid` (= ownerUid,
+  // dono dos dados) porque o PIN validado e o carimbo de autoria são SEMPRE do
+  // login atual, mesmo quando ele é membro convidado. Ver lib/audit.ts.
+  const [authUid, setAuthUid] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [txs, setTxs] = useState<Tx[]>([]);
@@ -962,6 +1059,8 @@ export default function CashFlowPage() {
   const [search, setSearch] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deletePinOpen, setDeletePinOpen] = useState(false);
+  const [deletePinErr, setDeletePinErr] = useState("");
   const [hideValues, setHideValues] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   // Contas a pagar / a receber / impostos do dono. O Orçamento do mês só precisa
@@ -1040,6 +1139,7 @@ export default function CashFlowPage() {
             const ownerUid = scope.ownerUid;
 
             setUid(ownerUid);
+            setAuthUid(u.uid);
             setUserName(u.displayName ?? u.email ?? "");
             setUserEmail(u.email ?? "");
 
@@ -1169,6 +1269,8 @@ export default function CashFlowPage() {
     if (!uid) throw new Error(t("notAuthenticated"));
     const [{ getFirebase }, { doc, updateDoc, collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
+    // Carimbo de autoria — a gravação já passou pela trava de PIN no modal.
+    const actor = { uid: authUid ?? uid, name: userName };
     const clean: Record<string, unknown> = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
 
     const hasCenter = data.type === "saida" && !!data.costCenterId && !!data.costCenterName;
@@ -1209,7 +1311,7 @@ export default function CashFlowPage() {
           clean.expenseAutoCreated = false;
         }
       }
-      await updateDoc(doc(db, "users", uid, "cashflow", editing.id), clean as any);
+      await updateDoc(doc(db, "users", uid, "cashflow", editing.id), { ...clean, ...stampUpdate(actor) } as any);
       await checkCenterBudget();
     } else if (data.type === "saida" && hasCenter) {
       // Saída nova já vinculada a um centro: lança a despesa automaticamente lá.
@@ -1219,7 +1321,7 @@ export default function CashFlowPage() {
         amount: data.amount, date: data.date,
       });
       if (expenseId) { clean.sourceExpenseId = expenseId; clean.expenseAutoCreated = true; }
-      await addDoc(collection(db, "users", uid, "cashflow"), clean);
+      await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
       await checkCenterBudget();
     } else {
       // Lançamento novo sem centro selecionado — tenta dar baixa automática
@@ -1229,7 +1331,7 @@ export default function CashFlowPage() {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
         if (matchedId) clean.sourceExpenseId = matchedId;
       }
-      await addDoc(collection(db, "users", uid, "cashflow"), clean);
+      await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
     }
   }
 
@@ -1237,14 +1339,36 @@ export default function CashFlowPage() {
     if (!uid) throw new Error(t("notAuthenticated"));
     const [{ getFirebase }, { collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
+    // A importação já passou pela trava de PIN no modal — carimba a autoria.
+    const stamp = stampCreate({ uid: authUid ?? uid, name: userName });
     await Promise.all(importedTxs.map(async (tx) => {
-      const entry: Record<string, unknown> = { ...tx, createdAt: Date.now() };
+      const entry: Record<string, unknown> = { ...tx, createdAt: Date.now(), ...stamp };
       if (tx.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: tx.description, amount: tx.amount });
         if (matchedId) entry.sourceExpenseId = matchedId;
       }
       await addDoc(collection(db, "users", uid, "cashflow"), entry);
     }));
+  }
+
+  // Lixeira → confirma → pede o PIN antes de excluir de fato.
+  async function requestDeletePin() {
+    if (!confirmId || !uid || deleting) return;
+    const who = authUid ?? uid;
+    const hash = await loadPinHash(who);
+    if (!hash) { setDeletePinErr(tPin("notConfigured")); return; }
+    setDeletePinErr("");
+    setDeletePinOpen(true);
+  }
+
+  async function handleDeletePinSuccess(pin: string) {
+    const who = authUid ?? uid;
+    if (!who) return;
+    const res = await runPinCheck(who, pin);
+    if (res.ok) { setDeletePinOpen(false); handleDelete(); return; }
+    if (res.kind === "wrong") { shakePinModal(tPin("wrong")); return; }
+    setDeletePinOpen(false);
+    setDeletePinErr(res.kind === "locked" ? tPin("lockedRetry") : tPin("notConfigured"));
   }
 
   async function handleDelete() {
@@ -1442,22 +1566,33 @@ export default function CashFlowPage() {
 
       <Navbar user={{ displayName: userName || null, email: userEmail }} activePath="/fluxo-caixa" onLogout={handleLogout} />
 
-      <TransactionModal open={modal} editing={editing} uid={uid} costCenters={costCenters} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
-      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
+      <TransactionModal open={modal} editing={editing} uid={uid} authUid={authUid} costCenters={costCenters} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
+      <ImportModal open={importOpen} authUid={authUid} onClose={() => setImportOpen(false)} onImport={handleImport} />
 
-      <Modal open={!!confirmId} onClose={() => setConfirmId(null)} size="sm" closeDisabled={deleting}>
+      <Modal open={!!confirmId && !deletePinOpen} onClose={() => { setConfirmId(null); setDeletePinErr(""); }} size="sm" closeDisabled={deleting}>
         <div className="p-6 text-center">
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "var(--status-danger-bg)" }}>
             <Trash2 size={20} style={{ color: "var(--status-danger-text)" }} />
           </div>
           <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>{t("deleteConfirm.title")}</p>
           <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>{t("deleteConfirm.body")}</p>
+          {deletePinErr && (
+            <p className="text-xs mb-3 rounded-lg px-3 py-2" style={{ background: "var(--status-danger-bg)", color: "var(--status-danger-text)" }}>{deletePinErr}</p>
+          )}
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setConfirmId(null)} className="flex-1">{t("deleteConfirm.cancel")}</Button>
-            <Button variant="danger" icon={Trash2} onClick={handleDelete} loading={deleting} className="flex-1">{t("deleteConfirm.delete")}</Button>
+            <Button variant="secondary" onClick={() => { setConfirmId(null); setDeletePinErr(""); }} className="flex-1">{t("deleteConfirm.cancel")}</Button>
+            <Button variant="danger" icon={Trash2} onClick={requestDeletePin} loading={deleting} className="flex-1">{t("deleteConfirm.delete")}</Button>
           </div>
         </div>
       </Modal>
+
+      <PinModal
+        open={deletePinOpen}
+        title={tGate("deleteTitle")}
+        subtitle={tGate("deleteSubtitle")}
+        onClose={() => { setDeletePinOpen(false); setConfirmId(null); setDeletePinErr(""); }}
+        onSuccess={handleDeletePinSuccess}
+      />
 
       {/* Detalhamento do Orçamento */}
       <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} size="md" mobileSheet>

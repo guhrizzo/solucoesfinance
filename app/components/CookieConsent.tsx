@@ -13,7 +13,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { Cookie, ChevronDown, ExternalLink } from "lucide-react";
 import {
   getConsentSnapshot,
@@ -27,25 +27,8 @@ import {
 
 const OPTIONAL: ConsentCategory[] = ["preferences", "analytics"];
 
-// Rotas do app autenticado — nelas o banner acompanha o tema (claro ou escuro).
-// Fora delas (landing, login, cadastro, política) o banner é sempre claro, já
-// que essas páginas públicas são desenhadas em fundo claro.
-// Mantém em sincronia com a lista em AppShell.tsx.
-const APP_PREFIXES = [
-  "/dashboard",
-  "/fluxo-caixa",
-  "/contasPagar",
-  "/contasReceber",
-  "/costCenter",
-  "/estoque",
-  "/vendas",
-  "/impostos",
-  "/relatorios",
-  "/configuracoes",
-];
-
-// Fora das rotas do app, o wrapper recebe .cookie-consent--light, que reaplica
-// os tokens claros de :root mesmo sob [data-theme="dark"] (ver globals.css).
+// O banner sempre acompanha o tema (claro ou escuro) — as páginas públicas
+// também têm os dois modos desde o toggle na Fase pública (ThemeToggle).
 
 // `false` no SSR e durante a hidratação, `true` só depois de montar — sem
 // setState em effect (lint: react-hooks/set-state-in-effect). Enquanto for
@@ -55,8 +38,6 @@ const emptySubscribe = () => () => {};
 
 export function CookieConsent() {
   const t = useTranslations("common.cookies");
-  const pathname = usePathname();
-  const themed = APP_PREFIXES.some((p) => pathname.startsWith(p));
 
   const mounted = useSyncExternalStore(
     emptySubscribe,
@@ -119,9 +100,7 @@ export function CookieConsent() {
     close();
   };
 
-  const wrapperClass = `fixed inset-x-0 bottom-0 p-3 sm:p-4 ${
-    themed ? "" : "cookie-consent--light"
-  }`;
+  const wrapperClass = "fixed inset-x-0 bottom-0 p-3 sm:p-4";
 
   // ── Mini: aviso curto, cabe numa linha. "Saiba mais" aumenta o card;
   // o link de política abre a página completa numa aba nova. ──────────────

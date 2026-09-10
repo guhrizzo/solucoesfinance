@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink } from "@/lib/authLink";
 import { passwordRules } from "@/lib/passwordRules";
 
@@ -129,7 +130,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex overflow-hidden">
+    <div className="mkt min-h-screen flex overflow-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; box-sizing: border-box; }
@@ -302,7 +303,35 @@ export default function RegisterPage() {
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #d0daf0; border-radius: 4px; }
+
+        /* ── Tema escuro (parte pública) ── */
+        [data-theme="dark"] .reg-input {
+          background:#0f151e; border-color:#232b38; color:#e6e9ee;
+        }
+        [data-theme="dark"] .reg-input:focus {
+          background:#141a24; border-color:#4d92ff;
+          box-shadow: 0 0 0 3px rgba(77,146,255,0.14);
+        }
+        [data-theme="dark"] .reg-input::placeholder { color:#7d8798; }
+        [data-theme="dark"] .btn-social {
+          background:#141a24; border-color:#232b38; color:#b9c1cd;
+        }
+        [data-theme="dark"] .btn-social:hover:not(:disabled) {
+          border-color:#4d92ff; background:rgba(77,146,255,0.10);
+        }
+        [data-theme="dark"] .divider { background:#232b38; }
+        [data-theme="dark"] .error-box { background:rgba(242,105,95,0.12); border-color:rgba(242,105,95,0.35); }
+        [data-theme="dark"] .pass-rule.nok { color:#7d8798; }
+        [data-theme="dark"] .rule-dot.nok { background:#232b38; }
+        [data-theme="dark"] .checkbox-custom { background:#0f151e; border-color:#363f4e; }
+        [data-theme="dark"] .checkbox-custom.checked { background:#4d92ff; border-color:#4d92ff; }
+        [data-theme="dark"] .spinner-blue { border-color:#232b38; border-top-color:#4d92ff; }
+        [data-theme="dark"] ::-webkit-scrollbar-thumb { background:#232b38; }
+        [data-theme="dark"] .dark-logo-invert { filter: brightness(0) invert(1); }
       `}</style>
+
+      {/* Toggle de tema — canto superior direito, sobre o painel do formulário */}
+      <ThemeToggle className="absolute top-4 right-4 z-20 h-9 w-9 text-slate-400 hover:text-blue-600 border border-slate-200 hover:border-blue-300" />
 
       {/* ══════════════════════════════════════════════════════════
           PAINEL ESQUERDO — hero decorativo
@@ -378,7 +407,7 @@ export default function RegisterPage() {
 
           {/* Logo mobile */}
           <div className="flex items-center mb-8 lg:hidden">
-            <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="h-9 w-auto" />
+            <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="dark-logo-invert h-9 w-auto" />
           </div>
 
           {/* Cabeçalho */}

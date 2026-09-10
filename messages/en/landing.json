@@ -5,6 +5,52 @@
     "ogTitle": "NexusFi — Financial management for businesses",
     "ogDescription": "A complete platform to organize your company's finances with real-time data."
   },
+  "whatsapp": {
+    "aria": "Chat with us on WhatsApp",
+    "tooltip": "Chat with us",
+    "prefill": "Hi! I came from the NexusFi site and would like to know more.",
+    "modalTitle": "How can we help?",
+    "modalSubtitle": "Pick a topic and we'll continue on WhatsApp.",
+    "close": "Close",
+    "topics": [
+      {
+        "label": "Cash flow and dashboard",
+        "message": "Hi! I came from the NexusFi site and want to understand how the cash flow control and dashboard work."
+      },
+      {
+        "label": "Accounts payable and receivable",
+        "message": "Hi! I came from the NexusFi site and have questions about accounts payable and receivable."
+      },
+      {
+        "label": "Taxes",
+        "message": "Hi! I came from the NexusFi site and want to know how the platform helps with tax control."
+      },
+      {
+        "label": "Inventory + Mercado Livre and Shopee",
+        "message": "Hi! I came from the NexusFi site and want to understand the inventory integration with Mercado Livre and Shopee."
+      },
+      {
+        "label": "Sales dashboard and pricing",
+        "message": "Hi! I came from the NexusFi site and have questions about the sales dashboard and the pricing calculator."
+      },
+      {
+        "label": "Cost centers and reports",
+        "message": "Hi! I came from the NexusFi site and want to understand cost centers and reports."
+      },
+      {
+        "label": "Team, permissions and security PIN",
+        "message": "Hi! I came from the NexusFi site and want to know how team management, permissions and the security PIN work."
+      },
+      {
+        "label": "Plans, pricing and free trial",
+        "message": "Hi! I came from the NexusFi site and want to know more about the plans, pricing and free trial."
+      },
+      {
+        "label": "Something else",
+        "message": "Hi! I came from the NexusFi site and would like to ask a question."
+      }
+    ]
+  },
   "nav": {
     "features": "Features",
     "plans": "Pricing",

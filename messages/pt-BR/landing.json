@@ -5,6 +5,52 @@
     "ogTitle": "NexusFi — Gestão financeira empresarial",
     "ogDescription": "Plataforma completa para organizar as finanças da sua empresa com dados em tempo real."
   },
+  "whatsapp": {
+    "aria": "Fale conosco no WhatsApp",
+    "tooltip": "Fale conosco",
+    "prefill": "Olá! Vim pelo site da NexusFi e gostaria de saber mais.",
+    "modalTitle": "Como podemos ajudar?",
+    "modalSubtitle": "Escolha o assunto e a conversa continua no WhatsApp.",
+    "close": "Fechar",
+    "topics": [
+      {
+        "label": "Fluxo de caixa e dashboard",
+        "message": "Olá! Vim pelo site da NexusFi e quero entender como funciona o controle de fluxo de caixa e o dashboard."
+      },
+      {
+        "label": "Contas a pagar e a receber",
+        "message": "Olá! Vim pelo site da NexusFi e tenho dúvidas sobre o controle de contas a pagar e a receber."
+      },
+      {
+        "label": "Impostos (Simples, DAS e afins)",
+        "message": "Olá! Vim pelo site da NexusFi e quero saber como a plataforma ajuda no controle de impostos."
+      },
+      {
+        "label": "Estoque + Mercado Livre e Shopee",
+        "message": "Olá! Vim pelo site da NexusFi e quero entender a integração de estoque com o Mercado Livre e a Shopee."
+      },
+      {
+        "label": "Painel de vendas e precificação",
+        "message": "Olá! Vim pelo site da NexusFi e tenho dúvidas sobre o painel de vendas e a calculadora de precificação."
+      },
+      {
+        "label": "Centro de custos e relatórios",
+        "message": "Olá! Vim pelo site da NexusFi e quero entender o centro de custos e os relatórios."
+      },
+      {
+        "label": "Equipe, permissões e PIN de segurança",
+        "message": "Olá! Vim pelo site da NexusFi e quero saber como funciona a gestão de equipe, as permissões e o PIN de segurança."
+      },
+      {
+        "label": "Planos, preços e teste grátis",
+        "message": "Olá! Vim pelo site da NexusFi e quero saber mais sobre os planos, preços e o teste grátis."
+      },
+      {
+        "label": "Outra dúvida",
+        "message": "Olá! Vim pelo site da NexusFi e gostaria de tirar uma dúvida."
+      }
+    ]
+  },
   "nav": {
     "features": "Funcionalidades",
     "plans": "Planos",

@@ -10,10 +10,19 @@ import ConfirmModal from "@/app/components/ConfirmModal";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
-  Zap, Loader2, ArrowRight, Package, X, CheckCircle, Download
+  Loader2, ArrowRight, Package, X, CheckCircle, Download
 } from "lucide-react";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shopee OCULTA da interface por enquanto. A integração de backend continua
+// existindo (rotas /api/shopee/*, lib/shopee.ts, webhooks, tipos) — só
+// escondemos os pontos de entrada visíveis no Estoque: aba de filtro, painel
+// "Resumo Shopee", o canal "Shopee" no modal de integrações e a opção Shopee
+// no vínculo manual.
+// Para voltar a exibir a Shopee, troque para `true`.
+const SHOPEE_UI_VISIVEL = false;
 
 // Interfaces de Dados
 interface ProdutoEstoque {
@@ -129,7 +138,6 @@ export default function EstoquePage() {
   const [modalIntegracoesOpen, setModalIntegracoesOpen] = useState(false);
   const [modalVinculosOpen, setModalVinculosOpen] = useState(false);
   const [selectedProdutoSku, setSelectedProdutoSku] = useState<string | null>(null);
-  const [modalSimuladorOpen, setModalSimuladorOpen] = useState(false);
 
   // Formulário Produto
   const [formSku, setFormSku] = useState("");
@@ -149,9 +157,6 @@ export default function EstoquePage() {
   const vinculoTitleId = useId();
   const vinculoPriceId = useId();
   const vinculoQuantityId = useId();
-  const simSkuId = useId();
-  const simQuantityId = useId();
-  const simUnitPriceId = useId();
   const [formSaving, setFormSaving] = useState(false);
 
   // Formulário Vínculo Manual
@@ -161,14 +166,6 @@ export default function EstoquePage() {
   const [formVinculoPrice, setFormVinculoPrice] = useState("");
   const [formVinculoQuantity, setFormVinculoQuantity] = useState("");
   const [formVinculoSaving, setFormVinculoSaving] = useState(false);
-
-  // Formulário Simulador Vendas — parte de um produto do estoque central
-  // (não exige anúncio vinculado). Registra a venda no Painel de Vendas.
-  const [simSku, setSimSku] = useState("");
-  const [simChannel, setSimChannel] = useState<"mercadolivre" | "shopee">("mercadolivre");
-  const [simQuantity, setSimQuantity] = useState("1");
-  const [simUnitPrice, setSimUnitPrice] = useState("");
-  const [simRunning, setSimRunning] = useState(false);
 
   // Resumo Shopee: nº de itens/unidades cadastrados + valor líquido a receber
   // (escrow). Carregado sob demanda de /api/shopee/repasse.
@@ -327,7 +324,7 @@ export default function EstoquePage() {
 
   // Controlar classe modal-open no body para efeito de desfoque (blur) na navbar
   useEffect(() => {
-    const anyModalOpen = modalProdutoOpen || modalIntegracoesOpen || modalVinculosOpen || modalSimuladorOpen;
+    const anyModalOpen = modalProdutoOpen || modalIntegracoesOpen || modalVinculosOpen;
     if (anyModalOpen) {
       document.body.classList.add("modal-open");
     } else {
@@ -336,7 +333,7 @@ export default function EstoquePage() {
     return () => {
       document.body.classList.remove("modal-open");
     };
-  }, [modalProdutoOpen, modalIntegracoesOpen, modalVinculosOpen, modalSimuladorOpen]);
+  }, [modalProdutoOpen, modalIntegracoesOpen, modalVinculosOpen]);
 
   // Sincronizar Estoque Manualmente.
   // direction "pull" = puxa estoque/preço do canal pro central (canal manda).
@@ -658,96 +655,6 @@ export default function EstoquePage() {
     }
   };
 
-  // "199.9" (número) → "199,90" (campo em pt-BR).
-  const toPriceField = (n: number) => (Number(n) || 0).toFixed(2).replace(".", ",");
-  // "1.234,56" ou "199.90" → 1234.56 / 199.9
-  const parsePriceField = (s: string): number => {
-    const t = s.trim();
-    if (!t) return NaN;
-    return t.includes(",")
-      ? parseFloat(t.replace(/\./g, "").replace(",", "."))
-      : parseFloat(t);
-  };
-
-  // Abre o simulador já com o 1º produto selecionado e o preço preenchido.
-  const openSimulador = () => {
-    const first = produtos[0];
-    setSimSku(first?.sku ?? "");
-    setSimChannel("mercadolivre");
-    setSimQuantity("1");
-    setSimUnitPrice(first ? toPriceField(first.price) : "");
-    setModalSimuladorOpen(true);
-  };
-
-  const onSimSkuChange = (sku: string) => {
-    setSimSku(sku);
-    const p = produtos.find((x) => x.sku === sku);
-    if (p) setSimUnitPrice(toPriceField(p.price));
-  };
-
-  // Simular Venda — baixa o estoque central do SKU (propagando aos vínculos, se
-  // houver) e lança a venda como ENTRADA no Fluxo de Caixa (lib/vendas.ts) — é
-  // isso que faz a venda aparecer no Painel de Vendas (/vendas) e no Dashboard.
-  const handleSimularVenda = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ownerUid || !simSku || !simQuantity) return;
-
-    const produto = produtos.find((p) => p.sku === simSku);
-    if (!produto) { showToast(t("toast.productNotFound"), "error"); return; }
-
-    const qty = Math.max(1, parseInt(simQuantity) || 1);
-    const parsedPrice = parsePriceField(simUnitPrice);
-    const unitPrice = Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : produto.price;
-    const novaQtd = Math.max(0, (produto.quantity || 0) - qty);
-
-    setSimRunning(true);
-    showToast(t("toast.simRunning"), "info");
-
-    try {
-      const { getFirebase } = await import("@/lib/firebase");
-      const { db } = await getFirebase();
-      const { doc, updateDoc, collection, query, where, getDocs } = await import("firebase/firestore");
-      const { registrarVendaClient } = await import("@/lib/vendas");
-
-      // 1. Baixa o estoque central do SKU.
-      await updateDoc(doc(db, "estoque", produto.id), { quantity: novaQtd, updatedAt: Date.now() });
-
-      // 2. Espelha a nova quantidade nos anúncios vinculados ao mesmo SKU.
-      const snapVinculos = await getDocs(
-        query(collection(db, "vinculos"), where("userId", "==", ownerUid), where("sku", "==", simSku))
-      );
-      await Promise.all(
-        snapVinculos.docs.map((dv) =>
-          updateDoc(doc(db, "vinculos", dv.id), { quantity: novaQtd, updatedAt: Date.now() })
-        )
-      );
-
-      // 3. Lança a venda como entrada no caixa → aparece no Painel de Vendas.
-      //    Sem orderId: cada clique é uma venda distinta (não precisa de dedupe,
-      //    que só existe para o reenvio de webhook de pedido real).
-      await registrarVendaClient(db, ownerUid, {
-        channel: simChannel,
-        sku: simSku,
-        productName: produto.name || simSku,
-        adId: `sim-${simSku}`,
-        quantity: qty,
-        unitPrice,
-        orderId: null,
-      });
-
-      showToast(
-        t("toast.simDone", { qty, name: produto.name, sku: simSku, stock: novaQtd }),
-        "success"
-      );
-      setModalSimuladorOpen(false);
-    } catch (err: any) {
-      console.error(err);
-      showToast(err.message || t("toast.simFailed"), "error");
-    } finally {
-      setSimRunning(false);
-    }
-  };
-
   // Mapeia quais SKU têm quais plataformas vinculadas
   const vinculosPorSku = useMemo(() => {
     const map: Record<string, { platform: "mercadolivre" | "shopee"; id: string; adId: string }[]> = {};
@@ -878,15 +785,6 @@ export default function EstoquePage() {
 
           <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={openSimulador}
-              disabled={produtos.length === 0}
-              className="btn-success flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg, var(--pos), var(--pos))", cursor: "pointer" }}
-            >
-              <Zap size={15} /> {t("actions.simulateSale")}
-            </button>
-
-            <button
               onClick={() => setModalIntegracoesOpen(true)}
               className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
               style={{ cursor: "pointer" }}
@@ -973,7 +871,8 @@ export default function EstoquePage() {
         </div>
 
         {/* Painel Shopee: estoque cadastrado + valor líquido a receber */}
-        {temShopee && (
+        {/* Oculto da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo). */}
+        {SHOPEE_UI_VISIVEL && temShopee && (
           <div className="cf-card p-5">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
@@ -1055,7 +954,10 @@ export default function EstoquePage() {
                 { id: "shopee", label: "", ariaLabel: t("tabs.filterShopee"), image: "/Shopee.svg" },
                 { id: "local", label: t("tabs.local"), icon: null },
                 { id: "baixo", label: t("tabs.lowStock"), icon: AlertTriangle }
-              ].map((tab) => {
+              ]
+                // Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo).
+                .filter((tab) => SHOPEE_UI_VISIVEL || tab.id !== "shopee")
+                .map((tab) => {
                 const IconComponent = tab.icon;
                 return (
                   <button
@@ -1461,7 +1363,8 @@ export default function EstoquePage() {
                   )}
                 </div>
 
-                {/* Canal 2: Shopee */}
+                {/* Canal 2: Shopee — oculto da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo). */}
+                {SHOPEE_UI_VISIVEL && (
                 <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
                   <div className="flex items-center gap-3">
                     <div className="flex flex-col items-center gap-2">
@@ -1487,6 +1390,7 @@ export default function EstoquePage() {
                     </button>
                   )}
                 </div>
+                )}
 
               </div>
 
@@ -1631,7 +1535,8 @@ export default function EstoquePage() {
                       style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
                     >
                       <option value="mercadolivre">Mercado Livre</option>
-                      <option value="shopee">Shopee</option>
+                      {/* Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo). */}
+                      {SHOPEE_UI_VISIVEL && <option value="shopee">Shopee</option>}
                     </select>
                   </div>
 
@@ -1705,127 +1610,6 @@ export default function EstoquePage() {
               </div>
 
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 4: SIMULADOR DE VENDA (TESTE WEBHOOKS) ── */}
-      {modalSimuladorOpen && (
-        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ background: "var(--db-overlay)", backdropFilter: "blur(5px)", zIndex: 9999 }}>
-          <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-fade-in" style={{ background: "var(--cf-card)" }}>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
-              <div className="flex items-center gap-2">
-                <Zap size={16} className="text-emerald-500" />
-                <h3 className="font-heading font-bold text-base" style={{ color: "var(--cf-text)" }}>
-                  {t("simulatorModal.title")}
-                </h3>
-              </div>
-              <button
-                onClick={() => setModalSimuladorOpen(false)}
-                aria-label={tc("close")}
-                className="p-1.5 rounded-lg cursor-pointer border-none"
-                style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSimularVenda} className="p-5 space-y-4">
-
-              <div className="rounded-xl px-4 py-3 text-[11px] leading-relaxed space-y-1.5" style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", color: "var(--success)" }}>
-                <p className="font-bold flex items-center gap-1"><CheckCircle size={12} /> {t("simulatorModal.whatItDoes")}</p>
-                <p>{t("simulatorModal.step1")}</p>
-                <p>{t.rich("simulatorModal.step2", { b: (c) => <strong>{c}</strong> })}</p>
-                <p>{t.rich("simulatorModal.step3", { b: (c) => <strong>{c}</strong> })}</p>
-              </div>
-
-              <div className="space-y-1">
-                <label htmlFor={simSkuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.productSold")}</label>
-                <select
-                  id={simSkuId}
-                  value={simSku}
-                  onChange={(e) => onSimSkuChange(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 rounded-xl text-xs outline-none cursor-pointer"
-                  style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
-                >
-                  <option value="">{t("simulatorModal.choose")}</option>
-                  {produtos.map((p) => (
-                    <option key={p.id} value={p.sku}>
-                      {t("simulatorModal.optionLabel", { name: p.name, sku: p.sku, qty: p.quantity })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <fieldset className="space-y-1 border-0 p-0 m-0 min-w-0">
-                <legend className="text-[10px] font-bold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.saleChannel")}</legend>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["mercadolivre", "shopee"] as const).map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setSimChannel(c)}
-                      className="px-3 py-2.5 rounded-xl text-xs font-bold border cursor-pointer transition-all"
-                      style={simChannel === c
-                        ? { background: "rgba(16,185,129,0.12)", borderColor: "var(--pos)", color: "var(--pos)" }
-                        : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}
-                    >
-                      {platformLabel(c)}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label htmlFor={simQuantityId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.quantity")}</label>
-                  <input
-                    id={simQuantityId}
-                    type="number"
-                    value={simQuantity}
-                    onChange={(e) => setSimQuantity(e.target.value)}
-                    min="1"
-                    required
-                    className="w-full px-3 py-2.5 rounded-xl text-xs outline-none mono"
-                    style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor={simUnitPriceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("simulatorModal.unitPrice")}</label>
-                  <input
-                    id={simUnitPriceId}
-                    type="text"
-                    inputMode="decimal"
-                    value={simUnitPrice}
-                    onChange={(e) => setSimUnitPrice(e.target.value)}
-                    placeholder="0,00"
-                    className="w-full px-3 py-2.5 rounded-xl text-xs outline-none mono"
-                    style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModalSimuladorOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer"
-                  style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                >
-                  {t("simulatorModal.close")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={simRunning || !simSku}
-                  className="btn-success px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg, var(--pos), var(--pos))" }}
-                >
-                  {simRunning ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                  {t("simulatorModal.submit")}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

@@ -640,6 +640,235 @@ textarea::placeholder {
 }
 
 /* ────────────────────────────────────────────────────────────────── */
+/* Botão flutuante do WhatsApp (WhatsAppFab.tsx) — só na landing.       */
+/* Canto inferior DIREITO, empilhado ACIMA do widget de acessibilidade  */
+/* (o `bottom` vem inline do componente, que conhece o estado do        */
+/* banner de cookies e do widget). Verde do WhatsApp fixo — não         */
+/* acompanha o tema claro/escuro. prefers-reduced-motion é ignorado de  */
+/* propósito no projeto (ver ForceMotion.tsx), então o anel pulsa       */
+/* sempre.                                                              */
+/* ────────────────────────────────────────────────────────────────── */
+.wa-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 24px;
+  z-index: 1400;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px rgba(37, 211, 102, 0.3);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.wa-fab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #25d366;
+  z-index: -1;
+  animation: wa-fab-pulse 2s ease infinite;
+}
+@keyframes wa-fab-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+.wa-fab:hover {
+  transform: scale(1.1) translateY(-5px);
+  background: #1ebe5d;
+  box-shadow: 0 12px 20px rgba(37, 211, 102, 0.4);
+}
+.wa-fab svg {
+  width: 30px;
+  height: 30px;
+}
+.wa-fab__badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wa-fab__tooltip {
+  position: absolute;
+  right: 75px;
+  white-space: nowrap;
+  background: #333;
+  color: #fff;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    right 0.3s ease;
+  pointer-events: none;
+}
+.wa-fab:hover .wa-fab__tooltip {
+  opacity: 1;
+  visibility: visible;
+  right: 80px;
+}
+@media (max-width: 768px) {
+  .wa-fab {
+    right: 16px;
+    width: 52px;
+    height: 52px;
+  }
+  .wa-fab svg {
+    width: 26px;
+    height: 26px;
+  }
+  .wa-fab__tooltip {
+    display: none;
+  }
+}
+
+/* ── Modal do WhatsApp (WhatsAppFab.tsx) — o visitante escolhe o assunto e
+   segue pro WhatsApp com a mensagem pronta. Portal no <body>, acima do FAB
+   (1400) e do widget de acessibilidade (1500). Tema claro/escuro pelos
+   tokens semânticos. ─────────────────────────────────────────────────── */
+.wa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 10, 16, 0.6);
+  animation: wa-modal-fade 0.18s ease both;
+}
+@keyframes wa-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.wa-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-pop);
+  animation: wa-modal-pop 0.22s cubic-bezier(0.34, 0.1, 0.64, 1) both;
+}
+@keyframes wa-modal-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.wa-modal__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 18px 12px;
+}
+.wa-modal__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #25d366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wa-modal__icon svg { width: 22px; height: 22px; }
+.wa-modal__title {
+  font-family: var(--font-display), var(--font-hanken), sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+.wa-modal__subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.wa-modal__close {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--sunken);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wa-modal__close:hover { color: var(--text); }
+.wa-modal__list {
+  padding: 4px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wa-modal__topic {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.wa-modal__topic:hover {
+  border-color: var(--brand);
+  background: var(--brand-weak);
+}
+.wa-modal__topic svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--text-subtle);
+  margin-left: auto;
+}
+
+/* ────────────────────────────────────────────────────────────────── */
 /* PROGRESS BAR */
 /* ────────────────────────────────────────────────────────────────── */
 
@@ -938,26 +1167,6 @@ html[data-underline-links="1"] a[href] {
 /* DARK MODE SPECIFIC ENHANCEMENTS */
 /* ────────────────────────────────────────────────────────────────── */
 
-/* Banner de cookies (CookieConsent.tsx): nas páginas públicas (landing, login,
-   cadastro, política) ele é SEMPRE claro, mesmo com o tema escuro ativo — essas
-   telas têm fundo claro. Reaplica no subtree do banner os tokens de :root.
-   Nas rotas do app autenticado a classe não é usada e o banner segue o tema. */
-[data-theme="dark"] .cookie-consent--light {
-  color-scheme: light;
-  --surface: #ffffff;
-  --sunken: #eef0f4;
-  --border: #e2e5ea;
-  --border-strong: #cfd4dc;
-  --text: #16202e;
-  --text-muted: #5a6675;
-  --text-subtle: #8a94a2;
-  --brand: #1f6feb;
-  --brand-hover: #1a5fd0;
-  --brand-weak: #e9f1fd;
-  --brand-on: #ffffff;
-  --shadow-pop: 0 8px 28px -8px rgba(16, 32, 46, 0.18), 0 2px 6px -2px rgba(16, 32, 46, 0.1);
-}
-
 [data-theme="dark"] .cf-card {
   box-shadow: var(--cf-shadow-sm);
 }
@@ -965,3 +1174,98 @@ html[data-underline-links="1"] a[href] {
 [data-theme="dark"] .cf-card:hover {
   box-shadow: var(--cf-shadow-md);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* PARTE PÚBLICA — modo claro / escuro                                      */
+/* Landing, login, cadastro, rodapé e páginas legais usam utilitários      */
+/* Tailwind de cor fixa (bg-white, text-slate-500, …). A camada `.mkt`     */
+/* (marketing) remapeia essas cores para o tema escuro SEM tocar no modo   */
+/* claro — que continua sendo o comportamento padrão do Tailwind.          */
+/* Regras fora de @layer vencem qualquer utilitário do Tailwind, então     */
+/* não é preciso !important.                                               */
+/* O hero (fundo azul-marinho + vídeo) é escuro nos dois modos e usa       */
+/* classes próprias (text-white, text-blue-100, card-glass) que NÃO        */
+/* aparecem na lista abaixo — ficam intactas.                              */
+/* ═══════════════════════════════════════════════════════════════════════ */
+.mkt {
+  --mkt-bg: #ffffff;
+  --mkt-alt: #f8fafc;
+  --mkt-card: #ffffff;
+  --mkt-border: #e2e8f0;
+  --mkt-border-soft: #eef2f7;
+  --mkt-heading: #172554;
+  --mkt-body: #475569;
+  --mkt-muted: #64748b;
+  --mkt-faint: #94a3b8;
+  --mkt-brand: #2563eb;
+  --mkt-brand-weak: #eff6ff;
+  --mkt-track: #dbeafe;
+  --mkt-pos: #15803d;
+  --mkt-pos-weak: #f0fdf4;
+  --mkt-footer: #172554;
+}
+
+[data-theme="dark"] .mkt {
+  --mkt-bg: #0b0f17;
+  --mkt-alt: #0f151e;
+  --mkt-card: #141a24;
+  --mkt-border: #232b38;
+  --mkt-border-soft: #1c2430;
+  --mkt-heading: #e8ebf0;
+  --mkt-body: #b9c1cd;
+  --mkt-muted: #99a3b2;
+  --mkt-faint: #7d8798;
+  --mkt-brand: #4d92ff;
+  --mkt-brand-weak: rgba(77, 146, 255, 0.12);
+  --mkt-track: #232b38;
+  --mkt-pos: #3ecf7f;
+  --mkt-pos-weak: rgba(62, 207, 127, 0.12);
+  --mkt-footer: #090d14;
+}
+
+/* Helpers para markup novo/convertido (rodapé, toggle) */
+.mkt-footer-bg { background-color: var(--mkt-footer); }
+.mkt-surface { background-color: var(--mkt-bg); }
+.mkt-surface-alt { background-color: var(--mkt-alt); }
+.mkt-heading-c { color: var(--mkt-heading); }
+.mkt-body-c { color: var(--mkt-body); }
+.mkt-muted-c { color: var(--mkt-muted); }
+
+/* ── Remapeamento das cores fixas — SÓ no tema escuro ────────────────── */
+
+/* Superfícies full-bleed (raiz da página + seções) → fundo base.
+   Especificidade maior que a regra de cartão abaixo, então vence nelas. */
+[data-theme="dark"] .mkt.bg-white,
+[data-theme="dark"] .mkt > section.bg-white,
+[data-theme="dark"] .mkt > section.bg-slate-50 { background-color: var(--mkt-bg); }
+
+/* Cartões e blocos internos → superfície elevada */
+[data-theme="dark"] .mkt .bg-white,
+[data-theme="dark"] .mkt .bg-slate-50,
+[data-theme="dark"] .mkt .bg-gray-50 { background-color: var(--mkt-card); }
+
+[data-theme="dark"] .mkt .bg-blue-50 { background-color: var(--mkt-brand-weak); }
+[data-theme="dark"] .mkt .bg-blue-100 { background-color: var(--mkt-track); }
+[data-theme="dark"] .mkt .bg-green-50 { background-color: var(--mkt-pos-weak); }
+
+[data-theme="dark"] .mkt .text-blue-950,
+[data-theme="dark"] .mkt .text-blue-900 { color: var(--mkt-heading); }
+[data-theme="dark"] .mkt .text-slate-600,
+[data-theme="dark"] .mkt .text-gray-600 { color: var(--mkt-body); }
+[data-theme="dark"] .mkt .text-slate-500,
+[data-theme="dark"] .mkt .text-gray-500 { color: var(--mkt-muted); }
+[data-theme="dark"] .mkt .text-slate-400,
+[data-theme="dark"] .mkt .text-slate-300,
+[data-theme="dark"] .mkt .text-gray-400 { color: var(--mkt-faint); }
+[data-theme="dark"] .mkt .text-blue-600,
+[data-theme="dark"] .mkt .text-blue-500 { color: var(--mkt-brand); }
+[data-theme="dark"] .mkt .text-green-700 { color: var(--mkt-pos); }
+
+[data-theme="dark"] .mkt .border-slate-200,
+[data-theme="dark"] .mkt .border-slate-100,
+[data-theme="dark"] .mkt .border-blue-50,
+[data-theme="dark"] .mkt .border-blue-100,
+[data-theme="dark"] .mkt .border-blue-100\/40 { border-color: var(--mkt-border); }
+
+[data-theme="dark"] .mkt .hover\:bg-blue-50:hover { background-color: var(--mkt-brand-weak); }
+[data-theme="dark"] .mkt .hover\:border-blue-300:hover { border-color: var(--mkt-brand); }

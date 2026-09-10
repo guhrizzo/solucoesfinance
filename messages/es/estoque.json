@@ -5,10 +5,9 @@
   },
   "meta": {
     "title": "Inventario Centralizado",
-    "subtitle": "Gestiona tu stock de forma centralizada e intégralo con Mercado Livre y Shopee."
+    "subtitle": "Gestiona tu stock de forma centralizada e intégralo con Mercado Livre."
   },
   "actions": {
-    "simulateSale": "Simular Venta (Prueba)",
     "integrations": "Integraciones ({count})",
     "newProduct": "Nuevo Producto"
   },
@@ -22,7 +21,7 @@
     "activeChannels": "Canales Activos",
     "channelsConnected": "{count} Conectados",
     "channelsNone": "Ninguno",
-    "channelsHint": "Mercado Livre y Shopee"
+    "channelsHint": "Mercado Livre"
   },
   "shopeePanel": {
     "title": "Shopee — stock y liquidación",
@@ -137,21 +136,6 @@
     "currentStock": "Stock Actual",
     "linkAd": "Vincular Anuncio"
   },
-  "simulatorModal": {
-    "title": "Simulador de Ventas",
-    "whatItDoes": "Qué hace la simulación:",
-    "step1": "1. Descuenta la cantidad vendida del stock central del SKU (y la refleja en los anuncios vinculados, si los hay).",
-    "step2": "2. Registra la venta como <b>ingreso en el Flujo de Caja</b> en la categoría Ventas.",
-    "step3": "3. La venta pasa a aparecer en el <b>Panel de Ventas</b> y en el Dashboard.",
-    "productSold": "Producto vendido",
-    "choose": "-- Elige un producto --",
-    "optionLabel": "{name} (SKU: {sku} | Stock: {qty})",
-    "saleChannel": "Canal de la venta",
-    "quantity": "Cantidad",
-    "unitPrice": "Precio unitario (R$)",
-    "close": "Cerrar",
-    "submit": "Registrar venta simulada"
-  },
   "toast": {
     "productUpdated": "¡Producto actualizado con éxito!",
     "skuInUse": "¡Este SKU ya está siendo usado por otro producto!",
@@ -166,10 +150,6 @@
     "linkRemoveError": "Error al eliminar el vínculo",
     "integrationRemoved": "Integración y vínculos eliminados.",
     "disconnectError": "Error al desconectar la cuenta",
-    "productNotFound": "Producto no encontrado en el inventario",
-    "simRunning": "Registrando venta simulada...",
-    "simDone": "Venta simulada: {qty}x {name} · SKU {sku} ahora con {stock} un. Míralo en el Panel de Ventas.",
-    "simFailed": "Error al simular la venta",
     "mlConnectedLimited": "Cuenta de Mercado Livre conectada, pero sin permiso para importar anuncios automáticamente. Vincula manualmente o revisa los alcances de la aplicación.",
     "mlIntegratedImported": "¡Mercado Livre integrado! {count} anuncio(s) importado(s).",
     "mlIntegrated": "¡Cuenta de Mercado Livre integrada con éxito!",

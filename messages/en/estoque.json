@@ -5,10 +5,9 @@
   },
   "meta": {
     "title": "Centralized Inventory",
-    "subtitle": "Manage your stock in one place and integrate with Mercado Livre and Shopee."
+    "subtitle": "Manage your stock in one place and integrate with Mercado Livre."
   },
   "actions": {
-    "simulateSale": "Simulate Sale (Test)",
     "integrations": "Integrations ({count})",
     "newProduct": "New Product"
   },
@@ -22,7 +21,7 @@
     "activeChannels": "Active Channels",
     "channelsConnected": "{count} Connected",
     "channelsNone": "None",
-    "channelsHint": "Mercado Livre & Shopee"
+    "channelsHint": "Mercado Livre"
   },
   "shopeePanel": {
     "title": "Shopee — stock and payout",
@@ -137,21 +136,6 @@
     "currentStock": "Current Stock",
     "linkAd": "Link Listing"
   },
-  "simulatorModal": {
-    "title": "Sales Simulator",
-    "whatItDoes": "What the simulation does:",
-    "step1": "1. Deducts the sold quantity from the central stock for the SKU (and mirrors it to linked listings, if any).",
-    "step2": "2. Posts the sale as a <b>Cash Flow inflow</b> in the Sales category.",
-    "step3": "3. The sale then shows up in the <b>Sales Dashboard</b> and the Dashboard.",
-    "productSold": "Product sold",
-    "choose": "-- Choose a product --",
-    "optionLabel": "{name} (SKU: {sku} | Stock: {qty})",
-    "saleChannel": "Sale channel",
-    "quantity": "Quantity",
-    "unitPrice": "Unit price (R$)",
-    "close": "Close",
-    "submit": "Record simulated sale"
-  },
   "toast": {
     "productUpdated": "Product updated successfully!",
     "skuInUse": "This SKU is already used by another product!",
@@ -166,10 +150,6 @@
     "linkRemoveError": "Error removing link",
     "integrationRemoved": "Integration and links removed.",
     "disconnectError": "Error disconnecting account",
-    "productNotFound": "Product not found in inventory",
-    "simRunning": "Recording simulated sale...",
-    "simDone": "Simulated sale: {qty}x {name} · SKU {sku} now at {stock} units. Check the Sales Dashboard.",
-    "simFailed": "Failed to simulate sale",
     "mlConnectedLimited": "Mercado Livre account connected, but without permission to import listings automatically. Link manually or review the application scopes.",
     "mlIntegratedImported": "Mercado Livre integrated! {count} listing(s) imported.",
     "mlIntegrated": "Mercado Livre account integrated successfully!",

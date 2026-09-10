@@ -1,9 +1,28 @@
 {
   "meta": {
     "title": "Panel de Ventas",
-    "subtitle": "Ventas de Mercado Livre y Shopee — cada pedido entra automáticamente como <strong>ingreso en el Flujo de Caja</strong>."
+    "subtitle": "Registra una venta aquí — entra como <strong>ingreso en el Flujo de Caja</strong> y descuenta el stock al instante."
   },
-  "simulateSale": "Simular venta",
+  "newSale": {
+    "cta": "Nueva venta",
+    "title": "Registrar venta",
+    "hint": "La venta entra como ingreso en el Flujo de Caja y descuenta stock. En los canales conectados, la publicación también se actualiza.",
+    "product": "Producto",
+    "noProducts": "Ningún producto en stock",
+    "productOption": "{name} · SKU {sku} · {qty} en stock",
+    "channel": "Canal de la venta",
+    "channelManual": "Venta manual",
+    "quantity": "Cantidad",
+    "unitPrice": "Precio unitario",
+    "totalLabel": "Total de la venta",
+    "lowStockWarn": "Solo hay {available} en stock — el saldo quedará en cero.",
+    "submit": "Registrar venta",
+    "cancel": "Cancelar",
+    "success": "Venta de {qty}× {name} registrada.",
+    "errorGeneric": "No se pudo registrar la venta.",
+    "pinTitle": "Confirmar venta",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para registrar la venta"
+  },
   "periods": {
     "mes": "Este mes",
     "d30": "30 días",
@@ -21,7 +40,8 @@
   "channels": {
     "label": "Canales:",
     "connected": "conectado",
-    "notConnected": "no conectado"
+    "notConnected": "no conectado",
+    "manual": "Venta manual"
   },
   "kpi": {
     "salesValue": "Valor de ventas",
@@ -45,8 +65,8 @@
   "chart": {
     "title": "Evolución de las ventas",
     "empty": "Sin ventas en el período.",
-    "ariaLabel": "Gráfico de barras: ventas de Mercado Livre y Shopee por período — detalle en la tabla de abajo",
-    "caption": "Ventas de Mercado Livre y Shopee por período",
+    "ariaLabel": "Gráfico de barras: ventas de Mercado Livre por período — detalle en la tabla de abajo",
+    "caption": "Ventas de Mercado Livre por período",
     "colPeriod": "Período"
   },
   "topProducts": {
@@ -71,8 +91,8 @@
   },
   "recentSales": {
     "title": "Ventas recientes",
-    "subtitle": "Últimos pedidos recibidos de los marketplaces",
-    "syncedBadge": "Sincronizado en caja",
+    "subtitle": "Últimas ventas registradas y pedidos de los marketplaces",
+    "syncedBadge": "Registrado en caja",
     "colDate": "Fecha",
     "colChannel": "Canal",
     "colProduct": "Producto",
@@ -80,7 +100,7 @@
     "colUnit": "Unitario",
     "colTotal": "Total",
     "empty": "Ninguna venta en el período.",
-    "emptyHint": "Las ventas de Mercado Livre y Shopee (reales o simuladas en Stock) aparecen aquí."
+    "emptyHint": "Las ventas registradas aquí o recibidas de los marketplaces aparecen en esta lista."
   },
   "pricing": {
     "title": "Calculadora de Precios",

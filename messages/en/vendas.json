@@ -1,9 +1,28 @@
 {
   "meta": {
     "title": "Sales Dashboard",
-    "subtitle": "Mercado Livre and Shopee sales — every order is automatically posted as a <strong>Cash Flow inflow</strong>."
+    "subtitle": "Record a sale here — it posts as a <strong>Cash Flow inflow</strong> and deducts stock right away."
   },
-  "simulateSale": "Simulate sale",
+  "newSale": {
+    "cta": "New sale",
+    "title": "Record sale",
+    "hint": "The sale posts as revenue in Cash Flow and deducts stock. On connected channels, the listing is updated too.",
+    "product": "Product",
+    "noProducts": "No products in stock",
+    "productOption": "{name} · SKU {sku} · {qty} in stock",
+    "channel": "Sales channel",
+    "channelManual": "Manual sale",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price",
+    "totalLabel": "Sale total",
+    "lowStockWarn": "Only {available} in stock — the balance will hit zero.",
+    "submit": "Record sale",
+    "cancel": "Cancel",
+    "success": "Sale of {qty}× {name} recorded.",
+    "errorGeneric": "Could not record the sale.",
+    "pinTitle": "Confirm sale",
+    "pinSubtitle": "Enter your 4-digit PIN to record the sale"
+  },
   "periods": {
     "mes": "This month",
     "d30": "30 days",
@@ -21,7 +40,8 @@
   "channels": {
     "label": "Channels:",
     "connected": "connected",
-    "notConnected": "not connected"
+    "notConnected": "not connected",
+    "manual": "Manual sale"
   },
   "kpi": {
     "salesValue": "Sales value",
@@ -45,8 +65,8 @@
   "chart": {
     "title": "Sales trend",
     "empty": "No sales in the period.",
-    "ariaLabel": "Bar chart: Mercado Livre and Shopee sales by period — breakdown in the table below",
-    "caption": "Mercado Livre and Shopee sales by period",
+    "ariaLabel": "Bar chart: Mercado Livre sales by period — breakdown in the table below",
+    "caption": "Mercado Livre sales by period",
     "colPeriod": "Period"
   },
   "topProducts": {
@@ -71,8 +91,8 @@
   },
   "recentSales": {
     "title": "Recent sales",
-    "subtitle": "Latest orders received from the marketplaces",
-    "syncedBadge": "Synced to cash flow",
+    "subtitle": "Latest recorded sales and marketplace orders",
+    "syncedBadge": "Posted to cash flow",
     "colDate": "Date",
     "colChannel": "Channel",
     "colProduct": "Product",
@@ -80,7 +100,7 @@
     "colUnit": "Unit",
     "colTotal": "Total",
     "empty": "No sales in the period.",
-    "emptyHint": "Mercado Livre and Shopee sales (real or simulated in Inventory) show up here."
+    "emptyHint": "Sales recorded here or received from the marketplaces show up in this list."
   },
   "pricing": {
     "title": "Pricing Calculator",

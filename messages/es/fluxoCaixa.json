@@ -47,9 +47,19 @@
   },
   "deleteConfirm": {
     "title": "¿Eliminar transacción?",
-    "body": "Esta acción no se puede deshacer.",
+    "body": "Esta acción no se puede deshacer. Se solicitará tu PIN.",
     "cancel": "Cancelar",
     "delete": "Eliminar"
+  },
+  "pin": {
+    "createTitle": "Confirmar movimiento",
+    "createSubtitle": "Ingresa tu PIN de 4 dígitos para registrar",
+    "editTitle": "Confirmar edición",
+    "editSubtitle": "Ingresa tu PIN de 4 dígitos para guardar los cambios",
+    "deleteTitle": "Confirmar eliminación",
+    "deleteSubtitle": "Ingresa tu PIN de 4 dígitos para eliminar",
+    "importTitle": "Confirmar importación",
+    "importSubtitle": "Ingresa tu PIN de 4 dígitos para importar las transacciones"
   },
   "budgetModal": {
     "title": "Presupuesto · {period}",

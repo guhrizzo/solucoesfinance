@@ -13,6 +13,11 @@
   "search": "Buscar",
   "showPassword": "Mostrar senha",
   "hidePassword": "Ocultar senha",
+  "theme": {
+    "toggle": "Alternar tema claro/escuro",
+    "light": "Modo claro",
+    "dark": "Modo escuro"
+  },
   "accessDenied": {
     "title": "Acesso restrito",
     "body": "Sua conta não tem permissão para acessar <b>{category}</b>. Fale com o administrador da conta para liberar.",

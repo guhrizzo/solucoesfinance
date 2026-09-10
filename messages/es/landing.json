@@ -5,6 +5,52 @@
     "ogTitle": "NexusFi — Gestión financiera para empresas",
     "ogDescription": "Una plataforma completa para organizar las finanzas de tu empresa con datos en tiempo real."
   },
+  "whatsapp": {
+    "aria": "Habla con nosotros por WhatsApp",
+    "tooltip": "Habla con nosotros",
+    "prefill": "¡Hola! Vine desde el sitio de NexusFi y me gustaría saber más.",
+    "modalTitle": "¿Cómo podemos ayudarte?",
+    "modalSubtitle": "Elige un tema y seguimos por WhatsApp.",
+    "close": "Cerrar",
+    "topics": [
+      {
+        "label": "Flujo de caja y panel",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender cómo funciona el control de flujo de caja y el panel."
+      },
+      {
+        "label": "Cuentas por pagar y por cobrar",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y tengo dudas sobre el control de cuentas por pagar y por cobrar."
+      },
+      {
+        "label": "Impuestos",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber cómo la plataforma ayuda con el control de impuestos."
+      },
+      {
+        "label": "Inventario + Mercado Livre y Shopee",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender la integración de inventario con Mercado Livre y Shopee."
+      },
+      {
+        "label": "Panel de ventas y precios",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y tengo dudas sobre el panel de ventas y la calculadora de precios."
+      },
+      {
+        "label": "Centros de costo e informes",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender los centros de costo y los informes."
+      },
+      {
+        "label": "Equipo, permisos y PIN de seguridad",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber cómo funcionan la gestión de equipo, los permisos y el PIN de seguridad."
+      },
+      {
+        "label": "Planes, precios y prueba gratis",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber más sobre los planes, precios y la prueba gratis."
+      },
+      {
+        "label": "Otra duda",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y me gustaría hacer una consulta."
+      }
+    ]
+  },
   "nav": {
     "features": "Funcionalidades",
     "plans": "Precios",

@@ -2,24 +2,43 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useId } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/app/hooks/useAuth";
 import { Link } from "@/i18n/navigation";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
-import { PageLoader } from "@/app/components/ui";
+import { PageLoader, Modal, Button, MoneyInput, parseAmount } from "@/app/components/ui";
+import PinModal from "@/app/components/PinModal";
+import { loadPinHash, verifyPin, getPinLockStatus } from "@/app/hooks/usePin";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
 import {
   ShoppingCart, DollarSign, Receipt, Package, TrendingUp,
-  ArrowRight, AlertTriangle, Zap, Boxes, Layers,
-  LayoutGrid, Calculator,
+  ArrowRight, AlertTriangle, Boxes, Layers,
+  LayoutGrid, Calculator, Plus, X, Check,
 } from "lucide-react";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Canal = "mercadolivre" | "shopee";
+type Canal = "mercadolivre" | "shopee" | "manual";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shopee OCULTA da interface por enquanto (mesma flag do Estoque). A
+// integração de backend continua no ar; aqui só escondemos os elementos
+// visíveis do painel de vendas que citam a Shopee: chip de status do canal,
+// linha "por canal", série/legenda/tabela do gráfico e o bloco de repasse
+// (escrow). Para voltar a exibir, troque para `true`.
+const SHOPEE_UI_VISIVEL = false;
+
+// Canais de MARKETPLACE exibidos na interface (chips de conexão).
+const CANAIS_VISIVEIS: Canal[] = SHOPEE_UI_VISIVEL
+  ? ["mercadolivre", "shopee"]
+  : ["mercadolivre"];
+
+// Canais mostrados na quebra "Vendas por canal" e no gráfico — inclui a venda
+// manual (balcão), registrada aqui no painel.
+const CANAIS_QUEBRA: Canal[] = [...CANAIS_VISIVEIS, "manual"];
 
 interface CashflowTx {
   id: string;
@@ -60,10 +79,12 @@ type Aba = "geral" | "precificacao";
 
 const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
-// Nomes de marca — não traduzir.
+// Nomes de marca (ML/Shopee) — não traduzir. "manual" tem o rótulo traduzido
+// via canalLabel(); o `label` aqui é só um fallback.
 const CANAL_INFO: Record<Canal, { label: string; bg: string; fg: string; solid: string }> = {
   mercadolivre: { label: "Mercado Livre", bg: "var(--brand-ml-bg)", fg: "var(--brand-ml-fg)", solid: "var(--brand-ml-solid)" },
   shopee: { label: "Shopee", bg: "var(--brand-shopee-bg)", fg: "var(--brand-shopee-fg)", solid: "var(--brand-shopee-bg)" },
+  manual: { label: "Venda manual", bg: "var(--cf-input)", fg: "var(--cf-text-2)", solid: "var(--cf-text-3)" },
 };
 
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -123,6 +144,16 @@ export default function VendasPage() {
   const [shopeeRepasse, setShopeeRepasse] = useState<
     { pendente: number; liberado: number; taxas: number; mock: boolean } | null
   >(null);
+  const [novaVendaOpen, setNovaVendaOpen] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (msg: string, type: "success" | "error" = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // Nome curto do canal (marca do marketplace ou rótulo traduzido da venda manual).
+  const canalLabel = (c: Canal) => (c === "manual" ? t("channels.manual") : CANAL_INFO[c].label);
 
   useEffect(() => {
     if (!user || !ownerUid) return;
@@ -161,8 +192,9 @@ export default function VendasPage() {
   }, [user, ownerUid]);
 
   // Valor líquido a receber da Shopee (escrow) — consulta sob demanda.
+  // Não busca nada enquanto a Shopee estiver oculta da interface (ver SHOPEE_UI_VISIVEL).
   useEffect(() => {
-    if (!ownerUid) return;
+    if (!ownerUid || !SHOPEE_UI_VISIVEL) return;
     let cancelled = false;
     (async () => {
       try {
@@ -181,9 +213,14 @@ export default function VendasPage() {
     return () => { cancelled = true; };
   }, [ownerUid]);
 
-  // ── Vendas (entradas de marketplace) ───────────────────────────────────────
+  // ── Vendas — entradas com canal (marketplace ou venda manual do painel) ─────
   const todasVendas = useMemo(
-    () => txs.filter((t) => t.type === "entrada" && (t.saleChannel === "mercadolivre" || t.saleChannel === "shopee")),
+    () =>
+      txs.filter(
+        (t) =>
+          t.type === "entrada" &&
+          (t.saleChannel === "mercadolivre" || t.saleChannel === "shopee" || t.saleChannel === "manual")
+      ),
     [txs]
   );
 
@@ -220,13 +257,22 @@ export default function VendasPage() {
       };
     };
 
-    return { total, pedidos, unidades, ticket, ml: porCanal("mercadolivre"), shopee: porCanal("shopee") };
+    return {
+      total, pedidos, unidades, ticket,
+      ml: porCanal("mercadolivre"),
+      shopee: porCanal("shopee"),
+      manual: porCanal("manual"),
+    };
   }, [vendas]);
 
   // ── Série temporal (gráfico de barras empilhadas por canal) ────────────────
   const serie = useMemo(() => {
     const now = new Date();
-    const buckets: { key: string; label: string; ml: number; shopee: number }[] = [];
+    const buckets: { key: string; label: string; ml: number; shopee: number; manual: number }[] = [];
+
+    // "mercadolivre" → ml, "shopee" → shopee, resto (manual) → manual.
+    const chKey = (c?: Canal): "ml" | "shopee" | "manual" =>
+      c === "shopee" ? "shopee" : c === "mercadolivre" ? "ml" : "manual";
 
     if (periodo === "tudo") {
       for (let i = 11; i >= 0; i--) {
@@ -234,12 +280,12 @@ export default function VendasPage() {
         buckets.push({
           key: monthKey(d),
           label: d.toLocaleDateString(locale, { month: "short" }).replace(".", ""),
-          ml: 0, shopee: 0,
+          ml: 0, shopee: 0, manual: 0,
         });
       }
       vendas.forEach((v) => {
         const b = buckets.find((x) => x.key === v.date.slice(0, 7));
-        if (b) b[v.saleChannel === "shopee" ? "shopee" : "ml"] += v.amount || 0;
+        if (b) b[chKey(v.saleChannel)] += v.amount || 0;
       });
     } else {
       const dias = periodo === "mes"
@@ -250,15 +296,15 @@ export default function VendasPage() {
         : (() => { const d = new Date(now); d.setDate(d.getDate() - 29); return d; })();
       for (let i = 0; i < dias; i++) {
         const d = new Date(base); d.setDate(base.getDate() + i);
-        buckets.push({ key: ymd(d), label: String(d.getDate()), ml: 0, shopee: 0 });
+        buckets.push({ key: ymd(d), label: String(d.getDate()), ml: 0, shopee: 0, manual: 0 });
       }
       vendas.forEach((v) => {
         const b = buckets.find((x) => x.key === v.date);
-        if (b) b[v.saleChannel === "shopee" ? "shopee" : "ml"] += v.amount || 0;
+        if (b) b[chKey(v.saleChannel)] += v.amount || 0;
       });
     }
 
-    const max = Math.max(1, ...buckets.map((b) => b.ml + b.shopee));
+    const max = Math.max(1, ...buckets.map((b) => b.ml + b.shopee + b.manual));
     return { buckets, max };
   }, [vendas, periodo, locale]);
 
@@ -299,10 +345,11 @@ export default function VendasPage() {
     return { unidades, baixo, zerado, valor, itens: produtos.length };
   }, [produtos]);
 
-  const canaisConectados = useMemo(() => {
+  const canaisConectados = useMemo<Record<Canal, boolean>>(() => {
     return {
       mercadolivre: integracoes.some((i) => i.platform === "mercadolivre"),
       shopee: integracoes.some((i) => i.platform === "shopee"),
+      manual: true, // venda manual sempre disponível
     };
   }, [integracoes]);
 
@@ -319,6 +366,28 @@ export default function VendasPage() {
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
       <Navbar activePath="/vendas" user={user} onLogout={handleLogout} hidePeriod />
+
+      {toast && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-lg"
+          style={{
+            background: toast.type === "success" ? "var(--pos)" : "var(--neg)",
+            color: "var(--on-accent)",
+          }}
+        >
+          {toast.type === "success" ? <Check size={16} /> : <X size={16} />}
+          {toast.msg}
+        </div>
+      )}
+
+      <NovaVendaModal
+        open={novaVendaOpen}
+        onClose={() => setNovaVendaOpen(false)}
+        produtos={produtos}
+        authUid={user?.uid ?? null}
+        canaisConectados={canaisConectados}
+        onDone={(msg, type) => { showToast(msg, type); if (type === "success") setNovaVendaOpen(false); }}
+      />
 
       <main className="px-6 py-8 max-w-7xl mx-auto w-full space-y-8 pb-24">
 
@@ -349,12 +418,14 @@ export default function VendasPage() {
                   </button>
                 ))}
               </div>
-              <Link
-                href="/estoque"
-                className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
+              <button
+                onClick={() => setNovaVendaOpen(true)}
+                disabled={produtos.length === 0}
+                className="btn-success flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, var(--pos), var(--pos))", cursor: "pointer" }}
               >
-                <Zap size={15} /> {t("simulateSale")}
-              </Link>
+                <Plus size={15} /> {t("newSale.cta")}
+              </button>
             </div>
           )}
         </div>
@@ -386,7 +457,8 @@ export default function VendasPage() {
         {/* Status dos canais */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
           <span style={{ color: "var(--cf-text-3)" }}>{t("channels.label")}</span>
-          {(["mercadolivre", "shopee"] as Canal[]).map((c) => (
+          {/* Shopee oculta da interface (ver SHOPEE_UI_VISIVEL / CANAIS_VISIVEIS no topo). */}
+          {CANAIS_VISIVEIS.map((c) => (
             <span
               key={c}
               className="px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5"
@@ -439,14 +511,15 @@ export default function VendasPage() {
           {/* Por canal */}
           <div className="cf-card p-5 space-y-4">
             <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>{t("byChannel.title")}</h2>
-            {(["mercadolivre", "shopee"] as Canal[]).map((c) => {
-              const d = c === "mercadolivre" ? kpis.ml : kpis.shopee;
+            {/* ML + venda manual (+ Shopee quando visível — ver SHOPEE_UI_VISIVEL). */}
+            {CANAIS_QUEBRA.map((c) => {
+              const d = c === "mercadolivre" ? kpis.ml : c === "shopee" ? kpis.shopee : kpis.manual;
               const pct = kpis.total > 0 ? (d.total / kpis.total) * 100 : 0;
               return (
                 <div key={c} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold px-2 py-0.5 rounded" style={{ background: CANAL_INFO[c].bg, color: CANAL_INFO[c].fg }}>
-                      {CANAL_INFO[c].label}
+                      {canalLabel(c)}
                     </span>
                     <span className="mono font-bold" style={{ color: "var(--cf-text)" }}>{toBRL(d.total, locale)}</span>
                   </div>
@@ -461,7 +534,8 @@ export default function VendasPage() {
               );
             })}
 
-            {shopeeRepasse && (
+            {/* Repasse Shopee (escrow) — oculto da interface (ver SHOPEE_UI_VISIVEL no topo). */}
+            {SHOPEE_UI_VISIVEL && shopeeRepasse && (
               <div className="pt-3 mt-1 space-y-1.5" style={{ borderTop: "1px solid var(--cf-border)" }}>
                 <div className="flex items-center justify-between text-xs">
                   <span style={{ color: "var(--cf-text-2)" }}>
@@ -488,7 +562,11 @@ export default function VendasPage() {
               </h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--cf-text-3)" }}>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.mercadolivre.solid }} /> ML</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.shopee.solid }} /> Shopee</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.manual.solid }} /> {t("channels.manual")}</span>
+                {/* Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo). */}
+                {SHOPEE_UI_VISIVEL && (
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.shopee.solid }} /> Shopee</span>
+                )}
               </div>
             </div>
             {vendas.length === 0 ? (
@@ -506,11 +584,16 @@ export default function VendasPage() {
                   const bw = Math.max(3, (560 / n) - 3);
                   const x = 30 + i * (560 / n);
                   const hMl = (b.ml / serie.max) * 150;
+                  const hMan = (b.manual / serie.max) * 150;
                   const hShp = (b.shopee / serie.max) * 150;
                   return (
                     <g key={b.key}>
                       <rect x={x} y={165 - hMl} width={bw} height={hMl} rx="2" fill={CANAL_INFO.mercadolivre.solid} />
-                      <rect x={x} y={165 - hMl - hShp} width={bw} height={hShp} rx="2" fill={CANAL_INFO.shopee.solid} />
+                      <rect x={x} y={165 - hMl - hMan} width={bw} height={hMan} rx="2" fill={CANAL_INFO.manual.solid} />
+                      {/* Barra Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo). */}
+                      {SHOPEE_UI_VISIVEL && (
+                        <rect x={x} y={165 - hMl - hMan - hShp} width={bw} height={hShp} rx="2" fill={CANAL_INFO.shopee.solid} />
+                      )}
                       {(n <= 16 || i % Math.ceil(n / 12) === 0) && (
                         <text x={x + bw / 2} y={178} fontSize="8" fill="var(--cf-text-3)" textAnchor="middle">{b.label}</text>
                       )}
@@ -526,7 +609,9 @@ export default function VendasPage() {
                   <tr>
                     <th scope="col">{t("chart.colPeriod")}</th>
                     <th scope="col">{CANAL_INFO.mercadolivre.label}</th>
-                    <th scope="col">{CANAL_INFO.shopee.label}</th>
+                    <th scope="col">{t("channels.manual")}</th>
+                    {/* Coluna Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo). */}
+                    {SHOPEE_UI_VISIVEL && <th scope="col">{CANAL_INFO.shopee.label}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -534,7 +619,8 @@ export default function VendasPage() {
                     <tr key={b.key}>
                       <th scope="row">{b.label}</th>
                       <td>{toBRL(b.ml, locale)}</td>
-                      <td>{toBRL(b.shopee, locale)}</td>
+                      <td>{toBRL(b.manual, locale)}</td>
+                      {SHOPEE_UI_VISIVEL && <td>{toBRL(b.shopee, locale)}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -671,12 +757,12 @@ export default function VendasPage() {
                       </td>
                       <td className="px-5 py-3">
                         <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: CANAL_INFO[canal].bg, color: CANAL_INFO[canal].fg }}>
-                          {CANAL_INFO[canal].label}
+                          {canalLabel(canal)}
                         </span>
                       </td>
                       <td className="px-5 py-3">
                         <div className="text-xs font-semibold" style={{ color: "var(--cf-text)" }}>
-                          {v.description.replace(/^Venda (Mercado Livre|Shopee) · /, "")}
+                          {v.description.replace(/^Venda(?: (?:Mercado Livre|Shopee))? · /, "")}
                         </div>
                         {v.saleSku && <div className="text-[10px] mono" style={{ color: "var(--cf-text-3)" }}>{v.saleSku}</div>}
                       </td>
@@ -840,6 +926,245 @@ function Linha({ label, value, color, bold }: { label: string; value: string; co
       <span style={{ color: "var(--cf-text-2)" }}>{label}</span>
       <span className="mono font-semibold" style={{ color: color ?? "var(--cf-text)" }}>{value}</span>
     </div>
+  );
+}
+
+// ─── Modal "Nova venda" ──────────────────────────────────────────────────────
+//
+// Registra à mão uma venda de um produto do estoque (integrado ao marketplace
+// ou cadastrado manualmente). Pede o PIN e chama POST /api/vendas, que lança a
+// ENTRADA no Fluxo de Caixa e baixa/propaga o estoque pros canais vinculados.
+
+function NovaVendaModal({
+  open, onClose, produtos, authUid, canaisConectados, onDone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  produtos: ProdutoEstoque[];
+  authUid: string | null;
+  canaisConectados: { mercadolivre: boolean; shopee: boolean };
+  onDone: (msg: string, type: "success" | "error") => void;
+}) {
+  const t = useTranslations("vendas.newSale");
+  const tPin = useTranslations("common.pin");
+  const locale = useLocale();
+
+  const [sku, setSku] = useState("");
+  const [channel, setChannel] = useState<Canal>("manual");
+  const [qty, setQty] = useState("1");
+  const [price, setPrice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [err, setErr] = useState("");
+
+  const skuId = useId();
+  const qtyId = useId();
+  const priceId = useId();
+
+  const canais: Canal[] = [
+    "manual",
+    ...(canaisConectados.mercadolivre ? (["mercadolivre"] as Canal[]) : []),
+    ...(canaisConectados.shopee && SHOPEE_UI_VISIVEL ? (["shopee"] as Canal[]) : []),
+  ];
+
+  const produto = produtos.find((p) => p.sku === sku) ?? null;
+  const qtyNum = Math.max(1, parseInt(qty) || 1);
+  const priceNum = parseAmount(price);
+  const canSave = !!produto && qtyNum >= 1 && priceNum > 0 && !submitting;
+  const semEstoque = !!produto && qtyNum > (produto.quantity || 0);
+
+  useEffect(() => {
+    if (!open) return;
+    const first = produtos[0];
+    setSku(first?.sku ?? "");
+    setChannel("manual");
+    setQty("1");
+    setPrice(first ? (Number(first.price) || 0).toFixed(2).replace(".", ",") : "");
+    setSubmitting(false);
+    setPinOpen(false);
+    setErr("");
+  }, [open, produtos]);
+
+  const onSkuChange = (next: string) => {
+    setSku(next);
+    const p = produtos.find((x) => x.sku === next);
+    if (p) setPrice((Number(p.price) || 0).toFixed(2).replace(".", ","));
+  };
+
+  async function requestPin() {
+    if (!canSave || !produto) return;
+    if (!authUid) { setErr(tPin("notConfigured")); return; }
+    const hash = await loadPinHash(authUid);
+    if (!hash) { setErr(tPin("notConfigured")); return; }
+    setErr("");
+    setPinOpen(true);
+  }
+
+  async function handlePinSuccess(pin: string) {
+    if (!authUid || !produto) return;
+    const result = await verifyPin(authUid, pin);
+    if (result === "locked" || (result === "wrong" && getPinLockStatus().locked)) {
+      setPinOpen(false); setErr(tPin("lockedRetry")); return;
+    }
+    if (result === "wrong") {
+      (window as unknown as { __pinModalShake?: (m: string) => void }).__pinModalShake?.(tPin("wrong"));
+      return;
+    }
+    if (result === "no_pin") { setPinOpen(false); setErr(tPin("notConfigured")); return; }
+
+    // result === "ok"
+    setPinOpen(false);
+    setSubmitting(true);
+    setErr("");
+    try {
+      const res = await authedFetch("/api/vendas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: produto.sku,
+          productName: produto.name || produto.sku,
+          channel,
+          quantity: qtyNum,
+          unitPrice: priceNum,
+          orderId: `manual-${(crypto as Crypto).randomUUID()}`,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t("errorGeneric"));
+      onDone(
+        t("success", { qty: qtyNum, name: produto.name || produto.sku }),
+        "success"
+      );
+    } catch (e) {
+      const msg = e instanceof Error && e.message ? e.message : t("errorGeneric");
+      setErr(msg);
+      onDone(msg, "error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      <Modal open={open} onClose={onClose} size="sm" mobileSheet closeDisabled={submitting}>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShoppingCart size={16} style={{ color: "var(--pos)" }} />
+              <h3 className="font-heading font-bold text-base" style={{ color: "var(--cf-text)" }}>{t("title")}</h3>
+            </div>
+            <button
+              onClick={() => !submitting && onClose()}
+              className="p-1.5 rounded-lg cursor-pointer border-none"
+              style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
+              aria-label={t("cancel")}
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          <p className="text-[11px] leading-relaxed rounded-xl px-3 py-2.5" style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
+            {t("hint")}
+          </p>
+
+          {err && (
+            <div className="rounded-xl px-3 py-2.5 text-xs" style={{ background: "var(--neg-weak)", color: "var(--neg)" }}>
+              {err}
+            </div>
+          )}
+
+          {/* Produto */}
+          <div className="space-y-1">
+            <label htmlFor={skuId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("product")}</label>
+            <select
+              id={skuId}
+              value={sku}
+              onChange={(e) => onSkuChange(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl text-xs outline-none cursor-pointer"
+              style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
+            >
+              {produtos.length === 0 && <option value="">{t("noProducts")}</option>}
+              {produtos.map((p) => (
+                <option key={p.id} value={p.sku}>
+                  {t("productOption", { name: p.name, sku: p.sku, qty: p.quantity })}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Canal — só aparece se houver marketplace conectado */}
+          {canais.length > 1 && (
+            <fieldset className="space-y-1 border-0 p-0 m-0 min-w-0">
+              <legend className="text-[10px] font-bold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-3)" }}>{t("channel")}</legend>
+              <div className="flex flex-wrap gap-2">
+                {canais.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setChannel(c)}
+                    className="px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all"
+                    style={channel === c
+                      ? { background: "var(--pos-weak)", borderColor: "var(--pos)", color: "var(--pos)" }
+                      : { background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text-2)" }}
+                  >
+                    {c === "manual" ? t("channelManual") : CANAL_INFO[c].label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          {/* Quantidade + Preço */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label htmlFor={qtyId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("quantity")}</label>
+              <input
+                id={qtyId}
+                type="number"
+                min="1"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-xs outline-none mono"
+                style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor={priceId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("unitPrice")}</label>
+              <MoneyInput
+                id={priceId}
+                value={price}
+                onValueChange={setPrice}
+                style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}
+              />
+            </div>
+          </div>
+
+          {produto && (
+            <div className="flex items-center justify-between text-xs pt-1" style={{ color: "var(--cf-text-2)" }}>
+              <span>{t("totalLabel")}</span>
+              <span className="mono font-bold" style={{ color: "var(--pos)" }}>{toBRL(priceNum * qtyNum, locale)}</span>
+            </div>
+          )}
+          {semEstoque && (
+            <p className="text-[11px] flex items-center gap-1" style={{ color: "var(--warning)" }}>
+              <AlertTriangle size={12} /> {t("lowStockWarn", { available: produto?.quantity ?? 0 })}
+            </p>
+          )}
+
+          <Button onClick={requestPin} disabled={!canSave} loading={submitting} icon={Check} variant="success" size="lg" className="w-full">
+            {t("submit")}
+          </Button>
+        </div>
+      </Modal>
+
+      <PinModal
+        open={pinOpen}
+        title={t("pinTitle")}
+        subtitle={t("pinSubtitle")}
+        onClose={() => setPinOpen(false)}
+        onSuccess={handlePinSuccess}
+      />
+    </>
   );
 }
 

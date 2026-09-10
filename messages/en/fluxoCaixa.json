@@ -47,9 +47,19 @@
   },
   "deleteConfirm": {
     "title": "Delete transaction?",
-    "body": "This can't be undone.",
+    "body": "This can't be undone. Your PIN will be requested.",
     "cancel": "Cancel",
     "delete": "Delete"
+  },
+  "pin": {
+    "createTitle": "Confirm transaction",
+    "createSubtitle": "Enter your 4-digit PIN to record it",
+    "editTitle": "Confirm changes",
+    "editSubtitle": "Enter your 4-digit PIN to save changes",
+    "deleteTitle": "Confirm deletion",
+    "deleteSubtitle": "Enter your 4-digit PIN to delete",
+    "importTitle": "Confirm import",
+    "importSubtitle": "Enter your 4-digit PIN to import the transactions"
   },
   "budgetModal": {
     "title": "Budget · {period}",

@@ -36,8 +36,10 @@ import {
   Check,
 } from "lucide-react";
 import Footer from "@/app/components/Footer";
+import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { formatMoneyFromCents } from "@/lib/format";
 import {
   PLAN_TIERS,
@@ -100,10 +102,10 @@ export default function FinanceHome() {
   const solutionPoints = t.raw("problem.solutionPoints") as string[];
 
   // Dialog acessível pro modal de período — mesma técnica de
-  // app/components/ui/Modal.tsx (role/foco/Esc/focus trap), só que inline:
-  // manter a estilização atual (light-only, cores fixas) em vez de puxar o
-  // Modal compartilhado, que usa tokens de tema e ficaria ilegível se o
-  // visitante tiver o modo escuro salvo de uma visita anterior ao app.
+  // app/components/ui/Modal.tsx (role/foco/Esc/focus trap), só que inline.
+  // O container do portal leva a classe `.mkt`, então as cores fixas (bg-white,
+  // text-slate-*, …) acompanham o tema claro/escuro pelo remapeamento em
+  // globals.css, mesmo renderizado fora da árvore da landing (portal no body).
   const periodModalTitleId = useId();
   const periodModalRef = useRef<HTMLDivElement>(null);
   const periodModalPreviouslyFocused = useRef<HTMLElement | null>(null);
@@ -205,7 +207,7 @@ export default function FinanceHome() {
   }, []);
 
   return (
-    <div ref={pageRef} className="min-h-screen bg-white font-sans overflow-x-hidden">
+    <div ref={pageRef} className="mkt min-h-screen bg-white font-sans overflow-x-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
@@ -321,6 +323,7 @@ export default function FinanceHome() {
 
           <div className="hidden md:flex items-center gap-3">
             <LocaleSwitcher className="text-white mr-1" />
+            <ThemeToggle className="text-white/80 hover:text-white h-9 w-9 border border-white/20 hover:border-white/40" />
             <Link href="/login">
               <button className="btn-outline text-white text-sm px-5 py-2 cursor-pointer rounded-full font-medium">
                 {t("nav.login")}
@@ -349,7 +352,10 @@ export default function FinanceHome() {
                 {t(`nav.${item}`)}
               </a>
             ))}
-            <LocaleSwitcher className="text-white py-1" />
+            <div className="flex items-center justify-between py-1">
+              <LocaleSwitcher className="text-white" />
+              <ThemeToggle className="text-white/80 hover:text-white h-9 w-9 border border-white/20" />
+            </div>
             <div className="flex gap-3 pt-2">
               <Link href="/login">
                 <button className="btn-outline text-white text-sm px-5 py-2 rounded-full font-medium flex-1">{t("nav.login")}</button>
@@ -735,7 +741,7 @@ export default function FinanceHome() {
             periodModalOpen &&
             createPortal(
             <div
-              className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+              className="mkt fixed inset-0 z-[999] flex items-center justify-center p-4"
               style={{ background: "rgba(10, 22, 40, 0.55)", backdropFilter: "blur(2px)" }}
               // Fechar no clique do backdrop é conveniência de mouse — Esc
               // (tratado no useEffect acima) e o botão "Fechar" (aria-label)
@@ -868,6 +874,9 @@ export default function FinanceHome() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Botão flutuante do WhatsApp */}
+      <WhatsAppFab />
     </div>
   );
 }

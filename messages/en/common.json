@@ -13,6 +13,11 @@
   "search": "Search",
   "showPassword": "Show password",
   "hidePassword": "Hide password",
+  "theme": {
+    "toggle": "Toggle light/dark theme",
+    "light": "Light mode",
+    "dark": "Dark mode"
+  },
   "accessDenied": {
     "title": "Restricted access",
     "body": "Your account doesn't have permission to access <b>{category}</b>. Ask the account administrator to grant it.",

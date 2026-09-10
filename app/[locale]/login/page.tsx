@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink, completeGoogleLink, type PendingGoogleLink } from "@/lib/authLink";
 
 // Códigos de erro Firebase reconhecidos → chave em auth.errors.
@@ -171,7 +172,7 @@ export default function LoginPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen flex overflow-hidden">
+    <div className="mkt min-h-screen flex overflow-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
@@ -246,7 +247,32 @@ export default function LoginPage() {
           background:#eff6ff; border:1px solid #bfdbfe;
           border-radius:12px; animation: fadeUp 0.3s ease both;
         }
+
+        /* ── Tema escuro (parte pública) ── */
+        [data-theme="dark"] .input-field {
+          background:#0f151e; border-color:#232b38; color:#e6e9ee;
+        }
+        [data-theme="dark"] .input-field:focus {
+          background:#141a24; border-color:#4d92ff;
+          box-shadow: 0 0 0 3px rgba(77,146,255,0.14);
+        }
+        [data-theme="dark"] .input-field::placeholder { color:#7d8798; }
+        [data-theme="dark"] .social-btn {
+          background:#141a24; border-color:#232b38; color:#b9c1cd;
+        }
+        [data-theme="dark"] .social-btn:hover:not(:disabled) {
+          border-color:#4d92ff; background:rgba(77,146,255,0.10);
+        }
+        [data-theme="dark"] .divider-line { background:#232b38; }
+        [data-theme="dark"] .error-box { background:rgba(242,105,95,0.12); border-color:rgba(242,105,95,0.35); }
+        [data-theme="dark"] .success-box { background:rgba(62,207,127,0.12); border-color:rgba(62,207,127,0.35); }
+        [data-theme="dark"] .link-box { background:rgba(77,146,255,0.12); border-color:rgba(77,146,255,0.35); }
+        [data-theme="dark"] .spinner-blue { border-color:#232b38; border-top-color:#4d92ff; }
+        [data-theme="dark"] .dark-logo-invert { filter: brightness(0) invert(1); }
       `}</style>
+
+      {/* Toggle de tema — canto superior direito, sobre o painel do formulário */}
+      <ThemeToggle className="absolute top-4 right-4 z-20 h-9 w-9 text-slate-400 hover:text-blue-600 border border-slate-200 hover:border-blue-300" />
 
       {/* ── Painel esquerdo ── */}
       <div className="hidden lg:flex lg:w-1/2 hero-gradient flex-col justify-between p-12 relative overflow-hidden">
@@ -322,7 +348,7 @@ export default function LoginPage() {
 
           {/* Logo mobile */}
           <div className="flex items-center mb-10 lg:hidden">
-            <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="h-9 w-auto" />
+            <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="dark-logo-invert h-9 w-auto" />
           </div>
 
           <div className="fade-in">

@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CATEGORY_INFO } from "@/lib/consent";
 import { alternatesFor } from "@/lib/seo";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { CookiePreferencesButton } from "./CookiePreferencesButton";
 
 export async function generateMetadata({
@@ -47,13 +48,16 @@ export default async function PrivacidadePage() {
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-12 sm:py-16">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)]"
-      >
-        <ArrowLeft size={15} />
-        {t("back")}
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)]"
+        >
+          <ArrowLeft size={15} />
+          {t("back")}
+        </Link>
+        <ThemeToggle className="h-9 w-9 border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--brand)]" />
+      </div>
 
       <h1 className="font-heading mt-6 text-2xl font-bold text-[var(--text)] sm:text-3xl">
         {tp("title")}

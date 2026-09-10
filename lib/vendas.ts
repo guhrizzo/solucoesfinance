@@ -15,8 +15,11 @@
 // não duplica.
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type VendaChannel = "mercadolivre" | "shopee" | "manual";
+
 export interface VendaInput {
-  channel: "mercadolivre" | "shopee";
+  /** "manual" = venda registrada à mão no Painel de Vendas (balcão / fora dos marketplaces). */
+  channel: VendaChannel;
   sku: string;
   productName: string;
   adId: string;
@@ -36,9 +39,10 @@ export interface VendaInput {
   feeAmount?: number;
 }
 
-const CHANNEL_LABEL: Record<VendaInput["channel"], string> = {
+const CHANNEL_LABEL: Record<VendaChannel, string> = {
   mercadolivre: "Mercado Livre",
   shopee: "Shopee",
+  manual: "Venda manual",
 };
 
 function buildCashflowEntry(v: VendaInput) {
@@ -50,16 +54,21 @@ function buildCashflowEntry(v: VendaInput) {
   const orderId = (v.orderId || "").toString().trim();
   const name = (v.productName || v.sku || "Produto").toString().trim();
 
+  const description =
+    v.channel === "manual"
+      ? `Venda · ${name}`
+      : `Venda ${CHANNEL_LABEL[v.channel]} · ${name}`;
+
   return {
     type: "entrada" as const,
-    description: `Venda ${CHANNEL_LABEL[v.channel]} · ${name}`.slice(0, 120),
+    description: description.slice(0, 120),
     category: "Vendas",
     amount,
     date,
     note: orderId ? `Pedido ${orderId}` : "",
     createdAt: Date.now(),
     // ── metadados da venda ──
-    source: "marketplace",
+    source: v.channel === "manual" ? "manual" : "marketplace",
     saleChannel: v.channel,
     saleSku: (v.sku || "").toString().trim().toUpperCase(),
     saleQty: quantity,
