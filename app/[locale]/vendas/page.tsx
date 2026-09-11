@@ -21,7 +21,7 @@ import {
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Canal = "mercadolivre" | "shopee" | "manual";
+type Canal = "mercadolivre" | "shopee" | "tiktokshop" | "manual";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shopee OCULTA da interface por enquanto (mesma flag do Estoque). A
@@ -31,10 +31,15 @@ type Canal = "mercadolivre" | "shopee" | "manual";
 // (escrow). Para voltar a exibir, troque para `true`.
 const SHOPEE_UI_VISIVEL = false;
 
+// TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
+const TIKTOKSHOP_UI_VISIVEL = true;
+
 // Canais de MARKETPLACE exibidos na interface (chips de conexão).
-const CANAIS_VISIVEIS: Canal[] = SHOPEE_UI_VISIVEL
-  ? ["mercadolivre", "shopee"]
-  : ["mercadolivre"];
+const CANAIS_VISIVEIS: Canal[] = [
+  "mercadolivre",
+  ...(SHOPEE_UI_VISIVEL ? (["shopee"] as Canal[]) : []),
+  ...(TIKTOKSHOP_UI_VISIVEL ? (["tiktokshop"] as Canal[]) : []),
+];
 
 // Canais mostrados na quebra "Vendas por canal" e no gráfico — inclui a venda
 // manual (balcão), registrada aqui no painel.
@@ -84,6 +89,7 @@ const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 const CANAL_INFO: Record<Canal, { label: string; bg: string; fg: string; solid: string }> = {
   mercadolivre: { label: "Mercado Livre", bg: "var(--brand-ml-bg)", fg: "var(--brand-ml-fg)", solid: "var(--brand-ml-solid)" },
   shopee: { label: "Shopee", bg: "var(--brand-shopee-bg)", fg: "var(--brand-shopee-fg)", solid: "var(--brand-shopee-bg)" },
+  tiktokshop: { label: "TikTok Shop", bg: "var(--brand-tiktok-bg)", fg: "var(--brand-tiktok-fg)", solid: "var(--brand-tiktok-solid)" },
   manual: { label: "Venda manual", bg: "var(--cf-input)", fg: "var(--cf-text-2)", solid: "var(--cf-text-3)" },
 };
 
@@ -261,6 +267,7 @@ export default function VendasPage() {
       total, pedidos, unidades, ticket,
       ml: porCanal("mercadolivre"),
       shopee: porCanal("shopee"),
+      tiktokshop: porCanal("tiktokshop"),
       manual: porCanal("manual"),
     };
   }, [vendas]);
@@ -268,11 +275,11 @@ export default function VendasPage() {
   // ── Série temporal (gráfico de barras empilhadas por canal) ────────────────
   const serie = useMemo(() => {
     const now = new Date();
-    const buckets: { key: string; label: string; ml: number; shopee: number; manual: number }[] = [];
+    const buckets: { key: string; label: string; ml: number; shopee: number; tiktokshop: number; manual: number }[] = [];
 
-    // "mercadolivre" → ml, "shopee" → shopee, resto (manual) → manual.
-    const chKey = (c?: Canal): "ml" | "shopee" | "manual" =>
-      c === "shopee" ? "shopee" : c === "mercadolivre" ? "ml" : "manual";
+    // "mercadolivre" → ml, "shopee" → shopee, "tiktokshop" → tiktokshop, resto (manual) → manual.
+    const chKey = (c?: Canal): "ml" | "shopee" | "tiktokshop" | "manual" =>
+      c === "shopee" ? "shopee" : c === "mercadolivre" ? "ml" : c === "tiktokshop" ? "tiktokshop" : "manual";
 
     if (periodo === "tudo") {
       for (let i = 11; i >= 0; i--) {
@@ -280,7 +287,7 @@ export default function VendasPage() {
         buckets.push({
           key: monthKey(d),
           label: d.toLocaleDateString(locale, { month: "short" }).replace(".", ""),
-          ml: 0, shopee: 0, manual: 0,
+          ml: 0, shopee: 0, tiktokshop: 0, manual: 0,
         });
       }
       vendas.forEach((v) => {
@@ -296,7 +303,7 @@ export default function VendasPage() {
         : (() => { const d = new Date(now); d.setDate(d.getDate() - 29); return d; })();
       for (let i = 0; i < dias; i++) {
         const d = new Date(base); d.setDate(base.getDate() + i);
-        buckets.push({ key: ymd(d), label: String(d.getDate()), ml: 0, shopee: 0, manual: 0 });
+        buckets.push({ key: ymd(d), label: String(d.getDate()), ml: 0, shopee: 0, tiktokshop: 0, manual: 0 });
       }
       vendas.forEach((v) => {
         const b = buckets.find((x) => x.key === v.date);
@@ -304,7 +311,7 @@ export default function VendasPage() {
       });
     }
 
-    const max = Math.max(1, ...buckets.map((b) => b.ml + b.shopee + b.manual));
+    const max = Math.max(1, ...buckets.map((b) => b.ml + b.shopee + b.tiktokshop + b.manual));
     return { buckets, max };
   }, [vendas, periodo, locale]);
 
@@ -349,6 +356,7 @@ export default function VendasPage() {
     return {
       mercadolivre: integracoes.some((i) => i.platform === "mercadolivre"),
       shopee: integracoes.some((i) => i.platform === "shopee"),
+      tiktokshop: integracoes.some((i) => i.platform === "tiktokshop"),
       manual: true, // venda manual sempre disponível
     };
   }, [integracoes]);
@@ -511,9 +519,9 @@ export default function VendasPage() {
           {/* Por canal */}
           <div className="cf-card p-5 space-y-4">
             <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>{t("byChannel.title")}</h2>
-            {/* ML + venda manual (+ Shopee quando visível — ver SHOPEE_UI_VISIVEL). */}
+            {/* ML + TikTok Shop + venda manual (+ Shopee quando visível — ver SHOPEE_UI_VISIVEL). */}
             {CANAIS_QUEBRA.map((c) => {
-              const d = c === "mercadolivre" ? kpis.ml : c === "shopee" ? kpis.shopee : kpis.manual;
+              const d = c === "mercadolivre" ? kpis.ml : c === "shopee" ? kpis.shopee : c === "tiktokshop" ? kpis.tiktokshop : kpis.manual;
               const pct = kpis.total > 0 ? (d.total / kpis.total) * 100 : 0;
               return (
                 <div key={c} className="space-y-1.5">
@@ -567,6 +575,9 @@ export default function VendasPage() {
                 {SHOPEE_UI_VISIVEL && (
                   <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.shopee.solid }} /> Shopee</span>
                 )}
+                {TIKTOKSHOP_UI_VISIVEL && (
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: CANAL_INFO.tiktokshop.solid }} /> TikTok Shop</span>
+                )}
               </div>
             </div>
             {vendas.length === 0 ? (
@@ -586,6 +597,7 @@ export default function VendasPage() {
                   const hMl = (b.ml / serie.max) * 150;
                   const hMan = (b.manual / serie.max) * 150;
                   const hShp = (b.shopee / serie.max) * 150;
+                  const hTts = (b.tiktokshop / serie.max) * 150;
                   return (
                     <g key={b.key}>
                       <rect x={x} y={165 - hMl} width={bw} height={hMl} rx="2" fill={CANAL_INFO.mercadolivre.solid} />
@@ -593,6 +605,9 @@ export default function VendasPage() {
                       {/* Barra Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo). */}
                       {SHOPEE_UI_VISIVEL && (
                         <rect x={x} y={165 - hMl - hMan - hShp} width={bw} height={hShp} rx="2" fill={CANAL_INFO.shopee.solid} />
+                      )}
+                      {TIKTOKSHOP_UI_VISIVEL && (
+                        <rect x={x} y={165 - hMl - hMan - hShp - hTts} width={bw} height={hTts} rx="2" fill={CANAL_INFO.tiktokshop.solid} />
                       )}
                       {(n <= 16 || i % Math.ceil(n / 12) === 0) && (
                         <text x={x + bw / 2} y={178} fontSize="8" fill="var(--cf-text-3)" textAnchor="middle">{b.label}</text>
@@ -612,6 +627,7 @@ export default function VendasPage() {
                     <th scope="col">{t("channels.manual")}</th>
                     {/* Coluna Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo). */}
                     {SHOPEE_UI_VISIVEL && <th scope="col">{CANAL_INFO.shopee.label}</th>}
+                    {TIKTOKSHOP_UI_VISIVEL && <th scope="col">{CANAL_INFO.tiktokshop.label}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -621,6 +637,7 @@ export default function VendasPage() {
                       <td>{toBRL(b.ml, locale)}</td>
                       <td>{toBRL(b.manual, locale)}</td>
                       {SHOPEE_UI_VISIVEL && <td>{toBRL(b.shopee, locale)}</td>}
+                      {TIKTOKSHOP_UI_VISIVEL && <td>{toBRL(b.tiktokshop, locale)}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -942,7 +959,7 @@ function NovaVendaModal({
   onClose: () => void;
   produtos: ProdutoEstoque[];
   authUid: string | null;
-  canaisConectados: { mercadolivre: boolean; shopee: boolean };
+  canaisConectados: { mercadolivre: boolean; shopee: boolean; tiktokshop: boolean };
   onDone: (msg: string, type: "success" | "error") => void;
 }) {
   const t = useTranslations("vendas.newSale");
@@ -965,6 +982,7 @@ function NovaVendaModal({
     "manual",
     ...(canaisConectados.mercadolivre ? (["mercadolivre"] as Canal[]) : []),
     ...(canaisConectados.shopee && SHOPEE_UI_VISIVEL ? (["shopee"] as Canal[]) : []),
+    ...(canaisConectados.tiktokshop && TIKTOKSHOP_UI_VISIVEL ? (["tiktokshop"] as Canal[]) : []),
   ];
 
   const produto = produtos.find((p) => p.sku === sku) ?? null;

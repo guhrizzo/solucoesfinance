@@ -6,48 +6,63 @@
     "ogDescription": "Una plataforma completa para organizar las finanzas de tu empresa con datos en tiempo real."
   },
   "whatsapp": {
-    "aria": "Habla con nosotros por WhatsApp",
+    "aria": "Habla con Midas, nuestro asistente",
     "tooltip": "Habla con nosotros",
     "prefill": "¡Hola! Vine desde el sitio de NexusFi y me gustaría saber más.",
-    "modalTitle": "¿Cómo podemos ayudarte?",
-    "modalSubtitle": "Elige un tema y seguimos por WhatsApp.",
+    "modalTitle": "Midas",
+    "modalSubtitle": "Resuelve tu duda aquí o habla con nuestro equipo por WhatsApp.",
     "close": "Cerrar",
+    "greeting": "¡Hola! Soy Midas, el asistente virtual de NexusFi. Elige un tema abajo o escribe tu pregunta.",
+    "inputPlaceholder": "Escribe tu pregunta...",
+    "send": "Enviar",
+    "typing": "Escribiendo...",
+    "fallback": "Todavía no puedo responder eso por aquí. ¿Quieres hablar directo con nuestro equipo por WhatsApp?",
+    "whatsappCta": "Hablar por WhatsApp",
     "topics": [
       {
         "label": "Flujo de caja y panel",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender cómo funciona el control de flujo de caja y el panel."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender cómo funciona el control de flujo de caja y el panel.",
+        "answer": "El panel muestra ingresos, gastos y saldo en tiempo real, con gráficos por período. Cada movimiento de caja (manual, de ventas o de cuentas pagadas/cobradas) lo actualiza al instante."
       },
       {
         "label": "Cuentas por pagar y por cobrar",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y tengo dudas sobre el control de cuentas por pagar y por cobrar."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y tengo dudas sobre el control de cuentas por pagar y por cobrar.",
+        "answer": "Puedes registrar cuentas por pagar y por cobrar con vencimiento, categoría y estado, y la plataforma avisa lo que está por vencer. Al marcarla como pagada/cobrada, el valor entra al flujo de caja automáticamente."
       },
       {
         "label": "Impuestos",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber cómo la plataforma ayuda con el control de impuestos."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber cómo la plataforma ayuda con el control de impuestos.",
+        "answer": "NexusFi organiza el control de impuestos junto con el resto de tus finanzas, para que sigas los vencimientos y valores sin depender de una hoja de cálculo aparte."
       },
       {
         "label": "Inventario + Mercado Livre y Shopee",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender la integración de inventario con Mercado Livre y Shopee."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender la integración de inventario con Mercado Livre y Shopee.",
+        "answer": "El módulo de inventario sigue las entradas y salidas de productos y se integra con marketplaces — las ventas de allí entran automáticamente en tu caja y en el panel de ventas."
       },
       {
         "label": "Panel de ventas y precios",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y tengo dudas sobre el panel de ventas y la calculadora de precios."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y tengo dudas sobre el panel de ventas y la calculadora de precios.",
+        "answer": "El panel de ventas reúne lo vendido por período y canal, y la calculadora de precios ayuda a definir el precio de venta según costo, comisiones y el margen deseado."
       },
       {
         "label": "Centros de costo e informes",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender los centros de costo y los informes."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender los centros de costo y los informes.",
+        "answer": "Puedes organizar los gastos por centro de costo (área, proyecto, etc.) y la plataforma genera informes automáticos para ver hacia dónde va el dinero."
       },
       {
         "label": "Equipo, permisos y PIN de seguridad",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber cómo funcionan la gestión de equipo, los permisos y el PIN de seguridad."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber cómo funcionan la gestión de equipo, los permisos y el PIN de seguridad.",
+        "answer": "Puedes invitar miembros del equipo con permisos específicos por área, y las acciones sensibles piden un PIN de seguridad — todo queda registrado con quién hizo qué y cuándo."
       },
       {
         "label": "Planes, precios y prueba gratis",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber más sobre los planes, precios y la prueba gratis."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero saber más sobre los planes, precios y la prueba gratis.",
+        "answer": "Tenemos prueba gratis para que conozcas la plataforma antes de suscribirte. Para ver los planes y precios actuales, revisa la sección de Planes aquí en la página o habla con nuestro equipo por WhatsApp."
       },
       {
         "label": "Otra duda",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y me gustaría hacer una consulta."
+        "message": "¡Hola! Vine desde el sitio de NexusFi y me gustaría hacer una consulta.",
+        "answer": "Puedes escribir tu duda aquí mismo e intentaré ayudarte, o si prefieres, habla directo con nuestro equipo por WhatsApp."
       }
     ]
   },

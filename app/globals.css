@@ -39,13 +39,17 @@
   --warn: #b0751a;
   --warn-weak: #fbf2e0;
 
-  /* Marcas de marketplace — cores de identidade do Mercado Livre e Shopee.
-     Fixas (não trocam com o tema); usadas só nos chips das integrações. */
+  /* Marcas de marketplace — cores de identidade do Mercado Livre, Shopee e
+     TikTok Shop. Fixas (não trocam com o tema); usadas só nos chips das
+     integrações e nas barras/legenda do gráfico de vendas por canal. */
   --brand-ml-bg: #fff159;
   --brand-ml-fg: #111111;
   --brand-ml-solid: #ffd000;
   --brand-shopee-bg: #ff5722;
   --brand-shopee-fg: #ffffff;
+  --brand-tiktok-bg: #010101;
+  --brand-tiktok-fg: #ffffff;
+  --brand-tiktok-solid: #fe2c55;
 
   /* Paleta categórica — séries de dados (donut de centro de custos, impostos
      por tipo, gráficos). 8 matizes distinguíveis; NÃO são cor de status. */
@@ -640,17 +644,17 @@ textarea::placeholder {
 }
 
 /* ────────────────────────────────────────────────────────────────── */
-/* Botão flutuante do WhatsApp (WhatsAppFab.tsx) — só na landing.       */
+/* Botão flutuante do chatbot Midas (WhatsAppFab.tsx) — só na landing.  */
 /* Canto inferior DIREITO, empilhado ACIMA do widget de acessibilidade  */
 /* (o `bottom` vem inline do componente, que conhece o estado do        */
-/* banner de cookies e do widget). Verde do WhatsApp fixo — não         */
-/* acompanha o tema claro/escuro. prefers-reduced-motion é ignorado de  */
-/* propósito no projeto (ver ForceMotion.tsx), então o anel pulsa       */
+/* banner de cookies e do widget). Azul de marca (var(--brand)) — troca */
+/* sozinho com o tema claro/escuro. prefers-reduced-motion é ignorado   */
+/* de propósito no projeto (ver ForceMotion.tsx), então o anel pulsa    */
 /* sempre.                                                              */
 /* ────────────────────────────────────────────────────────────────── */
 .wa-fab {
   position: fixed;
-  right: 16px;
+  right: 28px;
   bottom: 24px;
   z-index: 1400;
   width: 60px;
@@ -658,12 +662,12 @@ textarea::placeholder {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #25d366;
+  background: var(--brand);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 16px rgba(37, 211, 102, 0.3);
+  box-shadow: 0 8px 16px rgba(31, 111, 235, 0.3);
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -676,7 +680,7 @@ textarea::placeholder {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: #25d366;
+  background: var(--brand);
   z-index: -1;
   animation: wa-fab-pulse 2s ease infinite;
 }
@@ -692,66 +696,38 @@ textarea::placeholder {
 }
 .wa-fab:hover {
   transform: scale(1.1) translateY(-5px);
-  background: #1ebe5d;
-  box-shadow: 0 12px 20px rgba(37, 211, 102, 0.4);
+  background: var(--brand-hover);
+  box-shadow: 0 12px 20px rgba(31, 111, 235, 0.4);
 }
 .wa-fab svg {
   width: 30px;
   height: 30px;
 }
-.wa-fab__badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #ff3b30;
-  color: #fff;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 .wa-fab__tooltip {
   position: absolute;
-  right: 75px;
+  left: 50%;
+  bottom: 100%;
+  margin-bottom: 8px;
+  transform: translateX(-50%);
   white-space: nowrap;
   background: #333;
   color: #fff;
-  padding: 8px 15px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.3s ease,
-    right 0.3s ease;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   pointer-events: none;
-}
-.wa-fab:hover .wa-fab__tooltip {
-  opacity: 1;
-  visibility: visible;
-  right: 80px;
 }
 @media (max-width: 768px) {
   .wa-fab {
-    right: 16px;
+    right: 22px;
     width: 52px;
     height: 52px;
   }
   .wa-fab svg {
     width: 26px;
     height: 26px;
-  }
-  .wa-fab__tooltip {
-    display: none;
   }
 }
 
@@ -799,7 +775,7 @@ textarea::placeholder {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #25d366;
+  background: var(--brand);
   color: #fff;
   display: flex;
   align-items: center;
@@ -866,6 +842,190 @@ textarea::placeholder {
   flex-shrink: 0;
   color: var(--text-subtle);
   margin-left: auto;
+}
+
+/* ── Chat do WhatsAppFab.tsx — o modal de tópicos virou um chat de       */
+/* verdade: histórico de balões, chips de assunto (resposta pronta, sem   */
+/* rede) e um campo de texto livre que chama /api/chat. `.wa-chat` só     */
+/* ajusta o `.wa-modal` pra layout em coluna com só o corpo rolando.      */
+/* ────────────────────────────────────────────────────────────────── */
+.wa-chat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wa-chat__body {
+  flex: 1;
+  min-height: 220px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wa-chat__bubble {
+  max-width: 85%;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.wa-chat__bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.wa-chat__bubble--bot {
+  align-self: flex-start;
+  background: var(--sunken);
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+}
+.wa-chat__bubble--user {
+  align-self: flex-end;
+  background: var(--brand);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.wa-chat__wa-inline {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wa-chat__wa-inline svg {
+  width: 13px;
+  height: 13px;
+}
+.wa-chat__bubble--typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 14px;
+}
+.wa-chat__bubble--typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-subtle);
+  animation: wa-chat-typing 1s ease-in-out infinite;
+}
+.wa-chat__bubble--typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.wa-chat__bubble--typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes wa-chat-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.wa-chat__topics {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+}
+.wa-chat__topic-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.wa-chat__topic-chip:hover {
+  border-color: var(--brand);
+  background: var(--brand-weak);
+}
+.wa-chat__inputbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+.wa-chat__inputbar input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13.5px;
+}
+.wa-chat__inputbar input:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.wa-chat__inputbar button {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.wa-chat__inputbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wa-chat__footer-cta {
+  margin: 0 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--sunken);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wa-chat__footer-cta:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.wa-chat__footer-cta svg {
+  width: 15px;
+  height: 15px;
+}
+@media (max-width: 480px) {
+  .wa-chat__body {
+    max-height: 50vh;
+  }
 }
 
 /* ────────────────────────────────────────────────────────────────── */

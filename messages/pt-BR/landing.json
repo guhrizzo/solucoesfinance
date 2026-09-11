@@ -6,48 +6,63 @@
     "ogDescription": "Plataforma completa para organizar as finanças da sua empresa com dados em tempo real."
   },
   "whatsapp": {
-    "aria": "Fale conosco no WhatsApp",
+    "aria": "Fale com o Midas, nosso assistente",
     "tooltip": "Fale conosco",
     "prefill": "Olá! Vim pelo site da NexusFi e gostaria de saber mais.",
-    "modalTitle": "Como podemos ajudar?",
-    "modalSubtitle": "Escolha o assunto e a conversa continua no WhatsApp.",
+    "modalTitle": "Midas",
+    "modalSubtitle": "Tire sua dúvida por aqui ou fale com nosso time no WhatsApp.",
     "close": "Fechar",
+    "greeting": "Oi! Sou o Midas, assistente virtual da NexusFi. Escolha um assunto abaixo ou digite sua pergunta.",
+    "inputPlaceholder": "Digite sua pergunta...",
+    "send": "Enviar",
+    "typing": "Digitando...",
+    "fallback": "Ainda não consigo responder isso por aqui. Quer falar direto com nosso time no WhatsApp?",
+    "whatsappCta": "Falar no WhatsApp",
     "topics": [
       {
         "label": "Fluxo de caixa e dashboard",
-        "message": "Olá! Vim pelo site da NexusFi e quero entender como funciona o controle de fluxo de caixa e o dashboard."
+        "message": "Olá! Vim pelo site da NexusFi e quero entender como funciona o controle de fluxo de caixa e o dashboard.",
+        "answer": "O dashboard mostra entradas, saídas e saldo em tempo real, com gráficos por período. Todo lançamento de caixa (manual, de vendas ou de contas pagas/recebidas) atualiza o painel na hora."
       },
       {
         "label": "Contas a pagar e a receber",
-        "message": "Olá! Vim pelo site da NexusFi e tenho dúvidas sobre o controle de contas a pagar e a receber."
+        "message": "Olá! Vim pelo site da NexusFi e tenho dúvidas sobre o controle de contas a pagar e a receber.",
+        "answer": "Dá pra cadastrar contas a pagar e a receber com vencimento, categoria e status, e a plataforma avisa o que está próximo do prazo. Ao marcar como paga/recebida, o valor já entra no fluxo de caixa."
       },
       {
         "label": "Impostos (Simples, DAS e afins)",
-        "message": "Olá! Vim pelo site da NexusFi e quero saber como a plataforma ajuda no controle de impostos."
+        "message": "Olá! Vim pelo site da NexusFi e quero saber como a plataforma ajuda no controle de impostos.",
+        "answer": "A NexusFi organiza o controle de impostos (Simples, DAS e afins) junto com o restante do financeiro, pra você acompanhar vencimentos e valores sem depender de planilha separada."
       },
       {
         "label": "Estoque + Mercado Livre e Shopee",
-        "message": "Olá! Vim pelo site da NexusFi e quero entender a integração de estoque com o Mercado Livre e a Shopee."
+        "message": "Olá! Vim pelo site da NexusFi e quero entender a integração de estoque com o Mercado Livre e a Shopee.",
+        "answer": "O módulo de estoque acompanha entradas e saídas de produtos e se integra com marketplaces — as vendas de lá já entram automaticamente no seu caixa e no painel de vendas."
       },
       {
         "label": "Painel de vendas e precificação",
-        "message": "Olá! Vim pelo site da NexusFi e tenho dúvidas sobre o painel de vendas e a calculadora de precificação."
+        "message": "Olá! Vim pelo site da NexusFi e tenho dúvidas sobre o painel de vendas e a calculadora de precificação.",
+        "answer": "O painel de vendas reúne o que foi vendido por período e canal, e a calculadora de precificação ajuda a definir o preço de venda considerando custo, taxas e margem desejada."
       },
       {
         "label": "Centro de custos e relatórios",
-        "message": "Olá! Vim pelo site da NexusFi e quero entender o centro de custos e os relatórios."
+        "message": "Olá! Vim pelo site da NexusFi e quero entender o centro de custos e os relatórios.",
+        "answer": "Você organiza despesas por centro de custo (setor, projeto, etc.) e a plataforma gera relatórios automáticos pra entender pra onde o dinheiro está indo."
       },
       {
         "label": "Equipe, permissões e PIN de segurança",
-        "message": "Olá! Vim pelo site da NexusFi e quero saber como funciona a gestão de equipe, as permissões e o PIN de segurança."
+        "message": "Olá! Vim pelo site da NexusFi e quero saber como funciona a gestão de equipe, as permissões e o PIN de segurança.",
+        "answer": "Dá pra convidar membros da equipe com permissões específicas por área, e ações sensíveis pedem um PIN de segurança — tudo fica registrado com quem fez o quê e quando."
       },
       {
         "label": "Planos, preços e teste grátis",
-        "message": "Olá! Vim pelo site da NexusFi e quero saber mais sobre os planos, preços e o teste grátis."
+        "message": "Olá! Vim pelo site da NexusFi e quero saber mais sobre os planos, preços e o teste grátis.",
+        "answer": "Temos teste grátis pra você conhecer a plataforma antes de assinar. Pra ver os planos e preços atualizados, dá uma olhada na seção de Planos aqui na página ou fale com nosso time no WhatsApp."
       },
       {
         "label": "Outra dúvida",
-        "message": "Olá! Vim pelo site da NexusFi e gostaria de tirar uma dúvida."
+        "message": "Olá! Vim pelo site da NexusFi e gostaria de tirar uma dúvida.",
+        "answer": "Pode digitar sua dúvida aqui mesmo que eu tento ajudar, ou, se preferir, fale direto com nosso time no WhatsApp."
       }
     ]
   },
