@@ -6,48 +6,63 @@
     "ogDescription": "A complete platform to organize your company's finances with real-time data."
   },
   "whatsapp": {
-    "aria": "Chat with us on WhatsApp",
+    "aria": "Chat with Midas, our assistant",
     "tooltip": "Chat with us",
     "prefill": "Hi! I came from the NexusFi site and would like to know more.",
-    "modalTitle": "How can we help?",
-    "modalSubtitle": "Pick a topic and we'll continue on WhatsApp.",
+    "modalTitle": "Midas",
+    "modalSubtitle": "Ask your question here or reach our team on WhatsApp.",
     "close": "Close",
+    "greeting": "Hi! I'm Midas, NexusFi's virtual assistant. Pick a topic below or type your question.",
+    "inputPlaceholder": "Type your question...",
+    "send": "Send",
+    "typing": "Typing...",
+    "fallback": "I can't answer that here yet. Want to talk directly to our team on WhatsApp?",
+    "whatsappCta": "Chat on WhatsApp",
     "topics": [
       {
         "label": "Cash flow and dashboard",
-        "message": "Hi! I came from the NexusFi site and want to understand how the cash flow control and dashboard work."
+        "message": "Hi! I came from the NexusFi site and want to understand how the cash flow control and dashboard work.",
+        "answer": "The dashboard shows income, expenses and balance in real time, with charts by period. Every cash entry (manual, from sales, or from paid/received bills) updates it instantly."
       },
       {
         "label": "Accounts payable and receivable",
-        "message": "Hi! I came from the NexusFi site and have questions about accounts payable and receivable."
+        "message": "Hi! I came from the NexusFi site and have questions about accounts payable and receivable.",
+        "answer": "You can register payables and receivables with due date, category and status, and the platform flags what's coming up. Marking one as paid/received updates your cash flow automatically."
       },
       {
         "label": "Taxes",
-        "message": "Hi! I came from the NexusFi site and want to know how the platform helps with tax control."
+        "message": "Hi! I came from the NexusFi site and want to know how the platform helps with tax control.",
+        "answer": "NexusFi organizes your tax control alongside the rest of your finances, so you can track deadlines and amounts without a separate spreadsheet."
       },
       {
         "label": "Inventory + Mercado Livre and Shopee",
-        "message": "Hi! I came from the NexusFi site and want to understand the inventory integration with Mercado Livre and Shopee."
+        "message": "Hi! I came from the NexusFi site and want to understand the inventory integration with Mercado Livre and Shopee.",
+        "answer": "The inventory module tracks stock in and out and integrates with marketplaces — sales from there flow automatically into your cash flow and sales dashboard."
       },
       {
         "label": "Sales dashboard and pricing",
-        "message": "Hi! I came from the NexusFi site and have questions about the sales dashboard and the pricing calculator."
+        "message": "Hi! I came from the NexusFi site and have questions about the sales dashboard and the pricing calculator.",
+        "answer": "The sales dashboard groups what was sold by period and channel, and the pricing calculator helps set your sale price based on cost, fees and your target margin."
       },
       {
         "label": "Cost centers and reports",
-        "message": "Hi! I came from the NexusFi site and want to understand cost centers and reports."
+        "message": "Hi! I came from the NexusFi site and want to understand cost centers and reports.",
+        "answer": "You can organize expenses by cost center (department, project, etc.) and the platform generates automatic reports so you see where the money is going."
       },
       {
         "label": "Team, permissions and security PIN",
-        "message": "Hi! I came from the NexusFi site and want to know how team management, permissions and the security PIN work."
+        "message": "Hi! I came from the NexusFi site and want to know how team management, permissions and the security PIN work.",
+        "answer": "You can invite team members with permissions scoped by area, and sensitive actions require a security PIN — everything is logged with who did what and when."
       },
       {
         "label": "Plans, pricing and free trial",
-        "message": "Hi! I came from the NexusFi site and want to know more about the plans, pricing and free trial."
+        "message": "Hi! I came from the NexusFi site and want to know more about the plans, pricing and free trial.",
+        "answer": "We offer a free trial so you can try the platform before subscribing. For current plans and pricing, check the Plans section on this page or talk to our team on WhatsApp."
       },
       {
         "label": "Something else",
-        "message": "Hi! I came from the NexusFi site and would like to ask a question."
+        "message": "Hi! I came from the NexusFi site and would like to ask a question.",
+        "answer": "Feel free to type your question here and I'll try to help, or talk directly to our team on WhatsApp."
       }
     ]
   },

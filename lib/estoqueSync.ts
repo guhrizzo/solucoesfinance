@@ -17,6 +17,11 @@ import {
   updateShopeeStock,
   type ShopeeIntegracao,
 } from "@/lib/shopee";
+import {
+  getValidTiktokToken,
+  updateTiktokStock,
+  type TiktokIntegracao,
+} from "@/lib/tiktokshop";
 
 export interface OrigemVenda {
   platform: string;
@@ -53,7 +58,7 @@ async function propagarEstoque(
     try {
       const intSnap = await db.collection("integracoes").doc(vinculo.connectionId).get();
       if (!intSnap.exists) continue;
-      const integracao = { id: intSnap.id, ...intSnap.data() } as (MlIntegracao & ShopeeIntegracao);
+      const integracao = { id: intSnap.id, ...intSnap.data() } as (MlIntegracao & ShopeeIntegracao & TiktokIntegracao);
       if (isMockToken(integracao.accessToken)) continue;
 
       if (vinculo.platform === "mercadolivre") {
@@ -64,6 +69,10 @@ async function propagarEstoque(
         const token = await getValidShopeeToken(db, integracao);
         await updateShopeeStock(token, integracao.accountId || "", vinculo.adId, novaQuantidade);
         console.log(`[sync] Shopee item ${vinculo.adId} → ${novaQuantidade} un`);
+      } else if (vinculo.platform === "tiktokshop") {
+        const token = await getValidTiktokToken(db, integracao);
+        await updateTiktokStock(token, integracao.accountId || "", integracao.shopCipher || "", vinculo.adId, novaQuantidade);
+        console.log(`[sync] TikTok Shop SKU ${vinculo.adId} → ${novaQuantidade} un`);
       }
     } catch (err) {
       console.error(`[sync] falha ao propagar estoque p/ ${vinculo.platform}:${vinculo.adId}:`, err);

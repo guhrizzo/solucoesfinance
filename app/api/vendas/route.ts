@@ -10,7 +10,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { registrarVendaAdmin, type VendaChannel } from "@/lib/vendas";
 import { baixarEstoqueEPropagar } from "@/lib/estoqueSync";
 
-const CHANNELS: VendaChannel[] = ["manual", "mercadolivre", "shopee"];
+const CHANNELS: VendaChannel[] = ["manual", "mercadolivre", "shopee", "tiktokshop"];
 const RATE_LIMIT = { windowMs: 60_000, max: 20 }; // 20 vendas / min por IP+conta
 
 /**

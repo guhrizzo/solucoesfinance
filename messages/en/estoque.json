@@ -1,7 +1,8 @@
 {
   "platformName": {
     "mercadolivre": "Mercado Livre",
-    "shopee": "Shopee"
+    "shopee": "Shopee",
+    "tiktokshop": "TikTok Shop"
   },
   "meta": {
     "title": "Centralized Inventory",
@@ -41,6 +42,7 @@
     "todos": "All",
     "filterML": "Filter by Mercado Livre",
     "filterShopee": "Filter by Shopee",
+    "filterTiktok": "Filter by TikTok Shop",
     "local": "Local Only",
     "lowStock": "Low Stock"
   },
@@ -100,6 +102,7 @@
     "available": "Available for Integration",
     "mlDesc": "Real integration via OAuth 2.0",
     "shopeeDesc": "Real listing and sales integration",
+    "tiktokDesc": "Real product and sales integration",
     "connectAccount": "Connect Account",
     "yourAccounts": "Your Integrated Accounts ({count})",
     "noneConnected": "No account connected right now.",
@@ -161,7 +164,12 @@
     "shopeeConnectFail": "Could not start the connection to Shopee",
     "shopeeConnectError": "Error connecting to Shopee",
     "shopeeRepasseFail": "Failed to query the Shopee payout",
-    "shopeeRepasseError": "Error querying the Shopee payout"
+    "shopeeRepasseError": "Error querying the Shopee payout",
+    "tiktokConnectedLimited": "TikTok Shop store connected, but without permission to import products automatically. Link manually or review the app scopes.",
+    "tiktokIntegratedImported": "TikTok Shop integrated! {count} product(s) imported.",
+    "tiktokIntegrated": "TikTok Shop store integrated successfully!",
+    "tiktokConnectFail": "Could not start the connection to TikTok Shop",
+    "tiktokConnectError": "Error connecting to TikTok Shop"
   },
   "confirm": {
     "removeProductTitle": "Remove product",

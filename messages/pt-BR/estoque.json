@@ -1,7 +1,8 @@
 {
   "platformName": {
     "mercadolivre": "Mercado Livre",
-    "shopee": "Shopee"
+    "shopee": "Shopee",
+    "tiktokshop": "TikTok Shop"
   },
   "meta": {
     "title": "Estoque Centralizado",
@@ -41,6 +42,7 @@
     "todos": "Todos",
     "filterML": "Filtrar por Mercado Livre",
     "filterShopee": "Filtrar por Shopee",
+    "filterTiktok": "Filtrar por TikTok Shop",
     "local": "Apenas Local",
     "lowStock": "Estoque Baixo"
   },
@@ -100,6 +102,7 @@
     "available": "Disponíveis para Integração",
     "mlDesc": "Integração real via OAuth2.0",
     "shopeeDesc": "Integração real de anúncios e vendas",
+    "tiktokDesc": "Integração real de produtos e vendas",
     "connectAccount": "Conectar Conta",
     "yourAccounts": "Suas Contas Integradas ({count})",
     "noneConnected": "Nenhuma conta conectada no momento.",
@@ -161,7 +164,12 @@
     "shopeeConnectFail": "Não foi possível iniciar a conexão com a Shopee",
     "shopeeConnectError": "Erro ao conectar à Shopee",
     "shopeeRepasseFail": "Falha ao consultar repasse da Shopee",
-    "shopeeRepasseError": "Erro ao consultar repasse da Shopee"
+    "shopeeRepasseError": "Erro ao consultar repasse da Shopee",
+    "tiktokConnectedLimited": "Loja da TikTok Shop conectada, mas sem permissão para importar produtos automaticamente. Vincule manualmente ou revise os escopos do app.",
+    "tiktokIntegratedImported": "TikTok Shop integrada! {count} produto(s) importado(s).",
+    "tiktokIntegrated": "Loja da TikTok Shop integrada com sucesso!",
+    "tiktokConnectFail": "Não foi possível iniciar a conexão com a TikTok Shop",
+    "tiktokConnectError": "Erro ao conectar à TikTok Shop"
   },
   "confirm": {
     "removeProductTitle": "Remover produto",

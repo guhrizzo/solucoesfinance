@@ -24,6 +24,11 @@ import { formatMoney } from "@/lib/format";
 // Para voltar a exibir a Shopee, troque para `true`.
 const SHOPEE_UI_VISIVEL = false;
 
+// TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
+const TIKTOKSHOP_UI_VISIVEL = true;
+
+type Plataforma = "mercadolivre" | "shopee" | "tiktokshop";
+
 // Interfaces de Dados
 interface ProdutoEstoque {
   id: string;
@@ -37,7 +42,7 @@ interface ProdutoEstoque {
 
 interface Integracao {
   id: string;
-  platform: "mercadolivre" | "shopee";
+  platform: Plataforma;
   accountId: string;
   accountName: string;
   accessToken: string;
@@ -49,7 +54,7 @@ interface Integracao {
 interface Vinculo {
   id: string;
   sku: string;
-  platform: "mercadolivre" | "shopee";
+  platform: Plataforma;
   adId: string;
   title: string;
   price: number;
@@ -65,7 +70,7 @@ export default function EstoquePage() {
   const locale = useLocale();
   const { user, loading: authLoading } = useAuth();
 
-  const platformLabel = (p: "mercadolivre" | "shopee") => t(`platformName.${p}`);
+  const platformLabel = (p: Plataforma) => t(`platformName.${p}`);
 
   // Resolve de quem são os dados que este login deve ver: o próprio uid
   // (dono) ou o do dono da conta (membro convidado) — ver
@@ -108,7 +113,7 @@ export default function EstoquePage() {
 
   // Estados de UI/Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"todos" | "mercadolivre" | "shopee" | "local" | "baixo">("todos");
+  const [activeTab, setActiveTab] = useState<"todos" | "mercadolivre" | "shopee" | "tiktokshop" | "local" | "baixo">("todos");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
 
   // Confirmação no estilo NexusFi (substitui o confirm() nativo do navegador).
@@ -160,7 +165,7 @@ export default function EstoquePage() {
   const [formSaving, setFormSaving] = useState(false);
 
   // Formulário Vínculo Manual
-  const [formVinculoPlatform, setFormVinculoPlatform] = useState<"mercadolivre" | "shopee">("mercadolivre");
+  const [formVinculoPlatform, setFormVinculoPlatform] = useState<Plataforma>("mercadolivre");
   const [formVinculoAdId, setFormVinculoAdId] = useState("");
   const [formVinculoTitle, setFormVinculoTitle] = useState("");
   const [formVinculoPrice, setFormVinculoPrice] = useState("");
@@ -310,7 +315,19 @@ export default function EstoquePage() {
         );
       }
       cleanUrlParams();
-    } else if (integration === "ml_error" || integration === "shopee_error") {
+    } else if (integration === "tiktok_success") {
+      if (warning === "limited_permissions") {
+        showToast(t("toast.tiktokConnectedLimited"), "info");
+      } else {
+        showToast(
+          imported && imported !== "0"
+            ? t("toast.tiktokIntegratedImported", { count: imported })
+            : t("toast.tiktokIntegrated"),
+          "success"
+        );
+      }
+      cleanUrlParams();
+    } else if (integration === "ml_error" || integration === "shopee_error" || integration === "tiktok_error") {
       showToast(t("toast.integrationError", { message: message || t("toast.integrationErrorGeneric") }), "error");
       cleanUrlParams();
     }
@@ -396,7 +413,7 @@ export default function EstoquePage() {
   );
 
   // Resumo de identidade da(s) conta(s) de um canal, pro badge do modal.
-  const resumoContas = (platform: "mercadolivre" | "shopee") => {
+  const resumoContas = (platform: Plataforma) => {
     const contas = integracoes.filter((i) => i.platform === platform);
     if (contas.length === 0) return null;
     if (contas.length === 1) return t("accountsSummary.one", { name: contas[0].accountName });
@@ -538,7 +555,7 @@ export default function EstoquePage() {
   };
 
   // Desconectar Integração
-  const handleDisconnect = (id: string, platform: "mercadolivre" | "shopee") => {
+  const handleDisconnect = (id: string, platform: Plataforma) => {
     setConfirmDialog({
       title: t("confirm.disconnectTitle"),
       message: t("confirm.disconnectMsg", { platform: platformLabel(platform) }),
@@ -657,7 +674,7 @@ export default function EstoquePage() {
 
   // Mapeia quais SKU têm quais plataformas vinculadas
   const vinculosPorSku = useMemo(() => {
-    const map: Record<string, { platform: "mercadolivre" | "shopee"; id: string; adId: string }[]> = {};
+    const map: Record<string, { platform: Plataforma; id: string; adId: string }[]> = {};
     vinculos.forEach((v) => {
       if (!map[v.sku]) map[v.sku] = [];
       map[v.sku].push({ platform: v.platform, id: v.id, adId: v.adId });
@@ -678,6 +695,7 @@ export default function EstoquePage() {
       if (activeTab === "todos") return true;
       if (activeTab === "mercadolivre") return skusVinculados.some((v) => v.platform === "mercadolivre");
       if (activeTab === "shopee") return skusVinculados.some((v) => v.platform === "shopee");
+      if (activeTab === "tiktokshop") return skusVinculados.some((v) => v.platform === "tiktokshop");
       if (activeTab === "local") return skusVinculados.length === 0;
       if (activeTab === "baixo") return p.quantity <= p.minQuantity && p.quantity > 0;
 
@@ -707,22 +725,25 @@ export default function EstoquePage() {
   }, [produtos, integracoes, vinculos]);
 
   // Redirecionamento OAuth das Plataformas
-  const handleConnectAccount = async (platform: "mercadolivre" | "shopee") => {
+  const handleConnectAccount = async (platform: Plataforma) => {
     if (!user) return;
 
-    // Shopee: rota autenticada (POST) — o ownerUid sai do ID token, não da URL.
-    if (platform === "shopee") {
+    // Shopee/TikTok Shop: rota autenticada (POST) — o ownerUid sai do ID
+    // token, não da URL.
+    if (platform === "shopee" || platform === "tiktokshop") {
+      const failKey = platform === "shopee" ? "shopeeConnectFail" : "tiktokConnectFail";
+      const errKey = platform === "shopee" ? "shopeeConnectError" : "tiktokConnectError";
       try {
-        const res = await authedFetch("/api/auth/shopee/redirect", { method: "POST" });
+        const res = await authedFetch(`/api/auth/${platform}/redirect`, { method: "POST" });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.authUrl) {
-          showToast(data.error || t("toast.shopeeConnectFail"), "error");
+          showToast(data.error || t(`toast.${failKey}`), "error");
           return;
         }
         window.location.href = data.authUrl;
       } catch (err) {
         console.error(err);
-        showToast(err instanceof Error ? err.message : t("toast.shopeeConnectError"), "error");
+        showToast(err instanceof Error ? err.message : t(`toast.${errKey}`), "error");
       }
       return;
     }
@@ -952,11 +973,13 @@ export default function EstoquePage() {
                 { id: "todos", label: t("tabs.todos"), icon: null },
                 { id: "mercadolivre", label: "", ariaLabel: t("tabs.filterML"), image: "/Logotipo_MercadoLivre.png" },
                 { id: "shopee", label: "", ariaLabel: t("tabs.filterShopee"), image: "/Shopee.svg" },
+                { id: "tiktokshop", label: "", ariaLabel: t("tabs.filterTiktok"), image: "/TikTokShop.svg" },
                 { id: "local", label: t("tabs.local"), icon: null },
                 { id: "baixo", label: t("tabs.lowStock"), icon: AlertTriangle }
               ]
                 // Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo).
                 .filter((tab) => SHOPEE_UI_VISIVEL || tab.id !== "shopee")
+                .filter((tab) => TIKTOKSHOP_UI_VISIVEL || tab.id !== "tiktokshop")
                 .map((tab) => {
                 const IconComponent = tab.icon;
                 return (
@@ -1127,10 +1150,16 @@ export default function EstoquePage() {
                                       ML · {v.adId}
                                     </span>
                                   );
-                                } else {
+                                } else if (v.platform === "shopee") {
                                   return (
                                     <span key={v.id} className="text-[9px] font-extrabold px-2 py-0.5 rounded-full text-white" style={{ background: "var(--brand-shopee-bg)", border: "1px solid var(--brand-shopee-bg)" }}>
                                       Shopee · {v.adId}
+                                    </span>
+                                  );
+                                } else {
+                                  return (
+                                    <span key={v.id} className="text-[9px] font-extrabold px-2 py-0.5 rounded-full" style={{ background: "var(--brand-tiktok-bg)", color: "var(--brand-tiktok-fg)", border: "1px solid var(--brand-tiktok-solid)" }}>
+                                      TikTok · {v.adId}
                                     </span>
                                   );
                                 }
@@ -1392,6 +1421,35 @@ export default function EstoquePage() {
                 </div>
                 )}
 
+                {/* Canal 3: TikTok Shop */}
+                {TIKTOKSHOP_UI_VISIVEL && (
+                <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center gap-2">
+                      <img src="/TikTokShop.svg" alt="TikTok Shop" style={{ height: "40px", objectFit: "contain" }} />
+                      <div className="text-center">
+                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.tiktokDesc")}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {resumoContas("tiktokshop") ? (
+                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      {resumoContas("tiktokshop")}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleConnectAccount("tiktokshop")}
+                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
+                      style={{ background: "var(--primary)", color: "white" }}
+                    >
+                      {t("integrationsModal.connectAccount")}
+                    </button>
+                  )}
+                </div>
+                )}
+
               </div>
 
               {/* Contas Conectadas */}
@@ -1409,7 +1467,13 @@ export default function EstoquePage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <img
-                              src={item.platform === "mercadolivre" ? "/Logotipo_MercadoLivre.png" : "/Shopee.svg"}
+                              src={
+                                item.platform === "mercadolivre"
+                                  ? "/Logotipo_MercadoLivre.png"
+                                  : item.platform === "shopee"
+                                  ? "/Shopee.svg"
+                                  : "/TikTokShop.svg"
+                              }
                               alt={item.platform}
                               style={{ height: "20px", objectFit: "contain" }}
                             />
@@ -1492,11 +1556,17 @@ export default function EstoquePage() {
                           <span
                             className="font-extrabold px-2 py-0.5 rounded text-[8px]"
                             style={{
-                              background: vin.platform === "mercadolivre" ? "var(--brand-ml-bg)" : "var(--brand-shopee-bg)",
-                              color: vin.platform === "mercadolivre" ? "var(--brand-ml-fg)" : "var(--brand-shopee-fg)"
+                              background:
+                                vin.platform === "mercadolivre" ? "var(--brand-ml-bg)"
+                                : vin.platform === "shopee" ? "var(--brand-shopee-bg)"
+                                : "var(--brand-tiktok-bg)",
+                              color:
+                                vin.platform === "mercadolivre" ? "var(--brand-ml-fg)"
+                                : vin.platform === "shopee" ? "var(--brand-shopee-fg)"
+                                : "var(--brand-tiktok-fg)",
                             }}
                           >
-                            {vin.platform === "mercadolivre" ? "MERCADO LIVRE" : "SHOPEE"}
+                            {vin.platform === "mercadolivre" ? "MERCADO LIVRE" : vin.platform === "shopee" ? "SHOPEE" : "TIKTOK SHOP"}
                           </span>
                           <button
                             onClick={() => handleRemoveVinculo(vin.id)}
@@ -1537,6 +1607,7 @@ export default function EstoquePage() {
                       <option value="mercadolivre">Mercado Livre</option>
                       {/* Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo). */}
                       {SHOPEE_UI_VISIVEL && <option value="shopee">Shopee</option>}
+                      {TIKTOKSHOP_UI_VISIVEL && <option value="tiktokshop">TikTok Shop</option>}
                     </select>
                   </div>
 
