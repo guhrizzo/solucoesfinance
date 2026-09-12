@@ -35,9 +35,9 @@
         "answer": "NexusFi organiza el control de impuestos junto con el resto de tus finanzas, para que sigas los vencimientos y valores sin depender de una hoja de cálculo aparte."
       },
       {
-        "label": "Inventario + Mercado Livre y marketplaces",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender la integración de inventario con Mercado Livre y otros marketplaces.",
-        "answer": "El módulo de inventario sigue las entradas y salidas de productos y se integra con marketplaces — las ventas de allí entran automáticamente en tu caja y en el panel de ventas."
+        "label": "Inventario + Mercado Livre",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender la integración de inventario con Mercado Livre.",
+        "answer": "El módulo de inventario sigue las entradas y salidas de productos y se integra con Mercado Livre — las ventas de allí entran automáticamente en tu caja y en el panel de ventas."
       },
       {
         "label": "Panel de ventas y precios",
@@ -162,8 +162,8 @@
         "desc": "Control de acceso por perfil: administrador, finanzas, gerente. Cada colaborador ve solo lo que necesita."
       },
       {
-        "title": "Integración con marketplaces",
-        "desc": "Conecta Mercado Libre y otros marketplaces: cada venta entra automáticamente en el flujo de caja, con tarifas y liquidaciones ya registradas."
+        "title": "Integración con Mercado Libre",
+        "desc": "Conecta Mercado Libre: cada venta entra automáticamente en el flujo de caja, con tarifas y liquidaciones ya registradas."
       }
     ]
   },
@@ -226,8 +226,8 @@
         "answer": "No. Tienes 7 días gratis en cualquier plan, sin necesidad de registrar una tarjeta de crédito."
       },
       {
-        "question": "¿Cómo funciona la integración con Mercado Livre y marketplaces?",
-        "answer": "Conectas tu cuenta del marketplace una vez y cada venta entra automáticamente en tu flujo de caja, con tarifas y liquidaciones ya registradas."
+        "question": "¿Cómo funciona la integración con Mercado Libre?",
+        "answer": "Conectas tu cuenta de Mercado Libre una vez y cada venta entra automáticamente en tu flujo de caja, con tarifas y liquidaciones ya registradas."
       },
       {
         "question": "¿Puedo controlar cuentas por pagar y por cobrar?",

@@ -35,9 +35,9 @@
         "answer": "A NexusFi organiza o controle de impostos (Simples, DAS e afins) junto com o restante do financeiro, pra você acompanhar vencimentos e valores sem depender de planilha separada."
       },
       {
-        "label": "Estoque + Mercado Livre e marketplaces",
-        "message": "Olá! Vim pelo site da NexusFi e quero entender a integração de estoque com o Mercado Livre e outros marketplaces.",
-        "answer": "O módulo de estoque acompanha entradas e saídas de produtos e se integra com marketplaces — as vendas de lá já entram automaticamente no seu caixa e no painel de vendas."
+        "label": "Estoque + Mercado Livre",
+        "message": "Olá! Vim pelo site da NexusFi e quero entender a integração de estoque com o Mercado Livre.",
+        "answer": "O módulo de estoque acompanha entradas e saídas de produtos e se integra com o Mercado Livre — as vendas de lá já entram automaticamente no seu caixa e no painel de vendas."
       },
       {
         "label": "Painel de vendas e precificação",
@@ -162,8 +162,8 @@
         "desc": "Controle de acesso por perfil: administrador, financeiro, gestor. Cada colaborador vê apenas o que precisa."
       },
       {
-        "title": "Integração com marketplaces",
-        "desc": "Conecte Mercado Livre e outros marketplaces: cada venda entra automaticamente no fluxo de caixa, com taxas e repasses já lançados."
+        "title": "Integração com Mercado Livre",
+        "desc": "Conecte o Mercado Livre: cada venda entra automaticamente no fluxo de caixa, com taxas e repasses já lançados."
       }
     ]
   },
@@ -226,8 +226,8 @@
         "answer": "Não. Você tem 7 dias grátis em qualquer plano, sem precisar cadastrar cartão de crédito."
       },
       {
-        "question": "Como funciona a integração com Mercado Livre e marketplaces?",
-        "answer": "Você conecta sua conta do marketplace uma vez e cada venda entra automaticamente no seu fluxo de caixa, já com taxas e repasses lançados."
+        "question": "Como funciona a integração com o Mercado Livre?",
+        "answer": "Você conecta sua conta do Mercado Livre uma vez e cada venda entra automaticamente no seu fluxo de caixa, já com taxas e repasses lançados."
       },
       {
         "question": "Dá para controlar contas a pagar e a receber?",

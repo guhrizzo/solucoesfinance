@@ -35,9 +35,9 @@
         "answer": "NexusFi organizes your tax control alongside the rest of your finances, so you can track deadlines and amounts without a separate spreadsheet."
       },
       {
-        "label": "Inventory + Mercado Livre and marketplaces",
-        "message": "Hi! I came from the NexusFi site and want to understand the inventory integration with Mercado Livre and other marketplaces.",
-        "answer": "The inventory module tracks stock in and out and integrates with marketplaces — sales from there flow automatically into your cash flow and sales dashboard."
+        "label": "Inventory + Mercado Livre",
+        "message": "Hi! I came from the NexusFi site and want to understand the inventory integration with Mercado Livre.",
+        "answer": "The inventory module tracks stock in and out and integrates with Mercado Livre — sales from there flow automatically into your cash flow and sales dashboard."
       },
       {
         "label": "Sales dashboard and pricing",
@@ -162,8 +162,8 @@
         "desc": "Role-based access: admin, finance, manager. Each teammate sees only what they need."
       },
       {
-        "title": "Marketplace integration",
-        "desc": "Connect Mercado Livre and other marketplaces: every sale flows automatically into cash flow, with fees and payouts already posted."
+        "title": "Mercado Livre integration",
+        "desc": "Connect Mercado Livre: every sale flows automatically into cash flow, with fees and payouts already posted."
       }
     ]
   },
@@ -226,8 +226,8 @@
         "answer": "No. You get 7 days free on any plan, no credit card required."
       },
       {
-        "question": "How does the Mercado Livre and marketplaces integration work?",
-        "answer": "Connect your marketplace account once, and every sale automatically flows into your cash flow, with fees and payouts already recorded."
+        "question": "How does the Mercado Livre integration work?",
+        "answer": "Connect your Mercado Livre account once, and every sale automatically flows into your cash flow, with fees and payouts already recorded."
       },
       {
         "question": "Can I track accounts payable and receivable?",
