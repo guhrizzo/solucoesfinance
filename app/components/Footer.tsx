@@ -76,7 +76,10 @@ export default function Footer() {
           ))}
         </div>
         <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-blue-300/75 text-center text-xs">{t("rights", { year })}</p>
+          <div className="text-center md:text-left">
+            <p className="text-blue-300/75 text-xs">{t("rights", { year })}</p>
+            <p className="text-blue-300/50 text-xs">{t("cnpj")}</p>
+          </div>
           <div className="flex items-center gap-4">
             <LocaleSwitcher className="text-blue-200" />
             <div className="flex items-center gap-1 text-blue-300/75 text-xs">

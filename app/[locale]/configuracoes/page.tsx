@@ -11,7 +11,7 @@ import { PageLoader } from "@/app/components/ui";
 import { useToast } from "@/app/components/useToast";
 import { ToastContainer } from "@/app/components/ToastContainer";
 import { useAccountScope } from "@/app/hooks/useAccountScope";
-import { isCompedEmail } from "@/lib/compAccounts";
+import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import PerfilTab from "./PerfilTab";
 import AparenciaTab from "./AparenciaTab";
 import FeedbackTab from "./FeedbackTab";
@@ -42,7 +42,7 @@ export default function ConfiguracoesPage() {
   const scope = useAccountScope();
   const { toasts, show: showToast, remove: removeToast } = useToast();
 
-  const isAdmin = isCompedEmail(user?.email ?? null);
+  const isAdmin = isSupremeAdminEmail(user?.email ?? null);
   const tabs = useMemo(
     () => (isAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS),
     [isAdmin]

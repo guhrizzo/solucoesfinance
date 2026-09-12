@@ -1,7 +1,9 @@
 // app/api/feedback/route.ts
 // POST  → qualquer usuário logado abre um bug / sugestão de melhoria.
 // GET   → lista os chamados. Adm supremo (lib/compAccounts) vê TODOS;
-//         qualquer outro vê só os próprios.
+//         qualquer outro vê só os próprios. Ser conta cortesia (isenta de
+//         cobrança) não dá esse privilégio — só quem está em
+//         SUPREME_ADMIN_EMAILS.
 //
 // A coleção `feedback` só é tocada aqui (Admin SDK) — firestore.rules nega
 // acesso direto do client.
@@ -12,7 +14,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
-import { isCompedEmail } from "@/lib/compAccounts";
+import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import { checkRateLimit } from "@/lib/rateLimit";
 import {
   FEEDBACK_LIMITS,
@@ -113,7 +115,7 @@ export async function GET(request: Request) {
   }
 
   const { email } = await identify(scope.uid);
-  const isAdmin = isCompedEmail(email);
+  const isAdmin = isSupremeAdminEmail(email);
 
   try {
     const db = await getAdminDb();

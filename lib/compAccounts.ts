@@ -1,7 +1,6 @@
 // lib/compAccounts.ts
-// Contas "cortesia" (adm supremo): e-mails que NUNCA são cobrados por nenhum
-// serviço da plataforma. Têm acesso vitalício — sem trial, sem paywall, sem
-// checkout.
+// Contas "cortesia": e-mails que NUNCA são cobrados por nenhum serviço da
+// plataforma. Têm acesso vitalício — sem trial, sem paywall, sem checkout.
 //
 // Puro / sem dependências: pode ser importado tanto no servidor (rotas de
 // billing) quanto no client (useSubscription).
@@ -14,12 +13,25 @@
 //   • useSubscription.ts    → atalho no client: se o e-mail logado é cortesia,
 //     libera na hora, mesmo antes do doc ser marcado / mesmo sendo membro.
 //   • /api/billing/checkout → recusa gerar cobrança pra conta cortesia.
+//
+// IMPORTANTE: isenção de cobrança (`isCompedEmail`) é independente de
+// privilégio de "adm supremo" (`isSupremeAdminEmail`, que enxerga e resolve
+// os chamados de feedback de TODOS os usuários). Um e-mail cortesia comum
+// não vira admin automaticamente — só quem está em `SUPREME_ADMIN_EMAILS`.
 
-/** E-mails com acesso vitalício e gratuito. Não remover sem alinhar com o dono. */
-const HARDCODED_COMP_EMAILS = [
+/** Donos da plataforma: além de cortesia, enxergam/resolvem os chamados de todo mundo. */
+const SUPREME_ADMIN_EMAILS = [
   "gurizzo943@gmail.com",
   "felipeaugjpaiva@gmail.com",
 ];
+
+/** E-mails com acesso vitalício e gratuito, sem privilégio de admin. */
+const COURTESY_ONLY_EMAILS = [
+  "atelieda.ni25@gmail.com",
+];
+
+/** E-mails com acesso vitalício e gratuito. Não remover sem alinhar com o dono. */
+const HARDCODED_COMP_EMAILS = [...SUPREME_ADMIN_EMAILS, ...COURTESY_ONLY_EMAILS];
 
 /** Fim de acesso "infinito" pra contas cortesia (ano 9999, em ms epoch). */
 export const COMP_ACCESS_UNTIL = Date.UTC(9999, 0, 1);
@@ -41,4 +53,11 @@ function compEmailSet(): Set<string> {
 export function isCompedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return compEmailSet().has(normalizeEmail(email));
+}
+
+/** true se o e-mail é de um adm supremo (dono da plataforma). */
+export function isSupremeAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const set = new Set(SUPREME_ADMIN_EMAILS.map(normalizeEmail));
+  return set.has(normalizeEmail(email));
 }
