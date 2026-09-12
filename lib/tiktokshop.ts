@@ -10,18 +10,30 @@
 //  - detalhe de pedido (pra baixar o estoque quando chega o evento de venda)
 //  - validação da assinatura dos pushes (webhook)
 //
-// ⚠️ https://partner.tiktokshop.com é uma SPA que bloqueia scraping (mesma
-// limitação que open.shopee.com já tinha) — os paths/versões abaixo seguem o
-// formato estável e público da TikTok Shop Partner API v2. Ao criar o app de
-// verdade, confirme no Partner Center: (1) a versão exata dos paths
-// (`/202309/...`), (2) o nome do header de assinatura do webhook, e (3) se o
-// warehouse_id precisa ser explícito no update de estoque (aqui assumimos loja
-// com um único armazém padrão, buscado em `fetchDefaultWarehouseId`).
+// Confirmado contra a documentação oficial (partner.tiktokshop.com/docv2, doc
+// pública, sem precisar do app aprovado) em 2026-09-11:
+//  - Autorização de SELLER usa `service_id` (não `app_key`) num domínio
+//    `services*.tiktokshop.com` separado do host de token — ver
+//    buildTiktokAuthUrl. app_key/app_secret continuam corretos pras chamadas
+//    de API (signedRequest) e pra troca/refresh de token.
+//  - Paths no formato `/{categoria}/202309/{recurso}` (usado em todo o
+//    arquivo) é o estilo atual, confirmado na doc de API versioning.
+//  - A assinatura do webhook vem no header `Authorization` (não
+//    `x-tts-signature`), calculada como
+//    HMAC-SHA256(app_key + corpo_bruto, app_secret) em hex minúsculo — ver
+//    verifyTiktokPush.
+//  - warehouse_id explícito segue fora de escopo (loja com múltiplos
+//    armazéns) — não confirmado, mantido como estava.
 
 import { createHmac, timingSafeEqual } from "crypto";
 
 const AUTH_HOST = "https://auth.tiktok-shops.com";
 const API_HOST = "https://open-api.tiktokglobalshop.com";
+// Autorização de seller (fluxo do dono da loja, não "Partner"/TAP multi-loja):
+// domínio muda por mercado. NexusFi é BR → Rest of World por padrão.
+// TIKTOKSHOP_MARKET="US" troca pro domínio dos EUA.
+const SELLER_AUTH_HOST_ROW = "https://services.tiktokshop.com";
+const SELLER_AUTH_HOST_US = "https://services.us.tiktokshop.com";
 
 // Renova o access token quando falta menos que isso pra expirar (token dura ~7 dias).
 const REFRESH_SKEW_MS = 30 * 60 * 1000;
@@ -71,13 +83,18 @@ export function tiktokShopCredentials() {
   const appKey = process.env.TIKTOKSHOP_APP_KEY;
   const appSecret = process.env.TIKTOKSHOP_APP_SECRET;
   const redirectUri = process.env.TIKTOKSHOP_REDIRECT_URI;
+  // service_id: só usado no link de autorização de seller (buildTiktokAuthUrl).
+  // Vem da mesma página do app no Partner Center (App & Service), abaixo do
+  // nome do app — diferente do app_key.
+  const serviceId = process.env.TIKTOKSHOP_SERVICE_ID;
   const configured =
     !!appKey &&
     appKey !== "SEU_APP_KEY_AQUI" &&
     !!appSecret &&
     appSecret !== "SEU_APP_SECRET_AQUI" &&
-    !!redirectUri;
-  return { appKey, appSecret, redirectUri, configured };
+    !!redirectUri &&
+    !!serviceId;
+  return { appKey, appSecret, redirectUri, serviceId, configured };
 }
 
 // ─── Assinatura ──────────────────────────────────────────────────────────────
@@ -120,11 +137,18 @@ function signedRequest(
 
 // ─── Autorização ─────────────────────────────────────────────────────────────
 
-/** Monta a URL de autorização — o seller loga e autoriza a loja pro app. */
+/**
+ * Monta a URL de autorização — o seller loga e autoriza a loja pro app.
+ * Autorização de seller usa `service_id` (não `app_key`) num domínio
+ * `services*.tiktokshop.com` por mercado — diferente do host de token
+ * (`auth.tiktok-shops.com`, usado só na troca/refresh de código por tokens).
+ */
 export function buildTiktokAuthUrl(opts: { state: string }): string {
-  const { appKey } = tiktokShopCredentials();
-  const p = new URLSearchParams({ app_key: appKey || "", state: opts.state });
-  return `${AUTH_HOST}/api/v2/authorization?${p.toString()}`;
+  const { serviceId } = tiktokShopCredentials();
+  const market = (process.env.TIKTOKSHOP_MARKET || "ROW").toUpperCase();
+  const host = market === "US" ? SELLER_AUTH_HOST_US : SELLER_AUTH_HOST_ROW;
+  const p = new URLSearchParams({ service_id: serviceId || "", state: opts.state });
+  return `${host}/open/authorize?${p.toString()}`;
 }
 
 async function getJson(url: string): Promise<any> {
@@ -362,24 +386,25 @@ export async function fetchTiktokOrder(
 // ─── Push (webhook): validação da assinatura ─────────────────────────────────
 
 /**
- * Valida a assinatura do evento (webhook) da TikTok Shop. Base do HMAC: o
- * corpo bruto, com o app_secret. `unconfigured` quando não há
- * TIKTOKSHOP_WEBHOOK_SECRET (o chamador decide se aceita mesmo assim).
- * ⚠️ Nome exato do header a confirmar no Partner Center ao cadastrar o
- * webhook — aqui assumimos `x-tts-signature`.
+ * Valida a assinatura do evento (webhook) da TikTok Shop. Algoritmo oficial
+ * (doc pública "TikTok Shop webhooks → Overview"): a TikTok Shop manda a
+ * assinatura no header `Authorization` (sem prefixo "Bearer"), calculada como
+ * HMAC-SHA256(app_key + corpo_bruto, app_secret) em hex minúsculo — não usa
+ * um segredo de webhook separado. `unconfigured` quando faltam
+ * TIKTOKSHOP_APP_KEY/APP_SECRET (o chamador decide se aceita mesmo assim).
  */
 export function verifyTiktokPush(opts: {
   signature?: string | null;
   rawBody: string;
 }): "valid" | "invalid" | "unconfigured" {
-  const secret = process.env.TIKTOKSHOP_WEBHOOK_SECRET;
-  if (!secret) return "unconfigured";
+  const { appKey, appSecret } = tiktokShopCredentials();
+  if (!appKey || !appSecret) return "unconfigured";
   if (!opts.signature) return "invalid";
 
-  const computed = hmacHex(opts.rawBody, secret);
+  const computed = hmacHex(`${appKey}${opts.rawBody}`, appSecret);
   try {
     const a = Buffer.from(computed, "hex");
-    const b = Buffer.from(opts.signature.trim(), "hex");
+    const b = Buffer.from(opts.signature.trim().toLowerCase(), "hex");
     return a.length === b.length && timingSafeEqual(a, b) ? "valid" : "invalid";
   } catch {
     return "invalid";

@@ -26,35 +26,40 @@ Cada venda também vira uma **entrada no Fluxo de Caixa** (`category: "Vendas"`,
 
 ## Fluxo de autorização (TikTok Shop Partner API v2)
 
-⚠️ `https://partner.tiktokshop.com` é uma SPA que bloqueia scraping (não deu pra
-confirmar os paths ao vivo via WebFetch — mesma limitação que `open.shopee.com` já
-tinha). O código abaixo segue o formato estável e publicamente documentado da API v2.
-**Confirme no Partner Center, ao criar o app de verdade**, os 3 pontos marcados com ⚠️.
+✅ Confirmado em 2026-09-11 contra a documentação pública oficial
+(`partner.tiktokshop.com/docv2` — a doc em si não é a SPA bloqueada, deu pra ler
+via browser). Os 3 pontos que antes estavam marcados como não confirmados (⚠️)
+agora estão fechados — ver tabela abaixo.
 
 | Passo | Onde no código | Detalhe |
 |---|---|---|
-| **1. Gerar link de autorização** (`GET /api/v2/authorization`) | `buildTiktokAuthUrl` em `lib/tiktokshop.ts` | Query: `app_key`, `state`. Host: `auth.tiktok-shops.com`. ⚠️ Apps "Partner" (multi-loja) podem usar um fluxo com `service_id` em vez de `app_key` — confirmar no tipo de app criado. |
+| **1. Gerar link de autorização** (`GET /open/authorize`) | `buildTiktokAuthUrl` em `lib/tiktokshop.ts` | Query: **`service_id`** (não `app_key`) + `state`. Host por mercado: `services.tiktokshop.com` (Rest of World, padrão — NexusFi é BR) ou `services.us.tiktokshop.com` (`TIKTOKSHOP_MARKET="US"`). `service_id` vem da mesma página do app no Partner Center (App & Service), abaixo do nome do app. |
 | **2. Vendedor autoriza e volta** | `app/api/auth/tiktokshop/callback/route.ts` | A TikTok Shop redireciona pro `redirect_uri` cadastrado no console com `?code=...&state=...`. O `state` (CSRF) viaja no cookie `tiktokshop_oauth`. |
-| **3. Trocar `code` por token** (`GET /api/v2/token/get`) | `exchangeTiktokToken` | Query: `app_key`, `app_secret`, `auth_code`, `grant_type=authorized_code`. Endpoint de auth — **sem** assinatura HMAC. Resposta: `access_token`, `refresh_token`, `access_token_expire_in` (~7 dias). |
+| **3. Trocar `code` por token** (`GET /api/v2/token/get`) | `exchangeTiktokToken` | Host `auth.tiktok-shops.com` (esse continua sendo por `app_key`, não `service_id`). Query: `app_key`, `app_secret`, `auth_code`, `grant_type=authorized_code`. Endpoint de auth — **sem** assinatura HMAC. Resposta: `access_token`, `refresh_token`, `access_token_expire_in` (~7 dias). |
 | **4. Renovar token** (`GET /api/v2/token/refresh`) | `refreshTiktokToken` / `getValidTiktokToken` | Query: `app_key`, `app_secret`, `refresh_token`, `grant_type=refresh_token`. A TikTok Shop devolve um novo `refresh_token` a cada renovação — persistimos no Firestore. Renova quando falta < 30 min. |
 | **5. Loja autorizada** (`GET /authorization/202309/shops`) | `fetchAuthorizedShop` | Devolve `shop_id`, `shop_cipher` (necessário nas chamadas seguintes) e `shop_name`. |
-| **Assinar chamadas de API** | `signedRequest` (interno) | `sign = HMAC-SHA256(app_secret, app_secret + path + params_ordenados + body + app_secret)`, hex. Headers: `x-tts-access-token` (token) e `x-tts-shop-cipher` (loja). |
-| **Host** | `API_HOST` / `AUTH_HOST` | API: `open-api.tiktokglobalshop.com`. Auth: `auth.tiktok-shops.com`. Não há sandbox público equivalente ao da Shopee — testar com uma loja de testes do próprio Partner Center. |
+| **Assinar chamadas de API** | `signedRequest` (interno) | `sign = HMAC-SHA256(app_secret, app_secret + path + params_ordenados + body + app_secret)`, hex. Headers: `x-tts-access-token` (token) e `x-tts-shop-cipher` (loja). Confirmado: path no formato `/{categoria}/202309/{recurso}` é o estilo atual (doc "API versioning"). |
+| **Host** | `API_HOST` / `AUTH_HOST` / `SELLER_AUTH_HOST_ROW`/`_US` | API: `open-api.tiktokglobalshop.com`. Token: `auth.tiktok-shops.com`. Autorização de seller: `services(.us).tiktokshop.com`. Não há sandbox público equivalente ao da Shopee — testar com uma loja de testes do próprio Partner Center. |
 
 > ⚠️ **Estoque assume um único armazém.** `updateTiktokStock` busca o `warehouse_id`
 > padrão da loja (`fetchDefaultWarehouseId`) e usa o mesmo pra todo update — lojas com
 > múltiplos centros de distribuição precisam escolher o armazém por SKU (fora de escopo
-> aqui, mesma simplificação que o ML/Shopee fazem pra itens sem variação).
+> aqui, mesma simplificação que o ML/Shopee fazem pra itens sem variação; não confirmado
+> contra o Partner Center real, sem forma de checar isso na doc pública).
 
-> ⚠️ **Nome do header de assinatura do webhook a confirmar.** `verifyTiktokPush`
-> (lib/tiktokshop.ts) assume `x-tts-signature`; o Partner Center mostra o nome exato
-> ao cadastrar o endpoint de eventos.
+> ✅ **Header de assinatura do webhook confirmado: `Authorization`** (não
+> `x-tts-signature`, que era a suposição anterior). `verifyTiktokPush`
+> (lib/tiktokshop.ts) já lê `Authorization` e calcula
+> `HMAC-SHA256(app_key + corpo_bruto, app_secret)` em hex minúsculo — sem
+> segredo de webhook separado (doc "TikTok Shop webhooks → Overview").
 
 ## O que configurar no TikTok Shop Partner Center
 
 <https://partner.tiktokshop.com> → seu **App** (conta de desenvolvedor aprovada).
 
-1. **App Key / App Secret** — copie os dois pro `.env.local`.
+1. **App Key / App Secret / Service ID** — na página do app (App & Service), copie
+   os três pro `.env.local`. O `service_id` fica abaixo do nome do app — é
+   diferente do App Key e só é usado no link de autorização do seller.
 
 2. **Redirect URL** — cadastre **exatamente**:
    ```
@@ -68,25 +73,32 @@ tinha). O código abaixo segue o formato estável e publicamente documentado da 
    - `Order` (`orders/search`, `orders`)
    - `Logistics` (`warehouses`) — pro update de estoque saber o armazém padrão
 
-4. **Webhook (eventos)** — na aba de Event Subscriptions:
+4. **Webhook (eventos)** — na aba de Event Subscriptions (App & Service → seu app →
+   Basic Information → Developing):
    - URL:
      ```
      https://nexusfi.com.br/api/webhooks/tiktokshop
      ```
    - Marque o evento **`ORDER_STATUS_CHANGE`**.
-   - Confirme ali o nome do header de assinatura e ajuste `verifyTiktokPush` se for
-     diferente de `x-tts-signature`.
+   - Não precisa confirmar nome de header nem segredo separado — a TikTok Shop
+     sempre manda a assinatura no header `Authorization`, calculada com o
+     mesmo App Key/Secret (ver `verifyTiktokPush`).
 
 ## Variáveis de ambiente (`.env.local` / envs do deploy)
 
 ```env
 TIKTOKSHOP_APP_KEY="..."          # App Key do Partner Center
 TIKTOKSHOP_APP_SECRET="..."       # App Secret do Partner Center
+TIKTOKSHOP_SERVICE_ID="..."       # Service ID (abaixo do nome do app) — só pro link de autorização
+TIKTOKSHOP_MARKET=""              # vazio/"ROW" = services.tiktokshop.com (BR); "US" = services.us.tiktokshop.com
 TIKTOKSHOP_REDIRECT_URI="https://nexusfi.com.br/api/auth/tiktokshop/callback"
-TIKTOKSHOP_WEBHOOK_SECRET=""      # normalmente = TIKTOKSHOP_APP_SECRET; confira no painel
 TIKTOKSHOP_WEBHOOK_STRICT=""      # deixe vazio até ver "assinatura valid" no log; depois "true"
 TIKTOKSHOP_PUSH_URL="https://nexusfi.com.br/api/webhooks/tiktokshop"  # idêntica à URL cadastrada no painel
 ```
+
+> `TIKTOKSHOP_WEBHOOK_SECRET` foi removida — a assinatura do webhook usa
+> `TIKTOKSHOP_APP_KEY`/`APP_SECRET` diretamente (algoritmo oficial confirmado),
+> nunca precisou de um segredo separado.
 
 > **`TIKTOKSHOP_PUSH_URL`** — mesmo motivo do `SHOPEE_PUSH_URL`: atrás do proxy da
 > Vercel, `request.url` pode não bater com a URL que a TikTok Shop usou pra assinar o
@@ -154,11 +166,8 @@ token + varredura de produtos + escritas sequenciais no Firestore.
 - **Sincronização "pull"** (TikTok Shop manda, central atualiza): não implementada —
   a Shopee também não tem, só o ML (`puxarCanalMercadoLivre`).
 - **Itens com variação/SKU múltiplo por warehouse**: `updateTiktokStock` assume um
-  único armazém padrão (ver aviso acima).
-- **Versão exata dos paths** (`/202309/...`) e **nome do header de assinatura do
-  webhook**: implementados com o formato mais estável e comum da API v2, mas não
-  confirmados contra o Partner Center real (SPA bloqueada pro WebFetch). Confirme ao
-  criar o app e ajuste `lib/tiktokshop.ts` se o painel mostrar algo diferente.
+  único armazém padrão (ver aviso acima) — esse ponto continua sem confirmação real,
+  a doc pública não cobre lojas multi-armazém em detalhe.
 - **Refresh concorrente**: dois eventos simultâneos podem tentar renovar o mesmo
   token. Em escala, mover pra um lock (Firestore transaction) — mesma dívida técnica
   do ML/Shopee.
