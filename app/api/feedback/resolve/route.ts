@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
-import { isCompedEmail } from "@/lib/compAccounts";
+import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import { feedbackResolvedEmail } from "@/lib/emailTemplates";
 import { FEEDBACK_LIMITS, type FeedbackDoc } from "@/lib/feedback";
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   const adminEmail = await verifiedEmail(scope.uid);
-  if (!isCompedEmail(adminEmail)) {
+  if (!isSupremeAdminEmail(adminEmail)) {
     return NextResponse.json({ error: "Você não tem acesso a esta ação." }, { status: 403 });
   }
 
