@@ -77,11 +77,11 @@ export async function POST(request: Request) {
     }
 
     // ── Evento real da TikTok Shop ──────────────────────────────────────────
-    // Assinatura: verifyTiktokPush (HMAC do corpo bruto com o app_secret).
-    // ⚠️ Nome exato do header a confirmar no Partner Center — ver comentário
-    // em lib/tiktokshop.ts.
+    // Assinatura: verifyTiktokPush — HMAC(app_key + corpo bruto, app_secret),
+    // hex minúsculo, mandada no header Authorization (confirmado na doc
+    // oficial "TikTok Shop webhooks → Overview", não é x-tts-signature).
     const sig = verifyTiktokPush({
-      signature: request.headers.get("x-tts-signature"),
+      signature: request.headers.get("authorization"),
       rawBody: raw,
     });
     if (sig === "invalid" && process.env.TIKTOKSHOP_WEBHOOK_STRICT === "true") {

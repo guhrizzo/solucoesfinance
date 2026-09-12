@@ -31,12 +31,20 @@ export async function GET(request: Request) {
     host,
     tiktokShopCredentialsConfigured: configured,
     apiHost: "https://open-api.tiktokglobalshop.com",
-    authHost: "https://auth.tiktok-shops.com",
+    tokenHost: "https://auth.tiktok-shops.com",
+    sellerAuthHost:
+      (process.env.TIKTOKSHOP_MARKET || "ROW").toUpperCase() === "US"
+        ? "https://services.us.tiktokshop.com"
+        : "https://services.tiktokshop.com",
     env: {
       TIKTOKSHOP_APP_KEY: envInfo("TIKTOKSHOP_APP_KEY", "SEU_APP_KEY_AQUI"),
       TIKTOKSHOP_APP_SECRET: envInfo("TIKTOKSHOP_APP_SECRET", "SEU_APP_SECRET_AQUI"),
+      TIKTOKSHOP_SERVICE_ID: envInfo("TIKTOKSHOP_SERVICE_ID"),
+      TIKTOKSHOP_MARKET: {
+        present: !!process.env.TIKTOKSHOP_MARKET,
+        value: (process.env.TIKTOKSHOP_MARKET || "ROW (padrão)").toUpperCase(),
+      },
       TIKTOKSHOP_REDIRECT_URI: envInfo("TIKTOKSHOP_REDIRECT_URI"),
-      TIKTOKSHOP_WEBHOOK_SECRET: envInfo("TIKTOKSHOP_WEBHOOK_SECRET"),
       TIKTOKSHOP_PUSH_URL: envInfo("TIKTOKSHOP_PUSH_URL"),
       TIKTOKSHOP_WEBHOOK_STRICT: {
         present: process.env.TIKTOKSHOP_WEBHOOK_STRICT === "true",
@@ -110,7 +118,7 @@ export async function GET(request: Request) {
   // ── Veredito ──────────────────────────────────────────────────────────────
   const problemas: string[] = [];
   if (!configured)
-    problemas.push("TIKTOKSHOP_APP_KEY/APP_SECRET/REDIRECT_URI incompletos (ou ainda placeholders) nesta implantação — cai em modo simulado.");
+    problemas.push("TIKTOKSHOP_APP_KEY/APP_SECRET/SERVICE_ID/REDIRECT_URI incompletos (ou ainda placeholders) nesta implantação — cai em modo simulado.");
   if ((checks.firebaseAdmin as any)?.ok === false)
     problemas.push("Firebase Admin não inicializa — confira as 3 envs FIREBASE_ADMIN_* (a PRIVATE_KEY precisa vir inteira).");
   if (redirectUri && redirectUri !== expectedRedirect)
