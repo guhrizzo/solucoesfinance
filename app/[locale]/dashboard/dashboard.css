@@ -22,6 +22,21 @@
   background: var(--surface);
   border: 1px solid var(--border);
   animation: slideUp 0.5s ease both;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* KPI clicável (hoje só "Inadimplência") — abre um modal de detalhamento,
+   mesmo padrão do KPI "Orçamento" do Fluxo de Caixa (.cf-kpi.clickable). */
+.kpi-card.clickable {
+  cursor: pointer;
+}
+.kpi-card.clickable:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--db-shadow-lg);
+}
+.kpi-card.clickable:active {
+  transform: translateY(0);
 }
 .chart-card {
   background: var(--surface);

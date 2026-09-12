@@ -53,10 +53,14 @@ import {
 // Ícones das funcionalidades — o texto vem de messages/*/landing.json
 // (features.items), na mesma ordem.
 const FEATURE_ICONS = [BarChart2, FileText, CreditCard, PieChart, Users, Globe];
+// "Saiba mais" de cada card abre o chatbot Midas (WhatsAppFab) já no tópico
+// correspondente — índice em landing.whatsapp.topics, na mesma ordem.
+const FEATURE_TOPIC_INDEX = [0, 5, 1, 5, 6, 3];
 
 type StatItem = { label: string; value: string; change: string };
 type FeatureItem = { title: string; desc: string };
 type TestimonialItem = { name: string; role: string; text: string };
+type FaqItem = { question: string; answer: string };
 
 const NAV_ITEMS = ["features", "plans", "integrations", "useCases", "contact"] as const;
 const TICKER_KEYS = [
@@ -87,6 +91,7 @@ export default function FinanceHome() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const pageRef = useRef<HTMLDivElement>(null);
 
   // Planos e preços: período de cobrança escolhido via modal (Mensal | Anual).
@@ -98,6 +103,7 @@ export default function FinanceHome() {
   const stats = t.raw("stats.items") as StatItem[];
   const features = t.raw("features.items") as FeatureItem[];
   const testimonials = t.raw("testimonials.items") as TestimonialItem[];
+  const faqItems = t.raw("faq.items") as FaqItem[];
   const painPoints = t.raw("problem.painPoints") as string[];
   const solutionPoints = t.raw("problem.solutionPoints") as string[];
 
@@ -602,9 +608,18 @@ export default function FinanceHome() {
                   </div>
                   <h3 className="text-blue-950 font-bold mb-2">{f.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
-                  <div className="flex items-center gap-1 mt-4 text-blue-500 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(
+                        new CustomEvent("midas:open-topic", { detail: { index: FEATURE_TOPIC_INDEX[i] } })
+                      );
+                    }}
+                    className="flex items-center gap-1 mt-4 text-blue-500 text-sm font-medium bg-transparent border-0 p-0 cursor-pointer hover:underline"
+                  >
                     {t("features.learnMore")} <ChevronRight size={14} />
-                  </div>
+                  </button>
                 </div>
               );
             })}
@@ -868,6 +883,56 @@ export default function FinanceHome() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="max-w-xl mb-14 section-line">
+            <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-3">{t("faq.eyebrow")}</p>
+            <h2 className="text-4xl font-extrabold text-blue-950 leading-tight">
+              {t("faq.title")}
+            </h2>
+            <p className="text-slate-500 mt-4 leading-relaxed">
+              {t("faq.subtitle")}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {faqItems.map((item, i) => {
+              const open = openFaq === i;
+              const panelId = `faq-panel-${i}`;
+              const buttonId = `faq-button-${i}`;
+              return (
+                <div key={item.question} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <button
+                    type="button"
+                    id={buttonId}
+                    aria-expanded={open}
+                    aria-controls={panelId}
+                    onClick={() => setOpenFaq(open ? null : i)}
+                    className="w-full flex items-center justify-between gap-4 text-left px-6 py-5 cursor-pointer"
+                  >
+                    <span className="text-blue-950 font-semibold">{item.question}</span>
+                    <ChevronDown
+                      size={18}
+                      className={`shrink-0 text-blue-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  <div
+                    id={panelId}
+                    role="region"
+                    aria-labelledby={buttonId}
+                    hidden={!open}
+                    className="px-6 pb-5"
+                  >
+                    <p className="text-slate-500 text-sm leading-relaxed">{item.answer}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

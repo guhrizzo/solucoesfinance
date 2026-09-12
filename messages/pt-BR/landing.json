@@ -35,9 +35,9 @@
         "answer": "A NexusFi organiza o controle de impostos (Simples, DAS e afins) junto com o restante do financeiro, pra você acompanhar vencimentos e valores sem depender de planilha separada."
       },
       {
-        "label": "Estoque + Mercado Livre e Shopee",
-        "message": "Olá! Vim pelo site da NexusFi e quero entender a integração de estoque com o Mercado Livre e a Shopee.",
-        "answer": "O módulo de estoque acompanha entradas e saídas de produtos e se integra com marketplaces — as vendas de lá já entram automaticamente no seu caixa e no painel de vendas."
+        "label": "Estoque + Mercado Livre",
+        "message": "Olá! Vim pelo site da NexusFi e quero entender a integração de estoque com o Mercado Livre.",
+        "answer": "O módulo de estoque acompanha entradas e saídas de produtos e se integra com o Mercado Livre — as vendas de lá já entram automaticamente no seu caixa e no painel de vendas."
       },
       {
         "label": "Painel de vendas e precificação",
@@ -162,8 +162,8 @@
         "desc": "Controle de acesso por perfil: administrador, financeiro, gestor. Cada colaborador vê apenas o que precisa."
       },
       {
-        "title": "Integração com marketplaces",
-        "desc": "Conecte Mercado Livre e Shopee: cada venda entra automaticamente no fluxo de caixa, com taxas e repasses já lançados."
+        "title": "Integração com Mercado Livre",
+        "desc": "Conecte o Mercado Livre: cada venda entra automaticamente no fluxo de caixa, com taxas e repasses já lançados."
       }
     ]
   },
@@ -213,6 +213,45 @@
         "name": "Bruno Castilho",
         "role": "Sócio — Castilho Advogados",
         "text": "Perfeito para escritórios. Emito relatórios para os sócios em minutos, com dados confiáveis e visualmente claros."
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "Dúvidas frequentes",
+    "title": "Perguntas frequentes",
+    "subtitle": "Ainda com dúvidas? Fale com a gente pelo WhatsApp ou veja as respostas mais comuns abaixo.",
+    "items": [
+      {
+        "question": "Preciso de cartão de crédito para testar?",
+        "answer": "Não. Você tem 7 dias grátis em qualquer plano, sem precisar cadastrar cartão de crédito."
+      },
+      {
+        "question": "Como funciona a integração com o Mercado Livre?",
+        "answer": "Você conecta sua conta do Mercado Livre uma vez e cada venda entra automaticamente no seu fluxo de caixa, já com taxas e repasses lançados."
+      },
+      {
+        "question": "Dá para controlar contas a pagar e a receber?",
+        "answer": "Sim. Você cadastra vencimento, categoria e status de cada conta, recebe alertas de prazo e, ao marcar como paga ou recebida, o valor já atualiza o caixa."
+      },
+      {
+        "question": "A plataforma ajuda com impostos como o DAS?",
+        "answer": "Sim, o controle de impostos (Simples, DAS e afins) fica organizado junto com o restante do financeiro, sem depender de planilha separada."
+      },
+      {
+        "question": "Posso convidar minha equipe para usar a plataforma?",
+        "answer": "Sim. Você convida membros da equipe com permissões específicas por área, e ações sensíveis pedem um PIN de segurança, com registro de quem fez o quê e quando."
+      },
+      {
+        "question": "Consigo trocar de plano depois de assinar?",
+        "answer": "Sim, você pode mudar de plano ou de período de cobrança (mensal ou anual) a qualquer momento, direto pela plataforma."
+      },
+      {
+        "question": "Meus dados financeiros ficam seguros?",
+        "answer": "Sim. O acesso é protegido por login individual, permissões por perfil e PIN para ações sensíveis, com tudo auditado."
+      },
+      {
+        "question": "Como falo com o suporte se tiver algum problema?",
+        "answer": "Você pode abrir um chamado direto pela plataforma, em Configurações, ou falar com nosso time pelo WhatsApp a qualquer momento."
       }
     ]
   },

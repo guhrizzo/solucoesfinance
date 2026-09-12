@@ -116,6 +116,33 @@ export function WhatsAppFab() {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight });
   }, [messages, sending]);
 
+  const topics = (t.raw("topics") as Topic[]) ?? [];
+  // Ref pra ler os tópicos atuais de dentro do listener sem precisar
+  // re-registrar o evento a cada render (t.raw cria um array novo sempre).
+  const topicsRef = useRef(topics);
+  topicsRef.current = topics;
+
+  // Abre o chat já com a pergunta/resposta de um tópico — disparado pelos
+  // botões "Saiba mais" dos cards de Funcionalidades via evento global
+  // (`window`, não prop/contexto), já que o card e este fab vivem em
+  // subárvores/portais diferentes da página.
+  useEffect(() => {
+    const onOpenTopic = (e: Event) => {
+      const index = (e as CustomEvent<{ index: number }>).detail?.index;
+      const topic = topicsRef.current[index];
+      if (!topic) return;
+      setOpen(true);
+      setMessages((prev) => [
+        ...(prev.length === 0 ? [{ id: nextId(), role: "bot" as const, text: t("greeting") }] : prev),
+        { id: nextId(), role: "user", text: topic.label },
+        { id: nextId(), role: "bot", text: topic.answer },
+      ]);
+    };
+    window.addEventListener("midas:open-topic", onOpenTopic);
+    return () => window.removeEventListener("midas:open-topic", onOpenTopic);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!mounted) return null;
 
   // O botão de acessibilidade fica em bottom:20 (ou 88 com o banner de
@@ -124,7 +151,6 @@ export function WhatsAppFab() {
   const cookieBarOpen = consent === null;
   const bottom = (cookieBarOpen ? 96 : 24) + (a11yWidgetOn ? 60 : 0);
 
-  const topics = (t.raw("topics") as Topic[]) ?? [];
   const lastUserText = [...messages].reverse().find((m) => m.role === "user")?.text;
 
   const goToWhatsApp = (message: string) => {

@@ -35,9 +35,9 @@
         "answer": "NexusFi organizes your tax control alongside the rest of your finances, so you can track deadlines and amounts without a separate spreadsheet."
       },
       {
-        "label": "Inventory + Mercado Livre and Shopee",
-        "message": "Hi! I came from the NexusFi site and want to understand the inventory integration with Mercado Livre and Shopee.",
-        "answer": "The inventory module tracks stock in and out and integrates with marketplaces — sales from there flow automatically into your cash flow and sales dashboard."
+        "label": "Inventory + Mercado Livre",
+        "message": "Hi! I came from the NexusFi site and want to understand the inventory integration with Mercado Livre.",
+        "answer": "The inventory module tracks stock in and out and integrates with Mercado Livre — sales from there flow automatically into your cash flow and sales dashboard."
       },
       {
         "label": "Sales dashboard and pricing",
@@ -162,8 +162,8 @@
         "desc": "Role-based access: admin, finance, manager. Each teammate sees only what they need."
       },
       {
-        "title": "Marketplace integration",
-        "desc": "Connect Mercado Livre and Shopee: every sale flows automatically into cash flow, with fees and payouts already posted."
+        "title": "Mercado Livre integration",
+        "desc": "Connect Mercado Livre: every sale flows automatically into cash flow, with fees and payouts already posted."
       }
     ]
   },
@@ -213,6 +213,45 @@
         "name": "Bruno Castilho",
         "role": "Partner — Castilho Advogados",
         "text": "Perfect for firms. I send reports to the partners in minutes, with reliable data that's visually clear."
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "Frequently asked questions",
+    "title": "Frequently asked questions",
+    "subtitle": "Still have questions? Chat with us on WhatsApp or check the most common answers below.",
+    "items": [
+      {
+        "question": "Do I need a credit card to try it out?",
+        "answer": "No. You get 7 days free on any plan, no credit card required."
+      },
+      {
+        "question": "How does the Mercado Livre integration work?",
+        "answer": "Connect your Mercado Livre account once, and every sale automatically flows into your cash flow, with fees and payouts already recorded."
+      },
+      {
+        "question": "Can I track accounts payable and receivable?",
+        "answer": "Yes. You register due dates, categories and status for each account, get deadline alerts, and once marked as paid or received, the amount updates your cash flow right away."
+      },
+      {
+        "question": "Does the platform help with taxes like Brazil's DAS?",
+        "answer": "Yes, tax tracking (Simples, DAS and similar) stays organized alongside the rest of your finances, with no need for a separate spreadsheet."
+      },
+      {
+        "question": "Can I invite my team to use the platform?",
+        "answer": "Yes. You can invite team members with specific permissions per area, and sensitive actions require a security PIN, with a record of who did what and when."
+      },
+      {
+        "question": "Can I change plans after subscribing?",
+        "answer": "Yes, you can switch plans or billing period (monthly or annual) at any time, directly from the platform."
+      },
+      {
+        "question": "Is my financial data secure?",
+        "answer": "Yes. Access is protected by individual logins, role-based permissions and a PIN for sensitive actions, with everything audited."
+      },
+      {
+        "question": "How do I reach support if I run into an issue?",
+        "answer": "You can open a support ticket right from the platform, in Settings, or talk to our team on WhatsApp anytime."
       }
     ]
   },

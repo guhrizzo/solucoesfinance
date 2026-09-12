@@ -7,13 +7,13 @@ import {
   TrendingUp, TrendingDown, DollarSign, CreditCard,
   AlertCircle, Clock, Wallet, ChevronRight, ChevronLeft, ArrowUpRight,
   ArrowDownRight, MoreHorizontal, Filter, Download, Printer,
-  RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart
+  RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart, X, ExternalLink
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import OnboardingModal, { type OnboardingAnswers } from "@/app/components/OnboardingModal";
 import CreatePasswordGate from "@/app/components/CreatePasswordGate";
 import Navbar from "@/app/components/Navbar";
-import { Badge, PageLoader, Sensitive } from "@/app/components/ui";
+import { Badge, PageLoader, Sensitive, Modal } from "@/app/components/ui";
 import AccessDenied from "@/app/components/AccessDenied";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney, formatDateTime } from "@/lib/format";
@@ -47,6 +47,10 @@ interface Receivable {
   id: string;
   clientName?: string;
   description?: string;
+  /** Título da cobrança (campo real gravado em contasReceber). */
+  title?: string;
+  /** Categoria (valor gravado, ex.: "Clientes") — ver RECEIVABLE_CATEGORIES. */
+  category?: string;
   dueDate: string;
   amount: number;
   status: string;
@@ -60,11 +64,134 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   amber:   { bg: "var(--warn-weak)",  text: "var(--warn)",  icon: "var(--warn-weak)"  },
 };
 
+// ─── Detalhamento da Inadimplência ─────────────────────────────────────────────
+// O modal que abre ao clicar no KPI "Inadimplência" abre as cobranças
+// pendentes linha a linha, agrupadas por categoria dentro de duas seções
+// (Vencidas / A vencer) — mesmo padrão do modal do KPI "Orçamento" do Fluxo
+// de Caixa (ver app/components/CashFlow.tsx, "Detalhamento do Orçamento").
+
+// `label` é o valor gravado em `receivable.category` — casado por string,
+// igual a CATEGORIES em app/[locale]/contasReceber/page.tsx. `key` indexa
+// contasReceber.categories pra exibição traduzida.
+const RECEIVABLE_CATEGORIES: { label: string; key: string }[] = [
+  { label: "Clientes", key: "clientes" },
+  { label: "Serviços", key: "servicos" },
+  { label: "Produtos", key: "produtos" },
+  { label: "Devoluções", key: "devolucoes" },
+  { label: "Empréstimos", key: "emprestimos" },
+  { label: "Outros", key: "outros" },
+];
+const receivableCatKey = (label: string) =>
+  RECEIVABLE_CATEGORIES.find(c => c.label === label)?.key ?? "outros";
+
+interface DefaultLine {
+  key: string;
+  label: string;
+  sub: string;
+  amount: number;
+  overdue: boolean;
+  href: string;
+  category: string;
+  categoryLabel: string;
+}
+interface DefaultCatGroup {
+  category: string;
+  categoryLabel: string;
+  total: number;
+  items: DefaultLine[];
+}
+
+function groupDefaultLines(rows: DefaultLine[]): DefaultCatGroup[] {
+  const m = new Map<string, DefaultLine[]>();
+  for (const r of rows) {
+    const arr = m.get(r.category) ?? [];
+    arr.push(r);
+    m.set(r.category, arr);
+  }
+  return [...m.entries()]
+    .map(([category, items]) => ({
+      category,
+      categoryLabel: items[0]?.categoryLabel ?? category,
+      items: items.sort((a, b) => a.sub.localeCompare(b.sub)),
+      total: items.reduce((s, i) => s + i.amount, 0),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+function DefaultStatusBadge({ overdue }: { overdue: boolean }) {
+  const t = useTranslations("dashboard.defaultModal");
+  return (
+    <span
+      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+      style={overdue ? { background: "var(--neg-weak)", color: "var(--neg)" } : { background: "var(--warn-weak)", color: "var(--warn)" }}
+    >
+      {overdue ? t("statusOverdue") : t("statusOpen")}
+    </span>
+  );
+}
+
+function DefaultLineRow({ line, hideValues }: { line: DefaultLine; hideValues: boolean }) {
+  const locale = useLocale();
+  return (
+    <a
+      href={line.href}
+      className="flex items-center gap-2.5 px-4 py-2.5 border-b last:border-b-0 transition-colors hover:bg-[var(--sunken)]"
+      style={{ borderColor: "var(--db-border)" }}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium truncate" style={{ color: "var(--db-text)" }}>{line.label}</p>
+          <DefaultStatusBadge overdue={line.overdue} />
+        </div>
+        <p className="text-[11px] mt-0.5" style={{ color: "var(--db-text-3)" }}>{line.sub}</p>
+      </div>
+      <span className="text-sm font-semibold mono shrink-0" style={{ color: line.overdue ? "var(--neg)" : "var(--db-text)" }}>
+        <Sensitive hidden={hideValues}>{formatMoney(line.amount, locale)}</Sensitive>
+      </span>
+      <ExternalLink size={12} className="shrink-0" style={{ color: "var(--db-text-3)" }} />
+    </a>
+  );
+}
+
+function DefaultCategoryBlock({ group, hideValues }: { group: DefaultCatGroup; hideValues: boolean }) {
+  const locale = useLocale();
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--db-border)" }}>
+      <div className="flex items-center justify-between px-4 py-2" style={{ background: "var(--db-bg-alt)", borderBottom: "1px solid var(--db-border)" }}>
+        <span className="text-xs font-bold" style={{ color: "var(--db-text-2)" }}>{group.categoryLabel} · {group.items.length}</span>
+        <span className="text-xs font-bold mono" style={{ color: "var(--db-text-2)" }}>
+          <Sensitive hidden={hideValues}>{formatMoney(group.total, locale)}</Sensitive>
+        </span>
+      </div>
+      {group.items.map(it => <DefaultLineRow key={it.key} line={it} hideValues={hideValues} />)}
+    </div>
+  );
+}
+
+function DefaultSection({ title, hint, total, color, hideValues, children }: {
+  title: string; hint: string; total: number; color: string; hideValues: boolean; children: React.ReactNode;
+}) {
+  const locale = useLocale();
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{title}</span>
+        <span className="text-sm font-bold mono" style={{ color }}>
+          <Sensitive hidden={hideValues}>{formatMoney(total, locale)}</Sensitive>
+        </span>
+      </div>
+      <p className="text-[11px] -mt-1.5" style={{ color: "var(--db-text-3)" }}>{hint}</p>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const locale = useLocale();
   const t = useTranslations("dashboard");
   const tNav = useTranslations("nav");
   const tCat = useTranslations("categories");
+  const tRecCat = useTranslations("contasReceber.categories");
   const toBRL = useCallback((n: number) => formatMoney(n, locale), [locale]);
   const months = useMemo(() => {
     const f = new Intl.DateTimeFormat(locale, { month: "short" });
@@ -82,8 +209,14 @@ export default function Dashboard() {
   const [hideValues, setHideValues] = useState(false);
   // Estilo do gráfico "Receita vs. Despesas" escolhido pelo usuário — persistido no localStorage.
   const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+  // Recorte Mensal/Anual dos KPIs, transações e centro de custos — mesmo
+  // padrão do toggle da tela de Relatórios (mês ou ano do refDate global).
+  const [filterPeriod, setFilterPeriod] = useState<"mes" | "ano">("mes");
   // Mês sob o cursor no gráfico Receita vs. Despesas (índice 0-11) — controla o tooltip.
   const [hoverMonth, setHoverMonth] = useState<number | null>(null);
+  // Modal de detalhamento do KPI "Inadimplência" — mesmo padrão do modal do
+  // KPI "Orçamento" no Fluxo de Caixa.
+  const [defaultModalOpen, setDefaultModalOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -115,7 +248,11 @@ export default function Dashboard() {
 
   // Mês de referência — agora é o mês global compartilhado (usePeriod), o
   // mesmo que a Navbar e as demais telas usam. Ver app/hooks/usePeriod.tsx.
-  const { refDate, label: periodLabel, isCurrentMonth, goPrevMonth, goNextMonth } = usePeriod();
+  const { refDate, label: monthLabel, isCurrentMonth, goPrevMonth, goNextMonth } = usePeriod();
+  const isAnnual = filterPeriod === "ano";
+  // Rótulo do período mostrado nos títulos: mês formatado (usePeriod) ou
+  // "Ano de {year}" quando o toggle está em Anual.
+  const periodLabel = isAnnual ? t("periodLabel.year", { year: refDate.getFullYear() }) : monthLabel;
 
   // ── Impressão do relatório do mês ──
   const [printedAt, setPrintedAt] = useState("");
@@ -210,31 +347,36 @@ export default function Dashboard() {
     };
   }, []);
 
-  // 1. Cálculos de KPI com base nos dados reais do mês atual
+  // 1. Cálculos de KPI com base nos dados reais do período selecionado
+  // (mês do refDate, ou o ano inteiro quando o toggle está em "Anual").
   const kpiData = useMemo(() => {
     const currentYear = refDate.getFullYear();
     const currentMonth = refDate.getMonth(); // 0 a 11
 
-    // Transações do mês atual
-    const currentMonthTxs = txs.filter(tx => {
-      const txDate = new Date(tx.date + "T12:00:00");
-      return txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth;
-    });
+    const isInPeriod = (txDate: Date) =>
+      isAnnual
+        ? txDate.getFullYear() === currentYear
+        : txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth;
+
+    // Transações do período atual
+    const currentPeriodTxs = txs.filter(tx => isInPeriod(new Date(tx.date + "T12:00:00")));
 
     let receitaMes = 0;
     let despesaMes = 0;
 
-    currentMonthTxs.forEach(tx => {
+    currentPeriodTxs.forEach(tx => {
       if (tx.type === "entrada") receitaMes += tx.amount;
       else despesaMes += tx.amount;
     });
 
-    // Transações do mês anterior (para comparar variação)
-    const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
-    const prevMonthTxs = txs.filter(tx => {
-      const txDate = new Date(tx.date + "T12:00:00");
-      return txDate.getFullYear() === prevMonthDate.getFullYear() && txDate.getMonth() === prevMonthDate.getMonth();
-    });
+    // Transações do período anterior (mês ou ano anterior, pra comparar variação)
+    const prevYear = isAnnual ? currentYear - 1 : new Date(currentYear, currentMonth - 1, 1).getFullYear();
+    const prevMonth = new Date(currentYear, currentMonth - 1, 1).getMonth();
+    const isInPrevPeriod = (txDate: Date) =>
+      isAnnual
+        ? txDate.getFullYear() === prevYear
+        : txDate.getFullYear() === prevYear && txDate.getMonth() === prevMonth;
+    const prevMonthTxs = txs.filter(tx => isInPrevPeriod(new Date(tx.date + "T12:00:00")));
 
     let receitaPrev = 0;
     let despesaPrev = 0;
@@ -257,6 +399,8 @@ export default function Dashboard() {
     const lucroPrev = receitaPrev - despesaPrev;
     const varLucro = calcVar(lucroMes, lucroPrev);
 
+    const vsLabel = isAnnual ? t("kpi.vsPrevYear") : t("kpi.vsPrevMonth");
+
     // Inadimplência: Contas a receber vencidas vs total de contas a receber pendentes
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -272,12 +416,12 @@ export default function Dashboard() {
     const taxaInadimplencia = totalPendingVal > 0 ? (overdueVal / totalPendingVal) * 100 : 0;
 
     return [
-      { label: t("kpi.grossRevenue"), value: <Sensitive hidden={hideValues}>{toBRL(receitaMes)}</Sensitive>, change: varReceita, up: parseFloat(varReceita) >= 0, sub: t("kpi.vsPrevMonth"), icon: TrendingUp,  color: "blue"    },
-      { label: t("kpi.totalExpenses"), value: <Sensitive hidden={hideValues}>{toBRL(despesaMes)}</Sensitive>, change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: t("kpi.vsPrevMonth"), icon: CreditCard,  color: "rose"    },
-      { label: t("kpi.netProfit"),   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: t("kpi.vsPrevMonth"), icon: Wallet,      color: "emerald" },
-      { label: t("kpi.defaultRate"),   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? t("kpi.overdue") : t("kpi.onTime"),  up: taxaInadimplencia === 0,  sub: t("kpi.pending", { value: toBRL(overdueVal) }), icon: AlertCircle, color: "amber"   },
+      { id: "revenue",  label: t("kpi.grossRevenue"), value: <Sensitive hidden={hideValues}>{toBRL(receitaMes)}</Sensitive>, change: varReceita, up: parseFloat(varReceita) >= 0, sub: vsLabel, icon: TrendingUp,  color: "blue"    },
+      { id: "expenses", label: t("kpi.totalExpenses"), value: <Sensitive hidden={hideValues}>{toBRL(despesaMes)}</Sensitive>, change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: vsLabel, icon: CreditCard,  color: "rose"    },
+      { id: "profit",   label: t("kpi.netProfit"),   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: vsLabel, icon: Wallet,      color: "emerald" },
+      { id: "default",  label: t("kpi.defaultRate"),   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? t("kpi.overdue") : t("kpi.onTime"),  up: taxaInadimplencia === 0,  sub: t("kpi.pending", { value: toBRL(overdueVal) }), icon: AlertCircle, color: "amber"   },
     ];
-  }, [txs, receivables, hideValues, refDate, t, toBRL]);
+  }, [txs, receivables, hideValues, refDate, isAnnual, t, toBRL]);
 
   // 2. Gráfico Receita vs. Despesas agrupado por mês do ano selecionado
   const chartData = useMemo(() => {
@@ -324,19 +468,19 @@ export default function Dashboard() {
       .slice(0, 4);
   }, [bills, locale]);
 
-  // 4. Últimas transações do mês selecionado (máximo 6 reais)
+  // 4. Últimas transações do período selecionado (máximo 6 reais)
   const recentTransactions = useMemo(() => {
     const y = refDate.getFullYear();
     const m = refDate.getMonth();
     return txs
       .filter((tx) => {
         const d = new Date(tx.date + "T12:00:00");
-        return d.getFullYear() === y && d.getMonth() === m;
+        return isAnnual ? d.getFullYear() === y : (d.getFullYear() === y && d.getMonth() === m);
       })
       .slice(0, 6);
-  }, [txs, refDate]);
+  }, [txs, refDate, isAnnual]);
 
-  // 5. Centro de Custos do mês selecionado (Despesas por categoria — Donut)
+  // 5. Centro de Custos do período selecionado (Despesas por categoria — Donut)
   const costCenterData = useMemo(() => {
     const categoryTotals: Record<string, number> = {};
     let totalExpenses = 0;
@@ -345,7 +489,8 @@ export default function Dashboard() {
 
     txs.forEach(tx => {
       const d = new Date(tx.date + "T12:00:00");
-      if (tx.type === "saida" && d.getFullYear() === y && d.getMonth() === m) {
+      const inPeriod = isAnnual ? d.getFullYear() === y : (d.getFullYear() === y && d.getMonth() === m);
+      if (tx.type === "saida" && inPeriod) {
         categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
         totalExpenses += tx.amount;
       }
@@ -374,7 +519,52 @@ export default function Dashboard() {
       centers: sortedCenters.slice(0, 5),
       totalExpenses
     };
-  }, [txs, refDate]);
+  }, [txs, refDate, isAnnual]);
+
+  // 5b. Detalhamento da Inadimplência — alimenta o modal que abre ao clicar
+  // no KPI "Inadimplência": cobranças pendentes (status !== recebido),
+  // separadas em Vencidas / A vencer e agrupadas por categoria dentro de
+  // cada seção. Não é recortado pelo mês/ano selecionado — mesma base do
+  // KPI (`pendingReceivables`/`overdueVal` acima, sempre "hoje").
+  const defaultDetalhe = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const pending = receivables.filter(r => r.status !== "recebido");
+
+    const lines: DefaultLine[] = pending.map(r => {
+      const due = new Date(r.dueDate + "T00:00:00");
+      due.setHours(0, 0, 0, 0);
+      const overdue = due < today;
+      const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+      const cat = r.category || "Outros";
+      return {
+        key: r.id,
+        label: r.title || r.clientName || r.description || t("defaultModal.fallbackLabel"),
+        sub: overdue
+          ? t("defaultModal.overdueBy", { days: Math.abs(diffDays) })
+          : t("defaultModal.dueIn", { date: due.toLocaleDateString(locale, { day: "2-digit", month: "short" }).replace(/\./g, "") }),
+        amount: r.amount,
+        overdue,
+        href: "/contasReceber",
+        category: cat,
+        categoryLabel: tRecCat(receivableCatKey(cat)),
+      };
+    });
+
+    const vencidas = lines.filter(l => l.overdue);
+    const aVencer = lines.filter(l => !l.overdue);
+    const vencidasTotal = vencidas.reduce((s, l) => s + l.amount, 0);
+    const aVencerTotal = aVencer.reduce((s, l) => s + l.amount, 0);
+
+    return {
+      vencidasGroups: groupDefaultLines(vencidas),
+      aVencerGroups: groupDefaultLines(aVencer),
+      vencidasTotal,
+      aVencerTotal,
+      total: vencidasTotal + aVencerTotal,
+    };
+  }, [receivables, locale, t, tRecCat]);
 
   // 6. Projeção de fluxo de caixa a 30 dias (Saldo em conta + Recebíveis 30d - Contas a Pagar 30d)
   const projection = useMemo(() => {
@@ -462,6 +652,71 @@ export default function Dashboard() {
         onLogout={handleLogout}
       />
 
+      {/* Detalhamento da Inadimplência — mesmo padrão do modal do KPI
+          "Orçamento" no Fluxo de Caixa (CashFlow.tsx). */}
+      <Modal open={defaultModalOpen} onClose={() => setDefaultModalOpen(false)} size="md" mobileSheet>
+        <div style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+          <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--db-border)" }}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--warn-weak)" }}>
+                <AlertCircle size={16} style={{ color: "var(--warn)" }} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-heading text-base font-bold truncate" style={{ color: "var(--db-text)" }}>{t("defaultModal.title")}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("defaultModal.subtitle")}</p>
+              </div>
+            </div>
+            <button onClick={() => setDefaultModalOpen(false)} className="p-1.5 rounded-lg cursor-pointer shrink-0"
+              style={{ background: "var(--db-bg-alt)", color: "var(--db-text-2)" }}>
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+            {defaultDetalhe.total === 0 ? (
+              <p className="text-sm text-center py-10" style={{ color: "var(--db-text-2)" }}>
+                {t("defaultModal.empty")}
+              </p>
+            ) : (
+              <>
+                {defaultDetalhe.vencidasGroups.length > 0 && (
+                  <DefaultSection
+                    title={t("defaultModal.overdueSection")}
+                    hint={t("defaultModal.overdueHint")}
+                    total={defaultDetalhe.vencidasTotal}
+                    color="var(--neg)"
+                    hideValues={hideValues}
+                  >
+                    {defaultDetalhe.vencidasGroups.map(g => <DefaultCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
+                  </DefaultSection>
+                )}
+
+                {defaultDetalhe.aVencerGroups.length > 0 && (
+                  <DefaultSection
+                    title={t("defaultModal.openSection")}
+                    hint={t("defaultModal.openHint")}
+                    total={defaultDetalhe.aVencerTotal}
+                    color="var(--warn)"
+                    hideValues={hideValues}
+                  >
+                    {defaultDetalhe.aVencerGroups.map(g => <DefaultCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
+                  </DefaultSection>
+                )}
+
+                <a href="/contasReceber" className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: "var(--brand)" }}>
+                  {t("defaultModal.openReceivables")} <ExternalLink size={11} />
+                </a>
+              </>
+            )}
+          </div>
+          <div className="px-5 py-4 shrink-0 flex items-center justify-between" style={{ borderTop: "1px solid var(--db-border)" }}>
+            <span className="text-sm font-semibold" style={{ color: "var(--db-text-2)" }}>{t("defaultModal.total")}</span>
+            <span className="font-heading text-lg font-bold mono" style={{ color: "var(--warn)" }}>
+              <Sensitive hidden={hideValues}>{toBRL(defaultDetalhe.total)}</Sensitive>
+            </span>
+          </div>
+        </div>
+      </Modal>
+
       <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-auto pb-20 lg:pb-8">
 
         {/* ── Cabeçalho que só aparece na impressão / PDF ── */}
@@ -486,6 +741,20 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 no-print">
+            <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
+              {([{ id: "mes" as const, label: t("period.monthly") }, { id: "ano" as const, label: t("period.annual") }]).map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setFilterPeriod(p.id)}
+                  className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer"
+                  style={filterPeriod === p.id
+                    ? { background: "var(--db-card)", color: "var(--primary)", boxShadow: "var(--db-shadow-sm)" }
+                    : { background: "transparent", color: "var(--db-text-2)" }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
             <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
               <button
                 onClick={goPrevMonth}
@@ -522,8 +791,17 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
           {kpiData.map((kpi, i) => {
             const c = colorMap[kpi.color];
+            const clickable = kpi.id === "default";
             return (
-              <div key={kpi.label} className="kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3 md:gap-4" style={{ animationDelay: `${i * 80}ms` }}>
+              <div
+                key={kpi.label}
+                className={`kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3 md:gap-4 ${clickable ? "clickable" : ""}`}
+                style={{ animationDelay: `${i * 80}ms` }}
+                onClick={clickable ? () => setDefaultModalOpen(true) : undefined}
+                role={clickable ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDefaultModalOpen(true); } } : undefined}
+              >
                 <div className="flex items-start justify-between">
                   <p className="text-xs font-medium" style={{ color: "var(--db-text-2)" }}>{kpi.label}</p>
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
@@ -537,7 +815,9 @@ export default function Dashboard() {
                       {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
                       {kpi.change}
                     </span>
-                    <span className="text-xs" style={{ color: "var(--db-text-2)" }}>{kpi.sub}</span>
+                    <span className="text-xs" style={{ color: clickable ? "var(--brand)" : "var(--db-text-2)" }}>
+                      {clickable ? t("kpi.seeBreakdown") : kpi.sub}
+                    </span>
                   </div>
                 </div>
               </div>

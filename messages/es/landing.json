@@ -35,9 +35,9 @@
         "answer": "NexusFi organiza el control de impuestos junto con el resto de tus finanzas, para que sigas los vencimientos y valores sin depender de una hoja de cálculo aparte."
       },
       {
-        "label": "Inventario + Mercado Livre y Shopee",
-        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender la integración de inventario con Mercado Livre y Shopee.",
-        "answer": "El módulo de inventario sigue las entradas y salidas de productos y se integra con marketplaces — las ventas de allí entran automáticamente en tu caja y en el panel de ventas."
+        "label": "Inventario + Mercado Livre",
+        "message": "¡Hola! Vine desde el sitio de NexusFi y quiero entender la integración de inventario con Mercado Livre.",
+        "answer": "El módulo de inventario sigue las entradas y salidas de productos y se integra con Mercado Livre — las ventas de allí entran automáticamente en tu caja y en el panel de ventas."
       },
       {
         "label": "Panel de ventas y precios",
@@ -162,8 +162,8 @@
         "desc": "Control de acceso por perfil: administrador, finanzas, gerente. Cada colaborador ve solo lo que necesita."
       },
       {
-        "title": "Integración con marketplaces",
-        "desc": "Conecta Mercado Libre y Shopee: cada venta entra automáticamente en el flujo de caja, con tarifas y liquidaciones ya registradas."
+        "title": "Integración con Mercado Libre",
+        "desc": "Conecta Mercado Libre: cada venta entra automáticamente en el flujo de caja, con tarifas y liquidaciones ya registradas."
       }
     ]
   },
@@ -213,6 +213,45 @@
         "name": "Bruno Castilho",
         "role": "Socio — Castilho Advogados",
         "text": "Perfecto para despachos. Envío informes a los socios en minutos, con datos confiables y visualmente claros."
+      }
+    ]
+  },
+  "faq": {
+    "eyebrow": "Preguntas frecuentes",
+    "title": "Preguntas frecuentes",
+    "subtitle": "¿Todavía tienes dudas? Habla con nosotros por WhatsApp o revisa las respuestas más comunes abajo.",
+    "items": [
+      {
+        "question": "¿Necesito tarjeta de crédito para probar?",
+        "answer": "No. Tienes 7 días gratis en cualquier plan, sin necesidad de registrar una tarjeta de crédito."
+      },
+      {
+        "question": "¿Cómo funciona la integración con Mercado Libre?",
+        "answer": "Conectas tu cuenta de Mercado Libre una vez y cada venta entra automáticamente en tu flujo de caja, con tarifas y liquidaciones ya registradas."
+      },
+      {
+        "question": "¿Puedo controlar cuentas por pagar y por cobrar?",
+        "answer": "Sí. Registras vencimiento, categoría y estado de cada cuenta, recibes alertas de plazo y, al marcarla como pagada o cobrada, el valor actualiza el caja al instante."
+      },
+      {
+        "question": "¿La plataforma ayuda con impuestos como el DAS?",
+        "answer": "Sí, el control de impuestos (Simples, DAS y similares) queda organizado junto con el resto del financiero, sin depender de una planilla aparte."
+      },
+      {
+        "question": "¿Puedo invitar a mi equipo a usar la plataforma?",
+        "answer": "Sí. Puedes invitar miembros del equipo con permisos específicos por área, y las acciones sensibles piden un PIN de seguridad, con registro de quién hizo qué y cuándo."
+      },
+      {
+        "question": "¿Puedo cambiar de plan después de suscribirme?",
+        "answer": "Sí, puedes cambiar de plan o de período de facturación (mensual o anual) en cualquier momento, directamente desde la plataforma."
+      },
+      {
+        "question": "¿Mis datos financieros están seguros?",
+        "answer": "Sí. El acceso está protegido por inicio de sesión individual, permisos por perfil y PIN para acciones sensibles, con todo auditado."
+      },
+      {
+        "question": "¿Cómo contacto al soporte si tengo un problema?",
+        "answer": "Puedes abrir un ticket directamente desde la plataforma, en Configuración, o hablar con nuestro equipo por WhatsApp en cualquier momento."
       }
     ]
   },

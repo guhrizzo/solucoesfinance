@@ -2,20 +2,45 @@
   "printReportTitle": "Financial report — {period}",
   "generatedAt": "Generated on {datetime}",
   "resultOf": "{period} results",
-  "resultSubtitle": "KPIs, transactions and cost centers for the selected month",
+  "resultSubtitle": "KPIs, transactions and cost centers for the selected period",
   "prevMonth": "Previous month",
   "nextMonth": "Next month",
   "printReport": "Print report",
   "printReportTooltip": "Print / save this month's report as PDF",
+  "period": {
+    "monthly": "Monthly",
+    "annual": "Annual"
+  },
+  "periodLabel": {
+    "year": "Year {year}"
+  },
   "kpi": {
     "grossRevenue": "Gross revenue",
     "totalExpenses": "Total expenses",
     "netProfit": "Net profit",
     "defaultRate": "Default rate",
     "vsPrevMonth": "vs. previous month",
+    "vsPrevYear": "vs. previous year",
     "overdue": "Overdue",
     "onTime": "On time",
-    "pending": "{value} pending"
+    "pending": "{value} pending",
+    "seeBreakdown": "See breakdown"
+  },
+  "defaultModal": {
+    "title": "Default rate",
+    "subtitle": "Pending receivables that make up the default rate",
+    "empty": "No pending receivables — all clear!",
+    "fallbackLabel": "Receivable",
+    "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
+    "dueIn": "due {date}",
+    "overdueSection": "Overdue",
+    "overdueHint": "Already past due",
+    "openSection": "Upcoming",
+    "openHint": "Still within the deadline",
+    "openReceivables": "Open receivables",
+    "total": "Total pending",
+    "statusOverdue": "Overdue",
+    "statusOpen": "Pending"
   },
   "chart": {
     "title": "Revenue vs. Expenses",
