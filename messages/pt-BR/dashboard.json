@@ -2,20 +2,45 @@
   "printReportTitle": "Relatório financeiro — {period}",
   "generatedAt": "Gerado em {datetime}",
   "resultOf": "Resultado de {period}",
-  "resultSubtitle": "KPIs, transações e centro de custos do mês selecionado",
+  "resultSubtitle": "KPIs, transações e centro de custos do período selecionado",
   "prevMonth": "Mês anterior",
   "nextMonth": "Próximo mês",
   "printReport": "Imprimir relatório",
   "printReportTooltip": "Imprimir / salvar em PDF o relatório deste mês",
+  "period": {
+    "monthly": "Mensal",
+    "annual": "Anual"
+  },
+  "periodLabel": {
+    "year": "Ano de {year}"
+  },
   "kpi": {
     "grossRevenue": "Receita bruta",
     "totalExpenses": "Despesas totais",
     "netProfit": "Lucro líquido",
     "defaultRate": "Inadimplência",
     "vsPrevMonth": "vs. mês anterior",
+    "vsPrevYear": "vs. ano anterior",
     "overdue": "Atrasadas",
     "onTime": "Em dia",
-    "pending": "{value} pendente"
+    "pending": "{value} pendente",
+    "seeBreakdown": "Ver detalhamento"
+  },
+  "defaultModal": {
+    "title": "Inadimplência",
+    "subtitle": "Cobranças pendentes que compõem a taxa de inadimplência",
+    "empty": "Nenhuma cobrança pendente — tudo em dia!",
+    "fallbackLabel": "Cobrança",
+    "overdueBy": "{days, plural, one {atrasada há # dia} other {atrasada há # dias}}",
+    "dueIn": "vence {date}",
+    "overdueSection": "Vencidas",
+    "overdueHint": "Já passaram do vencimento",
+    "openSection": "A vencer",
+    "openHint": "Ainda dentro do prazo",
+    "openReceivables": "Abrir contas a receber",
+    "total": "Total pendente",
+    "statusOverdue": "Atrasado",
+    "statusOpen": "Pendente"
   },
   "chart": {
     "title": "Receita vs. Despesas",

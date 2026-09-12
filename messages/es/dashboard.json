@@ -2,20 +2,45 @@
   "printReportTitle": "Informe financiero — {period}",
   "generatedAt": "Generado el {datetime}",
   "resultOf": "Resultado de {period}",
-  "resultSubtitle": "KPIs, transacciones y centros de costo del mes seleccionado",
+  "resultSubtitle": "KPIs, transacciones y centros de costo del período seleccionado",
   "prevMonth": "Mes anterior",
   "nextMonth": "Mes siguiente",
   "printReport": "Imprimir informe",
   "printReportTooltip": "Imprimir / guardar en PDF el informe de este mes",
+  "period": {
+    "monthly": "Mensual",
+    "annual": "Anual"
+  },
+  "periodLabel": {
+    "year": "Año {year}"
+  },
   "kpi": {
     "grossRevenue": "Ingreso bruto",
     "totalExpenses": "Gastos totales",
     "netProfit": "Utilidad neta",
     "defaultRate": "Morosidad",
     "vsPrevMonth": "vs. mes anterior",
+    "vsPrevYear": "vs. año anterior",
     "overdue": "Vencidas",
     "onTime": "Al día",
-    "pending": "{value} pendiente"
+    "pending": "{value} pendiente",
+    "seeBreakdown": "Ver detalle"
+  },
+  "defaultModal": {
+    "title": "Morosidad",
+    "subtitle": "Cobros pendientes que componen la tasa de morosidad",
+    "empty": "¡No hay cobros pendientes — todo al día!",
+    "fallbackLabel": "Cobro",
+    "overdueBy": "{days, plural, one {vencido hace # día} other {vencido hace # días}}",
+    "dueIn": "vence {date}",
+    "overdueSection": "Vencidas",
+    "overdueHint": "Ya pasaron del vencimiento",
+    "openSection": "Por vencer",
+    "openHint": "Aún dentro del plazo",
+    "openReceivables": "Abrir cuentas por cobrar",
+    "total": "Total pendiente",
+    "statusOverdue": "Vencido",
+    "statusOpen": "Pendiente"
   },
   "chart": {
     "title": "Ingresos vs. Gastos",
