@@ -13,10 +13,11 @@ import PinModal from "@/app/components/PinModal";
 import { loadPinHash, verifyPin, getPinLockStatus } from "@/app/hooks/usePin";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
+import { budgetForCenterMonth } from "@/lib/costCenterSync";
 import {
   ShoppingCart, DollarSign, Receipt, Package, TrendingUp,
   ArrowRight, AlertTriangle, Boxes, Layers,
-  LayoutGrid, Calculator, Plus, X, Check,
+  LayoutGrid, Calculator, Plus, X, Check, Target,
 } from "lucide-react";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -75,6 +76,21 @@ interface Integracao {
   id: string;
   platform: Canal;
   accountName?: string;
+}
+
+// Fonte do orçamento do mês (mesmo cálculo do KPI "Orçamento" do Fluxo de
+// Caixa — ver app/components/CashFlow.tsx e lib/costCenterSync.ts): orçamento
+// dos centros de custo no mês + contas a pagar que vencem no mês + impostos
+// que vencem no mês. Aqui só precisamos do suficiente pra somar o total.
+interface CostCenterBudget {
+  id: string;
+  budget?: number;
+  budgetsByMonth?: Record<string, number>;
+}
+interface ForecastAmount {
+  id: string;
+  amount: number;
+  dueDate: string;
 }
 
 type Periodo = "mes" | "30d" | "tudo";
@@ -144,6 +160,10 @@ export default function VendasPage() {
   const [txs, setTxs] = useState<CashflowTx[]>([]);
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
+  // Orçamento do mês (ponto de equilíbrio) — mesma fonte do Fluxo de Caixa.
+  const [costCenters, setCostCenters] = useState<CostCenterBudget[]>([]);
+  const [bills, setBills] = useState<ForecastAmount[]>([]);
+  const [taxes, setTaxes] = useState<ForecastAmount[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [aba, setAba] = useState<Aba>("geral");
@@ -166,6 +186,9 @@ export default function VendasPage() {
     let unsubTx: () => void;
     let unsubEstoque: () => void;
     let unsubInteg: () => void;
+    let unsubCenters: () => void;
+    let unsubBills: () => void;
+    let unsubTaxes: () => void;
 
     (async () => {
       try {
@@ -188,13 +211,35 @@ export default function VendasPage() {
         unsubInteg = onSnapshot(qInteg, (snap) => {
           setIntegracoes(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Integracao)));
         });
+
+        // Orçamento do mês (ponto de equilíbrio) — mesmas coleções do KPI
+        // "Orçamento" do Fluxo de Caixa: centros de custo, contas a pagar e
+        // impostos. Erro aqui não trava a página (aviso silencioso).
+        const qCenters = query(collection(db, "costCenters"), where("userId", "==", ownerUid));
+        unsubCenters = onSnapshot(qCenters, (snap) => {
+          setCostCenters(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CostCenterBudget)));
+        }, (err) => console.debug("Aviso ao sincronizar orçamento (centros):", err.code));
+
+        unsubBills = onSnapshot(collection(db, "users", ownerUid, "bills"), (snap) => {
+          setBills(snap.docs.map((d) => {
+            const x = d.data();
+            return { id: d.id, amount: Number(x.amount) || 0, dueDate: (x.dueDate as string) || "" };
+          }));
+        }, (err) => console.debug("Aviso ao sincronizar orçamento (contas a pagar):", err.code));
+
+        unsubTaxes = onSnapshot(collection(db, "users", ownerUid, "taxes"), (snap) => {
+          setTaxes(snap.docs.map((d) => {
+            const x = d.data();
+            return { id: d.id, amount: Number(x.amount) || 0, dueDate: (x.dueDate as string) || "" };
+          }));
+        }, (err) => console.debug("Aviso ao sincronizar orçamento (impostos):", err.code));
       } catch (err) {
         console.error("Erro ao configurar listeners de vendas:", err);
         setDbLoading(false);
       }
     })();
 
-    return () => { unsubTx?.(); unsubEstoque?.(); unsubInteg?.(); };
+    return () => { unsubTx?.(); unsubEstoque?.(); unsubInteg?.(); unsubCenters?.(); unsubBills?.(); unsubTaxes?.(); };
   }, [user, ownerUid]);
 
   // Valor líquido a receber da Shopee (escrow) — consulta sob demanda.
@@ -271,6 +316,39 @@ export default function VendasPage() {
       manual: porCanal("manual"),
     };
   }, [vendas]);
+
+  // ── Ponto de equilíbrio vinculado ao orçamento do mês ───────────────────────
+  // Ponto de equilíbrio = orçamento do mês atual (mesma soma do KPI
+  // "Orçamento" do Fluxo de Caixa: centros de custo + contas a pagar +
+  // impostos que vencem no mês). É o faturamento mínimo do mês pra cobrir
+  // essas despesas. Sempre olha o mês corrente — independe do filtro de
+  // período da tela (que também pode ser "30 dias" ou "Tudo").
+  const mesAtual = useMemo(() => monthKey(new Date()), []);
+
+  const orcamentoMes = useMemo(() => {
+    const centros = costCenters.reduce((s, c) => s + budgetForCenterMonth(c, mesAtual, mesAtual), 0);
+    const contasM = bills.filter((b) => (b.dueDate || "").slice(0, 7) === mesAtual).reduce((s, b) => s + b.amount, 0);
+    const impostosM = taxes.filter((tx) => (tx.dueDate || "").slice(0, 7) === mesAtual).reduce((s, tx) => s + tx.amount, 0);
+    return centros + contasM + impostosM;
+  }, [costCenters, bills, taxes, mesAtual]);
+
+  const vendidoMesAtual = useMemo(
+    () => todasVendas.filter((v) => (v.date || "").slice(0, 7) === mesAtual).reduce((s, v) => s + (v.amount || 0), 0),
+    [todasVendas, mesAtual]
+  );
+
+  const pontoEquilibrio = useMemo(() => {
+    const pct = orcamentoMes > 0 ? Math.min(100, (vendidoMesAtual / orcamentoMes) * 100) : 0;
+    const atingido = orcamentoMes > 0 && vendidoMesAtual >= orcamentoMes;
+    return {
+      meta: orcamentoMes,
+      vendido: vendidoMesAtual,
+      pct,
+      atingido,
+      falta: Math.max(0, orcamentoMes - vendidoMesAtual),
+      superavit: Math.max(0, vendidoMesAtual - orcamentoMes),
+    };
+  }, [orcamentoMes, vendidoMesAtual]);
 
   // ── Série temporal (gráfico de barras empilhadas por canal) ────────────────
   const serie = useMemo(() => {
@@ -512,6 +590,9 @@ export default function VendasPage() {
             tone="amber"
           />
         </div>
+
+        {/* Ponto de equilíbrio (vinculado ao orçamento do mês) */}
+        <BreakEvenCard pe={pontoEquilibrio} locale={locale} />
 
         {/* Split por canal + gráfico */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -1208,6 +1289,66 @@ function Kpi({ label, value, hint, icon, tone }: {
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: toneMap.bg, color: toneMap.fg }}>
         {icon}
       </div>
+    </div>
+  );
+}
+
+// Ponto de equilíbrio do mês: faturamento necessário pra cobrir o orçamento
+// (centros de custo + contas a pagar + impostos que vencem no mês — mesma
+// conta do KPI "Orçamento" do Fluxo de Caixa). Barra de progresso vendido ×
+// meta, com aviso quando não há orçamento configurado ainda.
+function BreakEvenCard({ pe, locale }: {
+  pe: { meta: number; vendido: number; pct: number; atingido: boolean; falta: number; superavit: number };
+  locale: string;
+}) {
+  const t = useTranslations("vendas.breakEven");
+
+  return (
+    <div className="cf-card p-5 space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "var(--brand-weak)", color: "var(--brand)" }}>
+          <Target size={18} />
+        </div>
+        <div>
+          <h2 className="font-heading font-bold text-sm" style={{ color: "var(--cf-text)" }}>{t("title")}</h2>
+          <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("subtitle")}</p>
+        </div>
+      </div>
+
+      {pe.meta <= 0 ? (
+        <p className="text-xs leading-relaxed rounded-xl px-3 py-2.5" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
+          {t("noBudget")}
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("target")}</p>
+              <p className="font-heading text-2xl font-bold mono mt-0.5" style={{ color: "var(--cf-text)" }}>{toBRL(pe.meta, locale)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("soldThisMonth")}</p>
+              <p className="font-heading text-lg font-bold mono mt-0.5" style={{ color: pe.atingido ? "var(--success)" : "var(--cf-text)" }}>{toBRL(pe.vendido, locale)}</p>
+            </div>
+          </div>
+
+          <div className="cf-progress">
+            <div
+              className="cf-progress-fill"
+              style={{ width: `${pe.pct}%`, background: pe.atingido ? "var(--success)" : "var(--primary)" }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--cf-text-3)" }}>
+            <span>{pe.pct.toFixed(0)}%</span>
+            {pe.atingido ? (
+              <span className="font-bold" style={{ color: "var(--success)" }}>{t("surplus", { value: toBRL(pe.superavit, locale) })}</span>
+            ) : (
+              <span className="font-bold" style={{ color: "var(--cf-text-2)" }}>{t("missing", { value: toBRL(pe.falta, locale) })}</span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

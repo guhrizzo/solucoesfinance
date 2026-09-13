@@ -56,6 +56,15 @@
     "title": "Sales by channel",
     "ordersUnits": "{orders, plural, one {# order} other {# orders}} · {units} units"
   },
+  "breakEven": {
+    "title": "Break-even point",
+    "subtitle": "Revenue needed this month to cover the budget (Cost Center, Bills and Taxes)",
+    "target": "Monthly target",
+    "soldThisMonth": "Sold this month",
+    "missing": "{value} left to reach the break-even point",
+    "surplus": "Break-even point reached · {value} surplus",
+    "noBudget": "No budget set for this month yet. Set a budget in Cost Center, Bills or Taxes to calculate the break-even point."
+  },
   "shopeeNet": {
     "label": "Shopee net receivable",
     "simulated": "SIMULATED",

@@ -56,6 +56,15 @@
     "title": "Ventas por canal",
     "ordersUnits": "{orders, plural, one {# pedido} other {# pedidos}} · {units} un"
   },
+  "breakEven": {
+    "title": "Punto de equilibrio",
+    "subtitle": "Facturación del mes necesaria para cubrir el presupuesto (Centro de Costos, Cuentas por Pagar e Impuestos)",
+    "target": "Meta del mes",
+    "soldThisMonth": "Vendido este mes",
+    "missing": "Faltan {value} para el punto de equilibrio",
+    "surplus": "Punto de equilibrio alcanzado · superávit de {value}",
+    "noBudget": "Aún no hay presupuesto configurado para este mes. Configura un presupuesto en Centro de Costos, Cuentas por Pagar o Impuestos para calcular el punto de equilibrio."
+  },
   "shopeeNet": {
     "label": "Neto a recibir de Shopee",
     "simulated": "SIMULADO",
