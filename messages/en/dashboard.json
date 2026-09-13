@@ -28,19 +28,23 @@
   },
   "defaultModal": {
     "title": "Default rate",
-    "subtitle": "Pending receivables that make up the default rate",
-    "empty": "No pending receivables — all clear!",
-    "fallbackLabel": "Receivable",
+    "subtitle": "Unpaid bills, taxes and cost center expenses",
+    "empty": "No pending items — all clear!",
+    "fallbackLabel": "Pending item",
     "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
     "dueIn": "due {date}",
     "overdueSection": "Overdue",
     "overdueHint": "Already past due",
     "openSection": "Upcoming",
     "openHint": "Still within the deadline",
-    "openReceivables": "Open receivables",
     "total": "Total pending",
     "statusOverdue": "Overdue",
-    "statusOpen": "Pending"
+    "statusOpen": "Pending",
+    "origin": {
+      "bill": "Bills",
+      "tax": "Taxes",
+      "expense": "Cost centers"
+    }
   },
   "chart": {
     "title": "Revenue vs. Expenses",

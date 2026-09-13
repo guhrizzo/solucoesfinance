@@ -28,19 +28,23 @@
   },
   "defaultModal": {
     "title": "Inadimplência",
-    "subtitle": "Cobranças pendentes que compõem a taxa de inadimplência",
-    "empty": "Nenhuma cobrança pendente — tudo em dia!",
-    "fallbackLabel": "Cobrança",
+    "subtitle": "Contas a pagar, impostos e centro de custos ainda não pagos",
+    "empty": "Nenhuma pendência — tudo em dia!",
+    "fallbackLabel": "Pendência",
     "overdueBy": "{days, plural, one {atrasada há # dia} other {atrasada há # dias}}",
     "dueIn": "vence {date}",
     "overdueSection": "Vencidas",
     "overdueHint": "Já passaram do vencimento",
     "openSection": "A vencer",
     "openHint": "Ainda dentro do prazo",
-    "openReceivables": "Abrir contas a receber",
     "total": "Total pendente",
     "statusOverdue": "Atrasado",
-    "statusOpen": "Pendente"
+    "statusOpen": "Pendente",
+    "origin": {
+      "bill": "Contas a Pagar",
+      "tax": "Impostos",
+      "expense": "Centro de Custos"
+    }
   },
   "chart": {
     "title": "Receita vs. Despesas",

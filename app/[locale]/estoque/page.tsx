@@ -740,7 +740,14 @@ export default function EstoquePage() {
           showToast(data.error || t(`toast.${failKey}`), "error");
           return;
         }
-        window.location.href = data.authUrl;
+        // TikTok Shop abre em nova guia (pedido do usuário) — o fluxo de
+        // autorização dele tende a travar/perder a sessão do Nexus quando
+        // navega na mesma guia. ML/Shopee continuam navegando na mesma guia.
+        if (platform === "tiktokshop") {
+          window.open(data.authUrl, "_blank", "noopener,noreferrer");
+        } else {
+          window.location.href = data.authUrl;
+        }
       } catch (err) {
         console.error(err);
         showToast(err instanceof Error ? err.message : t(`toast.${errKey}`), "error");

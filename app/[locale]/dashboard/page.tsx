@@ -37,7 +37,7 @@ interface Tx {
 
 interface Bill {
   id: string;
-  name: string;
+  title: string;
   dueDate: string;
   amount: number;
   status: string;
@@ -49,9 +49,30 @@ interface Receivable {
   description?: string;
   /** Título da cobrança (campo real gravado em contasReceber). */
   title?: string;
-  /** Categoria (valor gravado, ex.: "Clientes") — ver RECEIVABLE_CATEGORIES. */
   category?: string;
   dueDate: string;
+  amount: number;
+  status: string;
+}
+
+// Impostos (app/[locale]/impostos) e despesas de Centro de Custos
+// (app/[locale]/costCenter) entram no mesmo balaio de "pendências" que
+// Contas a Pagar e Contas a Receber — ver defaultDetalhe/kpiData abaixo.
+interface Tax {
+  id: string;
+  name: string;
+  dueDate: string;
+  amount: number;
+  status: string;
+}
+
+interface Expense {
+  id: string;
+  description?: string;
+  category: string;
+  center: string;
+  /** Data do lançamento — equivalente ao dueDate dos outros tipos. */
+  date: string;
   amount: number;
   status: string;
 }
@@ -65,24 +86,24 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
 };
 
 // ─── Detalhamento da Inadimplência ─────────────────────────────────────────────
-// O modal que abre ao clicar no KPI "Inadimplência" abre as cobranças
-// pendentes linha a linha, agrupadas por categoria dentro de duas seções
-// (Vencidas / A vencer) — mesmo padrão do modal do KPI "Orçamento" do Fluxo
-// de Caixa (ver app/components/CashFlow.tsx, "Detalhamento do Orçamento").
+// O modal que abre ao clicar no KPI "Inadimplência" abre as obrigações do
+// negócio ainda não pagas linha a linha — Contas a Pagar, Impostos e
+// despesas de Centro de Custos — agrupadas por origem dentro de duas seções
+// (Vencidas / A vencer). Contas a Receber fica de fora de propósito: é
+// dinheiro que o cliente deve pra você, não uma obrigação vencida do seu
+// negócio (ver "Vencimentos próximos"/projeção pra isso). Mesmo padrão do
+// modal do KPI "Orçamento" do Fluxo de Caixa (ver app/components/CashFlow.tsx,
+// "Detalhamento do Orçamento").
 
-// `label` é o valor gravado em `receivable.category` — casado por string,
-// igual a CATEGORIES em app/[locale]/contasReceber/page.tsx. `key` indexa
-// contasReceber.categories pra exibição traduzida.
-const RECEIVABLE_CATEGORIES: { label: string; key: string }[] = [
-  { label: "Clientes", key: "clientes" },
-  { label: "Serviços", key: "servicos" },
-  { label: "Produtos", key: "produtos" },
-  { label: "Devoluções", key: "devolucoes" },
-  { label: "Empréstimos", key: "emprestimos" },
-  { label: "Outros", key: "outros" },
-];
-const receivableCatKey = (label: string) =>
-  RECEIVABLE_CATEGORIES.find(c => c.label === label)?.key ?? "outros";
+type DefaultOrigin = "bill" | "tax" | "expense";
+const DEFAULT_ORIGIN_HREF: Record<DefaultOrigin, string> = {
+  bill: "/contasPagar",
+  tax: "/impostos",
+  expense: "/costCenter",
+};
+// Ordem fixa de exibição dos grupos no modal — reflete o fluxo Pagar →
+// Impostos → Centro de Custos usado no resto do app.
+const DEFAULT_ORIGIN_ORDER: DefaultOrigin[] = ["bill", "tax", "expense"];
 
 interface DefaultLine {
   key: string;
@@ -91,31 +112,32 @@ interface DefaultLine {
   amount: number;
   overdue: boolean;
   href: string;
-  category: string;
-  categoryLabel: string;
+  origin: DefaultOrigin;
+  originLabel: string;
 }
-interface DefaultCatGroup {
-  category: string;
-  categoryLabel: string;
+interface DefaultOriginGroup {
+  origin: DefaultOrigin;
+  originLabel: string;
   total: number;
   items: DefaultLine[];
 }
 
-function groupDefaultLines(rows: DefaultLine[]): DefaultCatGroup[] {
-  const m = new Map<string, DefaultLine[]>();
+function groupDefaultLines(rows: DefaultLine[]): DefaultOriginGroup[] {
+  const m = new Map<DefaultOrigin, DefaultLine[]>();
   for (const r of rows) {
-    const arr = m.get(r.category) ?? [];
+    const arr = m.get(r.origin) ?? [];
     arr.push(r);
-    m.set(r.category, arr);
+    m.set(r.origin, arr);
   }
-  return [...m.entries()]
-    .map(([category, items]) => ({
-      category,
-      categoryLabel: items[0]?.categoryLabel ?? category,
+  return DEFAULT_ORIGIN_ORDER.filter(o => m.has(o)).map(origin => {
+    const items = m.get(origin)!;
+    return {
+      origin,
+      originLabel: items[0]?.originLabel ?? origin,
       items: items.sort((a, b) => a.sub.localeCompare(b.sub)),
       total: items.reduce((s, i) => s + i.amount, 0),
-    }))
-    .sort((a, b) => b.total - a.total);
+    };
+  });
 }
 
 function DefaultStatusBadge({ overdue }: { overdue: boolean }) {
@@ -153,12 +175,12 @@ function DefaultLineRow({ line, hideValues }: { line: DefaultLine; hideValues: b
   );
 }
 
-function DefaultCategoryBlock({ group, hideValues }: { group: DefaultCatGroup; hideValues: boolean }) {
+function DefaultCategoryBlock({ group, hideValues }: { group: DefaultOriginGroup; hideValues: boolean }) {
   const locale = useLocale();
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--db-border)" }}>
       <div className="flex items-center justify-between px-4 py-2" style={{ background: "var(--db-bg-alt)", borderBottom: "1px solid var(--db-border)" }}>
-        <span className="text-xs font-bold" style={{ color: "var(--db-text-2)" }}>{group.categoryLabel} · {group.items.length}</span>
+        <span className="text-xs font-bold" style={{ color: "var(--db-text-2)" }}>{group.originLabel} · {group.items.length}</span>
         <span className="text-xs font-bold mono" style={{ color: "var(--db-text-2)" }}>
           <Sensitive hidden={hideValues}>{formatMoney(group.total, locale)}</Sensitive>
         </span>
@@ -191,7 +213,6 @@ export default function Dashboard() {
   const t = useTranslations("dashboard");
   const tNav = useTranslations("nav");
   const tCat = useTranslations("categories");
-  const tRecCat = useTranslations("contasReceber.categories");
   const toBRL = useCallback((n: number) => formatMoney(n, locale), [locale]);
   const months = useMemo(() => {
     const f = new Intl.DateTimeFormat(locale, { month: "short" });
@@ -234,6 +255,8 @@ export default function Dashboard() {
   const [txs, setTxs] = useState<Tx[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [receivables, setReceivables] = useState<Receivable[]>([]);
+  const [taxes, setTaxes] = useState<Tax[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   const activePath = "/dashboard";
 
@@ -248,11 +271,26 @@ export default function Dashboard() {
 
   // Mês de referência — agora é o mês global compartilhado (usePeriod), o
   // mesmo que a Navbar e as demais telas usam. Ver app/hooks/usePeriod.tsx.
-  const { refDate, label: monthLabel, isCurrentMonth, goPrevMonth, goNextMonth } = usePeriod();
+  const { refDate, label: monthLabel, isCurrentMonth, goPrevMonth, goNextMonth, setMonth } = usePeriod();
   const isAnnual = filterPeriod === "ano";
   // Rótulo do período mostrado nos títulos: mês formatado (usePeriod) ou
   // "Ano de {year}" quando o toggle está em Anual.
   const periodLabel = isAnnual ? t("periodLabel.year", { year: refDate.getFullYear() }) : monthLabel;
+
+  // No modo Anual o stepper precisa andar ano a ano (não mês a mês) — senão
+  // o rótulo "Ano de {year}" só muda depois de 12 cliques. `setMonth` pula
+  // pro mesmo mês no ano anterior/seguinte, mantendo o refDate global
+  // coerente pro resto do app (Navbar, telas mensais).
+  const isCurrentYear = refDate.getFullYear() === new Date().getFullYear();
+  const isCurrentPeriod = isAnnual ? isCurrentYear : isCurrentMonth;
+  const goPrevPeriod = useCallback(() => {
+    if (isAnnual) setMonth(new Date(refDate.getFullYear() - 1, refDate.getMonth(), 1));
+    else goPrevMonth();
+  }, [isAnnual, refDate, setMonth, goPrevMonth]);
+  const goNextPeriod = useCallback(() => {
+    if (isAnnual) setMonth(new Date(refDate.getFullYear() + 1, refDate.getMonth(), 1));
+    else goNextMonth();
+  }, [isAnnual, refDate, setMonth, goNextMonth]);
 
   // ── Impressão do relatório do mês ──
   const [printedAt, setPrintedAt] = useState("");
@@ -268,10 +306,12 @@ export default function Dashboard() {
     let unsubTxs: (() => void) | undefined;
     let unsubBills: (() => void) | undefined;
     let unsubReceivables: (() => void) | undefined;
+    let unsubTaxes: (() => void) | undefined;
+    let unsubExpenses: (() => void) | undefined;
 
     (async () => {
       try {
-        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, orderBy, onSnapshot, doc, getDoc }] = await Promise.all([
+        const [{ getFirebase }, { onAuthStateChanged }, { collection, query, where, orderBy, onSnapshot, doc, getDoc }] = await Promise.all([
           import("@/lib/firebase"),
           import("firebase/auth"),
           import("firebase/firestore"),
@@ -332,6 +372,20 @@ export default function Dashboard() {
             setReceivables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Receivable)));
           }, (err) => console.error("Erro Receivables:", err));
 
+          // Listener de Impostos — entram no detalhamento de Inadimplência
+          // junto com Contas a Pagar/Receber (ver kpiData/defaultDetalhe).
+          const taxesRef = collection(db, "users", ownerUid, "taxes");
+          unsubTaxes = onSnapshot(taxesRef, (snap) => {
+            setTaxes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tax)));
+          }, (err) => console.error("Erro Taxes:", err));
+
+          // Listener de Despesas de Centro de Custos — coleção raiz
+          // "expenses" filtrada por dono, igual app/[locale]/costCenter.
+          const expensesRef = query(collection(db, "expenses"), where("userId", "==", ownerUid));
+          unsubExpenses = onSnapshot(expensesRef, (snap) => {
+            setExpenses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)));
+          }, (err) => console.error("Erro Expenses:", err));
+
         });
       } catch (err) {
         console.error("Erro ao inicializar listeners:", err);
@@ -344,6 +398,8 @@ export default function Dashboard() {
       unsubTxs?.();
       unsubBills?.();
       unsubReceivables?.();
+      unsubTaxes?.();
+      unsubExpenses?.();
     };
   }, []);
 
@@ -401,17 +457,34 @@ export default function Dashboard() {
 
     const vsLabel = isAnnual ? t("kpi.vsPrevYear") : t("kpi.vsPrevMonth");
 
-    // Inadimplência: Contas a receber vencidas vs total de contas a receber pendentes
+    // Inadimplência: pendências financeiras do negócio com vencimento no
+    // período selecionado (mês ou ano do refDate, igual às demais KPIs
+    // acima) — Contas a Pagar, Impostos e despesas de Centro de Custos ainda
+    // não pagas, vencidas vs total pendente do período. Contas a Receber NÃO
+    // entra aqui: é dinheiro que falta entrar, não uma obrigação vencida do
+    // negócio (fica só no card "Vencimentos próximos"/projeção).
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    const pendingReceivables = receivables.filter(r => r.status !== "recebido");
-    const totalPendingVal = pendingReceivables.reduce((sum, r) => sum + r.amount, 0);
-    const overdueVal = pendingReceivables.filter(r => {
-      const due = new Date(r.dueDate + "T00:00:00");
+    const isOverdue = (dueStr: string) => {
+      const due = new Date(dueStr + "T00:00:00");
       due.setHours(0, 0, 0, 0);
       return due < today;
-    }).reduce((sum, r) => sum + r.amount, 0);
+    };
+    const isDueInPeriod = (dueStr: string) => isInPeriod(new Date(dueStr + "T12:00:00"));
+
+    const pendingBills = bills.filter(b => b.status !== "pago" && isDueInPeriod(b.dueDate));
+    const pendingTaxes = taxes.filter(x => x.status !== "pago" && isDueInPeriod(x.dueDate));
+    const pendingExpenses = expenses.filter(e => e.status !== "pago" && isDueInPeriod(e.date));
+
+    const totalPendingVal =
+      pendingBills.reduce((sum, b) => sum + b.amount, 0) +
+      pendingTaxes.reduce((sum, x) => sum + x.amount, 0) +
+      pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+    const overdueVal =
+      pendingBills.filter(b => isOverdue(b.dueDate)).reduce((sum, b) => sum + b.amount, 0) +
+      pendingTaxes.filter(x => isOverdue(x.dueDate)).reduce((sum, x) => sum + x.amount, 0) +
+      pendingExpenses.filter(e => isOverdue(e.date)).reduce((sum, e) => sum + e.amount, 0);
 
     const taxaInadimplencia = totalPendingVal > 0 ? (overdueVal / totalPendingVal) * 100 : 0;
 
@@ -421,7 +494,7 @@ export default function Dashboard() {
       { id: "profit",   label: t("kpi.netProfit"),   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: vsLabel, icon: Wallet,      color: "emerald" },
       { id: "default",  label: t("kpi.defaultRate"),   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? t("kpi.overdue") : t("kpi.onTime"),  up: taxaInadimplencia === 0,  sub: t("kpi.pending", { value: toBRL(overdueVal) }), icon: AlertCircle, color: "amber"   },
     ];
-  }, [txs, receivables, hideValues, refDate, isAnnual, t, toBRL]);
+  }, [txs, bills, taxes, expenses, hideValues, refDate, isAnnual, t, toBRL]);
 
   // 2. Gráfico Receita vs. Despesas agrupado por mês do ano selecionado
   const chartData = useMemo(() => {
@@ -522,35 +595,72 @@ export default function Dashboard() {
   }, [txs, refDate, isAnnual]);
 
   // 5b. Detalhamento da Inadimplência — alimenta o modal que abre ao clicar
-  // no KPI "Inadimplência": cobranças pendentes (status !== recebido),
-  // separadas em Vencidas / A vencer e agrupadas por categoria dentro de
-  // cada seção. Não é recortado pelo mês/ano selecionado — mesma base do
-  // KPI (`pendingReceivables`/`overdueVal` acima, sempre "hoje").
+  // no KPI "Inadimplência": as obrigações do negócio ainda não pagas com
+  // vencimento no período selecionado (mês ou ano do refDate — mesmo
+  // recorte do KPI acima) — Contas a Pagar, Impostos e despesas de Centro de
+  // Custos —, separadas em Vencidas / A vencer e agrupadas por origem
+  // dentro de cada seção. Contas a Receber fica de fora (ver comentário de
+  // DEFAULT_ORIGIN_HREF acima).
   const defaultDetalhe = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const currentYear = refDate.getFullYear();
+    const currentMonth = refDate.getMonth();
+    const isDueInPeriod = (dueStr: string) => {
+      const d = new Date(dueStr + "T12:00:00");
+      return isAnnual
+        ? d.getFullYear() === currentYear
+        : d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    };
 
-    const pending = receivables.filter(r => r.status !== "recebido");
-
-    const lines: DefaultLine[] = pending.map(r => {
-      const due = new Date(r.dueDate + "T00:00:00");
+    // Monta os campos comuns (sub, overdue) a partir de uma data de
+    // vencimento "YYYY-MM-DD" — igual pras 3 origens.
+    const dueMeta = (dueStr: string) => {
+      const due = new Date(dueStr + "T00:00:00");
       due.setHours(0, 0, 0, 0);
       const overdue = due < today;
       const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
-      const cat = r.category || "Outros";
-      return {
-        key: r.id,
-        label: r.title || r.clientName || r.description || t("defaultModal.fallbackLabel"),
-        sub: overdue
-          ? t("defaultModal.overdueBy", { days: Math.abs(diffDays) })
-          : t("defaultModal.dueIn", { date: due.toLocaleDateString(locale, { day: "2-digit", month: "short" }).replace(/\./g, "") }),
-        amount: r.amount,
-        overdue,
-        href: "/contasReceber",
-        category: cat,
-        categoryLabel: tRecCat(receivableCatKey(cat)),
-      };
-    });
+      const sub = overdue
+        ? t("defaultModal.overdueBy", { days: Math.abs(diffDays) })
+        : t("defaultModal.dueIn", { date: due.toLocaleDateString(locale, { day: "2-digit", month: "short" }).replace(/\./g, "") });
+      return { overdue, sub };
+    };
+
+    const lines: DefaultLine[] = [
+      ...bills.filter(b => b.status !== "pago" && isDueInPeriod(b.dueDate)).map((b): DefaultLine => {
+        const { overdue, sub } = dueMeta(b.dueDate);
+        return {
+          key: `bill-${b.id}`,
+          label: b.title || t("defaultModal.fallbackLabel"),
+          sub, amount: b.amount, overdue,
+          href: DEFAULT_ORIGIN_HREF.bill,
+          origin: "bill",
+          originLabel: t("defaultModal.origin.bill"),
+        };
+      }),
+      ...taxes.filter(x => x.status !== "pago" && isDueInPeriod(x.dueDate)).map((x): DefaultLine => {
+        const { overdue, sub } = dueMeta(x.dueDate);
+        return {
+          key: `tax-${x.id}`,
+          label: x.name || t("defaultModal.fallbackLabel"),
+          sub, amount: x.amount, overdue,
+          href: DEFAULT_ORIGIN_HREF.tax,
+          origin: "tax",
+          originLabel: t("defaultModal.origin.tax"),
+        };
+      }),
+      ...expenses.filter(e => e.status !== "pago" && isDueInPeriod(e.date)).map((e): DefaultLine => {
+        const { overdue, sub } = dueMeta(e.date);
+        return {
+          key: `expense-${e.id}`,
+          label: e.description || categoryLabel(e.category, tCat) || e.center || t("defaultModal.fallbackLabel"),
+          sub, amount: e.amount, overdue,
+          href: DEFAULT_ORIGIN_HREF.expense,
+          origin: "expense",
+          originLabel: t("defaultModal.origin.expense"),
+        };
+      }),
+    ];
 
     const vencidas = lines.filter(l => l.overdue);
     const aVencer = lines.filter(l => !l.overdue);
@@ -564,7 +674,7 @@ export default function Dashboard() {
       aVencerTotal,
       total: vencidasTotal + aVencerTotal,
     };
-  }, [receivables, locale, t, tRecCat]);
+  }, [bills, taxes, expenses, refDate, isAnnual, locale, t, tCat]);
 
   // 6. Projeção de fluxo de caixa a 30 dias (Saldo em conta + Recebíveis 30d - Contas a Pagar 30d)
   const projection = useMemo(() => {
@@ -686,7 +796,7 @@ export default function Dashboard() {
                     color="var(--neg)"
                     hideValues={hideValues}
                   >
-                    {defaultDetalhe.vencidasGroups.map(g => <DefaultCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
+                    {defaultDetalhe.vencidasGroups.map(g => <DefaultCategoryBlock key={g.origin} group={g} hideValues={hideValues} />)}
                   </DefaultSection>
                 )}
 
@@ -698,13 +808,9 @@ export default function Dashboard() {
                     color="var(--warn)"
                     hideValues={hideValues}
                   >
-                    {defaultDetalhe.aVencerGroups.map(g => <DefaultCategoryBlock key={g.category} group={g} hideValues={hideValues} />)}
+                    {defaultDetalhe.aVencerGroups.map(g => <DefaultCategoryBlock key={g.origin} group={g} hideValues={hideValues} />)}
                   </DefaultSection>
                 )}
-
-                <a href="/contasReceber" className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: "var(--brand)" }}>
-                  {t("defaultModal.openReceivables")} <ExternalLink size={11} />
-                </a>
               </>
             )}
           </div>
@@ -757,7 +863,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: "var(--db-border)", background: "var(--db-card)" }}>
               <button
-                onClick={goPrevMonth}
+                onClick={goPrevPeriod}
                 aria-label={t("prevMonth")}
                 className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer"
                 style={{ color: "var(--brand)" }}
@@ -766,8 +872,8 @@ export default function Dashboard() {
               </button>
               <span className="px-3 text-xs font-bold mono select-none" style={{ color: "var(--db-text)" }}>{periodLabel}</span>
               <button
-                onClick={goNextMonth}
-                disabled={isCurrentMonth}
+                onClick={goNextPeriod}
+                disabled={isCurrentPeriod}
                 aria-label={t("nextMonth")}
                 className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                 style={{ color: "var(--brand)" }}
@@ -1071,7 +1177,7 @@ export default function Dashboard() {
                         }
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold leading-tight truncate" style={{ color: "var(--db-text)" }}>{bill.name}</p>
+                        <p className="text-xs font-semibold leading-tight truncate" style={{ color: "var(--db-text)" }}>{bill.title}</p>
                         <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>{t("upcomingBills.dueOn", { date: bill.dueFormatted })}</p>
                       </div>
                     </div>

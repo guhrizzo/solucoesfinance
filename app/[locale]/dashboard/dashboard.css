@@ -134,6 +134,7 @@
   .nxfi-mobile-nav,
   .nxfi-sidebar-overlay,
   .nxfi-sidebar,
+  .skip-link,
   .no-print {
     display: none !important;
   }
