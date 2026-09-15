@@ -7,7 +7,7 @@
 // Modelo pré-pago: não há débito automático. Cada pagamento estende
 // `currentPeriodEnd`. `isActive` = agora < max(trialEndsAt, currentPeriodEnd).
 
-import { TRIAL_DAYS, type PlanId } from "./billingPlans";
+import { TRIAL_DAYS, type PlanId, getPlan } from "./billingPlans";
 import { COMP_ACCESS_UNTIL } from "./compAccounts";
 
 export interface BillingDoc {
@@ -137,4 +137,16 @@ export function resolveSubscriptionState(
     inTrial,
     comped: false,
   };
+}
+
+/**
+ * Recurso exclusivo do plano Pro (ex.: leitor de NF em /impostos). Trial
+ * (`plan === null`) NÃO conta como Pro — decisão de produto: só quem já
+ * pagou o Pro (ou conta cortesia) libera. Usar tanto no cliente
+ * (`useSubscription`) quanto no servidor (lendo `profile/billing` direto).
+ */
+export function isProAccess(state: Pick<SubscriptionState, "plan" | "comped">): boolean {
+  if (state.comped) return true;
+  if (!state.plan) return false;
+  return getPlan(state.plan)?.tier === "pro";
 }

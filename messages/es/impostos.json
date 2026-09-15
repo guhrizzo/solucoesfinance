@@ -2,7 +2,8 @@
   "meta": {
     "title": "Impuestos",
     "newTax": "Nuevo impuesto",
-    "addTax": "Agregar impuesto"
+    "addTax": "Agregar impuesto",
+    "readNf": "Leer factura"
   },
   "header": {
     "allClear": "✓ ¡Todo al día!",
@@ -80,6 +81,7 @@
     "iss": "ISS",
     "iptu": "IPTU",
     "itbi": "ITBI",
+    "irrf": "IRRF",
     "outro": "Otro"
   },
   "taxTypeDesc": {
@@ -100,6 +102,7 @@
     "iss": "Impuesto sobre servicios",
     "iptu": "Impuesto predial y territorial urbano",
     "itbi": "Impuesto sobre transmisión de bienes inmuebles",
+    "irrf": "Impuesto a la renta retenido en la fuente",
     "outro": "Otros impuestos y tasas"
   },
   "card": {
@@ -174,6 +177,45 @@
     "taxUpdated": "¡Impuesto actualizado!",
     "taxCreated": "¡Impuesto creado!",
     "markedPaid": "Impuesto marcado como pagado ✓",
-    "taxRemoved": "Impuesto eliminado."
+    "taxRemoved": "Impuesto eliminado.",
+    "nfLancamentosCreated": "{count, plural, one {¡# registro creado a partir de la factura!} other {¡# registros creados a partir de la factura!}}"
+  },
+  "nfReader": {
+    "title": "Lector de facturas",
+    "subtitle": "Extrae las retenciones de una factura de servicio automáticamente",
+    "stepInput": "Sube el PDF o foto de la factura",
+    "stepLoading": "Analizando la factura…",
+    "stepPreview": "{count, plural, one {# retención encontrada} other {# retenciones encontradas}}",
+    "stepSaving": "Creando registros…",
+    "stepDone": "Registros creados",
+    "upload": "Seleccionar PDF o foto de la factura",
+    "uploadHint": "PDF, JPG o PNG, hasta 3 MB",
+    "fileReady": "Listo para analizar",
+    "analyzingHint": "Leyendo el valor del servicio y los impuestos retenidos",
+    "close": "Cerrar",
+    "errReadFile": "Error al leer el archivo",
+    "errApi": "Error al analizar la factura",
+    "errParse": "No fue posible leer esta factura: {message}",
+    "tooBig": "Archivo demasiado grande. Sube un PDF o imagen de hasta 3 MB.",
+    "noRetentions": "Ninguna retención destacada en esta factura",
+    "noRetentionsHint": "Esta factura no tiene impuestos retenidos por ti (el tomador del servicio) — no hay nada para agregar a Impuestos.",
+    "notaInfo": "Factura {numero} · {prestador}",
+    "grossValue": "Valor bruto del servicio",
+    "netValue": "Valor neto a pagar al proveedor",
+    "dueDateLabel": "Vencimiento",
+    "selectAll": "Seleccionar todas",
+    "createButton": "{count, plural, one {Crear # registro} other {Crear # registros}}",
+    "creating": "Creando…",
+    "doneSummary": "{count, plural, one {# registro creado.} other {# registros creados.}}",
+    "doneNet": "Valor neto a pagar al proveedor: {value}",
+    "pinTitle": "Crear registros de impuestos",
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para confirmar",
+    "sourceNote": "Factura {numero} · {prestador}",
+    "proLock": {
+      "title": "Función del plan Pro",
+      "body": "La lectura de facturas con retención de impuestos es exclusiva del plan Pro.",
+      "cta": "Conocer el Pro",
+      "cancel": "Cerrar"
+    }
   }
 }

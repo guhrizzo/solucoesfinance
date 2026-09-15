@@ -12,6 +12,7 @@ import {
     ChevronLeft, ChevronRight, type LucideIcon,
     AlertCircle, Info, Eye, EyeOff, Zap, Target,
     Home, Car, Shield, Briefcase, Package, HelpCircle, Globe, ShieldCheck,
+    Upload, Sparkles, Lock, ScanLine,
 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
@@ -19,12 +20,16 @@ import { PageLoader } from "@/app/components/ui";
 import PinModal from "@/app/components/PinModal";
 import { loadPinHash, verifyPin, getPinLockStatus } from "@/app/hooks/usePin";
 import { usePeriod } from "@/app/hooks/usePeriod";
+import { useSubscription } from "@/app/hooks/useSubscription";
+import { Link } from "@/i18n/navigation";
 import PaymentMethodSelector, { PaymentMethodBadge } from "@/app/components/PaymentMethodSelector";
 import type { PaymentMethod } from "@/app/types/payment";
 import { syncTaxCashflow } from "@/lib/billTaxSync";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "@/app/components/AuditTrail";
 import { formatMoney } from "@/lib/format";
+import { isProAccess } from "@/lib/billing";
+import { authedFetch } from "@/lib/authedFetch";
 
 const FOCUSABLE_SELECTOR =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -36,7 +41,7 @@ type TaxFrequency = "mensal" | "trimestral" | "semestral" | "anual";
 type TaxSphere = "federal" | "estadual" | "municipal" | "outro";
 
 type TaxType =
-    | "simples_nacional" | "irpf" | "irpj" | "pis" | "cofins" | "csll" | "ipi" | "iof" | "itr" | "inss" | "fgts" // Federais
+    | "simples_nacional" | "irpf" | "irpj" | "pis" | "cofins" | "csll" | "ipi" | "iof" | "itr" | "inss" | "fgts" | "irrf" // Federais
     | "icms" | "ipva" | "itcmd" // Estaduais
     | "iss" | "iptu" | "itbi" // Municipais
     | "outro";
@@ -96,6 +101,7 @@ const TAX_TYPES: TaxTypeMeta[] = [
     { id: "itr", icon: Globe, color: "var(--cat-8)", esfera: "federal" },
     { id: "inss", icon: Shield, color: "var(--cat-1)", esfera: "federal" },
     { id: "fgts", icon: Briefcase, color: "var(--cat-2)", esfera: "federal" },
+    { id: "irrf", icon: DollarSign, color: "var(--cat-7)", esfera: "federal" },
     // Estaduais
     { id: "icms", icon: TrendingUp, color: "var(--cat-3)", esfera: "estadual" },
     { id: "ipva", icon: Car, color: "var(--cat-4)", esfera: "estadual" },
@@ -120,7 +126,7 @@ const STATUS_META: Record<TaxStatus, { bg: string; color: string; border: string
 const TAX_TYPE_TO_CATEGORY: Record<TaxType, string> = {
     simples_nacional: "Impostos", irpf: "Impostos", irpj: "Impostos", pis: "Impostos",
     cofins: "Impostos", csll: "Impostos", ipi: "Impostos", iof: "Impostos", itr: "Impostos",
-    inss: "Impostos", fgts: "Impostos", icms: "Impostos", ipva: "Impostos", itcmd: "Impostos",
+    inss: "Impostos", fgts: "Impostos", irrf: "Impostos", icms: "Impostos", ipva: "Impostos", itcmd: "Impostos",
     iss: "Impostos", iptu: "Impostos", itbi: "Impostos", outro: "Impostos",
 };
 
@@ -775,6 +781,374 @@ function TaxPayModal({ open, tax, uid, onClose, onConfirm }: {
     );
 }
 
+// ─── Leitor de NF com retenção de impostos (Pro) ──────────────────────────────
+// Sobe uma NFS-e (PDF/imagem), extrai as retenções via /api/analyze-nf-retencao
+// e cria um lançamento por tributo retido — mesmo padrão de estados do
+// ImportModal do Fluxo de Caixa (input → loading → preview → saving → done),
+// com 1 PIN autorizando o lote inteiro. Ver
+// docs/superpowers/specs/2026-09-14-nfse-retencao-impostos-design.md.
+
+type NfStep = "input" | "loading" | "preview" | "saving" | "done";
+
+interface NfRetention { tipo: TaxType; valor: number }
+interface NfResult {
+    numeroNota: string;
+    prestador: string;
+    dataEmissao: string;
+    valorTotalServico: number;
+    retentions: NfRetention[];
+}
+interface NfRow extends NfRetention { selected: boolean; dueDate: string }
+
+// Sugestão de vencimento pras retenções federais (DARF unificado): dia 20 do
+// mês seguinte à emissão. ISS fica em branco — regra municipal varia.
+function suggestDueDate(dataEmissao: string): string {
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(dataEmissao) ? new Date(dataEmissao + "T12:00:00") : new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(20);
+    return d.toISOString().split("T")[0];
+}
+
+function LerNfModal({ open, uid, authUid, userName, onClose, onCreated }: {
+    open: boolean;
+    uid: string | null;
+    authUid: string | null;
+    userName: string;
+    onClose: () => void;
+    onCreated: (count: number, netValue: number) => void;
+}) {
+    const t = useTranslations("impostos.nfReader");
+    const tType = useTranslations("impostos.taxTypes");
+    const tPin = useTranslations("common.pin");
+    const locale = useLocale();
+    const [step, setStep] = useState<NfStep>("input");
+    const [file, setFile] = useState<{ raw: File; base64: string; mediaType: string } | null>(null);
+    const [result, setResult] = useState<NfResult | null>(null);
+    const [rows, setRows] = useState<NfRow[]>([]);
+    const [pinOpen, setPinOpen] = useState(false);
+    const [err, setErr] = useState("");
+    const fileInputId = useId();
+
+    useEffect(() => {
+        if (!open) {
+            setStep("input"); setFile(null); setResult(null); setRows([]);
+            setPinOpen(false); setErr("");
+        }
+    }, [open]);
+
+    if (!open) return null;
+
+    function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        setErr("");
+        if (f.size > 3 * 1024 * 1024) { setErr(t("tooBig")); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const base64 = String(ev.target?.result ?? "").split(",")[1] ?? "";
+            const mediaType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+            setFile({ raw: f, base64, mediaType });
+        };
+        reader.onerror = () => setErr(t("errReadFile"));
+        reader.readAsDataURL(f);
+    }
+
+    async function analyze() {
+        if (!file) return;
+        setStep("loading"); setErr("");
+        try {
+            const res = await authedFetch("/api/analyze-nf-retencao", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ base64: file.base64, mediaType: file.mediaType }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error ?? t("errApi"));
+            setResult(data);
+            setRows((data.retentions as NfRetention[]).map(r => ({
+                ...r,
+                selected: true,
+                dueDate: r.tipo === "iss" ? "" : suggestDueDate(data.dataEmissao),
+            })));
+            setStep("preview");
+        } catch (e: any) {
+            setErr(t("errParse", { message: e.message }));
+            setStep("input");
+        }
+    }
+
+    function toggleRow(i: number) {
+        setRows(prev => prev.map((r, idx) => idx === i ? { ...r, selected: !r.selected } : r));
+    }
+
+    function setRowDueDate(i: number, dueDate: string) {
+        setRows(prev => prev.map((r, idx) => idx === i ? { ...r, dueDate } : r));
+    }
+
+    const selectedRows = rows.filter(r => r.selected);
+    const netValue = (result?.valorTotalServico ?? 0) - selectedRows.reduce((s, r) => s + r.valor, 0);
+    const canSubmit = selectedRows.length > 0 && selectedRows.every(r => r.dueDate !== "");
+
+    async function handleOpenPin() {
+        if (!canSubmit || !authUid) return;
+        const pinHash = await loadPinHash(authUid);
+        if (!pinHash) { setErr(tPin("notConfigured")); return; }
+        setErr("");
+        setPinOpen(true);
+    }
+
+    async function handlePinSuccess(pin: string) {
+        if (!authUid) return;
+        const result = await verifyPin(authUid, pin);
+        if (result === "ok") { setPinOpen(false); confirmCreate(); }
+        else if (result === "locked") { setPinOpen(false); setErr(tPin("lockedRetry")); }
+        else if (result === "wrong") {
+            const { locked } = getPinLockStatus();
+            if (locked) { setPinOpen(false); setErr(tPin("lockedRetry")); }
+            else (window as any).__pinModalShake?.(tPin("wrong"));
+        } else if (result === "no_pin") { setPinOpen(false); setErr(tPin("notConfigured")); }
+    }
+
+    async function confirmCreate() {
+        if (!uid || !result) return;
+        setStep("saving"); setErr("");
+        try {
+            const [{ getFirebase }, { collection, addDoc }, storageMod] = await Promise.all([
+                import("@/lib/firebase"),
+                import("firebase/firestore"),
+                import("firebase/storage"),
+            ]);
+            const { db, storage } = await getFirebase();
+
+            let attachmentUrl: string | undefined;
+            if (file) {
+                const { ref, uploadBytes, getDownloadURL } = storageMod;
+                const storageRef = ref(storage, `taxes/${Date.now()}-${file.raw.name}`);
+                await uploadBytes(storageRef, file.raw);
+                attachmentUrl = await getDownloadURL(storageRef);
+            }
+
+            const actor = { uid: authUid ?? uid, name: userName };
+            const toCreate = rows.filter(r => r.selected);
+            await Promise.all(toCreate.map(row => addDoc(collection(db, "users", uid, "taxes"), {
+                name: `${tType(row.tipo)} retido · NF ${result.numeroNota} (${result.prestador})`.slice(0, 90),
+                type: row.tipo,
+                amount: row.valor,
+                dueDate: row.dueDate,
+                status: "nao_pago",
+                frequency: "mensal",
+                notes: t("sourceNote", { numero: result.numeroNota, prestador: result.prestador }),
+                attachments: attachmentUrl ? [attachmentUrl] : [],
+                createdAt: Date.now(),
+                userId: uid,
+                ...stampCreate(actor),
+            })));
+
+            setStep("done");
+            onCreated(toCreate.length, netValue);
+        } catch (e: any) {
+            setErr(e?.message ?? t("errApi"));
+            setStep("preview");
+        }
+    }
+
+    return (
+        <>
+        <div className="fixed inset-0 z-990 flex items-end sm:items-center justify-center"
+            style={{ background: "rgba(13,17,23,0.6)", backdropFilter: "blur(8px)" }}>
+            <div className="w-full sm:max-w-lg sm:rounded-2xl rounded-t-3xl overflow-hidden"
+                style={{ background: "var(--cf-card)", boxShadow: "0 25px 50px rgba(0,0,0,0.25)", animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
+
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="w-10 h-1.5 rounded-full" style={{ background: "var(--cf-border)" }} />
+                </div>
+
+                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--brand)" }}>
+                            <Sparkles size={16} className="text-white" />
+                        </div>
+                        <div>
+                            <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>
+                                {step === "input" && t("stepInput")}
+                                {step === "loading" && t("stepLoading")}
+                                {step === "preview" && t("stepPreview", { count: rows.length })}
+                                {step === "saving" && t("stepSaving")}
+                                {step === "done" && t("stepDone")}
+                            </p>
+                        </div>
+                    </div>
+                    {step !== "saving" && (
+                        <button onClick={onClose} aria-label={tPin("close")} className="p-1.5 rounded-lg cursor-pointer"
+                            style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
+
+                <div className="px-5 py-4 space-y-4 overflow-y-auto" style={{ maxHeight: "80vh" }}>
+                    {err && (
+                        <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
+                            style={{ background: "var(--neg-weak)", border: "1px solid var(--neg-weak)", color: "var(--neg)" }}>
+                            <AlertTriangle size={13} className="shrink-0 mt-0.5" /> {err}
+                        </div>
+                    )}
+
+                    {step === "input" && (
+                        <>
+                            <label htmlFor={fileInputId}
+                                className="w-full border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer transition-all"
+                                style={{ borderColor: file ? "var(--brand)" : "var(--cf-border)" }}>
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--cf-input)" }}>
+                                    {file ? <FileText size={18} style={{ color: "var(--brand)" }} /> : <Upload size={18} style={{ color: "var(--cf-text-2)" }} />}
+                                </div>
+                                <p className="text-sm font-semibold text-center" style={{ color: "var(--cf-text)" }}>
+                                    {file ? file.raw.name : t("upload")}
+                                </p>
+                                <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{file ? t("fileReady") : t("uploadHint")}</p>
+                                <input id={fileInputId} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleFile} />
+                            </label>
+                            <button onClick={analyze} disabled={!file}
+                                className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${file ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                                style={file ? { background: "var(--brand)", color: "white" } : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
+                                <ScanLine size={15} /> {t("stepInput")}
+                            </button>
+                        </>
+                    )}
+
+                    {step === "loading" && (
+                        <div className="flex flex-col items-center justify-center py-12 gap-4">
+                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center animate-pulse" style={{ background: "var(--cf-input)" }}>
+                                <Sparkles size={28} style={{ color: "var(--brand)" }} />
+                            </div>
+                            <div className="text-center">
+                                <p className="font-heading text-sm font-bold" style={{ color: "var(--cf-text)" }}>{t("stepLoading")}</p>
+                                <p className="text-xs mt-2" style={{ color: "var(--cf-text-2)" }}>{t("analyzingHint")}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {(step === "preview" || step === "saving") && result && (
+                        <>
+                            <div className="rounded-xl p-3.5 space-y-1" style={{ background: "var(--cf-input)" }}>
+                                <p className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>
+                                    {t("notaInfo", { numero: result.numeroNota || "—", prestador: result.prestador || "—" })}
+                                </p>
+                                <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>
+                                    {t("grossValue")}: <span className="font-mono font-semibold" style={{ color: "var(--cf-text)" }}>{toBRL(result.valorTotalServico, locale)}</span>
+                                </p>
+                            </div>
+
+                            {rows.length === 0 ? (
+                                <div className="rounded-xl p-4 text-center" style={{ background: "var(--warn-weak)" }}>
+                                    <p className="text-sm font-bold" style={{ color: "var(--warn)" }}>{t("noRetentions")}</p>
+                                    <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>{t("noRetentionsHint")}</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {rows.map((row, i) => (
+                                        <div key={row.tipo} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+                                            style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", opacity: row.selected ? 1 : 0.5 }}>
+                                            <button type="button" onClick={() => toggleRow(i)}
+                                                aria-label={tType(row.tipo)}
+                                                className="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 cursor-pointer"
+                                                style={row.selected ? { background: "var(--brand)", borderColor: "var(--brand)" } : { borderColor: "var(--cf-border)" }}>
+                                                {row.selected && <Check size={11} className="text-white" />}
+                                            </button>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-bold truncate" style={{ color: "var(--cf-text)" }}>{tType(row.tipo)}</p>
+                                                <p className="text-xs font-mono" style={{ color: "var(--cf-text-2)" }}>{toBRL(row.valor, locale)}</p>
+                                            </div>
+                                            <div className="shrink-0">
+                                                <input type="date" value={row.dueDate} disabled={!row.selected || step === "saving"}
+                                                    onChange={e => setRowDueDate(i, e.target.value)}
+                                                    aria-label={t("dueDateLabel")}
+                                                    className="rounded-lg px-2 py-1.5 text-xs outline-none cursor-pointer disabled:cursor-not-allowed"
+                                                    style={{ background: "var(--cf-card)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {rows.length > 0 && (
+                                <div className="rounded-xl p-3.5 flex items-center justify-between" style={{ background: "var(--brand-weak)" }}>
+                                    <span className="text-xs font-semibold" style={{ color: "var(--brand)" }}>{t("netValue")}</span>
+                                    <span className="font-heading font-bold text-base mono" style={{ color: "var(--brand)" }}>{toBRL(netValue, locale)}</span>
+                                </div>
+                            )}
+
+                            {rows.length > 0 && (
+                                <button onClick={handleOpenPin} disabled={!canSubmit || step === "saving"}
+                                    className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${canSubmit && step !== "saving" ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+                                    style={canSubmit && step !== "saving" ? { background: "var(--brand)", color: "white" } : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
+                                    {step === "saving"
+                                        ? <><Loader2 size={15} className="animate-spin" /> {t("creating")}</>
+                                        : <><Check size={15} /> {t("createButton", { count: selectedRows.length })}</>}
+                                </button>
+                            )}
+                        </>
+                    )}
+
+                    {step === "done" && (
+                        <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+                            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "var(--pos-weak)" }}>
+                                <CheckCircle2 size={26} style={{ color: "var(--pos)" }} />
+                            </div>
+                            <p className="font-heading text-sm font-bold" style={{ color: "var(--cf-text)" }}>{t("doneSummary", { count: selectedRows.length })}</p>
+                            <p className="text-xs" style={{ color: "var(--cf-text-2)" }}>{t("doneNet", { value: toBRL(netValue, locale) })}</p>
+                            <button onClick={onClose}
+                                className="mt-2 px-5 py-2.5 rounded-xl text-sm font-bold cursor-pointer"
+                                style={{ background: "var(--brand)", color: "white" }}>
+                                {t("close")}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+        <PinModal
+            open={pinOpen}
+            title={t("pinTitle")}
+            subtitle={t("pinSubtitle")}
+            onClose={() => setPinOpen(false)}
+            onSuccess={handlePinSuccess}
+        />
+        </>
+    );
+}
+
+// ─── Cadeado de recurso Pro ─────────────────────────────────────────────────
+function ProLockModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+    const t = useTranslations("impostos.nfReader.proLock");
+    if (!open) return null;
+    return (
+        <div className="fixed inset-0 z-990 flex items-center justify-center p-4"
+            style={{ background: "rgba(13,17,23,0.5)", backdropFilter: "blur(8px)" }}>
+            <div className="cf-card p-6 w-full max-w-xs text-center" style={{ animation: "slideUp .3s cubic-bezier(.34,.1,.64,.88)" }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "var(--brand-weak)" }}>
+                    <Lock size={20} style={{ color: "var(--brand)" }} />
+                </div>
+                <p className="font-heading text-base font-bold mb-1" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
+                <p className="text-xs mb-5" style={{ color: "var(--cf-text-2)" }}>{t("body")}</p>
+                <div className="flex gap-2">
+                    <button onClick={onClose}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
+                        style={{ border: "1px solid var(--cf-border)", color: "var(--cf-text-2)" }}>
+                        {t("cancel")}
+                    </button>
+                    <Link href="/assinatura"
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1"
+                        style={{ background: "var(--brand)", color: "white" }}>
+                        <Sparkles size={13} /> {t("cta")}
+                    </Link>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Tax Card ──────────────────────────────────────────────────────────────────
 
 function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
@@ -975,6 +1349,11 @@ export default function ImpostosPage() {
     const [taxPayModal, setTaxPayModal] = useState<Tax | null>(null);
     const [deletePinOpen, setDeletePinOpen] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+    const [nfModalOpen, setNfModalOpen] = useState(false);
+    const [proLockOpen, setProLockOpen] = useState(false);
+    const sub = useSubscription();
+    const isPro = isProAccess(sub);
+    const openNfReader = () => { if (isPro) setNfModalOpen(true); else setProLockOpen(true); };
 
     const [alertDays, setAlertDays] = useState(7);
     const [search, setSearch] = useState("");
@@ -1280,6 +1659,20 @@ export default function ImpostosPage() {
                 }}
             />
 
+            <LerNfModal
+                open={nfModalOpen}
+                uid={uid}
+                authUid={authUid}
+                userName={userName}
+                onClose={() => setNfModalOpen(false)}
+                onCreated={(count) => {
+                    setNfModalOpen(false);
+                    showToast(t("toast.nfLancamentosCreated", { count }));
+                }}
+            />
+
+            <ProLockModal open={proLockOpen} onClose={() => setProLockOpen(false)} />
+
             <PinModal
                 open={deletePinOpen}
                 title={t("confirmDelete.pinTitle")}
@@ -1344,11 +1737,19 @@ export default function ImpostosPage() {
                             }
                         </p>
                     </div>
-                    <button onClick={() => { setEditing(null); setModal(true); }}
-                        className="hidden sm:flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
-                        style={{ background: "var(--brand)", color: "white" }}>
-                        <Plus size={14} /> {t("meta.newTax")}
-                    </button>
+                    <div className="hidden sm:flex items-center gap-2">
+                        <button onClick={openNfReader}
+                            className="flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
+                            style={{ background: "var(--cf-input)", border: "1px solid var(--cf-border)", color: "var(--cf-text)" }}>
+                            {isPro ? <ScanLine size={14} style={{ color: "var(--brand)" }} /> : <Lock size={14} style={{ color: "var(--cf-text-2)" }} />}
+                            {t("meta.readNf")}
+                        </button>
+                        <button onClick={() => { setEditing(null); setModal(true); }}
+                            className="flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl cursor-pointer"
+                            style={{ background: "var(--brand)", color: "white" }}>
+                            <Plus size={14} /> {t("meta.newTax")}
+                        </button>
+                    </div>
                 </div>
 
                 {/* KPIs */}
@@ -1501,6 +1902,18 @@ export default function ImpostosPage() {
             </main>
 
             {/* FAB mobile */}
+            <button onClick={openNfReader}
+                aria-label={t("meta.readNf")}
+                className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+                style={{
+                    bottom: 134, right: 16, width: 44, height: 44,
+                    background: "var(--cf-card)",
+                    border: "1px solid var(--cf-border)",
+                    color: isPro ? "var(--brand)" : "var(--cf-text-2)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                }}>
+                {isPro ? <ScanLine size={18} /> : <Lock size={16} />}
+            </button>
             <button onClick={() => { setEditing(null); setModal(true); }}
                 aria-label={t("meta.newTax")}
                 className="lg:hidden fixed z-20 rounded-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer"

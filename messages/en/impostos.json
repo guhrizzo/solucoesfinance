@@ -2,7 +2,8 @@
   "meta": {
     "title": "Taxes",
     "newTax": "New tax",
-    "addTax": "Add tax"
+    "addTax": "Add tax",
+    "readNf": "Read invoice"
   },
   "header": {
     "allClear": "✓ All caught up!",
@@ -80,6 +81,7 @@
     "iss": "ISS",
     "iptu": "IPTU",
     "itbi": "ITBI",
+    "irrf": "IRRF",
     "outro": "Other"
   },
   "taxTypeDesc": {
@@ -100,6 +102,7 @@
     "iss": "Service tax",
     "iptu": "Urban property tax",
     "itbi": "Real estate transfer tax",
+    "irrf": "Income tax withheld at source",
     "outro": "Other taxes and fees"
   },
   "card": {
@@ -174,6 +177,45 @@
     "taxUpdated": "Tax updated!",
     "taxCreated": "Tax created!",
     "markedPaid": "Tax marked as paid ✓",
-    "taxRemoved": "Tax removed."
+    "taxRemoved": "Tax removed.",
+    "nfLancamentosCreated": "{count, plural, one {# entry created from the invoice!} other {# entries created from the invoice!}}"
+  },
+  "nfReader": {
+    "title": "Invoice reader",
+    "subtitle": "Extract withholdings from a service invoice automatically",
+    "stepInput": "Upload the invoice as PDF or photo",
+    "stepLoading": "Analyzing the invoice…",
+    "stepPreview": "{count, plural, one {# withholding found} other {# withholdings found}}",
+    "stepSaving": "Creating entries…",
+    "stepDone": "Entries created",
+    "upload": "Select PDF or photo of the invoice",
+    "uploadHint": "PDF, JPG or PNG, up to 3 MB",
+    "fileReady": "Ready to analyze",
+    "analyzingHint": "Reading the service value and withheld taxes",
+    "close": "Close",
+    "errReadFile": "Error reading the file",
+    "errApi": "Error analyzing the invoice",
+    "errParse": "Could not read this invoice: {message}",
+    "tooBig": "File too large. Upload a PDF or image up to 3 MB.",
+    "noRetentions": "No withholdings found on this invoice",
+    "noRetentionsHint": "This invoice has no taxes withheld by you (the service taker) — nothing to add to Taxes.",
+    "notaInfo": "Invoice {numero} · {prestador}",
+    "grossValue": "Gross service value",
+    "netValue": "Net amount to pay the provider",
+    "dueDateLabel": "Due date",
+    "selectAll": "Select all",
+    "createButton": "{count, plural, one {Create # entry} other {Create # entries}}",
+    "creating": "Creating…",
+    "doneSummary": "{count, plural, one {# entry created.} other {# entries created.}}",
+    "doneNet": "Net amount to pay the provider: {value}",
+    "pinTitle": "Create tax entries",
+    "pinSubtitle": "Enter your 4-digit PIN to confirm",
+    "sourceNote": "Invoice {numero} · {prestador}",
+    "proLock": {
+      "title": "Pro plan feature",
+      "body": "Reading invoices with tax withholding is exclusive to the Pro plan.",
+      "cta": "Learn about Pro",
+      "cancel": "Close"
+    }
   }
 }

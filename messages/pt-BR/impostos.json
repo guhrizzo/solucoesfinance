@@ -2,7 +2,8 @@
   "meta": {
     "title": "Impostos",
     "newTax": "Novo imposto",
-    "addTax": "Adicionar imposto"
+    "addTax": "Adicionar imposto",
+    "readNf": "Ler NF"
   },
   "header": {
     "allClear": "✓ Tudo em dia!",
@@ -80,6 +81,7 @@
     "iss": "ISS",
     "iptu": "IPTU",
     "itbi": "ITBI",
+    "irrf": "IRRF",
     "outro": "Outro"
   },
   "taxTypeDesc": {
@@ -100,6 +102,7 @@
     "iss": "Imposto Sobre Serviços",
     "iptu": "Imposto Predial e Territorial Urbano",
     "itbi": "Imposto sobre Transmissão de Bens Imóveis",
+    "irrf": "Imposto de Renda Retido na Fonte",
     "outro": "Outros impostos e taxas"
   },
   "card": {
@@ -174,6 +177,45 @@
     "taxUpdated": "Imposto atualizado!",
     "taxCreated": "Imposto criado!",
     "markedPaid": "Imposto marcado como pago ✓",
-    "taxRemoved": "Imposto removido."
+    "taxRemoved": "Imposto removido.",
+    "nfLancamentosCreated": "{count, plural, one {# lançamento criado a partir da NF!} other {# lançamentos criados a partir da NF!}}"
+  },
+  "nfReader": {
+    "title": "Leitor de NF",
+    "subtitle": "Extraia as retenções de uma NFS-e automaticamente",
+    "stepInput": "Envie o PDF ou foto da nota",
+    "stepLoading": "Analisando a nota…",
+    "stepPreview": "{count, plural, one {# retenção encontrada} other {# retenções encontradas}}",
+    "stepSaving": "Criando lançamentos…",
+    "stepDone": "Lançamentos criados",
+    "upload": "Selecionar PDF ou foto da NF",
+    "uploadHint": "PDF, JPG ou PNG, até 3 MB",
+    "fileReady": "Pronto para analisar",
+    "analyzingHint": "Lendo o valor do serviço e as retenções destacadas",
+    "close": "Fechar",
+    "errReadFile": "Erro ao ler o arquivo",
+    "errApi": "Erro ao analisar a nota",
+    "errParse": "Não foi possível ler esta nota: {message}",
+    "tooBig": "Arquivo muito grande. Envie um PDF ou imagem de até 3 MB.",
+    "noRetentions": "Nenhuma retenção destacada nesta nota",
+    "noRetentionsHint": "Essa nota não tem tributos retidos pelo Tomador — não há nada para lançar em Impostos.",
+    "notaInfo": "NF {numero} · {prestador}",
+    "grossValue": "Valor bruto do serviço",
+    "netValue": "Valor líquido a pagar ao prestador",
+    "dueDateLabel": "Vencimento",
+    "selectAll": "Selecionar todas",
+    "createButton": "{count, plural, one {Criar # lançamento} other {Criar # lançamentos}}",
+    "creating": "Criando…",
+    "doneSummary": "{count, plural, one {# lançamento criado.} other {# lançamentos criados.}}",
+    "doneNet": "Valor líquido a pagar ao prestador: {value}",
+    "pinTitle": "Criar lançamentos de impostos",
+    "pinSubtitle": "Digite seu PIN de 4 dígitos para confirmar",
+    "sourceNote": "NF {numero} · {prestador}",
+    "proLock": {
+      "title": "Recurso do plano Pro",
+      "body": "A leitura de NF com retenção de impostos é exclusiva do plano Pro.",
+      "cta": "Conhecer o Pro",
+      "cancel": "Fechar"
+    }
   }
 }
