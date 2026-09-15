@@ -12,6 +12,7 @@ import { AppShell } from "@/app/components/AppShell";
 import { CookieConsent } from "@/app/components/CookieConsent";
 import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { LocaleSync } from "@/app/components/LocaleSync";
+import { PlatformAnalytics } from "@/app/components/PlatformAnalytics";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -148,6 +149,7 @@ export default async function LocaleLayout({
           <LocaleSync />
           <ThemeInitializer />
           <ForceMotion />
+          <PlatformAnalytics />
           <AppShell>{children}</AppShell>
           <CookieConsent />
           <AccessibilityWidget />

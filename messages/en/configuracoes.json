@@ -5,7 +5,8 @@
     "perfil": "Profile & Company",
     "aparencia": "Appearance",
     "feedback": "Bugs & suggestions",
-    "feedbackAdmin": "Tickets"
+    "feedbackAdmin": "Tickets",
+    "analytics": "Analytics"
   },
   "perfil": {
     "fallbackUser": "User",
@@ -150,6 +151,38 @@
       "resolvedAndNotified": "Resolved and user notified.",
       "resolved": "Resolved.",
       "reopened": "Ticket reopened."
+    }
+  },
+  "analytics": {
+    "subtitle": "Each \"visitor\" is a unique browser/device (identified by a cookie). Counts the whole app (signed in) and the public site.",
+    "loadError": "Could not load the data right now. Try reloading in a moment.",
+    "deniedTitle": "Restricted access",
+    "deniedDesc": "This tab is only visible to the platform administration.",
+    "kpi": {
+      "visitorsToday": "Visitors today",
+      "visitorsMonth": "Visitors in {month}",
+      "pageviewsToday": "Pageviews today",
+      "pageviewsMonth": "Pageviews in {month}",
+      "loggedAnon": "{logged} signed in · {anon} anonymous",
+      "pageviewsTodayHint": "Pages opened today (including reloads)",
+      "pageviewsMonthHint": "Pages opened this month (including reloads)"
+    },
+    "chart": {
+      "title": "Unique visitors per day — last 30 days",
+      "legendTotal": "Total",
+      "legendLogged": "Signed in",
+      "noData": "No data yet",
+      "ariaLabel": "Chart of unique visitors per day over the last 30 days",
+      "tooltipVisitors": "{count} visitors",
+      "tooltipLogged": "{count} signed in",
+      "footnote": "Adding up the days doesn't give the month's total — someone returning on different days counts on each day. The month's number is in the card above."
+    },
+    "pages": {
+      "title": "Most visited pages — last 30 days",
+      "colPage": "Page",
+      "colViews": "Views",
+      "emptyTitle": "No views recorded yet",
+      "emptyDesc": "As soon as someone visits the pages, the ranking shows up here."
     }
   }
 }

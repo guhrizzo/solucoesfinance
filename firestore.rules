@@ -132,6 +132,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // analytics_daily, analytics_monthly, analytics_page_daily (aba
+    // "Analytics" de Configurações — métricas da PLATAFORMA, não de uma
+    // conta) são lidas/escritas SOMENTE pelo Admin SDK (app/api/track e
+    // app/api/analytics). Não precisam de regra própria: já caem no
+    // fallback de negação abaixo, igual a `feedback` acima.
+
     // Fallback: nega o que não foi liberado acima.
     match /{document=**} {
       allow read, write: if false;

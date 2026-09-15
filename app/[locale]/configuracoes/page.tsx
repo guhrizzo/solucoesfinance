@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { User as UserIcon, Palette, MessageSquarePlus, Inbox } from "lucide-react";
+import { User as UserIcon, Palette, MessageSquarePlus, Inbox, BarChart3 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import { PageLoader } from "@/app/components/ui";
 import { useToast } from "@/app/components/useToast";
@@ -16,6 +16,7 @@ import PerfilTab from "./PerfilTab";
 import AparenciaTab from "./AparenciaTab";
 import FeedbackTab from "./FeedbackTab";
 import FeedbackAdminTab from "./FeedbackAdminTab";
+import AnalyticsAdminTab from "./AnalyticsAdminTab";
 
 interface AuthUser {
   uid: string;
@@ -23,7 +24,7 @@ interface AuthUser {
   displayName: string | null;
 }
 
-type TabId = "perfil" | "aparencia" | "feedback" | "feedbackAdmin";
+type TabId = "perfil" | "aparencia" | "feedback" | "feedbackAdmin" | "analytics";
 
 const BASE_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "perfil", icon: UserIcon },
@@ -31,7 +32,10 @@ const BASE_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "feedback", icon: MessageSquarePlus },
 ];
 
-const ADMIN_TAB = { id: "feedbackAdmin" as TabId, icon: Inbox };
+const ADMIN_TABS: { id: TabId; icon: React.ElementType }[] = [
+  { id: "feedbackAdmin", icon: Inbox },
+  { id: "analytics", icon: BarChart3 },
+];
 
 export default function ConfiguracoesPage() {
   const tc = useTranslations("configuracoes");
@@ -44,7 +48,7 @@ export default function ConfiguracoesPage() {
 
   const isAdmin = isSupremeAdminEmail(user?.email ?? null);
   const tabs = useMemo(
-    () => (isAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS),
+    () => (isAdmin ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS),
     [isAdmin]
   );
 
@@ -132,6 +136,7 @@ export default function ConfiguracoesPage() {
           {tab === "aparencia" && <AparenciaTab showToast={showToast} />}
           {tab === "feedback" && <FeedbackTab showToast={showToast} />}
           {tab === "feedbackAdmin" && isAdmin && <FeedbackAdminTab showToast={showToast} />}
+          {tab === "analytics" && isAdmin && <AnalyticsAdminTab />}
         </div>
       </main>
 

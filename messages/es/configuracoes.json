@@ -5,7 +5,8 @@
     "perfil": "Perfil y Empresa",
     "aparencia": "Apariencia",
     "feedback": "Errores y sugerencias",
-    "feedbackAdmin": "Tickets"
+    "feedbackAdmin": "Tickets",
+    "analytics": "Analytics"
   },
   "perfil": {
     "fallbackUser": "Usuario",
@@ -150,6 +151,38 @@
       "resolvedAndNotified": "Resuelto y usuario avisado.",
       "resolved": "Resuelto.",
       "reopened": "Ticket reabierto."
+    }
+  },
+  "analytics": {
+    "subtitle": "Cada \"visitante\" es un navegador/dispositivo único (identificado por una cookie). Cuenta toda la app (con sesión) y el sitio público.",
+    "loadError": "No fue posible cargar los datos ahora. Intenta recargar en un momento.",
+    "deniedTitle": "Acceso restringido",
+    "deniedDesc": "Esta pestaña solo es visible para la administración de la plataforma.",
+    "kpi": {
+      "visitorsToday": "Visitantes hoy",
+      "visitorsMonth": "Visitantes en {month}",
+      "pageviewsToday": "Pageviews hoy",
+      "pageviewsMonth": "Pageviews en {month}",
+      "loggedAnon": "{logged} con sesión · {anon} anónimos",
+      "pageviewsTodayHint": "Páginas abiertas hoy (con recargas)",
+      "pageviewsMonthHint": "Páginas abiertas en el mes (con recargas)"
+    },
+    "chart": {
+      "title": "Visitantes únicos por día — últimos 30 días",
+      "legendTotal": "Total",
+      "legendLogged": "Con sesión",
+      "noData": "Sin datos todavía",
+      "ariaLabel": "Gráfico de visitantes únicos por día en los últimos 30 días",
+      "tooltipVisitors": "{count} visitantes",
+      "tooltipLogged": "{count} con sesión",
+      "footnote": "Sumar los días no da el total del mes — quien vuelve en días diferentes cuenta en cada día. El número del mes está en la tarjeta de arriba."
+    },
+    "pages": {
+      "title": "Páginas más visitadas — últimos 30 días",
+      "colPage": "Página",
+      "colViews": "Visualizaciones",
+      "emptyTitle": "Todavía sin visualizaciones registradas",
+      "emptyDesc": "En cuanto alguien acceda a las páginas, el ranking aparece aquí."
     }
   }
 }

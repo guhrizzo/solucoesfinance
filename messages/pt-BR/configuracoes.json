@@ -5,7 +5,8 @@
     "perfil": "Perfil & Empresa",
     "aparencia": "Aparência",
     "feedback": "Bugs & sugestões",
-    "feedbackAdmin": "Chamados"
+    "feedbackAdmin": "Chamados",
+    "analytics": "Analytics"
   },
   "perfil": {
     "fallbackUser": "Usuário",
@@ -150,6 +151,38 @@
       "resolvedAndNotified": "Resolvido e usuário avisado.",
       "resolved": "Resolvido.",
       "reopened": "Chamado reaberto."
+    }
+  },
+  "analytics": {
+    "subtitle": "Cada \"visitante\" é um navegador/dispositivo único (identificado por um cookie). Conta o app inteiro (logado) e o site público.",
+    "loadError": "Não foi possível carregar os dados agora. Tente recarregar em instantes.",
+    "deniedTitle": "Acesso restrito",
+    "deniedDesc": "Esta aba é visível só pra administração da plataforma.",
+    "kpi": {
+      "visitorsToday": "Visitantes hoje",
+      "visitorsMonth": "Visitantes em {month}",
+      "pageviewsToday": "Pageviews hoje",
+      "pageviewsMonth": "Pageviews em {month}",
+      "loggedAnon": "{logged} logados · {anon} anônimos",
+      "pageviewsTodayHint": "Páginas abertas hoje (com recargas)",
+      "pageviewsMonthHint": "Páginas abertas no mês (com recargas)"
+    },
+    "chart": {
+      "title": "Visitantes únicos por dia — últimos 30 dias",
+      "legendTotal": "Total",
+      "legendLogged": "Logados",
+      "noData": "Sem dados ainda",
+      "ariaLabel": "Gráfico de visitantes únicos por dia nos últimos 30 dias",
+      "tooltipVisitors": "{count} visitantes",
+      "tooltipLogged": "{count} logados",
+      "footnote": "Somar os dias não dá o total do mês — quem volta em dias diferentes conta em cada dia. O número do mês está no cartão acima."
+    },
+    "pages": {
+      "title": "Páginas mais acessadas — últimos 30 dias",
+      "colPage": "Página",
+      "colViews": "Visualizações",
+      "emptyTitle": "Ainda sem visualizações registradas",
+      "emptyDesc": "Assim que alguém acessar as páginas, o ranking aparece aqui."
     }
   }
 }
