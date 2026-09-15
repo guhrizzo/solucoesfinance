@@ -56,6 +56,90 @@ const navItems: NavItem[] = [
   { key: "usuarios", icon: Users, href: "/users" },
 ];
 
+// Sino de notificações — auto-contido (estado de aberto/fechado, clique fora,
+// Esc) porque pode aparecer em até 3 lugares ao mesmo tempo no DOM (nav
+// horizontal, cabeçalho da sidebar vertical, topbar mobile — CSS decide qual
+// fica visível em cada largura, não o React), cada instância com seu próprio
+// dropdown independente. Os dados (itens, contagem, título/descrição já
+// traduzidos) vêm prontos do componente pai — ver useNotifications().
+function NotifBell({
+  items, unreadCount, onMarkRead, t, notifTitle, notifDesc, format, align = "right", buttonClassName = "nxfi-icon-btn",
+}: {
+  items: NotifItem[];
+  unreadCount: number;
+  onMarkRead: () => void | Promise<void>;
+  t: ReturnType<typeof useTranslations>;
+  notifTitle: (item: NotifItem) => string;
+  notifDesc: (item: NotifItem) => string;
+  format: ReturnType<typeof useFormatter>;
+  align?: "left" | "right";
+  buttonClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setOpen(false); btnRef.current?.focus(); }
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        ref={btnRef}
+        className={buttonClassName}
+        onClick={() => setOpen(o => !o)}
+        aria-label={t("notifications.label")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <Bell size={16} />
+        {unreadCount > 0 && <span className="nxfi-notif-dot" />}
+      </button>
+      {open && (
+        <div
+          className="nxfi-dropdown nxfi-notif-drop"
+          style={align === "left" ? { left: 0, right: "auto" } : undefined}
+          role="menu"
+        >
+          <div className="nxfi-notif-header">
+            <h3>{t("notifications.title")} <span style={{ color: "var(--nav-text-3)", fontWeight: 400 }}>({unreadCount})</span></h3>
+            <button onClick={() => { onMarkRead(); setOpen(false); }}>{t("notifications.markRead")}</button>
+          </div>
+          {items.length === 0 ? (
+            <p style={{ padding: "20px 16px", fontSize: "0.8rem", color: "var(--nav-text-3)", textAlign: "center" }}>
+              {t("notifications.empty")}
+            </p>
+          ) : (
+            items.map(item => (
+              <a key={item.id} href={item.href} className="nxfi-notif-item" onClick={() => setOpen(false)}>
+                <span className="nxfi-notif-dot2" style={{ background: item.urgent ? "var(--neg)" : "var(--brand)" }} />
+                <div>
+                  <div className="nxfi-notif-title">{notifTitle(item)}</div>
+                  <div className="nxfi-notif-desc">{notifDesc(item)}</div>
+                  <div className="nxfi-notif-time">{format.relativeTime(item.at)}</div>
+                </div>
+              </a>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar({
   user = { displayName: "Carlos Mendes", email: "carlos@nexusfi.com" },
   activePath = "/dashboard",
@@ -63,7 +147,6 @@ export default function Navbar({
   hidePeriod = false,
 }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [isServico, setIsServico] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
@@ -98,39 +181,32 @@ export default function Navbar({
     return t(`notifications.kinds.${item.kind}`, p);
   };
 
-  const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
-  const notifBtnRef = useRef<HTMLButtonElement>(null);
   const userBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Fecha dropdowns ao clicar fora
+  // Fecha o dropdown de usuário ao clicar fora (o sino de notificações cuida
+  // do próprio open/close — ver <NotifBell>, ele pode aparecer em até 3
+  // lugares ao mesmo tempo no DOM — nav horizontal, cabeçalho da sidebar
+  // vertical, topbar mobile — cada um com seu próprio estado).
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
       if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Esc fecha o dropdown aberto (notificação ou usuário) e devolve o foco
-  // pro botão que abriu.
+  // Esc fecha o dropdown de usuário e devolve o foco pro botão que abriu.
   useEffect(() => {
-    if (!notifOpen && !userOpen) return;
+    if (!userOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (notifOpen) {
-        setNotifOpen(false);
-        notifBtnRef.current?.focus();
-      }
-      if (userOpen) {
-        setUserOpen(false);
-        userBtnRef.current?.focus();
-      }
+      setUserOpen(false);
+      userBtnRef.current?.focus();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [notifOpen, userOpen]);
+  }, [userOpen]);
 
   // Monitora o ramo do usuário (serviço ou outro)
   useEffect(() => {
@@ -206,11 +282,11 @@ export default function Navbar({
     }, 1500);
   };
 
-  // Handler para marcar como lido com toast
+  // Handler para marcar como lido com toast — cada <NotifBell> fecha o
+  // próprio dropdown depois de chamar isto.
   const handleMarkAsRead = async () => {
     await markAllRead();
     showToast(t("notifications.markedRead"), "success");
-    setNotifOpen(false);
   };
 
   // ── Seletor de período (mês) ──
@@ -244,9 +320,16 @@ export default function Navbar({
   const sidebarJSX = (
     <>
       <aside className="nxfi-sidebar-vertical">
-        <a href="/dashboard" className="nxfi-vertical-logo">
-          <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 42, width: "auto" }} />
-        </a>
+        <div className="nxfi-vertical-header">
+          <a href="/dashboard" className="nxfi-vertical-logo">
+            <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 42, width: "auto" }} />
+          </a>
+          <NotifBell
+            items={notifications} unreadCount={unreadCount} onMarkRead={handleMarkAsRead}
+            t={t} notifTitle={notifTitle} notifDesc={notifDesc} format={format}
+            align="left" buttonClassName="nxfi-icon-btn"
+          />
+        </div>
         {periodControl(true)}
         <nav className="nxfi-vertical-nav">
           <div className="nxfi-vertical-section">{t("menuMain")}</div>
@@ -385,6 +468,10 @@ export default function Navbar({
             <button onClick={toggle} className="nxfi-icon-btn" aria-label={t("toggleTheme")}>
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
+            <NotifBell
+              items={notifications} unreadCount={unreadCount} onMarkRead={handleMarkAsRead}
+              t={t} notifTitle={notifTitle} notifDesc={notifDesc} format={format}
+            />
           </div>
         </div>
 
@@ -444,49 +531,16 @@ export default function Navbar({
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          <div ref={notifRef} style={{ position: "relative" }}>
-            <button
-              ref={notifBtnRef}
-              className="nxfi-icon-btn"
-              onClick={() => { setNotifOpen(!notifOpen); setUserOpen(false); }}
-              aria-label={t("notifications.label")}
-              aria-haspopup="menu"
-              aria-expanded={notifOpen}
-            >
-              <Bell size={16} />
-              {unreadCount > 0 && <span className="nxfi-notif-dot" />}
-            </button>
-            {notifOpen && (
-              <div className="nxfi-dropdown nxfi-notif-drop" role="menu">
-                <div className="nxfi-notif-header">
-                  <h3>{t("notifications.title")} <span style={{ color: "var(--nav-text-3)", fontWeight: 400 }}>({unreadCount})</span></h3>
-                  <button onClick={handleMarkAsRead}>{t("notifications.markRead")}</button>
-                </div>
-                {notifications.length === 0 ? (
-                  <p style={{ padding: "20px 16px", fontSize: "0.8rem", color: "var(--nav-text-3)", textAlign: "center" }}>
-                    {t("notifications.empty")}
-                  </p>
-                ) : (
-                  notifications.map(item => (
-                    <a key={item.id} href={item.href} className="nxfi-notif-item" onClick={() => setNotifOpen(false)}>
-                      <span className="nxfi-notif-dot2" style={{ background: item.urgent ? "var(--neg)" : "var(--brand)" }} />
-                      <div>
-                        <div className="nxfi-notif-title">{notifTitle(item)}</div>
-                        <div className="nxfi-notif-desc">{notifDesc(item)}</div>
-                        <div className="nxfi-notif-time">{format.relativeTime(item.at)}</div>
-                      </div>
-                    </a>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+          <NotifBell
+            items={notifications} unreadCount={unreadCount} onMarkRead={handleMarkAsRead}
+            t={t} notifTitle={notifTitle} notifDesc={notifDesc} format={format}
+          />
 
           <div ref={userRef} style={{ position: "relative" }}>
             <button
               ref={userBtnRef}
               className="nxfi-avatar-btn"
-              onClick={() => { setUserOpen(!userOpen); setNotifOpen(false); }}
+              onClick={() => setUserOpen(!userOpen)}
               aria-label={t("userMenu.label")}
               aria-haspopup="menu"
               aria-expanded={userOpen}

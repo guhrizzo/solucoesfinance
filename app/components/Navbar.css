@@ -657,21 +657,30 @@
   flex-shrink: 0;
   background: var(--nav-bg);
   border-right: 1px solid var(--nav-border);
-  overflow-y: auto;
-  overflow-x: hidden;
+  /* Sem overflow aqui de propósito: só o miolo (.nxfi-vertical-nav) rola —
+     a lista de itens pode ser mais alta que a tela, mas o cabeçalho e o
+     rodapé são de altura fixa (flex-shrink: 0). Um overflow:hidden/auto
+     neste <aside> cortaria o dropdown do sino de notificações (position:
+     absolute), que precisa "vazar" pra fora da largura da sidebar. */
+}
+.nxfi-vertical-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 14px 20px;
+  border-bottom: 1px solid var(--nav-border);
+  flex-shrink: 0;
 }
 .nxfi-vertical-logo {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px;
-  border-bottom: 1px solid var(--nav-border);
   text-decoration: none;
   font-weight: 800;
   font-size: 1.1rem;
   color: var(--nav-text);
   letter-spacing: -0.03em;
-  flex-shrink: 0;
 }
 .nxfi-vertical-logo span {
   color: var(--brand);
@@ -680,6 +689,7 @@
   flex: 1;
   padding: 16px 8px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .nxfi-vertical-section {
   font-size: 0.65rem;
