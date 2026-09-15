@@ -35,12 +35,29 @@
     "label": "Notificações",
     "markRead": "Marcar como lido",
     "markedRead": "Notificações marcadas como lidas",
-    "seeAll": "Ver todas as notificações",
-    "items": [
-      { "title": "Vencimento próximo", "desc": "Simples Nacional vence em 2 dias", "time": "há 10 min" },
-      { "title": "Nova transação", "desc": "Recebimento de Delta Tecnologia — R$ 134.000", "time": "há 35 min" },
-      { "title": "Meta atingida", "desc": "Lucro líquido superou projeção de outubro", "time": "há 2h" }
-    ]
+    "empty": "Nenhuma notificação por enquanto.",
+    "titles": {
+      "impostoVencimento": "Vencimento próximo",
+      "impostoAtraso": "Imposto em atraso",
+      "contaPagarVencimento": "Vencimento próximo",
+      "contaPagarAtraso": "Conta em atraso",
+      "contaReceberVencimento": "Vencimento próximo",
+      "contaReceberAtraso": "Cobrança em atraso",
+      "transacaoAlta": "Nova transação",
+      "vendaMarketplace": "Nova venda",
+      "feedbackResolvido": "Chamado respondido"
+    },
+    "kinds": {
+      "impostoVencimento": "{count, plural, one {{name} vence} other {# impostos vencem}} nos próximos {days} dias",
+      "impostoAtraso": "{count, plural, one {{name} está em atraso} other {# impostos estão em atraso}}",
+      "contaPagarVencimento": "{count, plural, one {{name} vence} other {# contas vencem}} nos próximos {days} dias",
+      "contaPagarAtraso": "{count, plural, one {{name} está em atraso} other {# contas estão em atraso}}",
+      "contaReceberVencimento": "{count, plural, one {{name} vence} other {# cobranças vencem}} nos próximos {days} dias",
+      "contaReceberAtraso": "{count, plural, one {{name} está em atraso} other {# cobranças estão em atraso}}",
+      "transacaoAlta": "{type, select, entrada {Entrada} other {Saída}} de {amount} · {description}",
+      "vendaMarketplace": "{count, plural, one {# nova venda} other {# novas vendas}} · {channel} · {total}",
+      "feedbackResolvido": "Seu chamado sobre \"{local}\" foi resolvido"
+    }
   },
   "userMenu": {
     "label": "Menu da conta",

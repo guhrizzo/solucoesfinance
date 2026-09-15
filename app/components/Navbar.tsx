@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale, useFormatter } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
@@ -20,8 +20,10 @@ import { useBillBadges } from "./Usebillbadges";
 import { useReceivableBadges } from "./useReceivableBadges";
 import { useAccountScope, hasPermission } from "../hooks/useAccountScope";
 import { usePeriod } from "../hooks/usePeriod";
+import { useNotifications, type NotifItem } from "../hooks/useNotifications";
 import { MonthPickerModal } from "./MonthPickerModal";
 import type { PermissionKey } from "@/lib/accountScope";
+import { formatMoney } from "@/lib/format";
 import "./Navbar.css";
 
 interface NavItem { key: string; icon: React.ElementType; href: string; badge?: number; permKey?: PermissionKey; }
@@ -54,14 +56,6 @@ const navItems: NavItem[] = [
   { key: "usuarios", icon: Users, href: "/users" },
 ];
 
-// Notificações de demonstração — id/urgent ficam no código; texto vem de
-// nav.notifications.items (mesma ordem).
-const NOTIF_META = [
-  { id: 1, urgent: true },
-  { id: 2, urgent: false },
-  { id: 3, urgent: false },
-];
-
 export default function Navbar({
   user = { displayName: "Carlos Mendes", email: "carlos@nexusfi.com" },
   activePath = "/dashboard",
@@ -75,7 +69,9 @@ export default function Navbar({
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
 
   const t = useTranslations("nav");
-  const notifItems = t.raw("notifications.items") as { title: string; desc: string; time: string }[];
+  const tPlatform = useTranslations("estoque");
+  const locale = useLocale();
+  const format = useFormatter();
   const router = useRouter();
   const { dark, toggle } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
@@ -84,6 +80,23 @@ export default function Navbar({
   const { receivableSummary } = useReceivableBadges();
   const scope = useAccountScope();
   const periodCtx = usePeriod();
+  const { items: notifications, unreadCount, markAllRead } = useNotifications(scope);
+
+  // Monta título + descrição já traduzidos de um item de notificação —
+  // canal de marketplace e valores em R$ são resolvidos aqui (o hook devolve
+  // os dados crus, sem depender de i18n). Ver app/hooks/useNotifications.ts.
+  const notifTitle = (item: NotifItem) => t(`notifications.titles.${item.kind}`);
+  const notifDesc = (item: NotifItem) => {
+    const p: Record<string, string | number> = { ...item.params };
+    if (item.kind === "vendaMarketplace") {
+      p.channel = tPlatform(`platformName.${p.channel}`);
+      p.total = formatMoney(Number(p.total), locale);
+    }
+    if (item.kind === "transacaoAlta") {
+      p.amount = formatMoney(Number(p.amount), locale);
+    }
+    return t(`notifications.kinds.${item.kind}`, p);
+  };
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
@@ -163,7 +176,6 @@ export default function Navbar({
 
   const firstName = user?.displayName?.split(" ")[0] ?? t("userMenu.fallbackUser");
   const avatar = useProfilePhoto();
-  const unreadCount = NOTIF_META.length;
 
   // Filtra itens com base no ramo (oculta estoque para serviços) e, pra
   // membros de equipe convidados (não o dono da conta), com base na
@@ -195,7 +207,8 @@ export default function Navbar({
   };
 
   // Handler para marcar como lido com toast
-  const handleMarkAsRead = () => {
+  const handleMarkAsRead = async () => {
+    await markAllRead();
     showToast(t("notifications.markedRead"), "success");
     setNotifOpen(false);
   };
@@ -449,21 +462,22 @@ export default function Navbar({
                   <h3>{t("notifications.title")} <span style={{ color: "var(--nav-text-3)", fontWeight: 400 }}>({unreadCount})</span></h3>
                   <button onClick={handleMarkAsRead}>{t("notifications.markRead")}</button>
                 </div>
-                {NOTIF_META.map((n, i) => (
-                  <div key={n.id} className="nxfi-notif-item">
-                    <span className="nxfi-notif-dot2" style={{ background: n.urgent ? "var(--neg)" : "var(--brand)" }} />
-                    <div>
-                      <div className="nxfi-notif-title">{notifItems[i]?.title}</div>
-                      <div className="nxfi-notif-desc">{notifItems[i]?.desc}</div>
-                      <div className="nxfi-notif-time">{notifItems[i]?.time}</div>
-                    </div>
-                  </div>
-                ))}
-                <div style={{ padding: "10px 16px", borderTop: "1px solid var(--nav-drop-div)" }}>
-                  <button style={{ width: "100%", background: "var(--nav-period-bg)", border: "none", borderRadius: 8, padding: "7px 0", fontSize: "0.78rem", fontWeight: 600, color: "var(--brand-500)", cursor: "pointer", fontFamily: "Sora, sans-serif" }}>
-                    {t("notifications.seeAll")}
-                  </button>
-                </div>
+                {notifications.length === 0 ? (
+                  <p style={{ padding: "20px 16px", fontSize: "0.8rem", color: "var(--nav-text-3)", textAlign: "center" }}>
+                    {t("notifications.empty")}
+                  </p>
+                ) : (
+                  notifications.map(item => (
+                    <a key={item.id} href={item.href} className="nxfi-notif-item" onClick={() => setNotifOpen(false)}>
+                      <span className="nxfi-notif-dot2" style={{ background: item.urgent ? "var(--neg)" : "var(--brand)" }} />
+                      <div>
+                        <div className="nxfi-notif-title">{notifTitle(item)}</div>
+                        <div className="nxfi-notif-desc">{notifDesc(item)}</div>
+                        <div className="nxfi-notif-time">{format.relativeTime(item.at)}</div>
+                      </div>
+                    </a>
+                  ))
+                )}
               </div>
             )}
           </div>

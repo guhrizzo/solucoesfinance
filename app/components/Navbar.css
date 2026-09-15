@@ -326,6 +326,7 @@
   border-bottom: 1px solid var(--nav-drop-div);
   transition: background 0.12s;
   cursor: pointer;
+  text-decoration: none;
 }
 .nxfi-notif-item:last-child {
   border-bottom: none;

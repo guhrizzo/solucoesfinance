@@ -35,12 +35,29 @@
     "label": "Notifications",
     "markRead": "Mark as read",
     "markedRead": "Notifications marked as read",
-    "seeAll": "See all notifications",
-    "items": [
-      { "title": "Due soon", "desc": "Simples Nacional is due in 2 days", "time": "10 min ago" },
-      { "title": "New transaction", "desc": "Payment from Delta Tecnologia — R$ 134,000", "time": "35 min ago" },
-      { "title": "Target hit", "desc": "Net profit beat the October projection", "time": "2h ago" }
-    ]
+    "empty": "No notifications for now.",
+    "titles": {
+      "impostoVencimento": "Due soon",
+      "impostoAtraso": "Tax overdue",
+      "contaPagarVencimento": "Due soon",
+      "contaPagarAtraso": "Bill overdue",
+      "contaReceberVencimento": "Due soon",
+      "contaReceberAtraso": "Charge overdue",
+      "transacaoAlta": "New transaction",
+      "vendaMarketplace": "New sale",
+      "feedbackResolvido": "Ticket answered"
+    },
+    "kinds": {
+      "impostoVencimento": "{count, plural, one {{name} is due} other {# taxes are due}} in the next {days} days",
+      "impostoAtraso": "{count, plural, one {{name} is overdue} other {# taxes are overdue}}",
+      "contaPagarVencimento": "{count, plural, one {{name} is due} other {# bills are due}} in the next {days} days",
+      "contaPagarAtraso": "{count, plural, one {{name} is overdue} other {# bills are overdue}}",
+      "contaReceberVencimento": "{count, plural, one {{name} is due} other {# charges are due}} in the next {days} days",
+      "contaReceberAtraso": "{count, plural, one {{name} is overdue} other {# charges are overdue}}",
+      "transacaoAlta": "{type, select, entrada {Inflow} other {Outflow}} of {amount} · {description}",
+      "vendaMarketplace": "{count, plural, one {# new sale} other {# new sales}} · {channel} · {total}",
+      "feedbackResolvido": "Your ticket about \"{local}\" was answered"
+    }
   },
   "userMenu": {
     "label": "Account menu",
