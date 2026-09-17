@@ -65,6 +65,30 @@ export interface ReportData {
 
 const shortDate = (d: string) => `${d.split("-")[2]}/${d.split("-")[1]}`;
 
+// Marca d'água diagonal com o nome da empresa, em opacidade baixa, repetida
+// em todas as páginas — inclusive as que o autoTable cria durante a
+// paginação, por isso só dá pra aplicar depois que todo o conteúdo já foi
+// desenhado (é o próprio motivo de rodar por último, logo antes do save).
+function addWatermark(doc: InstanceType<typeof import("jspdf").jsPDF>, text: string) {
+  // getNumberOfPages() existe em runtime (núcleo do jsPDF) mas não nos tipos públicos de `internal`.
+  const pageCount = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.saveGraphicsState();
+    // @ts-expect-error GState existe em runtime (núcleo do jsPDF) mas não nos tipos públicos.
+    doc.setGState(new doc.GState({ opacity: 0.06 }));
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(54);
+    doc.setTextColor(90);
+    doc.text(text, pageWidth / 2, pageHeight / 2, { angle: 45, align: "center", baseline: "middle" });
+    doc.restoreGraphicsState();
+  }
+  doc.setTextColor(0);
+  doc.setPage(pageCount);
+}
+
 export async function exportReportPdf(data: ReportData): Promise<void> {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import("jspdf"),
@@ -339,6 +363,12 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
     });
     afterTable();
   }
+
+  // Marca d'água é a marca do produto (NexusFi), não a da empresa do
+  // cliente — o cabeçalho acima já identifica de quem é o relatório; a marca
+  // d'água é o "gerado com NexusFi", por isso independe de ter empresa
+  // cadastrada.
+  addWatermark(doc, "NexusFi");
 
   const slugPeriod = data.periodLabel.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
   doc.save(`${t("fileSlug")}-${data.tab}-${slugPeriod}.pdf`);

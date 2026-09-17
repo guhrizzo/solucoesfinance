@@ -22,6 +22,11 @@ import {
   updateTiktokStock,
   type TiktokIntegracao,
 } from "@/lib/tiktokshop";
+import {
+  getValidSheinToken,
+  updateSheinStock,
+  type SheinIntegracao,
+} from "@/lib/shein";
 
 export interface OrigemVenda {
   platform: string;
@@ -58,7 +63,7 @@ async function propagarEstoque(
     try {
       const intSnap = await db.collection("integracoes").doc(vinculo.connectionId).get();
       if (!intSnap.exists) continue;
-      const integracao = { id: intSnap.id, ...intSnap.data() } as (MlIntegracao & ShopeeIntegracao & TiktokIntegracao);
+      const integracao = { id: intSnap.id, ...intSnap.data() } as (MlIntegracao & ShopeeIntegracao & TiktokIntegracao & SheinIntegracao);
       if (isMockToken(integracao.accessToken)) continue;
 
       if (vinculo.platform === "mercadolivre") {
@@ -73,6 +78,10 @@ async function propagarEstoque(
         const token = await getValidTiktokToken(db, integracao);
         await updateTiktokStock(token, integracao.accountId || "", integracao.shopCipher || "", vinculo.adId, novaQuantidade);
         console.log(`[sync] TikTok Shop SKU ${vinculo.adId} → ${novaQuantidade} un`);
+      } else if (vinculo.platform === "shein") {
+        const { openKeyId, secretKey } = await getValidSheinToken(db, integracao);
+        await updateSheinStock(openKeyId, secretKey, vinculo.adId, novaQuantidade);
+        console.log(`[sync] Shein SKU ${vinculo.adId} → ${novaQuantidade} un`);
       }
     } catch (err) {
       console.error(`[sync] falha ao propagar estoque p/ ${vinculo.platform}:${vinculo.adId}:`, err);

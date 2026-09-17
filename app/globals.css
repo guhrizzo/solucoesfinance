@@ -50,6 +50,9 @@
   --brand-tiktok-bg: #010101;
   --brand-tiktok-fg: #ffffff;
   --brand-tiktok-solid: #fe2c55;
+  --brand-shein-bg: #000000;
+  --brand-shein-fg: #ffffff;
+  --brand-shein-solid: #4b5563;
 
   /* Paleta categórica — séries de dados (donut de centro de custos, impostos
      por tipo, gráficos). 8 matizes distinguíveis; NÃO são cor de status. */

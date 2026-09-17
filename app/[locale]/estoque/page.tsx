@@ -27,7 +27,12 @@ const SHOPEE_UI_VISIVEL = false;
 // TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
 const TIKTOKSHOP_UI_VISIVEL = true;
 
-type Plataforma = "mercadolivre" | "shopee" | "tiktokshop";
+// Shein: integração nova, backend pronto mas ainda sem credenciais reais
+// (SHEIN_APP_ID/APP_SECRET) — mesma lógica da Shopee acima. Troque para
+// `true` quando o app for aprovado e testado contra a conta real.
+const SHEIN_UI_VISIVEL = false;
+
+type Plataforma = "mercadolivre" | "shopee" | "tiktokshop" | "shein";
 
 // Interfaces de Dados
 interface ProdutoEstoque {
@@ -113,7 +118,7 @@ export default function EstoquePage() {
 
   // Estados de UI/Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"todos" | "mercadolivre" | "shopee" | "tiktokshop" | "local" | "baixo">("todos");
+  const [activeTab, setActiveTab] = useState<"todos" | "mercadolivre" | "shopee" | "tiktokshop" | "shein" | "local" | "baixo">("todos");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
 
   // Confirmação no estilo NexusFi (substitui o confirm() nativo do navegador).
@@ -327,7 +332,19 @@ export default function EstoquePage() {
         );
       }
       cleanUrlParams();
-    } else if (integration === "ml_error" || integration === "shopee_error" || integration === "tiktok_error") {
+    } else if (integration === "shein_success") {
+      if (warning === "limited_permissions") {
+        showToast(t("toast.sheinConnectedLimited"), "info");
+      } else {
+        showToast(
+          imported && imported !== "0"
+            ? t("toast.sheinIntegratedImported", { count: imported })
+            : t("toast.sheinIntegrated"),
+          "success"
+        );
+      }
+      cleanUrlParams();
+    } else if (integration === "ml_error" || integration === "shopee_error" || integration === "tiktok_error" || integration === "shein_error") {
       showToast(t("toast.integrationError", { message: message || t("toast.integrationErrorGeneric") }), "error");
       cleanUrlParams();
     }
@@ -696,6 +713,7 @@ export default function EstoquePage() {
       if (activeTab === "mercadolivre") return skusVinculados.some((v) => v.platform === "mercadolivre");
       if (activeTab === "shopee") return skusVinculados.some((v) => v.platform === "shopee");
       if (activeTab === "tiktokshop") return skusVinculados.some((v) => v.platform === "tiktokshop");
+      if (activeTab === "shein") return skusVinculados.some((v) => v.platform === "shein");
       if (activeTab === "local") return skusVinculados.length === 0;
       if (activeTab === "baixo") return p.quantity <= p.minQuantity && p.quantity > 0;
 
@@ -728,11 +746,11 @@ export default function EstoquePage() {
   const handleConnectAccount = async (platform: Plataforma) => {
     if (!user) return;
 
-    // Shopee/TikTok Shop: rota autenticada (POST) — o ownerUid sai do ID
-    // token, não da URL.
-    if (platform === "shopee" || platform === "tiktokshop") {
-      const failKey = platform === "shopee" ? "shopeeConnectFail" : "tiktokConnectFail";
-      const errKey = platform === "shopee" ? "shopeeConnectError" : "tiktokConnectError";
+    // Shopee/TikTok Shop/Shein: rota autenticada (POST) — o ownerUid sai do
+    // ID token, não da URL.
+    if (platform === "shopee" || platform === "tiktokshop" || platform === "shein") {
+      const failKey = platform === "shopee" ? "shopeeConnectFail" : platform === "tiktokshop" ? "tiktokConnectFail" : "sheinConnectFail";
+      const errKey = platform === "shopee" ? "shopeeConnectError" : platform === "tiktokshop" ? "tiktokConnectError" : "sheinConnectError";
       try {
         const res = await authedFetch(`/api/auth/${platform}/redirect`, { method: "POST" });
         const data = await res.json().catch(() => ({}));
@@ -981,12 +999,14 @@ export default function EstoquePage() {
                 { id: "mercadolivre", label: "", ariaLabel: t("tabs.filterML"), image: "/Logotipo_MercadoLivre.png" },
                 { id: "shopee", label: "", ariaLabel: t("tabs.filterShopee"), image: "/Shopee.svg" },
                 { id: "tiktokshop", label: "", ariaLabel: t("tabs.filterTiktok"), image: "/TikTokShop.svg" },
+                { id: "shein", label: "", ariaLabel: t("tabs.filterShein"), image: "/Shein.svg" },
                 { id: "local", label: t("tabs.local"), icon: null },
                 { id: "baixo", label: t("tabs.lowStock"), icon: AlertTriangle }
               ]
                 // Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo).
                 .filter((tab) => SHOPEE_UI_VISIVEL || tab.id !== "shopee")
                 .filter((tab) => TIKTOKSHOP_UI_VISIVEL || tab.id !== "tiktokshop")
+                .filter((tab) => SHEIN_UI_VISIVEL || tab.id !== "shein")
                 .map((tab) => {
                 const IconComponent = tab.icon;
                 return (
@@ -1457,6 +1477,35 @@ export default function EstoquePage() {
                 </div>
                 )}
 
+                {/* Canal 4: Shein */}
+                {SHEIN_UI_VISIVEL && (
+                <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center gap-2">
+                      <img src="/Shein.svg" alt="Shein" style={{ height: "40px", objectFit: "contain" }} />
+                      <div className="text-center">
+                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.sheinDesc")}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {resumoContas("shein") ? (
+                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      {resumoContas("shein")}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleConnectAccount("shein")}
+                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
+                      style={{ background: "var(--primary)", color: "white" }}
+                    >
+                      {t("integrationsModal.connectAccount")}
+                    </button>
+                  )}
+                </div>
+                )}
+
               </div>
 
               {/* Contas Conectadas */}
@@ -1479,7 +1528,9 @@ export default function EstoquePage() {
                                   ? "/Logotipo_MercadoLivre.png"
                                   : item.platform === "shopee"
                                   ? "/Shopee.svg"
-                                  : "/TikTokShop.svg"
+                                  : item.platform === "tiktokshop"
+                                  ? "/TikTokShop.svg"
+                                  : "/Shein.svg"
                               }
                               alt={item.platform}
                               style={{ height: "20px", objectFit: "contain" }}
@@ -1615,6 +1666,7 @@ export default function EstoquePage() {
                       {/* Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo). */}
                       {SHOPEE_UI_VISIVEL && <option value="shopee">Shopee</option>}
                       {TIKTOKSHOP_UI_VISIVEL && <option value="tiktokshop">TikTok Shop</option>}
+                      {SHEIN_UI_VISIVEL && <option value="shein">Shein</option>}
                     </select>
                   </div>
 

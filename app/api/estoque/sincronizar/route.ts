@@ -26,6 +26,12 @@ import {
   updateTiktokStock,
   type TiktokIntegracao,
 } from "@/lib/tiktokshop";
+import {
+  getValidSheinToken,
+  fetchSheinListings,
+  updateSheinStock,
+  type SheinIntegracao,
+} from "@/lib/shein";
 import { puxarCanalMercadoLivre } from "@/lib/estoqueSync";
 
 // Cada chamada aqui pode disparar várias requisições à API do Mercado Livre
@@ -341,6 +347,81 @@ export async function POST(request: Request) {
         } catch (err: any) {
           console.error("Erro na sincronização real da TikTok Shop:", err);
           erros.push(err?.message || "Falha ao sincronizar com a TikTok Shop");
+        }
+      }
+      // ── Shein real ───────────────────────────────────────────────────────
+      if (integracao.platform === "shein") {
+        try {
+          const shIntegracao = integracao as unknown as SheinIntegracao;
+          const { openKeyId, secretKey } = await getValidSheinToken(db, shIntegracao);
+          const listings = await fetchSheinListings(openKeyId, secretKey);
+
+          for (const ad of listings) {
+            const snapEstoque = await db
+              .collection("estoque")
+              .where("userId", "==", userId)
+              .where("sku", "==", ad.sku)
+              .get();
+
+            // Fonte da verdade = estoque central (quando o produto já existe aqui).
+            let quantidadeFinal = ad.quantity;
+            let precoFinal = ad.price;
+
+            if (snapEstoque.empty) {
+              await db.collection("estoque").add({
+                userId,
+                sku: ad.sku,
+                name: ad.title,
+                price: ad.price,
+                quantity: ad.quantity,
+                minQuantity: 10,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              });
+            } else {
+              const e = snapEstoque.docs[0].data();
+              quantidadeFinal = e.quantity ?? ad.quantity;
+              precoFinal = e.price ?? ad.price;
+
+              // Empurra o estoque central de volta pro SKU se divergir.
+              if (typeof e.quantity === "number" && e.quantity !== ad.quantity) {
+                try {
+                  await updateSheinStock(openKeyId, secretKey, ad.adId, e.quantity);
+                } catch (err: any) {
+                  erros.push(`SKU ${ad.adId}: ${err?.message || "erro ao atualizar"}`);
+                }
+              }
+            }
+
+            const snapVinculo = await db
+              .collection("vinculos")
+              .where("userId", "==", userId)
+              .where("platform", "==", "shein")
+              .where("adId", "==", ad.adId)
+              .get();
+
+            const vinculoData = {
+              userId,
+              sku: ad.sku,
+              platform: "shein" as const,
+              adId: ad.adId,
+              title: ad.title,
+              price: precoFinal,
+              quantity: quantidadeFinal,
+              connectionId: docInt.id,
+              updatedAt: Date.now(),
+            };
+
+            if (!snapVinculo.empty) {
+              await db.collection("vinculos").doc(snapVinculo.docs[0].id).set(vinculoData, { merge: true });
+            } else {
+              await db.collection("vinculos").add({ ...vinculoData, createdAt: Date.now() });
+            }
+            totalSincronizados++;
+          }
+        } catch (err: any) {
+          console.error("Erro na sincronização real da Shein:", err);
+          erros.push(err?.message || "Falha ao sincronizar com a Shein");
         }
       }
     }

@@ -15,7 +15,7 @@
 // não duplica.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type VendaChannel = "mercadolivre" | "shopee" | "tiktokshop" | "manual";
+export type VendaChannel = "mercadolivre" | "shopee" | "tiktokshop" | "shein" | "manual";
 
 export interface VendaInput {
   /** "manual" = venda registrada à mão no Painel de Vendas (balcão / fora dos marketplaces). */
@@ -43,6 +43,7 @@ const CHANNEL_LABEL: Record<VendaChannel, string> = {
   mercadolivre: "Mercado Livre",
   shopee: "Shopee",
   tiktokshop: "TikTok Shop",
+  shein: "Shein",
   manual: "Venda manual",
 };
 

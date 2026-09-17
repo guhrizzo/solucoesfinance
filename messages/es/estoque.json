@@ -2,7 +2,8 @@
   "platformName": {
     "mercadolivre": "Mercado Livre",
     "shopee": "Shopee",
-    "tiktokshop": "TikTok Shop"
+    "tiktokshop": "TikTok Shop",
+    "shein": "Shein"
   },
   "meta": {
     "title": "Inventario Centralizado",
@@ -43,6 +44,7 @@
     "filterML": "Filtrar por Mercado Livre",
     "filterShopee": "Filtrar por Shopee",
     "filterTiktok": "Filtrar por TikTok Shop",
+    "filterShein": "Filtrar por Shein",
     "local": "Solo Local",
     "lowStock": "Stock Bajo"
   },
@@ -103,6 +105,7 @@
     "mlDesc": "Integración real vía OAuth 2.0",
     "shopeeDesc": "Integración real de anuncios y ventas",
     "tiktokDesc": "Integración real de productos y ventas",
+    "sheinDesc": "Integración real de productos y ventas",
     "connectAccount": "Conectar Cuenta",
     "yourAccounts": "Tus Cuentas Integradas ({count})",
     "noneConnected": "Ninguna cuenta conectada por ahora.",
@@ -169,7 +172,12 @@
     "tiktokIntegratedImported": "¡TikTok Shop integrada! {count} producto(s) importado(s).",
     "tiktokIntegrated": "¡Tienda de TikTok Shop integrada con éxito!",
     "tiktokConnectFail": "No se pudo iniciar la conexión con TikTok Shop",
-    "tiktokConnectError": "Error al conectar con TikTok Shop"
+    "tiktokConnectError": "Error al conectar con TikTok Shop",
+    "sheinConnectedLimited": "Tienda de Shein conectada, pero sin permiso para importar productos automáticamente. Vincula manualmente o revisa los alcances de la app.",
+    "sheinIntegratedImported": "¡Shein integrada! {count} producto(s) importado(s).",
+    "sheinIntegrated": "¡Tienda de Shein integrada con éxito!",
+    "sheinConnectFail": "No se pudo iniciar la conexión con Shein",
+    "sheinConnectError": "Error al conectar con Shein"
   },
   "confirm": {
     "removeProductTitle": "Eliminar producto",

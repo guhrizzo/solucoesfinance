@@ -21,7 +21,7 @@ import AccessDenied from "./AccessDenied";
 import { PageLoader } from "./ui";
 import PinModal from "./PinModal";
 import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
-import { stampCreate, stampUpdate } from "@/lib/audit";
+import { stampCreate, stampUpdate, stampSettle, type Actor } from "@/lib/audit";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import "./cashflow.css";
@@ -96,6 +96,8 @@ interface Tx {
   costCenterName?: string;
   /** true quando a despesa em `sourceExpenseId` foi criada A PARTIR desta saída (não apenas casada com uma despesa pré-existente) — define se ela deve ser removida junto ao deletar este lançamento. */
   expenseAutoCreated?: boolean;
+  /** Id da conta a pagar dada como paga automaticamente por esta saída (ver `autoSettleMatchingBill`) — mesmo campo que `syncBillCashflow` usa pra achar o espelho, aqui gravado no sentido contrário (Fluxo de Caixa → Contas a Pagar). */
+  sourceBillId?: string;
 }
 
 interface CostCenterOption {
@@ -198,6 +200,58 @@ async function autoSettleMatchingCostCenterExpense(
   } catch (err) {
     // Nunca deixa a baixa automática travar o salvamento da transação em si.
     console.error("Erro ao tentar dar baixa automática no Centro de Custo:", err);
+    return null;
+  }
+}
+
+/**
+ * Mesma ideia da `autoSettleMatchingCostCenterExpense`, agora pra Contas a
+ * Pagar: uma saída lançada aqui no Fluxo de Caixa (manual ou por importação)
+ * que bate com uma conta pendente/vencida/agendada — por título OU pelo
+ * fornecedor cadastrado na conta (`partyName`) — e pelo mesmo valor, marca
+ * essa conta como paga automaticamente. Só age com exatamente 1
+ * correspondência; ambíguo ou nenhum resultado não arrisca vincular errado.
+ *
+ * Diferente do Centro de Custo, Contas a Pagar tem trilha de auditoria
+ * (`stampSettle`) — carimba com o mesmo `actor` que já validou o PIN pra
+ * salvar esta transação (ver `handleSave`/`handleImport`), sem pedir um
+ * segundo PIN só pra isso.
+ */
+async function autoSettleMatchingBill(
+  db: import("firebase/firestore").Firestore,
+  uid: string,
+  tx: { description: string; amount: number },
+  actor: Actor
+): Promise<string | null> {
+  const desc = (tx.description || "").trim().toLowerCase();
+  if (!desc) return null;
+
+  try {
+    const { collection, getDocs, doc, updateDoc } = await import("firebase/firestore");
+    // Subcoleção já escopada por dono (users/{uid}/bills) — sem precisar de
+    // where nenhum, filtra tudo no cliente (mesmo espírito do Centro de Custo).
+    const snap = await getDocs(collection(db, "users", uid, "bills"));
+
+    const matches = snap.docs.filter((d) => {
+      const data = d.data();
+      if (data.status !== "pendente" && data.status !== "vencido" && data.status !== "agendado") return false;
+      const titulo = (data.title || "").trim().toLowerCase();
+      const fornecedor = (data.partyName || "").trim().toLowerCase();
+      const bateDescricao = titulo === desc || (!!fornecedor && fornecedor === desc);
+      return bateDescricao && Number(data.amount) === Number(tx.amount);
+    });
+    if (matches.length !== 1) return null;
+
+    const matched = matches[0];
+    await updateDoc(doc(db, "users", uid, "bills", matched.id), {
+      status: "pago",
+      paidAt: TODAY,
+      ...stampSettle(actor),
+    });
+    return matched.id;
+  } catch (err) {
+    // Nunca deixa a baixa automática travar o salvamento da transação em si.
+    console.error("Erro ao tentar dar baixa automática em Contas a Pagar:", err);
     return null;
   }
 }
@@ -1330,6 +1384,8 @@ export default function CashFlowPage() {
       if (data.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
         if (matchedId) clean.sourceExpenseId = matchedId;
+        const matchedBillId = await autoSettleMatchingBill(db, uid, { description: data.description, amount: data.amount }, actor);
+        if (matchedBillId) clean.sourceBillId = matchedBillId;
       }
       await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
     }
@@ -1340,12 +1396,15 @@ export default function CashFlowPage() {
     const [{ getFirebase }, { collection, addDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
     const { db } = await getFirebase();
     // A importação já passou pela trava de PIN no modal — carimba a autoria.
-    const stamp = stampCreate({ uid: authUid ?? uid, name: userName });
+    const importActor = { uid: authUid ?? uid, name: userName };
+    const stamp = stampCreate(importActor);
     await Promise.all(importedTxs.map(async (tx) => {
       const entry: Record<string, unknown> = { ...tx, createdAt: Date.now(), ...stamp };
       if (tx.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: tx.description, amount: tx.amount });
         if (matchedId) entry.sourceExpenseId = matchedId;
+        const matchedBillId = await autoSettleMatchingBill(db, uid, { description: tx.description, amount: tx.amount }, importActor);
+        if (matchedBillId) entry.sourceBillId = matchedBillId;
       }
       await addDoc(collection(db, "users", uid, "cashflow"), entry);
     }));
