@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect, useMemo, useId } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/app/hooks/useAuth";
+import { usePeriod } from "@/app/hooks/usePeriod";
 import { Link } from "@/i18n/navigation";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
@@ -18,6 +19,7 @@ import {
   ShoppingCart, DollarSign, Receipt, Package, TrendingUp,
   ArrowRight, AlertTriangle, Boxes, Layers,
   LayoutGrid, Calculator, Plus, X, Check, Target,
+  Calendar, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -93,7 +95,6 @@ interface ForecastAmount {
   dueDate: string;
 }
 
-type Periodo = "mes" | "30d" | "tudo";
 type Aba = "geral" | "precificacao";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -116,8 +117,10 @@ const ymd = (d: Date) => d.toISOString().split("T")[0];
 
 export default function VendasPage() {
   const t = useTranslations("vendas");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const { user, loading: authLoading } = useAuth();
+  const { monthKey: mesSelecionado, label: labelPeriodo, isCurrentMonth, goPrevMonth, goNextMonth } = usePeriod();
 
   const [ownerUid, setOwnerUid] = useState("");
   const [blocked, setBlocked] = useState(false);
@@ -165,7 +168,6 @@ export default function VendasPage() {
   const [bills, setBills] = useState<ForecastAmount[]>([]);
   const [taxes, setTaxes] = useState<ForecastAmount[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
-  const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [aba, setAba] = useState<Aba>("geral");
   const [shopeeRepasse, setShopeeRepasse] = useState<
     { pendente: number; liberado: number; taxas: number; mock: boolean } | null
@@ -275,21 +277,9 @@ export default function VendasPage() {
     [txs]
   );
 
-  const { dataInicio, labelPeriodo } = useMemo(() => {
-    const now = new Date();
-    if (periodo === "mes") {
-      return { dataInicio: `${monthKey(now)}-01`, labelPeriodo: t("periodLabels.mes") };
-    }
-    if (periodo === "30d") {
-      const d = new Date(now); d.setDate(d.getDate() - 29);
-      return { dataInicio: ymd(d), labelPeriodo: t("periodLabels.d30") };
-    }
-    return { dataInicio: "0000-00-00", labelPeriodo: t("periodLabels.tudo") };
-  }, [periodo, t]);
-
   const vendas = useMemo(
-    () => todasVendas.filter((v) => v.date >= dataInicio),
-    [todasVendas, dataInicio]
+    () => todasVendas.filter((v) => (v.date || "").slice(0, 7) === mesSelecionado),
+    [todasVendas, mesSelecionado]
   );
 
   // ── KPIs ───────────────────────────────────────────────────────────────────
@@ -318,23 +308,22 @@ export default function VendasPage() {
   }, [vendas]);
 
   // ── Ponto de equilíbrio vinculado ao orçamento do mês ───────────────────────
-  // Ponto de equilíbrio = orçamento do mês atual (mesma soma do KPI
-  // "Orçamento" do Fluxo de Caixa: centros de custo + contas a pagar +
+  // Ponto de equilíbrio = orçamento do mês selecionado na Navbar (mesma soma
+  // do KPI "Orçamento" do Fluxo de Caixa: centros de custo + contas a pagar +
   // impostos que vencem no mês). É o faturamento mínimo do mês pra cobrir
-  // essas despesas. Sempre olha o mês corrente — independe do filtro de
-  // período da tela (que também pode ser "30 dias" ou "Tudo").
+  // essas despesas.
   const mesAtual = useMemo(() => monthKey(new Date()), []);
 
   const orcamentoMes = useMemo(() => {
-    const centros = costCenters.reduce((s, c) => s + budgetForCenterMonth(c, mesAtual, mesAtual), 0);
-    const contasM = bills.filter((b) => (b.dueDate || "").slice(0, 7) === mesAtual).reduce((s, b) => s + b.amount, 0);
-    const impostosM = taxes.filter((tx) => (tx.dueDate || "").slice(0, 7) === mesAtual).reduce((s, tx) => s + tx.amount, 0);
+    const centros = costCenters.reduce((s, c) => s + budgetForCenterMonth(c, mesSelecionado, mesAtual), 0);
+    const contasM = bills.filter((b) => (b.dueDate || "").slice(0, 7) === mesSelecionado).reduce((s, b) => s + b.amount, 0);
+    const impostosM = taxes.filter((tx) => (tx.dueDate || "").slice(0, 7) === mesSelecionado).reduce((s, tx) => s + tx.amount, 0);
     return centros + contasM + impostosM;
-  }, [costCenters, bills, taxes, mesAtual]);
+  }, [costCenters, bills, taxes, mesSelecionado, mesAtual]);
 
   const vendidoMesAtual = useMemo(
-    () => todasVendas.filter((v) => (v.date || "").slice(0, 7) === mesAtual).reduce((s, v) => s + (v.amount || 0), 0),
-    [todasVendas, mesAtual]
+    () => todasVendas.filter((v) => (v.date || "").slice(0, 7) === mesSelecionado).reduce((s, v) => s + (v.amount || 0), 0),
+    [todasVendas, mesSelecionado]
   );
 
   const pontoEquilibrio = useMemo(() => {
@@ -352,46 +341,26 @@ export default function VendasPage() {
 
   // ── Série temporal (gráfico de barras empilhadas por canal) ────────────────
   const serie = useMemo(() => {
-    const now = new Date();
     const buckets: { key: string; label: string; ml: number; shopee: number; tiktokshop: number; manual: number }[] = [];
 
     // "mercadolivre" → ml, "shopee" → shopee, "tiktokshop" → tiktokshop, resto (manual) → manual.
     const chKey = (c?: Canal): "ml" | "shopee" | "tiktokshop" | "manual" =>
       c === "shopee" ? "shopee" : c === "mercadolivre" ? "ml" : c === "tiktokshop" ? "tiktokshop" : "manual";
 
-    if (periodo === "tudo") {
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        buckets.push({
-          key: monthKey(d),
-          label: d.toLocaleDateString(locale, { month: "short" }).replace(".", ""),
-          ml: 0, shopee: 0, tiktokshop: 0, manual: 0,
-        });
-      }
-      vendas.forEach((v) => {
-        const b = buckets.find((x) => x.key === v.date.slice(0, 7));
-        if (b) b[chKey(v.saleChannel)] += v.amount || 0;
-      });
-    } else {
-      const dias = periodo === "mes"
-        ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-        : 30;
-      const base = periodo === "mes"
-        ? new Date(now.getFullYear(), now.getMonth(), 1)
-        : (() => { const d = new Date(now); d.setDate(d.getDate() - 29); return d; })();
-      for (let i = 0; i < dias; i++) {
-        const d = new Date(base); d.setDate(base.getDate() + i);
-        buckets.push({ key: ymd(d), label: String(d.getDate()), ml: 0, shopee: 0, tiktokshop: 0, manual: 0 });
-      }
-      vendas.forEach((v) => {
-        const b = buckets.find((x) => x.key === v.date);
-        if (b) b[chKey(v.saleChannel)] += v.amount || 0;
-      });
+    const [y, m] = mesSelecionado.split("-").map(Number);
+    const dias = new Date(y, m, 0).getDate();
+    for (let i = 0; i < dias; i++) {
+      const d = new Date(y, m - 1, i + 1);
+      buckets.push({ key: ymd(d), label: String(d.getDate()), ml: 0, shopee: 0, tiktokshop: 0, manual: 0 });
     }
+    vendas.forEach((v) => {
+      const b = buckets.find((x) => x.key === v.date);
+      if (b) b[chKey(v.saleChannel)] += v.amount || 0;
+    });
 
     const max = Math.max(1, ...buckets.map((b) => b.ml + b.shopee + b.tiktokshop + b.manual));
     return { buckets, max };
-  }, [vendas, periodo, locale]);
+  }, [vendas, mesSelecionado]);
 
   // ── Top produtos vendidos × estoque ────────────────────────────────────────
   const topProdutos = useMemo(() => {
@@ -443,15 +412,9 @@ export default function VendasPage() {
   if (authLoading || (user && !blocked && dbLoading)) return <PageLoader />;
   if (!user) return null;
 
-  const periodOptions: { id: Periodo; label: string }[] = [
-    { id: "mes", label: t("periods.mes") },
-    { id: "30d", label: t("periods.d30") },
-    { id: "tudo", label: t("periods.tudo") },
-  ];
-
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
-      <Navbar activePath="/vendas" user={user} onLogout={handleLogout} hidePeriod />
+      <Navbar activePath="/vendas" user={user} onLogout={handleLogout} />
 
       {toast && (
         <div
@@ -490,19 +453,29 @@ export default function VendasPage() {
 
           {aba === "geral" && (
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--cf-border)" }}>
-                {periodOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => setPeriodo(opt.id)}
-                    className="px-3.5 py-2 text-xs font-bold cursor-pointer border-none"
-                    style={periodo === opt.id
-                      ? { background: "var(--primary)", color: "var(--brand-on)" }
-                      : { background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: "var(--cf-border)", background: "var(--cf-card)" }}>
+                <button
+                  onClick={goPrevMonth}
+                  aria-label={tNav("period.prevMonth")}
+                  type="button"
+                  className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer"
+                  style={{ color: "var(--primary)" }}
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="flex items-center gap-1.5 px-1 text-xs font-bold mono select-none" style={{ color: "var(--cf-text)" }}>
+                  <Calendar size={12} /> {labelPeriodo}
+                </span>
+                <button
+                  onClick={goNextMonth}
+                  disabled={isCurrentMonth}
+                  aria-label={tNav("period.nextMonth")}
+                  type="button"
+                  className="p-2 transition-colors hover:bg-[var(--sunken)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ color: "var(--primary)" }}
+                >
+                  <ChevronRight size={15} />
+                </button>
               </div>
               <button
                 onClick={() => setNovaVendaOpen(true)}

@@ -23,16 +23,6 @@
     "pinTitle": "Confirmar venta",
     "pinSubtitle": "Ingresa tu PIN de 4 dígitos para registrar la venta"
   },
-  "periods": {
-    "mes": "Este mes",
-    "d30": "30 días",
-    "tudo": "Todo"
-  },
-  "periodLabels": {
-    "mes": "Este mes",
-    "d30": "Últimos 30 días",
-    "tudo": "Todo el período"
-  },
   "tabs": {
     "geral": "Visión general",
     "precificacao": "Precios"

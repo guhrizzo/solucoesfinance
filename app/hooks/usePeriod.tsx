@@ -8,9 +8,9 @@
 // em localStorage, então a escolha sobrevive a recarga e troca de página.
 //
 // Relatórios usa `refDate` como âncora e ainda tem seu próprio toggle
-// Mensal/Anual (mês do refDate vs ano do refDate). Vendas (mês/30d/tudo) NÃO
-// usa este contexto. Páginas sem conceito de mês (Fluxo de caixa, Estoque,
-// Usuários) escondem o seletor via <Navbar hidePeriod />.
+// Mensal/Anual (mês do refDate vs ano do refDate). Páginas sem conceito de
+// mês (Fluxo de caixa, Estoque, Usuários) escondem o seletor via
+// <Navbar hidePeriod />.
 
 import {
   createContext,

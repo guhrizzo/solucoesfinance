@@ -23,16 +23,6 @@
     "pinTitle": "Confirm sale",
     "pinSubtitle": "Enter your 4-digit PIN to record the sale"
   },
-  "periods": {
-    "mes": "This month",
-    "d30": "30 days",
-    "tudo": "All"
-  },
-  "periodLabels": {
-    "mes": "This month",
-    "d30": "Last 30 days",
-    "tudo": "All time"
-  },
   "tabs": {
     "geral": "Overview",
     "precificacao": "Pricing"

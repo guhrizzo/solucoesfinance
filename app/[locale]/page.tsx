@@ -22,7 +22,6 @@ import {
   BarChart2,
   Zap,
   ArrowRight,
-  ChevronRight,
   Menu,
   X,
   Globe,
@@ -53,9 +52,6 @@ import {
 // Ícones das funcionalidades — o texto vem de messages/*/landing.json
 // (features.items), na mesma ordem.
 const FEATURE_ICONS = [BarChart2, FileText, CreditCard, PieChart, Users, Globe];
-// "Saiba mais" de cada card abre o chatbot Midas (WhatsAppFab) já no tópico
-// correspondente — índice em landing.whatsapp.topics, na mesma ordem.
-const FEATURE_TOPIC_INDEX = [0, 5, 1, 5, 6, 3];
 
 type StatItem = { label: string; value: string; change: string };
 type FeatureItem = { title: string; desc: string };
@@ -608,18 +604,6 @@ export default function FinanceHome() {
                   </div>
                   <h3 className="text-blue-950 font-bold mb-2">{f.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.dispatchEvent(
-                        new CustomEvent("midas:open-topic", { detail: { index: FEATURE_TOPIC_INDEX[i] } })
-                      );
-                    }}
-                    className="flex items-center gap-1 mt-4 text-blue-500 text-sm font-medium bg-transparent border-0 p-0 cursor-pointer hover:underline"
-                  >
-                    {t("features.learnMore")} <ChevronRight size={14} />
-                  </button>
                 </div>
               );
             })}
