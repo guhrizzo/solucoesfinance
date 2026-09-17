@@ -30,6 +30,8 @@ export interface ReportData {
   userLabel?: string;
   locale: string;
   messages: Record<string, unknown>;
+  /** Dados da empresa (Configurações > Perfil & Empresa) — timbram o cabeçalho. */
+  company?: { nomeFantasia: string; razaoSocial: string; cnpj: string; ramo: string[] };
 
   metrics?: { entradas: number; saidas: number; saldo: number; taxaConciliacao: number; total: number };
   txs?: { date: string; description: string; category: string; type: "entrada" | "saida"; amount: number; reconciled?: boolean }[];
@@ -89,23 +91,45 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const marginX = 40;
 
-  // ── Cabeçalho ──
+  // ── Cabeçalho (timbre) ──
+  // Nome fantasia (ou razão social, ou o título genérico se a empresa ainda
+  // não preencheu nada em Configurações > Perfil & Empresa) vira o topo do
+  // relatório — o PDF passa a se identificar com a empresa do usuário, não
+  // com o produto.
+  const company = data.company;
+  const companyName = company?.nomeFantasia || company?.razaoSocial || t("title");
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text(t("title"), marginX, 48);
+  doc.text(companyName, marginX, 48);
+
+  let headerY = 66;
+  const infoLines: string[] = [];
+  if (company?.razaoSocial && company.razaoSocial !== companyName) infoLines.push(company.razaoSocial);
+  if (company?.cnpj) infoLines.push(`${t("cnpjLabel")}: ${company.cnpj}`);
+  if (company?.ramo?.length) infoLines.push(`${t("industryLabel")}: ${company.ramo.join(", ")}`);
+
+  if (infoLines.length) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(90);
+    doc.text(infoLines.join("  ·  "), marginX, headerY);
+    headerY += 14;
+  }
 
   doc.setFontSize(11);
   doc.setTextColor(90);
-  doc.text(`${TAB_LABEL[data.tab]}  ·  ${data.periodLabel}`, marginX, 66);
+  doc.text(`${TAB_LABEL[data.tab]}  ·  ${data.periodLabel}`, marginX, headerY);
+  headerY += 14;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(130);
   const gen = data.generatedAt.toLocaleString(data.locale);
-  doc.text(`${t("generatedAt", { when: gen })}${data.userLabel ? `  ·  ${data.userLabel}` : ""}`, marginX, 80);
+  doc.text(`${t("generatedAt", { when: gen })}${data.userLabel ? `  ·  ${data.userLabel}` : ""}`, marginX, headerY);
   doc.setTextColor(0);
 
-  let y = 100;
+  let y = headerY + 20;
 
   const heading = (txt: string) => {
     doc.setFont("helvetica", "bold");

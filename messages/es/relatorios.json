@@ -160,6 +160,8 @@
   },
   "pdf": {
     "title": "Informes & Conciliación",
+    "cnpjLabel": "CNPJ",
+    "industryLabel": "Rubro",
     "generatedAt": "Generado el {when}",
     "tabFluxo": "Flujo de Caja",
     "tabFaturamento": "Facturación",

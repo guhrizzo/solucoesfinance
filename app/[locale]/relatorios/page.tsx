@@ -165,6 +165,10 @@ export default function RelatoriosPage() {
   // liberado — ver lib/accountScope.ts.
   const [blocked, setBlocked] = useState(false);
 
+  // Dados da empresa (Configurações > Perfil & Empresa) — timbram o cabeçalho
+  // do PDF exportado no lugar do nome genérico do produto.
+  const [company, setCompany] = useState<{ nomeFantasia: string; razaoSocial: string; cnpj: string; ramo: string[] } | null>(null);
+
   // ── Logout ─────────────────────────────────────────────────────────────────
   async function handleLogout() {
     const { getFirebase } = await import("@/lib/firebase");
@@ -263,6 +267,35 @@ export default function RelatoriosPage() {
       snapUnsub?.();
     };
   }, []);
+
+  // Dados da empresa pro timbre do PDF — mesmas fontes da aba Perfil & Empresa
+  // em Configurações (ver app/[locale]/configuracoes/PerfilTab.tsx).
+  useEffect(() => {
+    if (!uid) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getFirebase } = await import("@/lib/firebase");
+        const { doc, getDoc } = await import("firebase/firestore");
+        const { db } = await getFirebase();
+        const [companySnap, onboardingSnap] = await Promise.all([
+          getDoc(doc(db, "users", uid, "profile", "company")),
+          getDoc(doc(db, "users", uid, "profile", "onboarding")),
+        ]);
+        if (cancelled) return;
+        const c = companySnap.exists() ? companySnap.data() : {};
+        setCompany({
+          nomeFantasia: c.nomeFantasia ?? "",
+          razaoSocial: c.razaoSocial ?? "",
+          cnpj: c.cnpj ?? "",
+          ramo: onboardingSnap.exists() ? (onboardingSnap.data()?.answers?.ramo ?? []) : [],
+        });
+      } catch (err) {
+        console.error("Erro ao carregar dados da empresa para o PDF:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [uid]);
 
   // Filtragem das transações por período
   const filteredTxs = useMemo(() => {
@@ -583,6 +616,7 @@ export default function RelatoriosPage() {
         userLabel: user?.email ?? undefined,
         locale,
         messages,
+        company: company ?? undefined,
       };
       let payload: ReportData;
       if (activeTab === "fluxo") {
