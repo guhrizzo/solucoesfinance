@@ -42,24 +42,6 @@ function WaGlyph() {
   );
 }
 
-// Ícone do Midas — "badge" do Tabler (tabler.io/icons?icon=badge), traço só.
-function MidasGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M17 17v-13l-5 3l-5 -3v13l5 3l5 -3" />
-    </svg>
-  );
-}
-
 /**
  * Botão flutuante na landing pública — estilo "zap" clássico: bolha verde
  * com anel pulsante, badge de mensagem e tooltip no hover.
@@ -209,7 +191,7 @@ export function WhatsAppFab() {
         style={{ bottom }}
         onClick={() => setOpen(true)}
       >
-        <MidasGlyph />
+        <WaGlyph />
         <span className="wa-fab__tooltip" aria-hidden="true">
           {t("tooltip")}
         </span>
@@ -226,7 +208,7 @@ export function WhatsAppFab() {
           <div className="wa-modal wa-chat" role="dialog" aria-modal="true" aria-label={t("modalTitle")}>
             <div className="wa-modal__head">
               <span className="wa-modal__icon" aria-hidden="true">
-                <MidasGlyph />
+                <WaGlyph />
               </span>
               <div>
                 <p className="wa-modal__title">{t("modalTitle")}</p>
