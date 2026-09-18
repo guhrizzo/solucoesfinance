@@ -183,6 +183,14 @@
       "colViews": "Visualizaciones",
       "emptyTitle": "Todavía sin visualizaciones registradas",
       "emptyDesc": "En cuanto alguien acceda a las páginas, el ranking aparece aquí."
+    },
+    "loggedUsers": {
+      "title": "Con sesión iniciada recientemente — últimos 7 días",
+      "colEmail": "Correo electrónico",
+      "colLastSeen": "Último acceso",
+      "noEmail": "—",
+      "emptyTitle": "Nadie inició sesión en los últimos 7 días",
+      "emptyDesc": "Las cuentas que inicien sesión aparecen aquí. Accesos anteriores a esta pestaña no se incluyen."
     }
   }
 }

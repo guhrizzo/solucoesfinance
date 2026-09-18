@@ -51,13 +51,22 @@ interface CostCenter {
   categories?: Array<{ id: string; name: string; color: string }>;
 }
 
+/**
+ * "competencia" é o 4º valor de status, usado pro regime de competência:
+ * despesa reconhecida no mês do fato gerador (`date`), sem relação com
+ * dinheiro saindo do caixa. Nunca sincroniza com o Fluxo de Caixa (ver
+ * `ExpenseModal.handleSubmit`) e já fica fora do cálculo de gasto real —
+ * `centerSpentForMonth`/`expensesForCenterMonth` só contam `"pago"`.
+ */
+type ExpenseStatus = "pago" | "pendente" | "agendado" | "competencia";
+
 interface Expense {
   id: string;
   category: string;
   center: string;
   amount: number;
   date: string;
-  status: "pago" | "pendente" | "agendado";
+  status: ExpenseStatus;
   description?: string;
   userId: string;
   createdAt: any;
@@ -417,6 +426,11 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
   const [status, setStatus] = useState<"pago" | "pendente" | "agendado">("pago");
+  // Aba escolhida no modal — só decide o discriminador gravado (ver
+  // `ExpenseStatus`): "competencia" grava status "competencia" direto (sem
+  // status de pagamento) e nunca chama `syncExpenseCashflow`. Só pode ser
+  // escolhida ao criar uma despesa nova — ver `canChangeRegime` abaixo.
+  const [regime, setRegime] = useState<"caixa" | "competencia">("caixa");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const descriptionId = useId();
@@ -474,13 +488,18 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
     setCenter(editing?.center ?? centers[0]?.name ?? "");
     setAmount(editing ? String(editing.amount) : "");
     setDate(editing?.date ?? new Date().toISOString().split("T")[0]);
-    setStatus((editing?.status ?? "pago") as "pago" | "pendente" | "agendado");
+    setRegime(editing?.status === "competencia" ? "competencia" : "caixa");
+    setStatus((editing && editing.status !== "competencia" ? editing.status : "pago") as "pago" | "pendente" | "agendado");
     setSaving(false);
     setErr("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
   if (!open) return null;
+
+  // Regime só é escolhível ao criar — editando, fica travado no regime
+  // original (não existe conversão sã de "reconhecida" pra "paga/pendente").
+  const canChangeRegime = !editing;
 
   const parsedAmount = parseFloat(amount.replace(",", ".")) || 0;
   const canSave = category.trim().length > 0 && center.length > 0 && parsedAmount > 0 && date.length > 0;
@@ -499,19 +518,28 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
       // Gasto por período agora é sempre derivado das despesas reais (ver
       // centerSpentForMonth) — não há mais acumulador em costCenters pra
       // manter aqui. Só o documento da despesa + o espelho no cashflow.
+      const finalStatus: ExpenseStatus = regime === "competencia" ? "competencia" : status;
+
       if (editing) {
         await updateDoc(doc(db, "expenses", editing.id), {
-          description, category, center, amount: parsedAmount, date, status,
+          description, category, center, amount: parsedAmount, date, status: finalStatus,
         });
-        await syncExpenseCashflow(db, uid, editing.id, { description, category, center, amount: parsedAmount, date, status });
+        // Regime de competência nunca sincroniza com o Fluxo de Caixa.
+        if (regime === "caixa") {
+          await syncExpenseCashflow(db, uid, editing.id, { description, category, center, amount: parsedAmount, date, status: finalStatus as "pago" | "pendente" | "agendado" });
+        }
         onSaved(t("expenseUpdated"));
       } else {
         const expRef = await addDoc(collection(db, "expenses"), {
-          description, category, center, amount: parsedAmount, date, status,
+          description, category, center, amount: parsedAmount, date, status: finalStatus,
           userId: uid, createdAt: new Date(),
         });
-        await syncExpenseCashflow(db, uid, expRef.id, { description, category, center, amount: parsedAmount, date, status });
-        onSaved(status === "pago" ? t("expenseCreatedPosted") : t("expenseCreated"));
+        if (regime === "caixa") {
+          await syncExpenseCashflow(db, uid, expRef.id, { description, category, center, amount: parsedAmount, date, status: finalStatus as "pago" | "pendente" | "agendado" });
+          onSaved(finalStatus === "pago" ? t("expenseCreatedPosted") : t("expenseCreated"));
+        } else {
+          onSaved(t("expenseCreatedCompetencia"));
+        }
       }
 
       onClose();
@@ -542,7 +570,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
               {editing ? t("editTitle") : t("newTitle")}
             </h3>
             <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--success)" }}>
-              <Check size={11} /> {t("syncNote")}
+              <Check size={11} /> {regime === "caixa" ? t("syncNote") : t("competenciaNote")}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70 transition-opacity cursor-pointer" aria-label={tc("close")}>
@@ -558,6 +586,26 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
               <AlertCircle size={13} /> {err}
             </div>
           )}
+
+          {/* Regime — só escolhível ao criar; editando fica travado (ver canChangeRegime) */}
+          <div>
+            <div className="grid grid-cols-2 gap-2">
+              {(["caixa", "competencia"] as const).map(r => (
+                <button key={r} type="button" disabled={!canChangeRegime}
+                  onClick={() => canChangeRegime && setRegime(r)}
+                  className="py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                  style={regime === r
+                    ? { background: "var(--brand-weak)", borderColor: "var(--brand)", color: "var(--brand)" }
+                    : { background: "transparent", borderColor: "var(--db-border)", color: "var(--db-text-2)" }
+                  }>
+                  {r === "caixa" ? t("regimeCaixaTab") : t("regimeCompetenciaTab")}
+                </button>
+              ))}
+            </div>
+            {!canChangeRegime && (
+              <p className="text-xs mt-1.5" style={{ color: "var(--db-text-3)" }}>{t("regimeLocked")}</p>
+            )}
+          </div>
 
           {/* Descrição */}
           <div>
@@ -622,7 +670,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
             </div>
             <div>
               <label htmlFor={dateId} className="text-xs font-semibold block mb-1.5" style={{ color: "var(--db-text-2)" }}>
-                {t("date")} <span style={{ color: "var(--danger)" }}>*</span>
+                {regime === "caixa" ? t("date") : t("competenciaDate")} <span style={{ color: "var(--danger)" }}>*</span>
               </label>
               <input id={dateId} type="date" value={date} onChange={e => setDate(e.target.value)} required
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
@@ -630,7 +678,8 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
             </div>
           </div>
 
-          {/* Status */}
+          {/* Status — só faz sentido em regime de caixa; competência é sempre reconhecida automaticamente */}
+          {regime === "caixa" && (
           <fieldset className="border-0 p-0 m-0 min-w-0">
             <legend className="text-xs font-semibold block mb-2 p-0" style={{ color: "var(--db-text-2)" }}>
               {t("status")} <span style={{ color: "var(--danger)" }}>*</span>
@@ -657,6 +706,14 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
               </p>
             )}
           </fieldset>
+          )}
+
+          {regime === "competencia" && (
+            <p className="text-xs flex items-center gap-1.5 px-3 py-2.5 rounded-xl"
+              style={{ background: "var(--brand-weak)", color: "var(--brand)" }}>
+              <AlertCircle size={13} /> {t("competenciaFieldNote")}
+            </p>
+          )}
 
           {/* Ações */}
           <div className="flex gap-2 pt-1">
@@ -722,7 +779,7 @@ export default function CostCenterPage() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">("todos");
+  const [filterStatus, setFilterStatus] = useState<"todos" | ExpenseStatus>("todos");
   const [savingCenter, setSavingCenter] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -933,7 +990,8 @@ export default function CostCenterPage() {
 
   // ── Baixa rápida (marcar despesa como paga) ─────────────────────────────────
   const handleMarkExpensePaid = async (exp: Expense) => {
-    if (!uid || exp.status === "pago") return;
+    // Competência é reconhecida automaticamente na criação — não tem "pago" pra marcar.
+    if (!uid || exp.status === "pago" || exp.status === "competencia") return;
     setPayingExpenseId(exp.id);
     try {
       const { getFirebase } = await import("@/lib/firebase");
@@ -1271,6 +1329,7 @@ export default function CostCenterPage() {
                 <option value="pago">{tStatus("pago")}</option>
                 <option value="pendente">{tStatus("pendente")}</option>
                 <option value="agendado">{tStatus("agendado")}</option>
+                <option value="competencia">{tStatus("competencia")}</option>
               </select>
               <button onClick={() => { setEditingExpense(null); setShowExpenseModal(true); }}
                 className="text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
@@ -1309,7 +1368,7 @@ export default function CostCenterPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 shrink-0">
-                      {exp.status !== "pago" && (
+                      {exp.status !== "pago" && exp.status !== "competencia" && (
                         <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
                           title={t("expenses.markPaidTitle")} aria-label={t("expenses.markPaidAria", { name: exp.description || t("expenses.expenseFallback") })}
                           className="p-1 rounded cursor-pointer hover:opacity-70 transition-colors disabled:opacity-50">
@@ -1364,7 +1423,7 @@ export default function CostCenterPage() {
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-1.5">
-                            {exp.status !== "pago" && (
+                            {exp.status !== "pago" && exp.status !== "competencia" && (
                               <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
                                 title={t("expenses.markPaidTitle")} aria-label={t("expenses.markPaidAria", { name: exp.description || t("expenses.expenseFallback") })}
                                 className="p-1 rounded hover:opacity-70 cursor-pointer transition-colors disabled:opacity-50">

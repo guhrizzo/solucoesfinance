@@ -6,6 +6,7 @@
 
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { dayKey, monthKey } from "@/lib/analytics/dates";
+import type { LoggedUser } from "@/lib/analytics/loggedUsers";
 
 export interface DiaSerie {
   date: string;
@@ -31,6 +32,11 @@ export interface AnalyticsOverview {
   serie30: DiaSerie[];
   topPaginas: PaginaTop[];
   erro: boolean;
+}
+
+/** Shape que a rota /api/analytics realmente responde: `getAnalyticsOverview` + `getRecentLoggedUsers` mesclados. */
+export interface AnalyticsResponse extends AnalyticsOverview {
+  usuariosLogados: LoggedUser[];
 }
 
 const ZERO: Totais = { uniqueVisitors: 0, loggedVisitors: 0, pageviews: 0 };

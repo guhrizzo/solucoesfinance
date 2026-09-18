@@ -90,7 +90,8 @@
     "todos": "All",
     "pago": "Paid",
     "pendente": "Pending",
-    "agendado": "Scheduled"
+    "agendado": "Scheduled",
+    "competencia": "Accrual"
   },
   "confirm": {
     "deleteCenterTitle": "Delete cost center?",
@@ -103,6 +104,10 @@
     "editTitle": "Edit expense",
     "newTitle": "New expense",
     "syncNote": "\"Paid\" expenses sync with cash flow",
+    "competenciaNote": "Recognized in the accrual month — doesn't post anything to cash flow",
+    "regimeCaixaTab": "Cash Basis",
+    "regimeCompetenciaTab": "Accrual Basis",
+    "regimeLocked": "The basis can't be changed after the expense is created.",
     "description": "Description",
     "optional": "(optional)",
     "descriptionPlaceholder": "e.g. Lunch with client",
@@ -113,6 +118,8 @@
     "selectCenter": "— Select a center —",
     "amount": "Amount (R$)",
     "date": "Date",
+    "competenciaDate": "Accrual date (triggering event)",
+    "competenciaFieldNote": "This expense is automatically recognized on the accrual date entered — no payment status, and nothing is posted to cash flow.",
     "status": "Status",
     "paidCashflowNote": "Posted as an outflow in cash flow",
     "cancel": "Cancel",
@@ -121,7 +128,8 @@
     "saveError": "Error saving",
     "expenseUpdated": "Expense updated!",
     "expenseCreatedPosted": "Expense created and posted to cash flow!",
-    "expenseCreated": "Expense created!"
+    "expenseCreated": "Expense created!",
+    "expenseCreatedCompetencia": "Accrual expense recognized!"
   },
   "centerModal": {
     "editTitle": "Edit center",

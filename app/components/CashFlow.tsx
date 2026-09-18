@@ -96,7 +96,7 @@ interface Tx {
   costCenterName?: string;
   /** true quando a despesa em `sourceExpenseId` foi criada A PARTIR desta saída (não apenas casada com uma despesa pré-existente) — define se ela deve ser removida junto ao deletar este lançamento. */
   expenseAutoCreated?: boolean;
-  /** Id da conta a pagar dada como paga automaticamente por esta saída (ver `autoSettleMatchingBill`) — mesmo campo que `syncBillCashflow` usa pra achar o espelho, aqui gravado no sentido contrário (Fluxo de Caixa → Contas a Pagar). */
+  /** Id da conta a pagar baixada (total ou parcialmente) automaticamente por esta saída (ver `autoSettleMatchingBill`) — mesmo campo que `syncBillCashflow` usa pra achar o espelho, aqui gravado no sentido contrário (Fluxo de Caixa → Contas a Pagar). */
   sourceBillId?: string;
 }
 
@@ -169,6 +169,9 @@ if (typeof window !== "undefined") {
  * `sourceExpenseId` que o Centro de Custo já usa na direção oposta.
  * Só age quando encontra exatamente 1 correspondência; ambíguo ou nenhum
  * resultado não arrisca vincular errado, o lançamento fica só no cashflow.
+ * Despesas em regime de competência (`status: "competencia"`, ver
+ * costCenter/page.tsx) já ficam fora do filtro abaixo por não serem nem
+ * "pendente" nem "agendado" — nunca são alvo de baixa vinda do caixa.
  */
 async function autoSettleMatchingCostCenterExpense(
   db: import("firebase/firestore").Firestore,
@@ -204,18 +207,24 @@ async function autoSettleMatchingCostCenterExpense(
   }
 }
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const CENTS_EPSILON = 0.005;
+
 /**
  * Mesma ideia da `autoSettleMatchingCostCenterExpense`, agora pra Contas a
  * Pagar: uma saída lançada aqui no Fluxo de Caixa (manual ou por importação)
  * que bate com uma conta pendente/vencida/agendada — por título OU pelo
- * fornecedor cadastrado na conta (`partyName`) — e pelo mesmo valor, marca
- * essa conta como paga automaticamente. Só age com exatamente 1
- * correspondência; ambíguo ou nenhum resultado não arrisca vincular errado.
+ * fornecedor cadastrado na conta (`partyName`) — soma no saldo já pago dela
+ * (`amountPaid`). Só marca a conta como "pago" quando essa soma atinge o
+ * valor total; um valor menor (pagamento parcial) fica registrado em
+ * `amountPaid` mas a conta continua pendente/vencida/agendada, porque o
+ * pagamento ainda não foi completo. Só age com exatamente 1 correspondência;
+ * ambíguo ou nenhum resultado não arrisca vincular errado.
  *
  * Diferente do Centro de Custo, Contas a Pagar tem trilha de auditoria
  * (`stampSettle`) — carimba com o mesmo `actor` que já validou o PIN pra
  * salvar esta transação (ver `handleSave`/`handleImport`), sem pedir um
- * segundo PIN só pra isso.
+ * segundo PIN só pra isso. Aplicada tanto na baixa parcial quanto na total.
  */
 async function autoSettleMatchingBill(
   db: import("firebase/firestore").Firestore,
@@ -232,23 +241,39 @@ async function autoSettleMatchingBill(
     // where nenhum, filtra tudo no cliente (mesmo espírito do Centro de Custo).
     const snap = await getDocs(collection(db, "users", uid, "bills"));
 
-    const matches = snap.docs.filter((d) => {
-      const data = d.data();
-      if (data.status !== "pendente" && data.status !== "vencido" && data.status !== "agendado") return false;
-      const titulo = (data.title || "").trim().toLowerCase();
-      const fornecedor = (data.partyName || "").trim().toLowerCase();
-      const bateDescricao = titulo === desc || (!!fornecedor && fornecedor === desc);
-      return bateDescricao && Number(data.amount) === Number(tx.amount);
-    });
-    if (matches.length !== 1) return null;
+    const candidates = snap.docs
+      .map((d) => {
+        const data = d.data();
+        const remaining = round2(Number(data.amount) - Number(data.amountPaid || 0));
+        return { doc: d, data, remaining };
+      })
+      .filter(({ data, remaining }) => {
+        if (data.status !== "pendente" && data.status !== "vencido" && data.status !== "agendado") return false;
+        const titulo = (data.title || "").trim().toLowerCase();
+        const fornecedor = (data.partyName || "").trim().toLowerCase();
+        const bateDescricao = titulo === desc || (!!fornecedor && fornecedor === desc);
+        // Nunca aceita mais do que falta pagar — só igual (quita) ou menor (parcial).
+        return bateDescricao && remaining > 0 && Number(tx.amount) <= remaining + CENTS_EPSILON;
+      });
+    if (candidates.length !== 1) return null;
 
-    const matched = matches[0];
-    await updateDoc(doc(db, "users", uid, "bills", matched.id), {
-      status: "pago",
-      paidAt: TODAY,
-      ...stampSettle(actor),
-    });
-    return matched.id;
+    const { doc: matchedDoc, data, remaining } = candidates[0];
+    const quitaConta = Number(tx.amount) >= remaining - CENTS_EPSILON;
+
+    if (quitaConta) {
+      await updateDoc(doc(db, "users", uid, "bills", matchedDoc.id), {
+        status: "pago",
+        paidAt: TODAY,
+        amountPaid: data.amount,
+        ...stampSettle(actor),
+      });
+    } else {
+      await updateDoc(doc(db, "users", uid, "bills", matchedDoc.id), {
+        amountPaid: round2(Number(data.amountPaid || 0) + Number(tx.amount)),
+        ...stampSettle(actor),
+      });
+    }
+    return matchedDoc.id;
   } catch (err) {
     // Nunca deixa a baixa automática travar o salvamento da transação em si.
     console.error("Erro ao tentar dar baixa automática em Contas a Pagar:", err);

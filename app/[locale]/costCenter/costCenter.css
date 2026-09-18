@@ -55,3 +55,7 @@
   background: var(--brand-weak);
   color: var(--brand);
 }
+.badge-competencia {
+  background: color-mix(in srgb, var(--cat-3) 15%, transparent);
+  color: var(--cat-3);
+}

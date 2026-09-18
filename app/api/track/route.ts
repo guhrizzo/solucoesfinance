@@ -56,12 +56,15 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!vid || !UUID_RE.test(vid)) return noContent();
 
     // "Logado" = Bearer de um ID token válido. Ausência não é erro — só
-    // conta como visita anônima (ver cabeçalho do arquivo).
+    // conta como visita anônima (ver cabeçalho do arquivo). O uid vai junto
+    // pro marcador diário — é o que permite a aba Analytics listar QUEM
+    // acessou recentemente (ver getRecentLoggedUsers), não só o total.
     let logged = false;
+    let uid: string | null = null;
     const token = bearerToken(req);
     if (token) {
       try {
-        await (await getAdminAuth()).verifyIdToken(token);
+        uid = (await (await getAdminAuth()).verifyIdToken(token)).uid;
         logged = true;
       } catch {
         logged = false;
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const day = dayKey();
     const month = monthKey();
 
-    await registrarVisita(db, { day, month, vid, logged, now });
+    await registrarVisita(db, { day, month, vid, logged, uid, now });
 
     await db
       .collection("analytics_page_daily")
@@ -96,7 +99,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
 async function registrarVisita(
   db: Firestore,
-  { day, month, vid, logged, now }: { day: string; month: string; vid: string; logged: boolean; now: Timestamp }
+  { day, month, vid, logged, uid, now }: { day: string; month: string; vid: string; logged: boolean; uid: string | null; now: Timestamp }
 ): Promise<void> {
   const dailyRef = db.collection("analytics_daily").doc(day);
   const monthlyRef = db.collection("analytics_monthly").doc(month);
@@ -106,8 +109,8 @@ async function registrarVisita(
   await db.runTransaction(async (tx) => {
     const [dm, mm] = await Promise.all([tx.get(dailyMarker), tx.get(monthlyMarker)]);
 
-    aplicar(tx, dailyRef, dailyMarker, dm, day, logged, now, TTL_DIA_DIAS);
-    aplicar(tx, monthlyRef, monthlyMarker, mm, month, logged, now, TTL_MES_DIAS);
+    aplicar(tx, dailyRef, dailyMarker, dm, day, logged, uid, now, TTL_DIA_DIAS);
+    aplicar(tx, monthlyRef, monthlyMarker, mm, month, logged, uid, now, TTL_MES_DIAS);
   });
 }
 
@@ -118,6 +121,7 @@ function aplicar(
   snap: DocumentSnapshot,
   dateStr: string,
   logged: boolean,
+  uid: string | null,
   now: Timestamp,
   ttlDias: number
 ): void {
@@ -140,9 +144,11 @@ function aplicar(
     tx.set(markerRef, {
       firstSeen: now,
       logged,
+      // Só gravado quando logado — visitante anônimo nunca tem uid.
+      ...(logged && uid ? { uid } : {}),
       expiresAt: Timestamp.fromMillis(now.toMillis() + ttlDias * DIA_MS),
     });
   } else if (precisaLogado) {
-    tx.update(markerRef, { logged: true });
+    tx.update(markerRef, { logged: true, ...(uid ? { uid } : {}) });
   }
 }

@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import { getAnalyticsOverview } from "@/lib/analytics/overview";
+import { getRecentLoggedUsers } from "@/lib/analytics/loggedUsers";
 
 function bearerToken(req: Request): string | null {
   const h = req.headers.get("authorization") ?? "";
@@ -42,6 +43,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Sua conta não tem acesso a esta área." }, { status: 403 });
   }
 
-  const overview = await getAnalyticsOverview();
-  return NextResponse.json(overview);
+  const [overview, usuariosLogados] = await Promise.all([getAnalyticsOverview(), getRecentLoggedUsers()]);
+  return NextResponse.json({ ...overview, usuariosLogados });
 }

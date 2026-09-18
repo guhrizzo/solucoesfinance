@@ -183,6 +183,14 @@
       "colViews": "Views",
       "emptyTitle": "No views recorded yet",
       "emptyDesc": "As soon as someone visits the pages, the ranking shows up here."
+    },
+    "loggedUsers": {
+      "title": "Logged in recently — last 7 days",
+      "colEmail": "Email",
+      "colLastSeen": "Last seen",
+      "noEmail": "—",
+      "emptyTitle": "No one logged in over the last 7 days",
+      "emptyDesc": "Accounts that log in show up here. Access from before this tab existed isn't included."
     }
   }
 }

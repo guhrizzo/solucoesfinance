@@ -53,6 +53,7 @@ interface Bill {
     installmentCount?: number;  // N — tamanho da série
     notes: string;
     photos: string[];      // URLs de Storage
+    amountPaid?: number;   // soma dos pagamentos parciais recebidos via Fluxo de Caixa (ver autoSettleMatchingBill)
     paidAt?: string;
     createdAt: number;
     userId: string;
@@ -100,6 +101,8 @@ const STATUS_META: Record<BillStatus, { bg: string; color: string; border: strin
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const toBRL = (n: number, locale: string) => formatMoney(n, locale);
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 const labelDate = (d: string, locale: string) =>
     new Date(d + "T12:00:00")
@@ -1031,6 +1034,8 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
     const CatIcon = catMeta.icon;
     const isUrgent = status !== ("pago" as const) && days >= 0 && days <= alertDays;
     const isOverdue = status === ("vencido" as const);
+    const amountPaid = bill.amountPaid ?? 0;
+    const hasPartialPayment = status !== ("pago" as const) && amountPaid > 0;
 
     return (
         <div className="cf-card overflow-hidden transition-all hover:shadow-md"
@@ -1127,6 +1132,16 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                                     <PaymentMethodBadge method={bill.paymentMethod as PaymentMethod} prefix={t("prevMethod")} small />
                                 )}
                             </div>
+                        )}
+
+                        {hasPartialPayment && (
+                            <p className="text-xs mt-1.5 font-medium" style={{ color: "var(--warn)" }}>
+                                {t("partialPaid", {
+                                    paid: toBRL(amountPaid, locale),
+                                    total: toBRL(bill.amount, locale),
+                                    remaining: toBRL(round2(bill.amount - amountPaid), locale),
+                                })}
+                            </p>
                         )}
 
                         {bill.notes && (
@@ -1460,7 +1475,7 @@ export default function ContasPagarPage() {
         const { db } = await getFirebase();
 
         await updateDoc(doc(db, "users", uid, "bills", bill.id), {
-            status: "pago", paidAt, paidPaymentMethod: method,
+            status: "pago", paidAt, paidPaymentMethod: method, amountPaid: bill.amount,
             ...stampSettle({ uid: authUid ?? uid, name: userName }),
         });
 

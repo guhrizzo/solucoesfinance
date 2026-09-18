@@ -90,7 +90,8 @@
     "todos": "Todos",
     "pago": "Pago",
     "pendente": "Pendente",
-    "agendado": "Agendado"
+    "agendado": "Agendado",
+    "competencia": "Competência"
   },
   "confirm": {
     "deleteCenterTitle": "Deletar centro de custo?",
@@ -103,6 +104,10 @@
     "editTitle": "Editar despesa",
     "newTitle": "Nova despesa",
     "syncNote": "Despesas \"Pago\" sincronizam com fluxo de caixa",
+    "competenciaNote": "Reconhecida no mês do fato gerador — não gera lançamento no Fluxo de Caixa",
+    "regimeCaixaTab": "Regime de Caixa",
+    "regimeCompetenciaTab": "Regime de Competência",
+    "regimeLocked": "O regime não pode ser alterado depois de criada a despesa.",
     "description": "Descrição",
     "optional": "(opcional)",
     "descriptionPlaceholder": "Ex: Almoço com cliente",
@@ -113,6 +118,8 @@
     "selectCenter": "— Selecione um centro —",
     "amount": "Valor (R$)",
     "date": "Data",
+    "competenciaDate": "Data de competência (fato gerador)",
+    "competenciaFieldNote": "Essa despesa é reconhecida automaticamente na data de competência informada — sem status de pagamento e sem lançamento no Fluxo de Caixa.",
     "status": "Status",
     "paidCashflowNote": "Lançado como saída no fluxo de caixa",
     "cancel": "Cancelar",
@@ -121,7 +128,8 @@
     "saveError": "Erro ao salvar",
     "expenseUpdated": "Despesa atualizada!",
     "expenseCreatedPosted": "Despesa criada e lançada no fluxo de caixa!",
-    "expenseCreated": "Despesa criada!"
+    "expenseCreated": "Despesa criada!",
+    "expenseCreatedCompetencia": "Despesa de competência reconhecida!"
   },
   "centerModal": {
     "editTitle": "Editar centro",

@@ -90,7 +90,8 @@
     "todos": "Todos",
     "pago": "Pagado",
     "pendente": "Pendiente",
-    "agendado": "Programado"
+    "agendado": "Programado",
+    "competencia": "Devengo"
   },
   "confirm": {
     "deleteCenterTitle": "¿Eliminar centro de costos?",
@@ -103,6 +104,10 @@
     "editTitle": "Editar gasto",
     "newTitle": "Nuevo gasto",
     "syncNote": "Los gastos \"Pagado\" se sincronizan con el flujo de caja",
+    "competenciaNote": "Reconocido en el mes del hecho generador — no genera ningún registro en el flujo de caja",
+    "regimeCaixaTab": "Régimen de Caja",
+    "regimeCompetenciaTab": "Régimen de Devengo",
+    "regimeLocked": "El régimen no se puede cambiar después de creado el gasto.",
     "description": "Descripción",
     "optional": "(opcional)",
     "descriptionPlaceholder": "Ej.: Almuerzo con cliente",
@@ -113,6 +118,8 @@
     "selectCenter": "— Elige un centro —",
     "amount": "Valor (R$)",
     "date": "Fecha",
+    "competenciaDate": "Fecha de devengo (hecho generador)",
+    "competenciaFieldNote": "Este gasto se reconoce automáticamente en la fecha de devengo indicada — sin estado de pago y sin registro en el flujo de caja.",
     "status": "Estado",
     "paidCashflowNote": "Registrado como salida en el flujo de caja",
     "cancel": "Cancelar",
@@ -121,7 +128,8 @@
     "saveError": "Error al guardar",
     "expenseUpdated": "¡Gasto actualizado!",
     "expenseCreatedPosted": "¡Gasto creado y registrado en el flujo de caja!",
-    "expenseCreated": "¡Gasto creado!"
+    "expenseCreated": "¡Gasto creado!",
+    "expenseCreatedCompetencia": "¡Gasto de devengo reconocido!"
   },
   "centerModal": {
     "editTitle": "Editar centro",

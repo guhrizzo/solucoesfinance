@@ -61,6 +61,7 @@
     "photoCount": "{count, plural, one {# photo} other {# photos}}",
     "viewPhotos": "{count, plural, one {View # attached photo} other {View # attached photos}}",
     "paidOn": "Paid on {date}",
+    "partialPaid": "Partially paid: {paid} of {total} · {remaining} left",
     "overdueBy": "{count, plural, one {Overdue by # day} other {Overdue by # days}} · {date}",
     "dueToday": "⚠️ Due today! · {date}",
     "dueIn": "{count, plural, one {Due in # day} other {Due in # days}} · {date}",

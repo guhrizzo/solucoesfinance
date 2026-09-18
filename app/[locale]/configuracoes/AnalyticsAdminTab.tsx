@@ -9,17 +9,17 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Users, UserCheck, Eye, CalendarClock, AlertTriangle, ShieldAlert, BarChart3 } from "lucide-react";
+import { Users, UserCheck, Eye, CalendarClock, AlertTriangle, ShieldAlert, BarChart3, UserCircle } from "lucide-react";
 import { Card, KpiTile, Table, EmptyState } from "@/app/components/ui";
 import { authedFetch } from "@/lib/authedFetch";
-import { formatNumber } from "@/lib/format";
-import type { AnalyticsOverview } from "@/lib/analytics/overview";
+import { formatNumber, formatDateTime } from "@/lib/format";
+import type { AnalyticsResponse } from "@/lib/analytics/overview";
 import { VisitorsChart } from "./VisitorsChart";
 
 export default function AnalyticsAdminTab() {
     const t = useTranslations("configuracoes.analytics");
     const locale = useLocale();
-    const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+    const [overview, setOverview] = useState<AnalyticsResponse | null>(null);
     const [denied, setDenied] = useState(false);
 
     useEffect(() => {
@@ -46,7 +46,7 @@ export default function AnalyticsAdminTab() {
         return <p className="text-xs px-1" style={{ color: "var(--text-subtle)" }}>…</p>;
     }
 
-    const { hoje, mes, serie30, topPaginas, erro } = overview;
+    const { hoje, mes, serie30, topPaginas, usuariosLogados, erro } = overview;
     const anonHoje = Math.max(0, hoje.uniqueVisitors - hoje.loggedVisitors);
     const anonMes = Math.max(0, mes.uniqueVisitors - mes.loggedVisitors);
     const fmt = (n: number) => formatNumber(n, locale, { maximumFractionDigits: 0 });
@@ -132,6 +132,32 @@ export default function AnalyticsAdminTab() {
                                 icon={BarChart3}
                                 title={t("pages.emptyTitle")}
                                 description={t("pages.emptyDesc")}
+                            />
+                        }
+                    />
+                </div>
+            </Card>
+
+            <Card padding="md">
+                <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>{t("loggedUsers.title")}</h3>
+                <div className="mt-4">
+                    <Table
+                        columns={[
+                            { key: "email", header: t("loggedUsers.colEmail") },
+                            { key: "lastSeen", header: t("loggedUsers.colLastSeen"), align: "right", width: "170px" },
+                        ]}
+                        rows={usuariosLogados}
+                        rowKey={(u) => u.uid}
+                        renderCell={(u, key) => {
+                            if (key === "email") return <span className="text-xs">{u.email ?? t("loggedUsers.noEmail")}</span>;
+                            if (key === "lastSeen") return <span className="font-mono text-xs">{formatDateTime(u.lastSeen, locale)}</span>;
+                            return null;
+                        }}
+                        empty={
+                            <EmptyState
+                                icon={UserCircle}
+                                title={t("loggedUsers.emptyTitle")}
+                                description={t("loggedUsers.emptyDesc")}
                             />
                         }
                     />
