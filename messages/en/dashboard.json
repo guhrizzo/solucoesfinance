@@ -54,6 +54,7 @@
     "typePie": "Pie",
     "revenue": "Revenue",
     "expense": "Expense",
+    "budget": "Budget",
     "showValues": "Show values",
     "hideValues": "Hide values",
     "noData": "No data for this period.",

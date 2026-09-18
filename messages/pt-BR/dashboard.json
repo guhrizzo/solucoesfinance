@@ -54,6 +54,7 @@
     "typePie": "Pizza",
     "revenue": "Receita",
     "expense": "Despesa",
+    "budget": "Orçamento",
     "showValues": "Mostrar Valores",
     "hideValues": "Ocultar Valores",
     "noData": "Sem dados no período.",

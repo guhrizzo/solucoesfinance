@@ -54,6 +54,7 @@
     "typePie": "Circular",
     "revenue": "Ingreso",
     "expense": "Gasto",
+    "budget": "Presupuesto",
     "showValues": "Mostrar valores",
     "hideValues": "Ocultar valores",
     "noData": "Sin datos en el período.",

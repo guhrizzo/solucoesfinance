@@ -18,6 +18,7 @@ import AccessDenied from "@/app/components/AccessDenied";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney, formatDateTime } from "@/lib/format";
 import { categoryLabel } from "@/lib/cashflowCategories";
+import { budgetForCenterMonth } from "@/lib/costCenterSync";
 import "./dashboard.css";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -75,6 +76,13 @@ interface Expense {
   date: string;
   amount: number;
   status: string;
+}
+
+/** Só o suficiente pro cálculo do Orçamento mensal (budgetForCenterMonth, lib/costCenterSync) — mesmo formato usado em CashFlow.tsx e costCenter/page.tsx. */
+interface CostCenter {
+  id: string;
+  budget?: number;
+  budgetsByMonth?: Record<string, number>;
 }
 
 // Cor semântica por KPI — resolvida via tokens do design system (nunca hex).
@@ -257,6 +265,7 @@ export default function Dashboard() {
   const [receivables, setReceivables] = useState<Receivable[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
 
   const activePath = "/dashboard";
 
@@ -308,6 +317,7 @@ export default function Dashboard() {
     let unsubReceivables: (() => void) | undefined;
     let unsubTaxes: (() => void) | undefined;
     let unsubExpenses: (() => void) | undefined;
+    let unsubCostCenters: (() => void) | undefined;
 
     (async () => {
       try {
@@ -386,6 +396,15 @@ export default function Dashboard() {
             setExpenses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)));
           }, (err) => console.error("Erro Expenses:", err));
 
+          // Listener de Centros de Custo — só o orçamento por mês
+          // (budgetsByMonth), pra linha pontilhada de Orçamento no gráfico
+          // Receita vs. Despesas (mesma fonte do KPI "Orçamento" do Fluxo de
+          // Caixa, ver CashFlow.tsx → previsao).
+          const costCentersRef = query(collection(db, "costCenters"), where("userId", "==", ownerUid));
+          unsubCostCenters = onSnapshot(costCentersRef, (snap) => {
+            setCostCenters(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostCenter)));
+          }, (err) => console.error("Erro CostCenters:", err));
+
         });
       } catch (err) {
         console.error("Erro ao inicializar listeners:", err);
@@ -400,6 +419,7 @@ export default function Dashboard() {
       unsubReceivables?.();
       unsubTaxes?.();
       unsubExpenses?.();
+      unsubCostCenters?.();
     };
   }, []);
 
@@ -515,10 +535,23 @@ export default function Dashboard() {
       }
     });
 
-    const maxVal = Math.max(...revenues, ...expenses) || 1000;
+    // Orçamento mês a mês do ano selecionado — mesma fórmula do KPI
+    // "Orçamento" do Fluxo de Caixa (CashFlow.tsx → previsao): orçamento dos
+    // centros de custo naquele mês + contas a pagar que vencem naquele mês +
+    // impostos que vencem naquele mês.
+    const currentMonthKey = new Date().toISOString().slice(0, 7);
+    const budget = Array.from({ length: 12 }, (_, i) => {
+      const mKey = `${currentYear}-${String(i + 1).padStart(2, "0")}`;
+      const centers = costCenters.reduce((s, c) => s + budgetForCenterMonth(c, mKey, currentMonthKey), 0);
+      const billsM = bills.filter(b => (b.dueDate ?? "").slice(0, 7) === mKey).reduce((s, b) => s + b.amount, 0);
+      const taxesM = taxes.filter(t => (t.dueDate ?? "").slice(0, 7) === mKey).reduce((s, t) => s + t.amount, 0);
+      return centers + billsM + taxesM;
+    });
 
-    return { revenues, expenses, maxVal };
-  }, [txs, refDate]);
+    const maxVal = Math.max(...revenues, ...expenses, ...budget) || 1000;
+
+    return { revenues, expenses, budget, maxVal };
+  }, [txs, bills, taxes, costCenters, refDate]);
 
   // 3. Vencimentos próximos (Contas a Pagar pendentes)
   const upcomingBillsData = useMemo(() => {
@@ -964,6 +997,9 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
+                  <span className="w-2.5 h-2.5 rounded-full inline-block border-2" style={{ borderColor: "var(--warn)", background: "transparent" }} /> {t("chart.budget")}
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
                   <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-500)" }} /> {t("chart.revenue")}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
@@ -1044,6 +1080,7 @@ export default function Dashboard() {
                     const dim = (i: number) => (hoverMonth === null || hoverMonth === i ? 1 : 0.3);
                     return (
                       <>
+                        <polyline fill="none" stroke="var(--warn)" strokeWidth="1.75" strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.budget)} />
                         <polyline className="bar-rev-anim" fill="none" stroke="var(--brand-500)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
                         <polyline className="bar-exp-anim" fill="none" stroke="var(--brand-400)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
                         {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r={hoverMonth === i ? 3.5 : 2.5} fill="var(--brand-500)" opacity={dim(i)} style={{ transition: "opacity .15s" }} />)}
@@ -1055,19 +1092,25 @@ export default function Dashboard() {
                     );
                   })()
                 ) : (
-                  months.map((m, i) => {
-                    const rev = chartData.revenues[i];
-                    const exp = chartData.expenses[i];
-                    const bw = 22, gap = 44, x = 48 + i * gap;
-                    const dim = hoverMonth === null || hoverMonth === i ? 1 : 0.3;
-                    return (
-                      <g key={m}>
-                        <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60}ms` }} />
-                        <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60 + 30}ms` }} />
-                        <text x={x + bw} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
-                      </g>
-                    );
-                  })
+                  <>
+                    {months.map((m, i) => {
+                      const rev = chartData.revenues[i];
+                      const exp = chartData.expenses[i];
+                      const bw = 22, gap = 44, x = 48 + i * gap;
+                      const dim = hoverMonth === null || hoverMonth === i ? 1 : 0.3;
+                      return (
+                        <g key={m}>
+                          <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60}ms` }} />
+                          <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60 + 30}ms` }} />
+                          <text x={x + bw} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
+                        </g>
+                      );
+                    })}
+                    <polyline
+                      fill="none" stroke="var(--warn)" strokeWidth="1.75" strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round"
+                      points={chartData.budget.map((v, i) => `${48 + i * 44 + 23},${170 - (v / chartData.maxVal) * 160}`).join(" ")}
+                    />
+                  </>
                 )}
                 {months.map((_, i) => (
                   <rect
@@ -1099,6 +1142,13 @@ export default function Dashboard() {
                     {months[hoverMonth]} / {refDate.getFullYear()}
                   </p>
                   <div className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2 h-2 rounded-full shrink-0 border-2" style={{ borderColor: "var(--warn)", background: "transparent" }} />
+                    <span style={{ color: "var(--db-text-2)" }}>{t("chart.budget")}</span>
+                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
+                      <Sensitive hidden={hideValues}>{toBRL(chartData.budget[hoverMonth])}</Sensitive>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs mt-1">
                     <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-500)" }} />
                     <span style={{ color: "var(--db-text-2)" }}>{t("chart.revenue")}</span>
                     <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
@@ -1124,6 +1174,7 @@ export default function Dashboard() {
               <thead>
                 <tr>
                   <th scope="col">{t("chart.srMonth")}</th>
+                  <th scope="col">{t("chart.budget")}</th>
                   <th scope="col">{t("chart.revenue")}</th>
                   <th scope="col">{t("chart.expense")}</th>
                 </tr>
@@ -1132,6 +1183,7 @@ export default function Dashboard() {
                 {months.map((m, i) => (
                   <tr key={m}>
                     <th scope="row">{m}</th>
+                    <td>{toBRL(chartData.budget[i])}</td>
                     <td>{toBRL(chartData.revenues[i])}</td>
                     <td>{toBRL(chartData.expenses[i])}</td>
                   </tr>
