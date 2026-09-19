@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Users, UserCheck, Eye, CalendarClock, AlertTriangle, ShieldAlert, BarChart3, UserCircle } from "lucide-react";
+import { Users, UserCheck, Eye, CalendarClock, AlertTriangle, ShieldAlert, BarChart3, UserCircle, Download } from "lucide-react";
 import { Card, KpiTile, Table, EmptyState } from "@/app/components/ui";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatNumber, formatDateTime } from "@/lib/format";
@@ -46,7 +46,7 @@ export default function AnalyticsAdminTab() {
         return <p className="text-xs px-1" style={{ color: "var(--text-subtle)" }}>…</p>;
     }
 
-    const { hoje, mes, serie30, topPaginas, usuariosLogados, erro } = overview;
+    const { hoje, mes, serie30, topPaginas, usuariosLogados, downloads, erro } = overview;
     const anonHoje = Math.max(0, hoje.uniqueVisitors - hoje.loggedVisitors);
     const anonMes = Math.max(0, mes.uniqueVisitors - mes.loggedVisitors);
     const fmt = (n: number) => formatNumber(n, locale, { maximumFractionDigits: 0 });
@@ -132,6 +132,51 @@ export default function AnalyticsAdminTab() {
                                 icon={BarChart3}
                                 title={t("pages.emptyTitle")}
                                 description={t("pages.emptyDesc")}
+                            />
+                        }
+                    />
+                </div>
+            </Card>
+
+            <Card padding="md">
+                <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>{t("downloads.title")}</h3>
+                {downloads.erro && (
+                    <div
+                        className="mt-3 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
+                        style={{ background: "var(--warn-weak)", border: "1px solid var(--warn-weak)", color: "var(--warn)" }}
+                    >
+                        <AlertTriangle size={16} />
+                        {t("downloads.loadError")}
+                    </div>
+                )}
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <KpiTile
+                        label={t("downloads.total")}
+                        value={fmt(downloads.total)}
+                        delta={t("downloads.hint")}
+                        icon={Download}
+                    />
+                </div>
+                <div className="mt-4">
+                    <Table
+                        columns={[
+                            { key: "versao", header: t("downloads.colVersion") },
+                            { key: "publicadoEm", header: t("downloads.colPublished"), align: "right", width: "170px" },
+                            { key: "downloads", header: t("downloads.colDownloads"), align: "right", width: "120px" },
+                        ]}
+                        rows={downloads.porVersao}
+                        rowKey={(v) => v.versao}
+                        renderCell={(v, key) => {
+                            if (key === "versao") return <span className="font-mono text-xs">{v.versao}</span>;
+                            if (key === "publicadoEm") return <span className="font-mono text-xs">{v.publicadoEm ? formatDateTime(v.publicadoEm, locale) : "—"}</span>;
+                            if (key === "downloads") return <span className="font-bold">{fmt(v.downloads)}</span>;
+                            return null;
+                        }}
+                        empty={
+                            <EmptyState
+                                icon={Download}
+                                title={t("downloads.emptyTitle")}
+                                description={t("downloads.emptyDesc")}
                             />
                         }
                     />

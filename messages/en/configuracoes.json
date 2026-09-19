@@ -191,6 +191,17 @@
       "noEmail": "—",
       "emptyTitle": "No one logged in over the last 7 days",
       "emptyDesc": "Accounts that log in show up here. Access from before this tab existed isn't included."
+    },
+    "downloads": {
+      "title": "Windows app downloads",
+      "total": "Installer downloads",
+      "hint": "GitHub count: repeat downloads (and the app auto-update) count again.",
+      "colVersion": "Version",
+      "colPublished": "Published",
+      "colDownloads": "Downloads",
+      "emptyTitle": "No installer published yet",
+      "emptyDesc": "As soon as a GitHub release with the installer exists, downloads show up here.",
+      "loadError": "Could not query GitHub right now. The other numbers are unaffected."
     }
   }
 }

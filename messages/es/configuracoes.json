@@ -191,6 +191,17 @@
       "noEmail": "—",
       "emptyTitle": "Nadie inició sesión en los últimos 7 días",
       "emptyDesc": "Las cuentas que inicien sesión aparecen aquí. Accesos anteriores a esta pestaña no se incluyen."
+    },
+    "downloads": {
+      "title": "Descargas de la app para Windows",
+      "total": "Descargas del instalador",
+      "hint": "Conteo de GitHub: quien vuelve a descargar (o la actualización automática de la app) cuenta otra vez.",
+      "colVersion": "Versión",
+      "colPublished": "Publicada el",
+      "colDownloads": "Descargas",
+      "emptyTitle": "Aún no hay instalador publicado",
+      "emptyDesc": "Cuando exista un release con el instalador en GitHub, las descargas aparecerán aquí.",
+      "loadError": "No se pudo consultar GitHub ahora. Los demás números no se ven afectados."
     }
   }
 }

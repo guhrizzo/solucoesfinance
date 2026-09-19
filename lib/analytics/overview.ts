@@ -7,6 +7,7 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { dayKey, monthKey } from "@/lib/analytics/dates";
 import type { LoggedUser } from "@/lib/analytics/loggedUsers";
+import type { DownloadsOverview } from "@/lib/analytics/downloads";
 
 export interface DiaSerie {
   date: string;
@@ -37,6 +38,7 @@ export interface AnalyticsOverview {
 /** Shape que a rota /api/analytics realmente responde: `getAnalyticsOverview` + `getRecentLoggedUsers` mesclados. */
 export interface AnalyticsResponse extends AnalyticsOverview {
   usuariosLogados: LoggedUser[];
+  downloads: DownloadsOverview;
 }
 
 const ZERO: Totais = { uniqueVisitors: 0, loggedVisitors: 0, pageviews: 0 };
