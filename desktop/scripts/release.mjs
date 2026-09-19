@@ -10,6 +10,7 @@
 // Requer GH_TOKEN em desktop/electron-builder.env (escopo public_repo).
 
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -46,13 +47,35 @@ const tag = `v${version}`
 console.log(`\n▶ build ${tag}`)
 execFileSync('npm', ['run', 'build'], { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' })
 
-const assets = ['latest.yml', `Nexus-Fi-Setup-${version}.exe`, `Nexus-Fi-Setup-${version}.exe.blockmap`]
+const INSTALLER = 'Nexus-Fi-Setup.exe' // nome fixo — ver lib/desktopDownload.ts no site
+const assets = ['latest.yml', INSTALLER, `${INSTALLER}.blockmap`]
 for (const a of assets) {
   if (!fs.existsSync(path.join(buildDir, a))) {
     console.error(`Artefato não encontrado: build/${a}`)
     process.exit(1)
   }
 }
+
+// ── 1b. assinatura + hash ────────────────────────────────────────────────
+// Sem assinatura Authenticode o SmartScreen avisa "Windows protegeu o computador".
+// Não bloqueia a release (dá pra publicar sem), mas deixa o estado à vista.
+let signature = 'NotChecked'
+if (process.platform === 'win32') {
+  try {
+    signature = execFileSync(
+      'powershell',
+      ['-NoProfile', '-Command', `(Get-AuthenticodeSignature '${path.join(buildDir, INSTALLER)}').Status`],
+      { encoding: 'utf8' },
+    ).trim()
+  } catch {}
+}
+if (signature !== 'Valid') {
+  console.warn(`
+⚠ Instalador SEM assinatura válida (status: ${signature}) — o SmartScreen vai avisar.`)
+  console.warn('  Configure CSC_LINK + CSC_KEY_PASSWORD (ver desktop/README.md › Assinatura de código).')
+}
+const sha256 = createHash('sha256').update(fs.readFileSync(path.join(buildDir, INSTALLER))).digest('hex')
+console.log(`▶ SHA-256 ${sha256}`)
 
 // ── 2. cria ou reusa o draft ─────────────────────────────────────────────
 async function gh(url, init) {
@@ -75,7 +98,14 @@ if (release) {
   console.log(`▶ criando draft ${tag}`)
   release = await gh('/releases', {
     method: 'POST',
-    body: JSON.stringify({ tag_name: tag, name: `Nexus Fi ${version}`, draft: true }),
+    body: JSON.stringify({
+      tag_name: tag,
+      name: `Nexus Fi ${version}`,
+      draft: true,
+      body: `Instalador para Windows (64 bits): \`${INSTALLER}\`
+
+SHA-256: \`${sha256}\``,
+    }),
   })
 }
 

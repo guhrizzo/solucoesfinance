@@ -29,7 +29,7 @@ npm run dev        # abre o Electron apontando pra http://localhost:3000/login
 ```bash
 cd desktop
 npm install
-npm run build      # gera build/Nexus-Fi-Setup-<versão>.exe
+npm run build      # gera build/Nexus-Fi-Setup.exe (nome fixo, sem versão)
 ```
 
 Instalação por usuário (não pede admin).
@@ -40,8 +40,11 @@ Feed = Releases do GitHub do repo público `guhrizzo/solucoesfinance`.
 
 1. Suba `version` em `package.json`.
 2. Crie `desktop/electron-builder.env` (gitignored) com `GH_TOKEN=<PAT com escopo public_repo>`.
-3. `npm run release` — builda e cria uma release **rascunho** com `latest.yml` + `.exe` + `.blockmap`.
+3. `npm run release` — builda e cria uma release **rascunho** com `latest.yml` + `.exe` + `.blockmap`, e põe o SHA-256 nas notas. Avisa se o `.exe` não estiver assinado.
 4. No GitHub, publique a release. Os apps instalados detectam em até 6h (ou na hora, em **Ajuda › Procurar atualizações**).
+
+O botão "Baixar para Windows" da landing aponta pra `releases/latest/download/Nexus-Fi-Setup.exe`
+(`lib/desktopDownload.ts`), então ele só funciona depois que existir uma release **publicada**.
 
 ## Login
 
@@ -74,8 +77,44 @@ partir do `app/favicon.svg` do site. Para outra arte, ponha um
 `assets/icon.source.png` quadrado (≥ 1024×1024) — ele tem prioridade — e rode
 `npm run prebuild`.
 
+## Assinatura de código (Windows / SmartScreen)
+
+O aviso "O Windows protegeu o computador" aparece porque o instalador não tem
+assinatura digital (Authenticode). Não existe configuração de build que o
+remova — só assinar (ou distribuir pela Microsoft Store). Enquanto não assina,
+cada versão nova é um arquivo "desconhecido" pro SmartScreen.
+
+Caminhos, do mais simples ao mais caro:
+
+1. **Microsoft Store (MSIX)** — conta de desenvolvedor pessoal ~US$ 19 (uma vez).
+   A Microsoft assina e distribui; sem aviso e com atualização pela loja. Exige
+   trocar o alvo `nsis` por `appx` no `electron-builder.yml` e passar pela
+   certificação da loja.
+2. **Azure Artifact Signing** (antigo Trusted Signing) — ~US$ 10/mês, sem token
+   físico, reputação da Microsoft. Confira se o seu país/tipo de conta é elegível
+   antes. No electron-builder: `win.azureSignOptions` + variáveis `AZURE_*`.
+3. **Certificado de uma CA** (Sectigo, DigiCert, SSL.com…) — desde 2023 a chave fica
+   em token/HSM. **EV** dá reputação imediata; **OV** precisa acumular reputação.
+
+Com um certificado `.pfx`/`.p12`, basta definir antes do build e o electron-builder
+assina sozinho (o `npm run release` mostra o status da assinatura):
+
+```bash
+set CSC_LINK=C:\caminho\certificado.pfx
+set CSC_KEY_PASSWORD=<senha>
+npm run release
+```
+
+Nunca commite o certificado nem a senha. Quando o instalador estiver assinado,
+remova o passo do aviso ("Se o Windows mostrar…") da seção de download da
+landing (`messages/*/landing.json`, `downloadApp.step2`).
+
+Enquanto isso: envie cada `.exe` novo em
+https://www.microsoft.com/wdsi/filesubmission — reduz falso positivo do Defender
+(não elimina o SmartScreen).
+
 ## Limitações
 
-1. Sem assinatura de código: o SmartScreen avisa na 1ª instalação (*Mais informações* → *Executar assim mesmo*).
+1. Sem assinatura de código: o SmartScreen avisa na 1ª instalação (*Mais informações* → *Executar assim mesmo*) — ver seção acima.
 2. Precisa de internet (sem conexão mostra tela de "tentar de novo").
 3. Só Windows x64.

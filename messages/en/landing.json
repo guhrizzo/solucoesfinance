@@ -72,6 +72,7 @@
     "integrations": "Integrations",
     "useCases": "Use cases",
     "contact": "Contact",
+    "app": "Get the app",
     "login": "Log in",
     "tryFree": "Try for free",
     "openMenu": "Open menu",
@@ -195,6 +196,19 @@
     "body": "7 days free, setup in under 5 minutes, human support included.",
     "primary": "Start free trial",
     "secondary": "Talk to a consultant"
+  },
+  "downloadApp": {
+    "eyebrow": "Windows app",
+    "title": "Take NexusFi to your desktop.",
+    "body": "The same system in its own window, with a Start menu shortcut and automatic updates. Your data stays in the cloud, in sync with the browser.",
+    "cta": "Download for Windows",
+    "meta": "Windows 10 or 11 · 64-bit · no administrator needed",
+    "stepsTitle": "How to install",
+    "step1": "Download and open the Nexus-Fi-Setup.exe file.",
+    "step2": "If Windows shows “Windows protected your PC”, click “More info” and then “Run anyway”. The warning appears on first install because the installer isn't digitally signed yet.",
+    "step3": "Finish the installation and sign in with your account, using email and password or Google.",
+    "verify": "Want to check the file? Its SHA-256 hash is on the releases page.",
+    "verifyLink": "View releases page"
   },
   "testimonials": {
     "title": "Companies that transformed their finances",

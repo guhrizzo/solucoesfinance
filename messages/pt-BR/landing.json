@@ -72,6 +72,7 @@
     "integrations": "Integrações",
     "useCases": "Casos de uso",
     "contact": "Contato",
+    "app": "Baixar app",
     "login": "Entrar",
     "tryFree": "Testar grátis",
     "openMenu": "Abrir menu",
@@ -195,6 +196,19 @@
     "body": "7 dias grátis, configuração em menos de 5 minutos, suporte humano incluído.",
     "primary": "Começar teste grátis",
     "secondary": "Falar com consultor"
+  },
+  "downloadApp": {
+    "eyebrow": "App para Windows",
+    "title": "Leve o NexusFi para a sua área de trabalho.",
+    "body": "O mesmo sistema numa janela própria, com atalho no Menu Iniciar e atualização automática. Seus dados continuam na nuvem, sincronizados com o navegador.",
+    "cta": "Baixar para Windows",
+    "meta": "Windows 10 ou 11 · 64 bits · instalação sem administrador",
+    "stepsTitle": "Como instalar",
+    "step1": "Baixe e abra o arquivo Nexus-Fi-Setup.exe.",
+    "step2": "Se o Windows mostrar “O Windows protegeu o computador”, clique em “Mais informações” e depois em “Executar assim mesmo”. O aviso aparece na primeira instalação porque o instalador ainda não tem assinatura digital.",
+    "step3": "Conclua a instalação e entre com a sua conta, com e-mail e senha ou com o Google.",
+    "verify": "Quer conferir o arquivo? O código SHA-256 fica na página de versões.",
+    "verifyLink": "Ver página de versões"
   },
   "testimonials": {
     "title": "Empresas que transformaram seu financeiro",

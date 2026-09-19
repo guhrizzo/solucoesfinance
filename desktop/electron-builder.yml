@@ -25,7 +25,10 @@ win:
       arch:
         - x64
   icon: assets/icon.ico
-  # Sem assinatura de código por enquanto — SmartScreen vai avisar na 1a vez.
+  # Assinatura de código (Authenticode): o electron-builder assina sozinho quando
+  # CSC_LINK (.pfx/.p12) + CSC_KEY_PASSWORD estão no ambiente — sem nada a mais aqui.
+  # Sem certificado, o instalador sai sem assinatura e o SmartScreen avisa.
+  # Ver desktop/README.md ("Assinatura de código").
 
 nsis:
   oneClick: false
@@ -36,4 +39,6 @@ nsis:
   shortcutName: Nexus Fi
   deleteAppDataOnUninstall: false
 
-artifactName: Nexus-Fi-Setup-${version}.${ext}
+# Nome FIXO (sem versão): o site baixa por releases/latest/download/Nexus-Fi-Setup.exe
+# (ver lib/desktopDownload.ts). A versão fica no latest.yml e na tag da release.
+artifactName: Nexus-Fi-Setup.${ext}

@@ -33,11 +33,14 @@ import {
   CheckCircle,
   ChevronDown,
   Check,
+  Download,
+  Monitor,
 } from "lucide-react";
 import Footer from "@/app/components/Footer";
 import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
+import { DESKTOP_DOWNLOAD_URL, DESKTOP_RELEASES_URL } from "@/lib/desktopDownload";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { formatMoneyFromCents } from "@/lib/format";
 import {
@@ -58,7 +61,17 @@ type FeatureItem = { title: string; desc: string };
 type TestimonialItem = { name: string; role: string; text: string };
 type FaqItem = { question: string; answer: string };
 
-const NAV_ITEMS = ["features", "plans", "integrations", "useCases", "contact"] as const;
+const NAV_ITEMS = ["features", "plans", "integrations", "useCases", "contact", "app"] as const;
+
+// Âncora de cada item do menu ("#" = ainda sem seção própria).
+const NAV_HREF: Record<(typeof NAV_ITEMS)[number], string> = {
+  features: "#",
+  plans: "#planos",
+  integrations: "#",
+  useCases: "#",
+  contact: "#",
+  app: "#baixar-app",
+};
 const TICKER_KEYS = [
   "monthRevenue",
   "monthExpenses",
@@ -317,7 +330,7 @@ export default function FinanceHome() {
 
           <div className="hidden md:flex items-center gap-8">
             {NAV_ITEMS.map((item) => (
-              <a key={item} href={item === "plans" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium transition-colors">
+              <a key={item} href={NAV_HREF[item]} className="text-blue-100/70 hover:text-white text-sm font-medium transition-colors">
                 {t(`nav.${item}`)}
               </a>
             ))}
@@ -350,7 +363,7 @@ export default function FinanceHome() {
         {menuOpen && (
           <div className="md:hidden nav-blur px-6 pb-6 flex flex-col gap-4">
             {NAV_ITEMS.map((item) => (
-              <a key={item} href={item === "plans" ? "#planos" : "#"} className="text-blue-100/70 hover:text-white text-sm font-medium py-1 transition-colors">
+              <a key={item} href={NAV_HREF[item]} className="text-blue-100/70 hover:text-white text-sm font-medium py-1 transition-colors">
                 {t(`nav.${item}`)}
               </a>
             ))}
@@ -839,6 +852,59 @@ export default function FinanceHome() {
         </div>
       </section>
 
+      {/* App para Windows */}
+      <section id="baixar-app" className="py-24 bg-white scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-3">
+                {t("downloadApp.eyebrow")}
+              </p>
+              <h2 className="text-4xl font-extrabold text-blue-950 leading-tight mb-5">
+                {t("downloadApp.title")}
+              </h2>
+              <p className="text-slate-500 leading-relaxed mb-8 max-w-lg">{t("downloadApp.body")}</p>
+              <a
+                href={DESKTOP_DOWNLOAD_URL}
+                rel="noopener"
+                className="btn-primary inline-flex items-center gap-2 text-white font-semibold px-8 py-4 rounded-xl text-base"
+              >
+                <Download size={18} aria-hidden="true" />
+                {t("downloadApp.cta")}
+              </a>
+              <p className="text-slate-500 text-sm mt-4 flex items-center gap-2">
+                <Monitor size={14} aria-hidden="true" className="shrink-0" />
+                {t("downloadApp.meta")}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
+              <h3 className="text-blue-950 font-bold mb-5">{t("downloadApp.stepsTitle")}</h3>
+              <ol className="space-y-5">
+                {(["step1", "step2", "step3"] as const).map((step, i) => (
+                  <li key={step} className="flex gap-4">
+                    <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <p className="text-slate-600 text-sm leading-relaxed">{t(`downloadApp.${step}`)}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-slate-500 text-xs mt-6 pt-5 border-t border-slate-200">
+                {t("downloadApp.verify")}{" "}
+                <a
+                  href={DESKTOP_RELEASES_URL}
+                  rel="noopener"
+                  className="text-blue-600 font-semibold underline underline-offset-2"
+                >
+                  {t("downloadApp.verifyLink")}
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
