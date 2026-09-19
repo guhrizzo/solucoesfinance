@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // App desktop (Electron) — projeto próprio, fora do lint/build do site.
+    "desktop/**",
   ]),
 
   // Acessibilidade (WCAG 2.1 AA) — ver docs/superpowers/specs/2026-09-04-

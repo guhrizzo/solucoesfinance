@@ -1,0 +1,32 @@
+{
+  "name": "nexus-fi-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Casca desktop (Electron) do Nexus Fi",
+  "author": "Nexus Fi",
+  "main": "dist/main.js",
+  "scripts": {
+    "clean": "rimraf dist build",
+    "compile": "tsc",
+    "start": "npm run compile && electron dist/main.js",
+    "dev": "npm run compile && cross-env APP_ORIGIN=http://localhost:3000 electronmon dist/main.js",
+    "prebuild": "node scripts/make-icon.mjs",
+    "build": "npm run compile && npm run prebuild && electron-builder --win",
+    "release": "node scripts/release.mjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2",
+    "electron-window-state": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "cross-env": "^7.0.3",
+    "electron": "^34.5.8",
+    "electron-builder": "^26.0.12",
+    "electronmon": "^2.0.3",
+    "png-to-ico": "^3.0.0",
+    "rimraf": "^6.0.1",
+    "sharp": "^0.34.4",
+    "typescript": "^5"
+  }
+}

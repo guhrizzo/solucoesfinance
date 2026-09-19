@@ -1,0 +1,39 @@
+appId: br.com.nexusfi.app
+productName: Nexus Fi
+copyright: © Nexus Fi
+
+directories:
+  output: build
+  buildResources: assets
+
+files:
+  - dist/**/*
+  - assets/**/*
+  - package.json
+
+# electron-updater lê este bloco pra gerar o app-update.yml embutido.
+# GitHub Releases do repo público guhrizzo/solucoesfinance — download sem token.
+# Publicar precisa de GH_TOKEN local (desktop/electron-builder.env).
+publish:
+  provider: github
+  owner: guhrizzo
+  repo: solucoesfinance
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+  # Sem assinatura de código por enquanto — SmartScreen vai avisar na 1a vez.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Nexus Fi
+  deleteAppDataOnUninstall: false
+
+artifactName: Nexus-Fi-Setup-${version}.${ext}
