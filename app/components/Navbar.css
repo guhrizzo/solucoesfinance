@@ -272,6 +272,19 @@
   color: var(--nav-text-3);
 }
 
+.nxfi-avatar-company {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--brand);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nxfi-vertical-user .nxfi-avatar-company {
+  max-width: none;
+}
+
 .nxfi-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -362,6 +375,30 @@
 .nxfi-user-drop {
   right: 0;
   width: 220px;
+}
+/* Chip do usuário no rodapé da sidebar vertical: largura total, menu pra cima. */
+.nxfi-vertical-user {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  text-align: left;
+  font-family: var(--font-hanken), sans-serif;
+}
+.nxfi-vertical-user .nxfi-avatar-info {
+  flex: 1;
+  min-width: 0;
+}
+.nxfi-vertical-user .nxfi-avatar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nxfi-user-drop-up {
+  top: auto;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  width: auto;
 }
 .nxfi-user-drop-header {
   padding: 14px 16px 12px;

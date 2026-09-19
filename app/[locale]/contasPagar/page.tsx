@@ -53,6 +53,7 @@ interface Bill {
     installmentCount?: number;  // N — tamanho da série
     notes: string;
     photos: string[];      // URLs de Storage
+    estimatedAmount?: number; // valor estimado (planejamento) — igual ao de Impostos
     amountPaid?: number;   // soma dos pagamentos parciais recebidos via Fluxo de Caixa (ver autoSettleMatchingBill)
     paidAt?: string;
     createdAt: number;
@@ -194,6 +195,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const locale = useLocale();
     const [title, setTitle] = useState("");
     const [rawAmt, setRawAmt] = useState("");
+    const [estimatedRawAmt, setEstimatedRawAmt] = useState("");
     const [dueDate, setDueDate] = useState(TODAY);
     const [category, setCategory] = useState("Outros");
     const [recurrence, setRecurrence] = useState<Recurrence>("unica");
@@ -211,6 +213,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const [pinOpen, setPinOpen] = useState(false);
     const [pinErr, setPinErr] = useState("");
     const amtId = useId();
+    const estimatedAmtId = useId();
     const dueDateId = useId();
     const installmentsId = useId();
     const notesId = useId();
@@ -233,6 +236,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
         if (!open) return;
         setTitle(editing?.title ?? "");
         setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
+        setEstimatedRawAmt(editing?.estimatedAmount ? editing.estimatedAmount.toFixed(2).replace(".", ",") : "");
         setDueDate(editing?.dueDate ?? TODAY);
         setCategory(editing?.category ?? "Outros");
         setRecurrence(editing?.recurrence === "numeral" ? "numeral" : "unica");
@@ -293,6 +297,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     if (!open) return null;
 
     const amount = parseAmount(rawAmt);
+    const estimatedAmount = parseAmount(estimatedRawAmt);
     const isSeries = recurrence === "numeral";
     // "numeral" só na criação, ou ao editar uma parcela que já é de série.
     const numeralAllowed = !editing || !!editing.seriesId;
@@ -354,6 +359,8 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
             try {
                 await onSave({
                     title: title.trim(), amount, dueDate, category,
+                    // null (não undefined) pra apagar o estimado ao editar e esvaziar o campo.
+                    estimatedAmount: (estimatedAmount || null) as number | undefined,
                     recurrence, notes: notes.trim(),
                     status: isSeries ? "pendente" : status,
                     photos,
@@ -471,7 +478,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                         onNewCadastro={() => setTab("cadastro")}
                     />
 
-                    {/* Valor + Vencimento */}
+                    {/* Valor + Valor estimado */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                             <label htmlFor={amtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
@@ -482,6 +489,17 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
                                 style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
                         </div>
+                        <div className="space-y-2">
+                            <label htmlFor={estimatedAmtId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("estimatedLabel")}</label>
+                            <input id={estimatedAmtId} inputMode="decimal" value={estimatedRawAmt} onChange={e => setEstimatedRawAmt(formatAmount(e.target.value))}
+                                placeholder="0,00"
+                                className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono cursor-text"
+                                style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                        </div>
+                    </div>
+
+                    {/* Vencimento */}
+                    <div className="grid grid-cols-1 gap-3">
                         <div className="space-y-2">
                             <label htmlFor={dueDateId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>
                                 {isSeries ? t("firstDueDate") : t("dueDate")}
@@ -1144,6 +1162,12 @@ function BillCard({ bill, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             </p>
                         )}
 
+                        {bill.estimatedAmount ? (
+                            <p className="text-xs mt-1.5" style={{ color: "var(--cf-text-3)" }}>
+                                {t("estimated", { value: toBRL(bill.estimatedAmount, locale) })}
+                            </p>
+                        ) : null}
+
                         {bill.notes && (
                             <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text-3)" }}>📝 {bill.notes}</p>
                         )}
@@ -1637,6 +1661,7 @@ export default function ContasPagarPage() {
             aPagar: notPaid.reduce((s, b) => s + b.amount, 0),
             vencido: enriched.filter(b => b._status === ("vencido" as const)).reduce((s, b) => s + b.amount, 0),
             pago: enriched.filter(b => b._status === ("pago" as const)).reduce((s, b) => s + b.amount, 0),
+            estimado: enriched.filter(b => b.estimatedAmount).reduce((s, b) => s + (b.estimatedAmount || 0), 0),
             alert: enriched.filter(b => {
                 if (b._status === ("pago" as const)) return false;
                 const d = daysUntil(b.dueDate);
@@ -1810,7 +1835,7 @@ export default function ContasPagarPage() {
                         { label: t("kpi.toPay"), val: toBRL(kpis.aPagar, locale), color: "var(--brand)", bg: "var(--brand-weak)", sub: t("kpi.billCount", { count: kpis.totalNotPaid }) },
                         { label: t("kpi.overdue"), val: toBRL(kpis.vencido, locale), color: "var(--neg)", bg: "var(--neg-weak)", sub: t("kpi.billCount", { count: kpis.totalOverdue }) },
                         { label: t("kpi.paid"), val: toBRL(kpis.pago, locale), color: "var(--pos)", bg: "var(--pos-weak)", sub: t("kpi.billCount", { count: kpis.totalPaid }) },
-                        { label: t("kpi.alert", { days: alertDays }), val: String(kpis.alert), color: "var(--warn)", bg: "var(--warn-weak)", sub: t("kpi.dueSoon") },
+                        { label: t("kpi.estimated"), val: toBRL(kpis.estimado, locale), color: "var(--brand)", bg: "var(--brand-weak)", sub: t("kpi.planning") },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>

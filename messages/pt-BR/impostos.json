@@ -107,6 +107,7 @@
   },
   "card": {
     "paidOn": "Pago em {date}",
+    "partialPaid": "Pago parcialmente: {paid} de {total} · falta {remaining}",
     "overdueBy": "{count, plural, one {Atraso de # dia} other {Atraso de # dias}}",
     "dueToday": "⚠️ Vence hoje!",
     "dueIn": "{count, plural, one {Vence em # dia} other {Vence em # dias}} · {date}",

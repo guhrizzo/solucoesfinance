@@ -17,9 +17,9 @@
     "toPay": "To pay",
     "overdue": "Overdue",
     "paid": "Paid",
-    "alert": "Alert ({days}d)",
+    "estimated": "Estimated",
     "billCount": "{count, plural, one {# bill} other {# bills}}",
-    "dueSoon": "due soon"
+    "planning": "planning"
   },
   "toolbar": {
     "searchPlaceholder": "Search title or note…",
@@ -62,6 +62,7 @@
     "viewPhotos": "{count, plural, one {View # attached photo} other {View # attached photos}}",
     "paidOn": "Paid on {date}",
     "partialPaid": "Partially paid: {paid} of {total} · {remaining} left",
+    "estimated": "💡 Estimated: {value}",
     "overdueBy": "{count, plural, one {Overdue by # day} other {Overdue by # days}} · {date}",
     "dueToday": "⚠️ Due today! · {date}",
     "dueIn": "{count, plural, one {Due in # day} other {Due in # days}} · {date}",
@@ -84,6 +85,7 @@
     "fieldTitlePlaceholder": "e.g. Office rent",
     "amountPerInstallment": "Amount per installment (R$)",
     "amount": "Amount (R$)",
+    "estimatedLabel": "Estimated (optional)",
     "firstDueDate": "1st due date",
     "dueDate": "Due date",
     "category": "Category",

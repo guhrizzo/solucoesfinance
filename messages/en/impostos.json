@@ -107,6 +107,7 @@
   },
   "card": {
     "paidOn": "Paid on {date}",
+    "partialPaid": "Partially paid: {paid} of {total} · {remaining} left",
     "overdueBy": "{count, plural, one {# day overdue} other {# days overdue}}",
     "dueToday": "⚠️ Due today!",
     "dueIn": "{count, plural, one {Due in # day} other {Due in # days}} · {date}",

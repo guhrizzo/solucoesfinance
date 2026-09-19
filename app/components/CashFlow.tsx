@@ -98,6 +98,8 @@ interface Tx {
   expenseAutoCreated?: boolean;
   /** Id da conta a pagar baixada (total ou parcialmente) automaticamente por esta saída (ver `autoSettleMatchingBill`) — mesmo campo que `syncBillCashflow` usa pra achar o espelho, aqui gravado no sentido contrário (Fluxo de Caixa → Contas a Pagar). */
   sourceBillId?: string;
+  /** Id do imposto baixado (total ou parcialmente) automaticamente por esta saída (ver `autoSettleMatchingTax`). Campo próprio — NÃO é `sourceTaxId`, que marca o espelho criado pela página de Impostos e é apagado/regravado por `syncTaxCashflow`. */
+  settledTaxId?: string;
 }
 
 interface CostCenterOption {
@@ -277,6 +279,67 @@ async function autoSettleMatchingBill(
   } catch (err) {
     // Nunca deixa a baixa automática travar o salvamento da transação em si.
     console.error("Erro ao tentar dar baixa automática em Contas a Pagar:", err);
+    return null;
+  }
+}
+
+/**
+ * Mesma regra da `autoSettleMatchingBill`, agora pra Impostos
+ * (users/{uid}/taxes): uma saída que bate com um imposto ainda não pago pelo
+ * nome (`name`, ou "Imposto: {name}" — a descrição do espelho que a própria
+ * página de Impostos grava) soma em `amountPaid`; só vira "pago" quando a
+ * soma atinge o valor total. Só age com exatamente 1 correspondência.
+ * O vínculo fica em `settledTaxId` na saída — nunca em `sourceTaxId`, senão o
+ * `syncTaxCashflow` trataria o lançamento do extrato como espelho dele e o
+ * apagaria/sobrescreveria ao editar o imposto.
+ */
+async function autoSettleMatchingTax(
+  db: import("firebase/firestore").Firestore,
+  uid: string,
+  tx: { description: string; amount: number },
+  actor: Actor
+): Promise<string | null> {
+  const desc = (tx.description || "").trim().toLowerCase();
+  if (!desc) return null;
+
+  try {
+    const { collection, getDocs, doc, updateDoc } = await import("firebase/firestore");
+    const snap = await getDocs(collection(db, "users", uid, "taxes"));
+
+    const candidates = snap.docs
+      .map((d) => {
+        const data = d.data();
+        const remaining = round2(Number(data.amount) - Number(data.amountPaid || 0));
+        return { doc: d, data, remaining };
+      })
+      .filter(({ data, remaining }) => {
+        if (data.status === "pago") return false;
+        const nome = (data.name || "").trim().toLowerCase();
+        const bateDescricao = !!nome && (nome === desc || `imposto: ${nome}` === desc);
+        return bateDescricao && remaining > 0 && Number(tx.amount) <= remaining + CENTS_EPSILON;
+      });
+    if (candidates.length !== 1) return null;
+
+    const { doc: matchedDoc, data, remaining } = candidates[0];
+    const quitaImposto = Number(tx.amount) >= remaining - CENTS_EPSILON;
+
+    if (quitaImposto) {
+      await updateDoc(doc(db, "users", uid, "taxes", matchedDoc.id), {
+        status: "pago",
+        paidAt: TODAY,
+        amountPaid: data.amount,
+        ...stampSettle(actor),
+      });
+    } else {
+      await updateDoc(doc(db, "users", uid, "taxes", matchedDoc.id), {
+        amountPaid: round2(Number(data.amountPaid || 0) + Number(tx.amount)),
+        ...stampSettle(actor),
+      });
+    }
+    return matchedDoc.id;
+  } catch (err) {
+    // Nunca deixa a baixa automática travar o salvamento da transação em si.
+    console.error("Erro ao tentar dar baixa automática em Impostos:", err);
     return null;
   }
 }
@@ -1411,6 +1474,10 @@ export default function CashFlowPage() {
         if (matchedId) clean.sourceExpenseId = matchedId;
         const matchedBillId = await autoSettleMatchingBill(db, uid, { description: data.description, amount: data.amount }, actor);
         if (matchedBillId) clean.sourceBillId = matchedBillId;
+        if (!matchedBillId) {
+          const matchedTaxId = await autoSettleMatchingTax(db, uid, { description: data.description, amount: data.amount }, actor);
+          if (matchedTaxId) clean.settledTaxId = matchedTaxId;
+        }
       }
       await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
     }
@@ -1423,16 +1490,25 @@ export default function CashFlowPage() {
     // A importação já passou pela trava de PIN no modal — carimba a autoria.
     const importActor = { uid: authUid ?? uid, name: userName };
     const stamp = stampCreate(importActor);
-    await Promise.all(importedTxs.map(async (tx) => {
+    // As baixas rodam em sequência: duas saídas do mesmo extrato podem bater
+    // com a mesma conta/imposto (pagamentos parciais) e, em paralelo, ambas
+    // leriam o `amountPaid` antigo e uma sobrescreveria a soma da outra.
+    const entries: Record<string, unknown>[] = [];
+    for (const tx of importedTxs) {
       const entry: Record<string, unknown> = { ...tx, createdAt: Date.now(), ...stamp };
       if (tx.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: tx.description, amount: tx.amount });
         if (matchedId) entry.sourceExpenseId = matchedId;
         const matchedBillId = await autoSettleMatchingBill(db, uid, { description: tx.description, amount: tx.amount }, importActor);
         if (matchedBillId) entry.sourceBillId = matchedBillId;
+        if (!matchedBillId) {
+          const matchedTaxId = await autoSettleMatchingTax(db, uid, { description: tx.description, amount: tx.amount }, importActor);
+          if (matchedTaxId) entry.settledTaxId = matchedTaxId;
+        }
       }
-      await addDoc(collection(db, "users", uid, "cashflow"), entry);
-    }));
+      entries.push(entry);
+    }
+    await Promise.all(entries.map((entry) => addDoc(collection(db, "users", uid, "cashflow"), entry)));
   }
 
   // Lixeira → confirma → pede o PIN antes de excluir de fato.

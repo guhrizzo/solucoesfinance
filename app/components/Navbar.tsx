@@ -181,6 +181,32 @@ export default function Navbar({
     return t(`notifications.kinds.${item.kind}`, p);
   };
 
+  // Nome fantasia da empresa (Configurações > Perfil & Empresa), exibido no
+  // chip do usuário. Membros convidados leem o da conta do dono (ownerUid).
+  const [tradeName, setTradeName] = useState("");
+  useEffect(() => {
+    if (scope.loading || !scope.ownerUid) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getFirebase } = await import("@/lib/firebase");
+        const { doc, getDoc } = await import("firebase/firestore");
+        const { db } = await getFirebase();
+        const snap = await getDoc(doc(db, "users", scope.ownerUid, "profile", "company"));
+        if (!cancelled && snap.exists()) setTradeName(String(snap.data().nomeFantasia ?? "").trim());
+      } catch (err) {
+        console.error("Erro ao carregar o nome fantasia no Navbar:", err);
+      }
+    })();
+    // A aba Perfil & Empresa avisa quando salva, pra o chip atualizar sem recarregar.
+    const onUpdated = (e: Event) => setTradeName(String((e as CustomEvent<string>).detail ?? "").trim());
+    window.addEventListener("nexusfi:trade-name-updated", onUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("nexusfi:trade-name-updated", onUpdated);
+    };
+  }, [scope.loading, scope.ownerUid]);
+
   const userRef = useRef<HTMLDivElement>(null);
   const userBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -316,6 +342,58 @@ export default function Navbar({
     return block ? <div className="nxfi-vertical-period">{stepper}</div> : stepper;
   };
 
+  // ── Chip do usuário (foto + nome + cargo + menu) ──
+  // Compartilhado pelos dois layouts: na barra horizontal o menu abre pra
+  // baixo; no rodapé da sidebar vertical, pra cima. Os dois nunca estão
+  // montados juntos (o layout é exclusivo), então userRef/userBtnRef servem
+  // aos dois sem conflito.
+  const userMenuJSX = (placement: "below" | "above") => (
+    <div ref={userRef} style={{ position: "relative" }}>
+      <button
+        ref={userBtnRef}
+        className={`nxfi-avatar-btn${placement === "above" ? " nxfi-vertical-user" : ""}`}
+        onClick={() => setUserOpen(!userOpen)}
+        aria-label={t("userMenu.label")}
+        aria-haspopup="menu"
+        aria-expanded={userOpen}
+      >
+        <Avatar src={avatar.src} initial={avatar.initial} size={34} radius={8} />
+        <div className="nxfi-avatar-info">
+          <div className="nxfi-avatar-name">{firstName}</div>
+          <div className="nxfi-avatar-role">{scope.isOwner ? t("userMenu.roleOwner") : t("userMenu.roleMember")}</div>
+          {tradeName && <div className="nxfi-avatar-company" title={tradeName}>{tradeName}</div>}
+        </div>
+        <ChevronDown size={13} style={{ color: "var(--nav-text-3)", marginLeft: 2 }} />
+      </button>
+      {userOpen && (
+        <div className={`nxfi-dropdown nxfi-user-drop${placement === "above" ? " nxfi-user-drop-up" : ""}`} role="menu">
+          <div className="nxfi-user-drop-header">
+            <div className="nxfi-user-drop-name">{user?.displayName ?? t("userMenu.fallbackUser")}</div>
+            <div className="nxfi-user-drop-email">{user?.email}</div>
+          </div>
+          <div style={{ padding: "6px 0" }}>
+            {[
+              { key: "profile", icon: UserCircle, action: () => router.push("/users") },
+              { key: "billing", icon: Zap, action: () => showToast(t("userMenu.billingOpening"), "info") },
+              { key: "help", icon: HelpCircle, action: () => showToast(t("userMenu.helpOpening"), "info") },
+              { key: "settings", icon: Settings, action: () => router.push("/configuracoes") },
+            ].map((item) => (
+              <button key={item.key} className="nxfi-drop-item" onClick={item.action}>
+                <item.icon size={14} />
+                {t(`userMenu.${item.key}`)}
+              </button>
+            ))}
+            <div className="nxfi-drop-divider" />
+            <button className="nxfi-drop-item danger" onClick={handleLogout}>
+              <LogOut size={14} />
+              {t("logoutAccount")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   // ── Sidebar vertical via Portal ──
   const sidebarJSX = (
     <>
@@ -348,6 +426,7 @@ export default function Navbar({
           ))}
         </nav>
         <div className="nxfi-vertical-footer">
+          {userMenuJSX("above")}
           <button onClick={toggleLayout} className="nxfi-vertical-footer-btn">
             <PanelLeft size={16} />
             <span>{t("layoutHorizontal")}</span>
@@ -536,49 +615,7 @@ export default function Navbar({
             t={t} notifTitle={notifTitle} notifDesc={notifDesc} format={format}
           />
 
-          <div ref={userRef} style={{ position: "relative" }}>
-            <button
-              ref={userBtnRef}
-              className="nxfi-avatar-btn"
-              onClick={() => setUserOpen(!userOpen)}
-              aria-label={t("userMenu.label")}
-              aria-haspopup="menu"
-              aria-expanded={userOpen}
-            >
-              <Avatar src={avatar.src} initial={avatar.initial} size={34} radius={8} />
-              <div className="nxfi-avatar-info">
-                <div className="nxfi-avatar-name">{firstName}</div>
-                <div className="nxfi-avatar-role">{scope.isOwner ? t("userMenu.roleOwner") : t("userMenu.roleMember")}</div>
-              </div>
-              <ChevronDown size={13} style={{ color: "var(--nav-text-3)", marginLeft: 2 }} />
-            </button>
-            {userOpen && (
-              <div className="nxfi-dropdown nxfi-user-drop" role="menu">
-                <div className="nxfi-user-drop-header">
-                  <div className="nxfi-user-drop-name">{user?.displayName ?? t("userMenu.fallbackUser")}</div>
-                  <div className="nxfi-user-drop-email">{user?.email}</div>
-                </div>
-                <div style={{ padding: "6px 0" }}>
-                  {[
-                    { key: "profile", icon: UserCircle, action: () => router.push("/users") },
-                    { key: "billing", icon: Zap, action: () => showToast(t("userMenu.billingOpening"), "info") },
-                    { key: "help", icon: HelpCircle, action: () => showToast(t("userMenu.helpOpening"), "info") },
-                    { key: "settings", icon: Settings, action: () => router.push("/configuracoes") },
-                  ].map((item) => (
-                    <button key={item.key} className="nxfi-drop-item" onClick={item.action}>
-                      <item.icon size={14} />
-                      {t(`userMenu.${item.key}`)}
-                    </button>
-                  ))}
-                  <div className="nxfi-drop-divider" />
-                  <button className="nxfi-drop-item danger" onClick={handleLogout}>
-                    <LogOut size={14} />
-                    {t("logoutAccount")}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {userMenuJSX("below")}
         </div>
       </nav>
 

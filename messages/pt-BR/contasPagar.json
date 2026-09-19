@@ -17,9 +17,9 @@
     "toPay": "A pagar",
     "overdue": "Vencidas",
     "paid": "Pagas",
-    "alert": "Alerta ({days}d)",
+    "estimated": "Estimado",
     "billCount": "{count, plural, one {# conta} other {# contas}}",
-    "dueSoon": "vence em breve"
+    "planning": "planejamento"
   },
   "toolbar": {
     "searchPlaceholder": "Buscar título ou observação…",
@@ -62,6 +62,7 @@
     "viewPhotos": "{count, plural, one {Ver # foto anexada} other {Ver # fotos anexadas}}",
     "paidOn": "Pago em {date}",
     "partialPaid": "Pago parcialmente: {paid} de {total} · falta {remaining}",
+    "estimated": "💡 Estimado: {value}",
     "overdueBy": "{count, plural, one {Venceu há # dia} other {Venceu há # dias}} · {date}",
     "dueToday": "⚠️ Vence hoje! · {date}",
     "dueIn": "{count, plural, one {Vence em # dia} other {Vence em # dias}} · {date}",
@@ -84,6 +85,7 @@
     "fieldTitlePlaceholder": "Ex: Aluguel do escritório",
     "amountPerInstallment": "Valor por parcela (R$)",
     "amount": "Valor (R$)",
+    "estimatedLabel": "Estimado (opcional)",
     "firstDueDate": "1º vencimento",
     "dueDate": "Vencimento",
     "category": "Categoria",

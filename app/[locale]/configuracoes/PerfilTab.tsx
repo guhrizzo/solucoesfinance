@@ -139,6 +139,7 @@ export default function PerfilTab({
         { merge: true }
       );
       setCompanyLoaded(company);
+      window.dispatchEvent(new CustomEvent("nexusfi:trade-name-updated", { detail: company.nomeFantasia }));
       showToast(t("company.saved"), "success");
     } catch (err: unknown) {
       showToast(errMsg(err, t("company.error")), "error");

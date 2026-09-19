@@ -60,6 +60,7 @@ interface Tax {
     estimatedAmount?: number; // Para previsões
     paymentMethod?: string;
     paidPaymentMethod?: string;
+    amountPaid?: number;    // soma dos pagamentos vindos do extrato importado no Fluxo de Caixa (ver autoSettleMatchingTax)
     createdAt: number;
     userId: string;
     description?: string;
@@ -1259,6 +1260,16 @@ function TaxCard({ tax, alertDays, onEdit, onDelete, onOpenPayModal }: {
                             </p>
                         )}
 
+                        {status !== "pago" && (tax.amountPaid ?? 0) > 0 && (
+                            <p className="text-xs mt-1.5 font-medium" style={{ color: "var(--warn)" }}>
+                                {t("partialPaid", {
+                                    paid: toBRL(tax.amountPaid ?? 0, locale),
+                                    total: toBRL(tax.amount, locale),
+                                    remaining: toBRL(Math.round((tax.amount - (tax.amountPaid ?? 0)) * 100) / 100, locale),
+                                })}
+                            </p>
+                        )}
+
                         {tax.notes && (
                             <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text-3)" }}>📝 {tax.notes}</p>
                         )}
@@ -1466,8 +1477,13 @@ export default function ImpostosPage() {
         );
         const actor = { uid: authUid ?? uid, name: userName };
         let taxId: string;
+        // Reabrir um imposto que estava pago zera o acumulado de baixas do extrato,
+        // senão ele reapareceria como "pago parcialmente" (ou nunca mais casaria).
+        const reopened = !!editing && editing.status === "pago" && data.status !== "pago";
         if (editing) {
-            await updateDoc(doc(db, "users", uid, "taxes", editing.id), { ...clean, ...stampUpdate(actor) } as any);
+            await updateDoc(doc(db, "users", uid, "taxes", editing.id), {
+                ...clean, ...(reopened ? { amountPaid: 0 } : {}), ...stampUpdate(actor),
+            } as any);
             taxId = editing.id;
             showToast(t("toast.taxUpdated"));
         } else {
@@ -1487,6 +1503,7 @@ export default function ImpostosPage() {
             frequency: data.frequency,
             paidAt: data.paidAt,
             paidPaymentMethod: data.paidPaymentMethod as string | undefined,
+            amountPaid: reopened ? 0 : editing?.amountPaid,
         });
     }
 

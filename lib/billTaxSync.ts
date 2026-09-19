@@ -62,6 +62,8 @@ interface TaxLike {
   frequency?: string;
   paidAt?: string;
   paidPaymentMethod?: string;
+  /** Já pago via extrato importado (baixa automática no Fluxo de Caixa) — essas saídas já estão no caixa, o espelho só cobre o que faltava. */
+  amountPaid?: number;
 }
 
 /**
@@ -124,7 +126,11 @@ export async function syncTaxCashflow(db: Firestore, uid: string, tax: TaxLike):
       query(collection(db, "users", uid, "cashflow"), where("sourceTaxId", "==", tax.id))
     );
 
-    if (tax.status !== "pago") {
+    // Parte já paga por saídas do extrato (vinculadas por `settledTaxId`, não
+    // por `sourceTaxId`) não entra no espelho — senão contaria em dobro no caixa.
+    const remaining = Math.round((tax.amount - (tax.amountPaid ?? 0)) * 100) / 100;
+
+    if (tax.status !== "pago" || remaining <= 0.005) {
       await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, "users", uid, "cashflow", d.id))));
       return;
     }
@@ -133,7 +139,7 @@ export async function syncTaxCashflow(db: Firestore, uid: string, tax: TaxLike):
       type: "saida",
       description: `Imposto: ${tax.name}`,
       category: "Impostos",
-      amount: tax.amount,
+      amount: remaining,
       date: tax.paidAt || tax.dueDate || today(),
       note: `Imposto · ${FREQUENCY_LABEL[tax.frequency ?? "anual"] ?? "Anual"}`,
       sourceTaxId: tax.id,
