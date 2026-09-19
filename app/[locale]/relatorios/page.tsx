@@ -11,7 +11,7 @@ import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, Badge, Sensitive } from "@/app/components/ui";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
 
@@ -337,6 +337,8 @@ export default function RelatoriosPage() {
     const add = (m: Map<string, number>, name: string, v: number) => m.set(name, (m.get(name) ?? 0) + v);
 
     filteredTxs.forEach(tx => {
+      // Transferência entre contas do mesmo titular não é resultado — fica fora do DRE.
+      if (isSameOwnerTransfer(tx.category)) return;
       const catLower = tx.category.toLowerCase();
       const name = tx.category || noCategory;
       if (tx.type === "entrada") {

@@ -37,6 +37,17 @@ export const CASHFLOW_CATEGORIES: Record<TxType, string[]> = {
   ],
 };
 
+/** Movimentação entre contas do próprio titular — não é receita nem despesa,
+ *  então fica de fora do DRE (segue aparecendo no Fluxo de Caixa e demais abas). */
+export const SAME_OWNER_TRANSFER_CATEGORY = "Transferência mesma titularidade";
+
+/** Compara sem diferenciar maiúsculas/acentos, pra pegar variações digitadas
+ *  à mão (categoria livre) além do valor fixo da lista. */
+export function isSameOwnerTransfer(category: string): boolean {
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+  return norm(category) === norm(SAME_OWNER_TRANSFER_CATEGORY);
+}
+
 // Sentinela usada nos <select> de categoria. Quando escolhida, a UI troca por
 // um input livre e o valor salvo passa a ser o texto que o usuário digitar.
 export const CUSTOM_CATEGORY = "__custom__";
