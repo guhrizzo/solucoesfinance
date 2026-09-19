@@ -13,21 +13,16 @@ import {
   APP_ORIGIN,
   APP_ORIGINS,
   BACKGROUND_COLOR,
-  browserUserAgent,
   internalRedirectFor,
-  isAuthPopupOrigin,
 } from './config'
 import { createWindowState } from './window-state'
 import { buildMenu } from './menu'
 import { initUpdater, checkForUpdatesManual } from './updater'
+import { loginWithBrowser } from './device-login'
 
 const isDev = !app.isPackaged
 const ASSETS = path.join(__dirname, '..', 'assets')
 const OFFLINE_PAGE = path.join(ASSETS, 'offline.html')
-
-// Sem "Electron/…" no User-Agent, senão o Google recusa o login (popup do
-// Firebase). Precisa rodar antes de qualquer janela.
-app.userAgentFallback = browserUserAgent(app.userAgentFallback)
 
 // Códigos de erro de rede do Chromium que indicam "sem internet" (e não um
 // redirect/abort normal). Ver net_error_list.h.
@@ -57,13 +52,10 @@ function originOf(url: string): string | null {
   }
 }
 
-// Popups de login (Firebase/Google) são as únicas janelas filhas que podem
-// navegar pra fora do site; a janela principal nunca.
-function isAllowedNavigation(contents: Electron.WebContents, url: string): boolean {
+function isAllowedNavigation(url: string): boolean {
   if (url.startsWith('file:') || url === 'about:blank') return true
   const origin = originOf(url)
-  if (origin && APP_ORIGINS.includes(origin)) return true
-  return contents !== mainWindow?.webContents && isAuthPopupOrigin(url)
+  return !!origin && APP_ORIGINS.includes(origin)
 }
 
 function loadApp() {
@@ -124,11 +116,9 @@ function createWindow() {
 function hardenContents(contents: Electron.WebContents) {
   contents.setWindowOpenHandler(({ url }) => {
     const origin = originOf(url)
-    // Mesma origem (ex.: "abrir PDF em nova aba") e popup de login do
-    // Firebase/Google → janela filha no mesmo processo/sessão, herdando o
-    // webPreferences endurecido do pai. O popup precisa de `window.opener`
-    // pra devolver o resultado do login.
-    if ((origin && APP_ORIGINS.includes(origin)) || isAuthPopupOrigin(url)) {
+    // Mesma origem (ex.: "abrir PDF em nova aba") → janela filha no mesmo
+    // processo, herdando o webPreferences endurecido do pai.
+    if (origin && APP_ORIGINS.includes(origin)) {
       return {
         action: 'allow',
         overrideBrowserWindowOptions: {
@@ -150,7 +140,7 @@ function hardenContents(contents: Electron.WebContents) {
       mainWindow?.loadURL(internal)
       return
     }
-    if (isAllowedNavigation(contents, url)) return
+    if (isAllowedNavigation(url)) return
     event.preventDefault()
     if (/^https?:/.test(url)) shell.openExternal(url)
   })
@@ -162,7 +152,7 @@ function hardenContents(contents: Electron.WebContents) {
       mainWindow?.loadURL(internal)
       return
     }
-    if (isAllowedNavigation(contents, url)) return
+    if (isAllowedNavigation(url)) return
     event.preventDefault()
   })
 }
@@ -221,4 +211,5 @@ if (!app.requestSingleInstanceLock()) {
 
   ipcMain.on('retry-load', () => loadApp())
   ipcMain.handle('app-version', () => app.getVersion())
+  ipcMain.handle('login-with-browser', () => loginWithBrowser(getWindow))
 }

@@ -45,18 +45,34 @@ Feed = Releases do GitHub do repo público `guhrizzo/solucoesfinance`.
 
 ## Login
 
-Sem cookie de sessão neste projeto: a sessão é do Firebase Auth dentro do
-navegador embutido (IndexedDB), então persiste entre aberturas do app. O login
-com Google usa o popup do Firebase (`signInWithPopup`); o app permite popups de
-`*.firebaseapp.com` / `accounts.google.com` e remove o token `Electron/…` do
-User-Agent, porque o Google recusa OAuth em navegador embutido que se anuncia
-como Electron.
+E-mail e senha funcionam direto no app. **O Google não**: ele recusa OAuth em
+janela embutida (`accounts.google.com/signin/rejected`), e trocar o User-Agent
+não resolve. Por isso o botão "Google" (login e cadastro) delega pro navegador
+do sistema:
+
+1. O site detecta o app (`window.nexusDesktop`, ver `lib/desktopBridge.ts`) e chama
+   `loginWithBrowser()`; o app sobe um servidor em `127.0.0.1:<porta efêmera>` e abre
+   `/entrar-dispositivo?porta=…&state=…` no navegador padrão.
+2. Lá o usuário entra com o Google normalmente. A página troca o ID token por um
+   código de uso único (`POST /api/desktop/code`, coleção `device_logins`, 2 min,
+   guardado só o hash) e redireciona pra `http://127.0.0.1:<porta>/callback`.
+3. O app valida o `state`, abre `/entrar-dispositivo/concluir?code=…` na própria
+   janela, que resgata o código (`POST /api/desktop/exchange` → custom token do
+   Firebase) e faz `signInWithCustomToken`. Cai no dashboard, mesmo uid.
+
+A sessão é do Firebase Auth (IndexedDB) e persiste entre aberturas. Em dev, o app
+imprime a URL do passo 1 no terminal.
+
+**Importante:** o app carrega o site publicado, então o login com Google só
+funciona depois que as rotas `/entrar-dispositivo` e `/api/desktop/*` estiverem
+deployadas em produção.
 
 ## Ícone
 
 `assets/icon.png` / `assets/icon.ico` são gerados por `scripts/make-icon.mjs` a
-partir do logo branco sobre fundo escuro — **provisório**. Para o oficial, ponha
-um `assets/icon.source.png` quadrado (≥ 1024×1024) e rode `npm run prebuild`.
+partir do `app/favicon.svg` do site. Para outra arte, ponha um
+`assets/icon.source.png` quadrado (≥ 1024×1024) — ele tem prioridade — e rode
+`npm run prebuild`.
 
 ## Limitações
 

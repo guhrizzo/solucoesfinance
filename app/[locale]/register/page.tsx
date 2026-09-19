@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
+import { canLoginWithSystemBrowser, loginWithSystemBrowser } from "@/lib/desktopBridge";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink } from "@/lib/authLink";
 import { passwordRules } from "@/lib/passwordRules";
@@ -113,6 +114,11 @@ export default function RegisterPage() {
     setError(null);
     setGoogleLoading(true);
     try {
+      // App desktop: login pelo navegador do sistema (o Google recusa a janela embutida).
+      if (canLoginWithSystemBrowser()) {
+        await loginWithSystemBrowser();
+        return;
+      }
       await registerWithGoogle();
       goAfterSignup();
     } catch (err: any) {

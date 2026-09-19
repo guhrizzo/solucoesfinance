@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink, completeGoogleLink, type PendingGoogleLink } from "@/lib/authLink";
+import { canLoginWithSystemBrowser, loginWithSystemBrowser } from "@/lib/desktopBridge";
 
 // Códigos de erro Firebase reconhecidos → chave em auth.errors.
 const KNOWN_ERROR_CODES = new Set([
@@ -135,6 +136,12 @@ export default function LoginPage() {
     setError(null);
     setGoogleLoading(true);
     try {
+      // App desktop: o Google recusa OAuth em janela embutida, então o login é
+      // feito no navegador do sistema e o app navega sozinho ao receber a sessão.
+      if (canLoginWithSystemBrowser()) {
+        await loginWithSystemBrowser();
+        return;
+      }
       await loginWithGoogle();
       goAfterLogin();
     } catch (err: any) {

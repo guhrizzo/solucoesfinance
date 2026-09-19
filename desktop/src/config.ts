@@ -19,20 +19,6 @@ export const APP_ORIGINS = [
   'http://localhost:3000',
 ]
 
-// Origens que só podem abrir como popup do próprio app: o fluxo do Google
-// (signInWithPopup do Firebase) precisa delas na mesma sessão pra devolver o
-// resultado pra janela que abriu.
-const AUTH_POPUP_HOSTS = /^(.+\.)?firebaseapp\.com$|^accounts\.google\.com$/
-
-export function isAuthPopupOrigin(url: string): boolean {
-  try {
-    const u = new URL(url)
-    return u.protocol === 'https:' && AUTH_POPUP_HOSTS.test(u.hostname)
-  } catch {
-    return false
-  }
-}
-
 // Landing pública (`/`, `/en`, `/es`) — o app desktop NÃO deve abri-la; qualquer
 // navegação pra ela vira /login. O resto (login, cadastro, sistema, páginas
 // legais) segue normal.
@@ -53,10 +39,3 @@ export function internalRedirectFor(url: string): string | null {
 
 // Fundo da janela (evita flash branco no carregamento).
 export const BACKGROUND_COLOR = '#0b0d14'
-
-// User-Agent sem o token "Electron/…" e sem o nome do app: o Google bloqueia
-// login OAuth ("disallowed_useragent") em navegador embutido que se anuncia
-// como Electron.
-export function browserUserAgent(ua: string): string {
-  return ua.replace(/\s(Electron|nexus-fi-desktop)\/\S+/gi, '')
-}
