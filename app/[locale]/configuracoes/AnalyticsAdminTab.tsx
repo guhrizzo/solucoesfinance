@@ -46,7 +46,7 @@ export default function AnalyticsAdminTab() {
         return <p className="text-xs px-1" style={{ color: "var(--text-subtle)" }}>…</p>;
     }
 
-    const { hoje, mes, serie30, topPaginas, usuariosLogados, downloads, erro } = overview;
+    const { hoje, mes, serie30, topPaginas, usuariosLogados, downloads, cliquesDownload, erro } = overview;
     const anonHoje = Math.max(0, hoje.uniqueVisitors - hoje.loggedVisitors);
     const anonMes = Math.max(0, mes.uniqueVisitors - mes.loggedVisitors);
     const fmt = (n: number) => formatNumber(n, locale, { maximumFractionDigits: 0 });
@@ -140,7 +140,7 @@ export default function AnalyticsAdminTab() {
 
             <Card padding="md">
                 <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>{t("downloads.title")}</h3>
-                {downloads.erro && (
+                {(downloads.erro || cliquesDownload.erro) && (
                     <div
                         className="mt-3 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
                         style={{ background: "var(--warn-weak)", border: "1px solid var(--warn-weak)", color: "var(--warn)" }}
@@ -150,6 +150,12 @@ export default function AnalyticsAdminTab() {
                     </div>
                 )}
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <KpiTile
+                        label={t("downloads.uniquePeople")}
+                        value={fmt(cliquesDownload.pessoasUnicas)}
+                        delta={t("downloads.uniquePeopleHint", { clicks: fmt(cliquesDownload.cliques) })}
+                        icon={Users}
+                    />
                     <KpiTile
                         label={t("downloads.total")}
                         value={fmt(downloads.total)}

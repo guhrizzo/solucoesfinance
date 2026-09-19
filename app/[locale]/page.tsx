@@ -52,6 +52,12 @@ import {
   type BillingPeriod,
 } from "@/lib/billingPlans";
 
+// Conta a pessoa (cookie de visitante) que clicou em "Baixar app" — ver
+// app/api/track/download. keepalive pro request sobreviver ao download/navegação.
+function trackDownloadClick() {
+  fetch("/api/track/download", { method: "POST", keepalive: true }).catch(() => {});
+}
+
 // Ícones das funcionalidades — o texto vem de messages/*/landing.json
 // (features.items), na mesma ordem.
 const FEATURE_ICONS = [BarChart2, FileText, CreditCard, PieChart, Users, Globe];
@@ -867,6 +873,7 @@ export default function FinanceHome() {
               <a
                 href={DESKTOP_DOWNLOAD_URL}
                 rel="noopener"
+                onClick={trackDownloadClick}
                 className="btn-primary inline-flex items-center gap-2 text-white font-semibold px-8 py-4 rounded-xl text-base"
               >
                 <Download size={18} aria-hidden="true" />

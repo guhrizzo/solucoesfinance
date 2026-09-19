@@ -12,6 +12,7 @@ import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import { getAnalyticsOverview } from "@/lib/analytics/overview";
 import { getRecentLoggedUsers } from "@/lib/analytics/loggedUsers";
 import { getDesktopDownloads } from "@/lib/analytics/downloads";
+import { getDownloadClicks } from "@/lib/analytics/downloadClicks";
 
 function bearerToken(req: Request): string | null {
   const h = req.headers.get("authorization") ?? "";
@@ -44,10 +45,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Sua conta não tem acesso a esta área." }, { status: 403 });
   }
 
-  const [overview, usuariosLogados, downloads] = await Promise.all([
+  const [overview, usuariosLogados, downloads, cliquesDownload] = await Promise.all([
     getAnalyticsOverview(),
     getRecentLoggedUsers(),
     getDesktopDownloads(),
+    getDownloadClicks(),
   ]);
-  return NextResponse.json({ ...overview, usuariosLogados, downloads });
+  return NextResponse.json({ ...overview, usuariosLogados, downloads, cliquesDownload });
 }

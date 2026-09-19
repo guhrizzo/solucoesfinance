@@ -194,6 +194,8 @@
     },
     "downloads": {
       "title": "Windows app downloads",
+      "uniquePeople": "People who clicked Download",
+      "uniquePeopleHint": "{clicks} clicks on the landing button · 1 per browser",
       "total": "Installer downloads",
       "hint": "GitHub count: repeat downloads (and the app auto-update) count again.",
       "colVersion": "Version",

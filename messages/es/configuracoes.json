@@ -194,6 +194,8 @@
     },
     "downloads": {
       "title": "Descargas de la app para Windows",
+      "uniquePeople": "Personas que hicieron clic en Descargar",
+      "uniquePeopleHint": "{clicks} clics en el botón de la landing · 1 por navegador",
       "total": "Descargas del instalador",
       "hint": "Conteo de GitHub: quien vuelve a descargar (o la actualización automática de la app) cuenta otra vez.",
       "colVersion": "Versión",

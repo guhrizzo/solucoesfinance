@@ -8,6 +8,7 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { dayKey, monthKey } from "@/lib/analytics/dates";
 import type { LoggedUser } from "@/lib/analytics/loggedUsers";
 import type { DownloadsOverview } from "@/lib/analytics/downloads";
+import type { DownloadClicksOverview } from "@/lib/analytics/downloadClicks";
 
 export interface DiaSerie {
   date: string;
@@ -39,6 +40,7 @@ export interface AnalyticsOverview {
 export interface AnalyticsResponse extends AnalyticsOverview {
   usuariosLogados: LoggedUser[];
   downloads: DownloadsOverview;
+  cliquesDownload: DownloadClicksOverview;
 }
 
 const ZERO: Totais = { uniqueVisitors: 0, loggedVisitors: 0, pageviews: 0 };
