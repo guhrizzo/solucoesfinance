@@ -14,6 +14,9 @@ import { getAdminDb, getAdminBucket } from "@/lib/firebaseAdmin";
 import { resolveSubscriptionState, isProAccess, type BillingDoc } from "@/lib/billing";
 import { checkRateLimit } from "@/lib/rateLimit";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 const RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 10 }; // 10 análises / 10 min por conta
 
 // O arquivo chega via Storage (não mais no corpo da requisição em base64) —
