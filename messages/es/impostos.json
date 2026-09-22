@@ -5,6 +5,7 @@
     "addTax": "Agregar impuesto",
     "readNf": "Leer factura"
   },
+  "resultOf": "Resultado de {period}",
   "header": {
     "allClear": "✓ ¡Todo al día!",
     "dueSoon": "{count, plural, one {# vence en los próximos {days} días} other {# vencen en los próximos {days} días}}",
@@ -49,19 +50,28 @@
     "agendado": "Programados",
     "pago": "Pagados"
   },
+  "period": {
+    "monthly": "Mensual",
+    "annual": "Anual"
+  },
+  "periodLabel": {
+    "year": "Año {year}"
+  },
   "toolbar": {
     "searchPlaceholder": "Buscar impuesto u observación…",
     "searchAria": "Buscar impuesto u observación",
     "filterAll": "Todos",
     "allTypes": "Todos los tipos",
     "monthHint": "Vencimientos de este mes — cambia el mes en el selector de la barra",
+    "yearHint": "Vencimientos de este año — cambia el año navegando los meses en el selector de la barra",
     "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
   },
   "empty": {
     "noResults": "Sin resultados",
     "nothingIn": "Nada en {period}",
     "adjustFilters": "Ajusta los filtros para ver otros impuestos.",
-    "noneThisMonth": "Ningún impuesto vence este mes. Cambia el mes en el selector de la barra o agrega un impuesto."
+    "noneThisMonth": "Ningún impuesto vence este mes. Cambia el mes en el selector de la barra o agrega un impuesto.",
+    "noneThisYear": "Ningún impuesto vence este año. Cambia el año navegando los meses en el selector de la barra o agrega un impuesto."
   },
   "taxTypes": {
     "simples_nacional": "Simples Nacional",

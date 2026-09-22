@@ -84,7 +84,13 @@ try {
   const src = readFileSync(libPath, "utf8");
   const catKeys = new Set(Object.keys(load(SOURCE, "categories.json")));
 
-  const catBlock = src.slice(src.indexOf("CASHFLOW_CATEGORIES"), src.indexOf("CUSTOM_CATEGORY"));
+  // Delimita EXATAMENTE o literal do objeto: do nome até o primeiro "};",
+  // que é o que fecha o Record (os arrays internos fecham com "],"). Fatiar
+  // até CUSTOM_CATEGORY pegava também as strings das funções auxiliares que
+  // moram entre os dois (norm/isSameOwnerTransfer/isRedemption), e o check
+  // acusava "NFD" & cia. como categoria sem key.
+  const catStart = src.indexOf("CASHFLOW_CATEGORIES");
+  const catBlock = src.slice(catStart, src.indexOf("};", catStart));
   const storedValues = [...catBlock.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 
   const keyBlock = src.slice(src.indexOf("CATEGORY_KEY"));

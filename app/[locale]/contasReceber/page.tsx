@@ -1222,9 +1222,14 @@ export default function ContasReceberPage() {
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"todos" | ReceivableStatus>("todos");
     const [filterCategory, setFilterCategory] = useState("todas");
-    // Mês em foco = seletor global da Navbar (usePeriod). A lista é filtrada
-    // por mês de vencimento; alertas/KPIs seguem globais.
-    const { monthKey, label: periodLabel } = usePeriod();
+    // Mês em foco = seletor global da Navbar (usePeriod). A lista e os KPIs
+    // são filtrados por vencimento dentro do período — mês (padrão) ou o ano
+    // inteiro do mês selecionado, via toggle Mensal/Anual (mesmo padrão do
+    // toggle da tela de Relatórios).
+    const { monthKey, label: navbarMonthLabel, refDate } = usePeriod();
+    const [filterPeriod, setFilterPeriod] = useState<"mes" | "ano">("mes");
+    const isAnnual = filterPeriod === "ano";
+    const periodLabel = isAnnual ? t("periodLabel.year", { year: refDate.getFullYear() }) : navbarMonthLabel;
 
     // Toast com suporte a múltiplos simultâneos
     const { toasts, show: showToast } = useToast();
@@ -1562,17 +1567,25 @@ export default function ContasReceberPage() {
         receivables.map(r => ({ ...r, _status: computeStatus(r) })),
         [receivables]);
 
+    // Vencimento dentro do período em foco — mês (monthKey) ou o ano inteiro
+    // do mês selecionado, conforme o toggle Mensal/Anual.
+    const inPeriod = useCallback((dueDate: string) =>
+        isAnnual
+            ? (dueDate ?? "").slice(0, 4) === String(refDate.getFullYear())
+            : (dueDate ?? "").slice(0, 7) === monthKey,
+        [isAnnual, monthKey, refDate]);
+
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
         return enriched.filter(r => {
-            if ((r.dueDate ?? "").slice(0, 7) !== monthKey) return false;
+            if (!inPeriod(r.dueDate)) return false;
             if (filterStatus !== "todos" && r._status !== filterStatus) return false;
             if (filterCategory !== "todas" && r.category !== filterCategory) return false;
             if (q && !r.title.toLowerCase().includes(q) && !r.notes.toLowerCase().includes(q)
                 && !(r.partyName ?? "").toLowerCase().includes(q)) return false;
             return true;
         });
-    }, [enriched, filterStatus, filterCategory, search, monthKey]);
+    }, [enriched, filterStatus, filterCategory, search, inPeriod]);
 
     // Agrupa em seções ordenadas por prioridade
     const sections = useMemo(() => [
@@ -1582,23 +1595,24 @@ export default function ContasReceberPage() {
         { key: "recebido", color: "var(--pos)", receivables: filtered.filter(r => r._status === ("recebido" as const)) },
     ].filter(s => s.receivables.length > 0), [filtered]);
 
-    // KPIs
+    // KPIs — resultado do período em foco (mês ou ano), não o total histórico.
     const kpis = useMemo(() => {
-        const notReceived = enriched.filter(r => r._status !== ("recebido" as const));
+        const periodReceivables = enriched.filter(r => inPeriod(r.dueDate));
+        const notReceived = periodReceivables.filter(r => r._status !== ("recebido" as const));
         return {
             aReceber: notReceived.reduce((s, r) => s + r.amount, 0),
-            atrasado: enriched.filter(r => r._status === ("atrasado" as const)).reduce((s, r) => s + r.amount, 0),
-            recebido: enriched.filter(r => r._status === ("recebido" as const)).reduce((s, r) => s + r.amount, 0),
-            alert: enriched.filter(r => {
+            atrasado: periodReceivables.filter(r => r._status === ("atrasado" as const)).reduce((s, r) => s + r.amount, 0),
+            recebido: periodReceivables.filter(r => r._status === ("recebido" as const)).reduce((s, r) => s + r.amount, 0),
+            alert: periodReceivables.filter(r => {
                 if (r._status === ("recebido" as const)) return false;
                 const d = daysUntil(r.dueDate);
                 return d >= 0 && d <= alertDays;
             }).length,
             totalNotReceived: notReceived.length,
-            totalOverdue: enriched.filter(r => r._status === ("atrasado" as const)).length,
-            totalReceived: enriched.filter(r => r._status === ("recebido" as const)).length,
+            totalOverdue: periodReceivables.filter(r => r._status === ("atrasado" as const)).length,
+            totalReceived: periodReceivables.filter(r => r._status === ("recebido" as const)).length,
         };
-    }, [enriched, alertDays]);
+    }, [enriched, alertDays, inPeriod]);
 
     // ── Loading / Error ────────────────────────────────────────────────────────
 
@@ -1727,6 +1741,24 @@ export default function ContasReceberPage() {
                     </div>
                 </div>
 
+                {/* Período dos resultados (KPIs abaixo) — Mensal ou Anual */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
+                        {(["mes", "ano"] as const).map(p => (
+                            <button key={p} type="button" onClick={() => setFilterPeriod(p)}
+                                className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all"
+                                style={filterPeriod === p
+                                    ? { background: "var(--cf-card)", color: "var(--pos)", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }
+                                    : { background: "transparent", color: "var(--cf-text-2)" }}>
+                                {t(p === "mes" ? "period.monthly" : "period.annual")}
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }} title={t(isAnnual ? "toolbar.yearHint" : "toolbar.monthHint")}>
+                        {t("resultOf", { period: periodLabel })}
+                    </span>
+                </div>
+
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
@@ -1779,7 +1811,7 @@ export default function ContasReceberPage() {
                                 </select>
                             </div>
                             <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                                title={t("toolbar.monthHint")}>
+                                title={t(isAnnual ? "toolbar.yearHint" : "toolbar.monthHint")}>
                                 {periodLabel}
                             </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
@@ -1804,7 +1836,7 @@ export default function ContasReceberPage() {
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? t("empty.adjustFilters")
-                                : t("empty.noneThisMonth")}
+                                : t(isAnnual ? "empty.noneThisYear" : "empty.noneThisMonth")}
                         </p>
                         {!search && filterStatus === "todos" && filterCategory === "todas" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}

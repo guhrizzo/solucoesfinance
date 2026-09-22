@@ -127,7 +127,7 @@ function hardenContents(contents: Electron.WebContents) {
         },
       }
     }
-    // Externo (checkout InfinitePay, WhatsApp, marketplaces…) → navegador do sistema.
+    // Externo (checkout Mercado Pago, WhatsApp, marketplaces…) → navegador do sistema.
     if (/^https?:/.test(url)) shell.openExternal(url)
     return { action: 'deny' }
   })

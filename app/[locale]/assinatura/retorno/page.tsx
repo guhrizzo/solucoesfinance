@@ -21,17 +21,22 @@ function Retorno() {
   const { loading: authLoading } = useAuth();
   const sub = useSubscription();
 
+  // Mercado Pago (assinatura recorrente) volta com `preapproval_id`;
+  // InfinitePay (links legados) volta com order_nsu/transaction_nsu/slug.
+  const preapprovalId = params.get("preapproval_id") || "";
   const orderNsu = params.get("order_nsu") || "";
   const transactionNsu = params.get("transaction_nsu") || "";
   const slug = params.get("slug") || params.get("invoice_slug") || "";
   const receiptUrl = params.get("receipt_url") || "";
 
   // order_nsu = owner__plan__[contractId]__ts  → contrato quando há 4+ segmentos.
-  const contractId = (() => {
+  // No fluxo do MP o id do contrato vem na resposta do /confirm.
+  const legacyContractId = (() => {
     const parts = orderNsu.split("__");
     return parts.length >= 4 ? parts[2] : "";
   })();
-
+  const [mpContractId, setMpContractId] = useState("");
+  const contractId = mpContractId || legacyContractId;
   const [phase, setPhase] = useState<Phase>("confirming");
   const [msg, setMsg] = useState<string>("");
   const [downloading, setDownloading] = useState(false);
@@ -61,7 +66,7 @@ function Retorno() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!orderNsu || !transactionNsu || !slug) {
+    if (!preapprovalId && (!orderNsu || !transactionNsu || !slug)) {
       setPhase("error");
       setMsg(t("incompleteReturn"));
       return;
@@ -74,10 +79,15 @@ function Retorno() {
         const res = await authedFetch("/api/billing/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order_nsu: orderNsu, transaction_nsu: transactionNsu, slug }),
+          body: JSON.stringify(
+            preapprovalId
+              ? { preapproval_id: preapprovalId }
+              : { order_nsu: orderNsu, transaction_nsu: transactionNsu, slug }
+          ),
         });
         const data = await res.json();
         if (stop) return;
+        if (data?.contractId) setMpContractId(String(data.contractId));
         if (res.ok && data.ok) {
           setPhase("ok");
           return;
@@ -100,7 +110,7 @@ function Retorno() {
     return () => {
       stop = true;
     };
-  }, [authLoading, orderNsu, transactionNsu, slug, t]);
+  }, [authLoading, preapprovalId, orderNsu, transactionNsu, slug, t]);
 
   // Se a assinatura ficou ativa (via webhook, em paralelo), trata como sucesso
   // sem depender do resultado do /confirm.

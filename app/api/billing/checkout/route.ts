@@ -6,15 +6,18 @@ import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { getPlan } from "@/lib/billingPlans";
-import { createCheckoutLink, buildOrderNsu, infinitepayConfigured } from "@/lib/infinitepay";
+import { buildOrderNsu } from "@/lib/infinitepay";
+import { createPreapproval, mercadopagoConfigured } from "@/lib/mercadopago";
 import { isCompedEmail } from "@/lib/compAccounts";
 import type { ContractDoc } from "@/lib/contract";
 
-// POST /api/billing/checkout   body: { plan: "mensal" | "anual" }
+// POST /api/billing/checkout   body: { plan: PlanId, contractId }
 //
-// Autenticado, SÓ O DONO da conta. Gera o link de pagamento da InfinitePay e
-// devolve { url } pro client redirecionar. O `order_nsu` carrega ownerUid+plano
-// e volta intacto no webhook/redirect.
+// Autenticado, SÓ O DONO da conta. Cria a ASSINATURA RECORRENTE no Mercado Pago
+// (status pendente) e devolve { url } pro client redirecionar o cliente a
+// autorizar o meio de pagamento. O `external_reference` (mesmo formato do antigo
+// order_nsu: ownerUid__plano__contrato__ts) carrega dono+plano+contrato e volta
+// intacto em todo webhook.
 
 function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
@@ -45,8 +48,8 @@ export async function POST(request: Request) {
     /* sem e-mail → segue o fluxo normal de cobrança */
   }
 
-  if (!infinitepayConfigured()) {
-    return NextResponse.json({ error: "Pagamento não configurado (INFINITEPAY_HANDLE ausente)." }, { status: 503 });
+  if (!mercadopagoConfigured()) {
+    return NextResponse.json({ error: "Pagamento não configurado (MERCADOPAGO_ACCESS_TOKEN ausente)." }, { status: 503 });
   }
 
   const base = appUrl();
@@ -69,6 +72,17 @@ export async function POST(request: Request) {
     );
   }
   const db = await getAdminDb();
+
+  // Já existe renovação automática viva → não cria uma segunda cobrança em
+  // paralelo (cancele a atual antes de trocar de plano).
+  const billingSnap = await db.doc(`users/${scope.ownerUid}/profile/billing`).get();
+  if (billingSnap.exists && billingSnap.data()?.subscriptionStatus === "authorized") {
+    return NextResponse.json(
+      { error: "Você já tem uma assinatura com renovação automática ativa. Cancele-a antes de contratar outro plano." },
+      { status: 409 }
+    );
+  }
+
   const contractSnap = await db.doc(`users/${scope.ownerUid}/contracts/${cid}`).get();
   const contract = contractSnap.exists
     ? (contractSnap.data() as ContractDoc)
@@ -102,31 +116,32 @@ export async function POST(request: Request) {
     }
   }
 
+  const payerEmail = customer?.email;
+  if (!payerEmail) {
+    return NextResponse.json({ error: "Informe um e-mail válido no contrato para prosseguir." }, { status: 400 });
+  }
+
   try {
     const orderNsu = buildOrderNsu(scope.ownerUid, plan.id, cid);
-    const { url } = await createCheckoutLink({
-      orderNsu,
-      redirectUrl: `${base}/assinatura/retorno`,
-      webhookUrl: `${base}/api/webhooks/infinitepay`,
-      items: [
-        {
-          quantity: 1,
-          price: plan.priceCents,
-          description: `NexusFi — Plano ${plan.label}`,
-        },
-      ],
-      customer,
+    const { id: preapprovalId, url } = await createPreapproval({
+      externalReference: orderNsu,
+      payerEmail,
+      reason: `NexusFi — Plano ${plan.label}`,
+      priceCents: plan.priceCents,
+      everyMonths: plan.months,
+      backUrl: `${base}/assinatura/retorno`,
     });
 
-    // Registra o order_nsu no contrato (rastreio; a finalização usa o do order_nsu).
+    // Registra o order_nsu e a assinatura no contrato (rastreio; a finalização
+    // usa o external_reference).
     await db
       .doc(`users/${scope.ownerUid}/contracts/${cid}`)
-      .update({ orderNsu, updatedAt: Date.now() })
+      .update({ orderNsu, preapprovalId, updatedAt: Date.now() })
       .catch(() => undefined);
 
     return NextResponse.json({ url, orderNsu });
   } catch (err: any) {
-    console.error("Erro ao criar checkout InfinitePay:", err);
+    console.error("Erro ao criar assinatura no Mercado Pago:", err);
     return NextResponse.json({ error: err?.message || "Falha ao gerar o link de pagamento." }, { status: 502 });
   }
 }

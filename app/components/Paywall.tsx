@@ -35,12 +35,34 @@ export default function Paywall({ state, blocking = false, initialError = null }
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(initialError);
   const [period, setPeriod] = useState<BillingPeriod>("mensal");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelledNote, setCancelledNote] = useState<string | null>(null);
 
   // Antes do pagamento, a pessoa passa pela tela de contrato.
   const assinar = (planId: string) => {
     setError(null);
     setLoadingPlan(planId);
     router.push(`/assinatura/contrato?plano=${encodeURIComponent(planId)}`);
+  };
+
+  // Cancela a renovação automática no Mercado Pago. O acesso já pago segue até
+  // o fim do período; o estado se atualiza sozinho pelo onSnapshot.
+  const cancelarRenovacao = async () => {
+    const date = formatDate(state.accessUntil, locale);
+    if (!window.confirm(t("cancelConfirm", { date }))) return;
+    setError(null);
+    setCancelling(true);
+    try {
+      const { authedFetch } = await import("@/lib/authedFetch");
+      const res = await authedFetch("/api/billing/cancel", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) throw new Error(data?.error || t("cancelError"));
+      setCancelledNote(t("cancelledOk", { date }));
+    } catch (e: any) {
+      setError(e?.message || t("cancelError"));
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const logout = async () => {
@@ -73,9 +95,17 @@ export default function Paywall({ state, blocking = false, initialError = null }
         ? state.isOwner
           ? t("subTrialOwner")
           : t("subTrialMember")
-        : t("subActive", { plan: planLabel, date: formatDate(state.accessUntil, locale) });
+        : state.inGrace
+          ? t("subGrace", { plan: planLabel })
+          : state.cancelled
+            ? t("subActiveCancelled", { plan: planLabel, date: formatDate(state.accessUntil, locale) })
+            : state.autoRenews
+              ? t("subActiveAuto", { plan: planLabel, date: formatDate(state.accessUntil, locale) })
+              : t("subActive", { plan: planLabel, date: formatDate(state.accessUntil, locale) });
 
-  const mostrarPlanos = state.isOwner && state.status !== "active" && !state.comped;
+  // Quem cancelou a renovação pode assinar de novo (o acesso já pago é mantido).
+  const mostrarPlanos = state.isOwner && (state.status !== "active" || state.cancelled) && !state.comped;
+  const podeCancelar = state.isOwner && state.autoRenews && !state.comped;
 
   return (
     <div
@@ -112,6 +142,27 @@ export default function Paywall({ state, blocking = false, initialError = null }
             >
               {error}
             </div>
+          )}
+
+          {cancelledNote && (
+            <div
+              className="mt-4 text-sm rounded-lg px-3 py-2"
+              style={{ background: "var(--db-card-alt)", color: "var(--db-text-2)" }}
+            >
+              {cancelledNote}
+            </div>
+          )}
+
+          {podeCancelar && (
+            <button
+              onClick={cancelarRenovacao}
+              disabled={cancelling}
+              className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer disabled:opacity-60"
+              style={{ color: "var(--danger)" }}
+            >
+              {cancelling && <Loader2 size={12} className="animate-spin" />}
+              {cancelling ? t("cancelling") : t("cancelRenewal")}
+            </button>
           )}
 
           {mostrarPlanos && (
@@ -217,7 +268,13 @@ export default function Paywall({ state, blocking = false, initialError = null }
             </>
           )}
 
-          <p className="flex items-center gap-1.5 mt-6 text-xs" style={{ color: "var(--db-text-4)" }}>
+          {mostrarPlanos && (
+            <p className="mt-5 text-xs" style={{ color: "var(--db-text-3)" }}>
+              {t("autoRenewNote")}
+            </p>
+          )}
+
+          <p className="flex items-center gap-1.5 mt-3 text-xs" style={{ color: "var(--db-text-4)" }}>
             <ShieldCheck size={12} /> {t("processedBy")}
           </p>
         </div>

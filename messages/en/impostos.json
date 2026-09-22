@@ -5,6 +5,7 @@
     "addTax": "Add tax",
     "readNf": "Read invoice"
   },
+  "resultOf": "Result for {period}",
   "header": {
     "allClear": "✓ All caught up!",
     "dueSoon": "{count, plural, one {# due in the next {days} days} other {# due in the next {days} days}}",
@@ -49,19 +50,28 @@
     "agendado": "Scheduled",
     "pago": "Paid"
   },
+  "period": {
+    "monthly": "Monthly",
+    "annual": "Annual"
+  },
+  "periodLabel": {
+    "year": "Year {year}"
+  },
   "toolbar": {
     "searchPlaceholder": "Search tax or note…",
     "searchAria": "Search tax or note",
     "filterAll": "All",
     "allTypes": "All types",
     "monthHint": "Due dates this month — change the month in the Navbar selector",
+    "yearHint": "Due dates this year — change the year by browsing months in the Navbar selector",
     "resultCount": "{count, plural, one {# result} other {# results}}"
   },
   "empty": {
     "noResults": "No results",
     "nothingIn": "Nothing in {period}",
     "adjustFilters": "Adjust the filters to see other taxes.",
-    "noneThisMonth": "No tax is due this month. Change the month in the Navbar selector or add a tax."
+    "noneThisMonth": "No tax is due this month. Change the month in the Navbar selector or add a tax.",
+    "noneThisYear": "No tax is due this year. Change the year by browsing months in the Navbar selector or add a tax."
   },
   "taxTypes": {
     "simples_nacional": "Simples Nacional",

@@ -29,6 +29,9 @@ const INITIAL: State = {
   plan: null,
   inTrial: true,
   comped: false,
+  autoRenews: false,
+  cancelled: false,
+  inGrace: false,
 };
 
 export function useSubscription(): State {
@@ -93,6 +96,9 @@ export function useSubscription(): State {
                   plan: d.plan,
                   inTrial: d.inTrial,
                   comped: !!d.comped,
+                  autoRenews: !!d.autoRenews,
+                  cancelled: !!d.cancelled,
+                  inGrace: !!d.inGrace,
                   loading: false,
                   isOwner,
                   signedOut: false,
