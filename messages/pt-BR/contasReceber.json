@@ -4,6 +4,7 @@
     "newBill": "Nova cobrança",
     "newBillFab": "Nova conta a receber"
   },
+  "resultOf": "Resultado de {period}",
   "header": {
     "allClear": "✓ Tudo em dia!",
     "dueSoon": "{count, plural, one {# vence nos próximos {days} dias} other {# vencem nos próximos {days} dias}}",
@@ -21,12 +22,20 @@
     "billCount": "{count, plural, one {# cobrança} other {# cobranças}}",
     "dueSoon": "vence em breve"
   },
+  "period": {
+    "monthly": "Mensal",
+    "annual": "Anual"
+  },
+  "periodLabel": {
+    "year": "Ano de {year}"
+  },
   "toolbar": {
     "searchPlaceholder": "Buscar descrição ou observação…",
     "searchAria": "Buscar descrição ou observação",
     "filterAll": "Todos",
     "categoryAll": "Todas",
     "monthHint": "Vencimentos deste mês — troque o mês no seletor da Navbar",
+    "yearHint": "Vencimentos deste ano — troque o ano navegando os meses no seletor da Navbar",
     "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
   },
   "sections": {
@@ -54,6 +63,7 @@
     "nothingIn": "Nada em {period}",
     "adjustFilters": "Ajuste os filtros para ver outras cobranças.",
     "noneThisMonth": "Nenhuma cobrança vence neste mês. Troque o mês no seletor da Navbar ou adicione uma cobrança.",
+    "noneThisYear": "Nenhuma cobrança vence neste ano. Troque o ano navegando os meses no seletor da Navbar ou adicione uma cobrança.",
     "addBill": "Adicionar cobrança"
   },
   "card": {

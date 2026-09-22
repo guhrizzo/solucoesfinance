@@ -1371,9 +1371,14 @@ export default function ImpostosPage() {
     const [filterStatus, setFilterStatus] = useState<"todos" | TaxStatus>("todos");
     const [filterSphere, setFilterSphere] = useState<"todos" | TaxSphere>("todos");
     const [filterType, setFilterType] = useState("todos");
-    // Mês em foco = seletor global da Navbar (usePeriod). A lista é filtrada
-    // por mês de vencimento; alertas/KPIs seguem globais.
-    const { monthKey, label: periodLabel } = usePeriod();
+    // Mês em foco = seletor global da Navbar (usePeriod). A lista e os KPIs
+    // são filtrados por vencimento dentro do período — mês (padrão) ou o ano
+    // inteiro do mês selecionado, via toggle Mensal/Anual (mesmo padrão do
+    // toggle da tela de Relatórios).
+    const { monthKey, label: monthLabel, refDate } = usePeriod();
+    const [filterPeriod, setFilterPeriod] = useState<"mes" | "ano">("mes");
+    const isAnnual = filterPeriod === "ano";
+    const periodLabel = isAnnual ? t("periodLabel.year", { year: refDate.getFullYear() }) : monthLabel;
 
     const { toasts, show: showToast } = useToast();
 
@@ -1505,6 +1510,21 @@ export default function ImpostosPage() {
             paidPaymentMethod: data.paidPaymentMethod as string | undefined,
             amountPaid: reopened ? 0 : editing?.amountPaid,
         });
+
+        // Imposto ainda não quitado → procura saídas do Fluxo de Caixa (extrato
+        // importado, por exemplo) que batem com o nome ATUAL e ainda não foram
+        // vinculadas a nada. Cobre o caso de corrigir o nome do imposto pra
+        // igualar o que já sai no extrato: a correção agora dá baixa
+        // retroativa, sem precisar reimportar nada.
+        if (data.status !== "pago") {
+            const { autoSettleTaxFromCashflow } = await import("@/lib/billTaxSync");
+            await autoSettleTaxFromCashflow(db, uid, {
+                id: taxId,
+                name: data.name,
+                amount: data.amount,
+                amountPaid: reopened ? 0 : editing?.amountPaid,
+            }, actor);
+        }
     }
 
     async function handlePay(tax: Tax, paidAt: string, method: PaymentMethod) {
@@ -1597,10 +1617,18 @@ export default function ImpostosPage() {
         taxes.map(t => ({ ...t, _status: computeStatus(t) })),
         [taxes]);
 
+    // Vencimento dentro do período em foco — mês (monthKey) ou o ano inteiro
+    // do mês selecionado, conforme o toggle Mensal/Anual.
+    const inPeriod = useCallback((dueDate: string) =>
+        isAnnual
+            ? (dueDate ?? "").slice(0, 4) === String(refDate.getFullYear())
+            : (dueDate ?? "").slice(0, 7) === monthKey,
+        [isAnnual, monthKey, refDate]);
+
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
         return enriched.filter(t => {
-            if ((t.dueDate ?? "").slice(0, 7) !== monthKey) return false;
+            if (!inPeriod(t.dueDate)) return false;
             if (filterStatus !== "todos" && t._status !== filterStatus) return false;
             if (filterSphere !== "todos") {
                 const meta = getTaxMeta(t.type);
@@ -1610,7 +1638,7 @@ export default function ImpostosPage() {
             if (q && !t.name.toLowerCase().includes(q) && !t.notes.toLowerCase().includes(q)) return false;
             return true;
         });
-    }, [enriched, filterStatus, filterSphere, filterType, search, monthKey]);
+    }, [enriched, filterStatus, filterSphere, filterType, search, inPeriod]);
 
     const sections = useMemo(() => [
         { key: "atraso", color: "var(--neg)", taxes: filtered.filter(t => t._status === "atraso") },
@@ -1619,23 +1647,25 @@ export default function ImpostosPage() {
         { key: "pago", color: "var(--pos)", taxes: filtered.filter(t => t._status === "pago") },
     ].filter(s => s.taxes.length > 0), [filtered]);
 
+    // KPIs — resultado do período em foco (mês ou ano), não o total histórico.
     const kpis = useMemo(() => {
-        const notPaid = enriched.filter(t => t._status !== "pago");
+        const periodTaxes = enriched.filter(t => inPeriod(t.dueDate));
+        const notPaid = periodTaxes.filter(t => t._status !== "pago");
         return {
             aPagar: notPaid.reduce((s, t) => s + t.amount, 0),
-            atraso: enriched.filter(t => t._status === "atraso").reduce((s, t) => s + t.amount, 0),
-            pago: enriched.filter(t => t._status === "pago").reduce((s, t) => s + t.amount, 0),
-            estimado: enriched.filter(t => t.estimatedAmount).reduce((s, t) => s + (t.estimatedAmount || 0), 0),
-            alert: enriched.filter(t => {
+            atraso: periodTaxes.filter(t => t._status === "atraso").reduce((s, t) => s + t.amount, 0),
+            pago: periodTaxes.filter(t => t._status === "pago").reduce((s, t) => s + t.amount, 0),
+            estimado: periodTaxes.filter(t => t.estimatedAmount).reduce((s, t) => s + (t.estimatedAmount || 0), 0),
+            alert: periodTaxes.filter(t => {
                 if (t._status === "pago") return false;
                 const d = daysUntil(t.dueDate);
                 return d >= 0 && d <= alertDays;
             }).length,
             totalNotPaid: notPaid.length,
-            totalOverdue: enriched.filter(t => t._status === "atraso").length,
-            totalPaid: enriched.filter(t => t._status === "pago").length,
+            totalOverdue: periodTaxes.filter(t => t._status === "atraso").length,
+            totalPaid: periodTaxes.filter(t => t._status === "pago").length,
         };
-    }, [enriched, alertDays]);
+    }, [enriched, alertDays, inPeriod]);
 
     if (pageState === "blocked") return <AccessDenied category={tNav("items.impostos")} />;
 
@@ -1769,6 +1799,24 @@ export default function ImpostosPage() {
                     </div>
                 </div>
 
+                {/* Período dos resultados (KPIs abaixo) — Mensal ou Anual */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
+                        {(["mes", "ano"] as const).map(p => (
+                            <button key={p} type="button" onClick={() => setFilterPeriod(p)}
+                                className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all"
+                                style={filterPeriod === p
+                                    ? { background: "var(--cf-card)", color: "var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }
+                                    : { background: "transparent", color: "var(--cf-text-2)" }}>
+                                {t(p === "mes" ? "period.monthly" : "period.annual")}
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }} title={t(isAnnual ? "toolbar.yearHint" : "toolbar.monthHint")}>
+                        {t("resultOf", { period: periodLabel })}
+                    </span>
+                </div>
+
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
@@ -1848,7 +1896,7 @@ export default function ImpostosPage() {
                                 </select>
                             </div>
                             <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                                title={t("toolbar.monthHint")}>
+                                title={t(isAnnual ? "toolbar.yearHint" : "toolbar.monthHint")}>
                                 {periodLabel}
                             </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
@@ -1873,7 +1921,7 @@ export default function ImpostosPage() {
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterType !== "todos" || filterSphere !== "todos"
                                 ? t("empty.adjustFilters")
-                                : t("empty.noneThisMonth")}
+                                : t(isAnnual ? "empty.noneThisYear" : "empty.noneThisMonth")}
                         </p>
                         {!search && filterStatus === "todos" && filterType === "todos" && filterSphere === "todos" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}

@@ -5,6 +5,7 @@
     "addTax": "Adicionar imposto",
     "readNf": "Ler NF"
   },
+  "resultOf": "Resultado de {period}",
   "header": {
     "allClear": "✓ Tudo em dia!",
     "dueSoon": "{count, plural, one {# vence nos próximos {days} dias} other {# vencem nos próximos {days} dias}}",
@@ -49,19 +50,28 @@
     "agendado": "Agendados",
     "pago": "Pagos"
   },
+  "period": {
+    "monthly": "Mensal",
+    "annual": "Anual"
+  },
+  "periodLabel": {
+    "year": "Ano de {year}"
+  },
   "toolbar": {
     "searchPlaceholder": "Buscar imposto ou observação…",
     "searchAria": "Buscar imposto ou observação",
     "filterAll": "Todos",
     "allTypes": "Todos tipos",
     "monthHint": "Vencimentos deste mês — troque o mês no seletor da Navbar",
+    "yearHint": "Vencimentos deste ano — troque o ano navegando os meses no seletor da Navbar",
     "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
   },
   "empty": {
     "noResults": "Nenhum resultado",
     "nothingIn": "Nada em {period}",
     "adjustFilters": "Ajuste os filtros para ver outros impostos.",
-    "noneThisMonth": "Nenhum imposto vence neste mês. Troque o mês no seletor da Navbar ou adicione um imposto."
+    "noneThisMonth": "Nenhum imposto vence neste mês. Troque o mês no seletor da Navbar ou adicione um imposto.",
+    "noneThisYear": "Nenhum imposto vence neste ano. Troque o ano navegando os meses no seletor da Navbar ou adicione um imposto."
   },
   "taxTypes": {
     "simples_nacional": "Simples Nacional",

@@ -4,6 +4,7 @@
     "newBill": "New invoice",
     "newBillFab": "New account receivable"
   },
+  "resultOf": "Result for {period}",
   "header": {
     "allClear": "✓ All caught up!",
     "dueSoon": "{count, plural, one {# due in the next {days} days} other {# due in the next {days} days}}",
@@ -21,12 +22,20 @@
     "billCount": "{count, plural, one {# invoice} other {# invoices}}",
     "dueSoon": "due soon"
   },
+  "period": {
+    "monthly": "Monthly",
+    "annual": "Annual"
+  },
+  "periodLabel": {
+    "year": "Year {year}"
+  },
   "toolbar": {
     "searchPlaceholder": "Search description or note…",
     "searchAria": "Search description or note",
     "filterAll": "All",
     "categoryAll": "All",
     "monthHint": "Due dates this month — change the month in the Navbar selector",
+    "yearHint": "Due dates this year — change the year by browsing months in the Navbar selector",
     "resultCount": "{count, plural, one {# result} other {# results}}"
   },
   "sections": {
@@ -54,6 +63,7 @@
     "nothingIn": "Nothing in {period}",
     "adjustFilters": "Adjust the filters to see other invoices.",
     "noneThisMonth": "No invoice is due this month. Change the month in the Navbar selector or add an invoice.",
+    "noneThisYear": "No invoice is due this year. Change the year by browsing months in the Navbar selector or add an invoice.",
     "addBill": "Add invoice"
   },
   "card": {
