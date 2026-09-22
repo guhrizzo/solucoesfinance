@@ -207,7 +207,7 @@
     "errReadFile": "Error reading the file",
     "errApi": "Error analyzing the invoice",
     "errParse": "Could not read this invoice: {message}",
-    "tooBig": "File too large. Upload a PDF or image up to 3 MB.",
+    "tooBig": "File too large. Upload a PDF or image up to 5 MB.",
     "noRetentions": "No withholdings found on this invoice",
     "noRetentionsHint": "This invoice has no taxes withheld by you (the service taker) — nothing to add to Taxes.",
     "notaInfo": "Invoice {numero} · {prestador}",

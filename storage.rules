@@ -8,6 +8,12 @@ service firebase.storage {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Extrato bancário (PDF) subido pro leitor de IA — arquivo de trabalho,
+    // a API do servidor apaga logo depois de processar.
+    match /users/{userId}/extract-tmp/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Foto de perfil do usuário. O app envia sempre um JPEG 256x256 (~30 KB);
     // o guard de tamanho/tipo impede uso do caminho como storage genérico.
     match /users/{userId}/avatar/{allPaths=**} {

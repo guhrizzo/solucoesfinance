@@ -207,7 +207,7 @@
     "errReadFile": "Erro ao ler o arquivo",
     "errApi": "Erro ao analisar a nota",
     "errParse": "Não foi possível ler esta nota: {message}",
-    "tooBig": "Arquivo muito grande. Envie um PDF ou imagem de até 3 MB.",
+    "tooBig": "Arquivo muito grande. Envie um PDF ou imagem de até 5 MB.",
     "noRetentions": "Nenhuma retenção destacada nesta nota",
     "noRetentionsHint": "Essa nota não tem tributos retidos pelo Tomador — não há nada para lançar em Impostos.",
     "notaInfo": "NF {numero} · {prestador}",

@@ -142,7 +142,7 @@
     "upload": "Fazer upload",
     "uploadHint": ".pdf, .txt ou .csv do seu banco",
     "pdfReady": "PDF pronto para análise",
-    "pdfTooBig": "PDF muito grande (máx. 3 MB). Cole o texto do extrato.",
+    "pdfTooBig": "PDF muito grande (máx. 5 MB). Cole o texto do extrato.",
     "errReadFile": "Não foi possível ler o arquivo.",
     "orPasteText": "ou cole o texto",
     "bankStatement": "Extrato bancário",

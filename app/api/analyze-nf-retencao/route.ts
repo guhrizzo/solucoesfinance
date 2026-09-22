@@ -8,16 +8,20 @@
 // que ele está no plano Pro antes de chamar a API paga da Anthropic.
 
 import { NextRequest, NextResponse } from "next/server";
+import type { File as StorageFile } from "@google-cloud/storage";
 import { requireScope, isScopeError } from "@/lib/apiScope";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb, getAdminBucket } from "@/lib/firebaseAdmin";
 import { resolveSubscriptionState, isProAccess, type BillingDoc } from "@/lib/billing";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 const RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 10 }; // 10 análises / 10 min por conta
 
-// ~4MB de base64 ≈ 3MB de arquivo — mesmo teto de analyze-extract, abaixo do
-// limite de corpo de requisição da hospedagem serverless.
-const MAX_BASE64 = 4_000_000;
+// O arquivo chega via Storage (não mais no corpo da requisição em base64) —
+// a hospedagem serverless trava o corpo em ~4,5 MB e o base64 infla o
+// arquivo em ~33%, então 5 MB de PDF nunca coube ali. Fazendo o navegador
+// subir direto pro Storage, o corpo da requisição vira só um caminho (texto
+// curto) e o teto de tamanho passa a ser só este aqui.
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 const SYSTEM_PROMPT = `Você analisa Notas Fiscais de Serviço Eletrônicas (NFS-e) brasileiras,
 do ponto de vista do TOMADOR do serviço (quem paga e deve reter tributos).
@@ -65,17 +69,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let file: StorageFile | null = null;
+
   try {
-    const { base64, mediaType } = await req.json();
-    if (typeof base64 !== "string" || !base64) {
-      return NextResponse.json({ error: "Arquivo vazio." }, { status: 400 });
+    const { storagePath, mediaType } = await req.json();
+    if (typeof storagePath !== "string" || !storagePath.startsWith(`taxes/tmp/${scope.ownerUid}/`)) {
+      return NextResponse.json({ error: "Arquivo inválido." }, { status: 400 });
     }
-    if (base64.length > MAX_BASE64) {
+
+    const bucket = await getAdminBucket();
+    file = bucket.file(storagePath);
+
+    const [metadata] = await file.getMetadata().catch(() => [null]);
+    const sizeBytes = Number(metadata?.size) || 0;
+    if (!metadata || sizeBytes === 0) {
+      return NextResponse.json({ error: "Arquivo não encontrado. Envie novamente." }, { status: 400 });
+    }
+    if (sizeBytes > MAX_FILE_BYTES) {
       return NextResponse.json(
-        { error: "Arquivo muito grande. Envie um PDF ou imagem de até ~3 MB." },
+        { error: "Arquivo muito grande. Envie um PDF ou imagem de até 5 MB." },
         { status: 413 }
       );
     }
+
+    const [buffer] = await file.download();
+    const base64 = buffer.toString("base64");
 
     const isImage = typeof mediaType === "string" && mediaType.startsWith("image/");
     const messages = [{
@@ -137,5 +155,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message ?? "Não foi possível ler esta nota fiscal." }, { status: 500 });
+  } finally {
+    // Era só um arquivo de trabalho pra passar pela API — não fica no Storage.
+    await file?.delete().catch(() => {});
   }
 }

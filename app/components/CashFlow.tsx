@@ -24,6 +24,7 @@ import { loadPinHash, verifyPin, getPinLockStatus } from "../hooks/usePin";
 import { stampCreate, stampUpdate, stampSettle, type Actor } from "@/lib/audit";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
+import { authedFetch } from "@/lib/authedFetch";
 import "./cashflow.css";
 
 // ─── Verificação de PIN compartilhada pelos modais desta tela ────────────────
@@ -712,7 +713,7 @@ function ImportModal({ open, authUid, onClose, onImport }: {
   const [pinOpen, setPinOpen] = useState(false);
   const [step, setStep] = useState<ImportStep>("input");
   const [text, setText] = useState("");
-  const [pdf, setPdf] = useState<{ base64: string; name: string } | null>(null);
+  const [pdf, setPdf] = useState<{ raw: File; name: string } | null>(null);
   const [preview, setPreview] = useState<ImportedTx[]>([]);
   const [errMsg, setErrMsg] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -731,15 +732,9 @@ function ImportModal({ open, authUid, onClose, onImport }: {
     setErrMsg("");
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
     if (isPdf) {
-      if (file.size > 3 * 1024 * 1024) { setErrMsg(t("pdfTooBig")); return; }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const base64 = String(ev.target?.result ?? "").split(",")[1] ?? "";
-        setPdf({ base64, name: file.name });
-        setText("");
-      };
-      reader.onerror = () => setErrMsg(t("errReadFile"));
-      reader.readAsDataURL(file);
+      if (file.size > 5 * 1024 * 1024) { setErrMsg(t("pdfTooBig")); return; }
+      setPdf({ raw: file, name: file.name });
+      setText("");
     } else {
       const reader = new FileReader();
       reader.onload = (ev) => { setText(ev.target?.result as string ?? ""); setPdf(null); };
@@ -773,8 +768,21 @@ function ImportModal({ open, authUid, onClose, onImport }: {
     if (!text.trim() && !pdf) return;
     setStep("loading"); setErrMsg("");
     try {
-      const body = pdf ? { pdf: pdf.base64 } : { text };
-      const res = await fetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      let body: { text?: string; storagePath?: string } = { text };
+      if (pdf) {
+        if (!authUid) throw new Error(t("errApi"));
+        const [{ getFirebase }, { ref, uploadBytes }] = await Promise.all([
+          import("@/lib/firebase"),
+          import("firebase/storage"),
+        ]);
+        const { storage } = await getFirebase();
+        const storagePath = `users/${authUid}/extract-tmp/${Date.now()}-${pdf.raw.name}`;
+        await uploadBytes(ref(storage, storagePath), pdf.raw);
+        body = { storagePath };
+      }
+      const res = pdf
+        ? await authedFetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        : await fetch("/api/analyze-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? t("errApi"));
       const rawText = (data.content as any[])?.map((c: any) => c.text || "").join("") ?? "";

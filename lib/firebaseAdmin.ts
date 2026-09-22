@@ -47,3 +47,9 @@ export async function getAdminDb() {
   const { getFirestore } = await import("firebase-admin/firestore");
   return getFirestore(app);
 }
+
+export async function getAdminBucket() {
+  const { app } = await getFirebaseAdmin();
+  const { getStorage } = await import("firebase-admin/storage");
+  return getStorage(app).bucket("finance-add95.firebasestorage.app");
+}
