@@ -13,6 +13,8 @@
 // Compartilhado entre app/contasPagar/page.tsx e app/impostos/page.tsx.
 
 import type { Firestore } from "firebase/firestore";
+import type { Actor } from "@/lib/audit";
+import { stampSettle } from "@/lib/audit";
 
 // Categoria da conta a pagar → categoria equivalente do Fluxo de Caixa
 // (precisa bater com uma das opções de CAT.saida em app/components/CashFlow.tsx).
@@ -38,6 +40,8 @@ const FREQUENCY_LABEL: Record<string, string> = {
 };
 
 const today = () => new Date().toISOString().split("T")[0];
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const CENTS_EPSILON = 0.005;
 
 interface BillLike {
   id: string;
@@ -156,5 +160,150 @@ export async function syncTaxCashflow(db: Firestore, uid: string, tax: TaxLike):
     }
   } catch (err) {
     console.error("Erro ao sincronizar imposto com o Fluxo de Caixa:", err);
+  }
+}
+
+/**
+ * Sentido contrário de `autoSettleMatchingBill` (CashFlow.tsx): em vez de uma
+ * saída nova procurar uma conta pra baixar, aqui é a CONTA (recém salva/editada
+ * em contasPagar/page.tsx) que procura saídas do Fluxo de Caixa já lançadas
+ * anteriormente — do extrato importado, por exemplo — que não bateram na hora
+ * porque a descrição da saída ainda não era igual ao título/fornecedor da
+ * conta. Útil quando o usuário corrige o título da conta pra igualar o nome
+ * que já sai no extrato: essa correção agora dispara a baixa retroativa.
+ *
+ * Só considera saídas "soltas" (sem `sourceBillId`/`settledTaxId`/`sourceTaxId`
+ * — ou seja, que ainda não estão vinculadas a nenhuma conta ou imposto) e nunca
+ * mexe se houver outra conta pendente com o mesmo título/fornecedor (mesma
+ * cautela contra ambiguidade da direção original). Pode consumir mais de uma
+ * saída em sequência (mais antiga primeiro) até quitar o saldo restante —
+ * cada uma só entra se não estourar o que falta pagar.
+ */
+export async function autoSettleBillFromCashflow(
+  db: Firestore,
+  uid: string,
+  bill: { id: string; title: string; partyName?: string; amount: number; amountPaid?: number },
+  actor: Actor
+): Promise<void> {
+  try {
+    const titulo = (bill.title || "").trim().toLowerCase();
+    const fornecedor = (bill.partyName || "").trim().toLowerCase();
+    if (!titulo && !fornecedor) return;
+
+    let remaining = round2(bill.amount - (bill.amountPaid || 0));
+    if (remaining <= CENTS_EPSILON) return;
+
+    const { collection, query, where, getDocs, doc, updateDoc } = await import("firebase/firestore");
+
+    // Ambiguidade: outra conta pendente com o mesmo título/fornecedor — não arrisca vincular.
+    const billsSnap = await getDocs(collection(db, "users", uid, "bills"));
+    const hasAmbiguity = billsSnap.docs.some((d) => {
+      if (d.id === bill.id) return false;
+      const data = d.data();
+      if (data.status !== "pendente" && data.status !== "vencido" && data.status !== "agendado") return false;
+      const t = (data.title || "").trim().toLowerCase();
+      const f = (data.partyName || "").trim().toLowerCase();
+      return t === titulo || (!!fornecedor && f === fornecedor);
+    });
+    if (hasAmbiguity) return;
+
+    const snap = await getDocs(query(collection(db, "users", uid, "cashflow"), where("type", "==", "saida")));
+    const candidates = snap.docs
+      .filter((d) => {
+        const data = d.data();
+        if (data.sourceBillId || data.settledTaxId || data.sourceTaxId) return false;
+        const desc = (data.description || "").trim().toLowerCase();
+        return desc === titulo || (!!fornecedor && desc === fornecedor);
+      })
+      .sort((a, b) => String(a.data().date || "").localeCompare(String(b.data().date || "")));
+
+    let linked = false;
+    for (const d of candidates) {
+      if (remaining <= CENTS_EPSILON) break;
+      const amt = Number(d.data().amount);
+      if (amt > remaining + CENTS_EPSILON) continue; // nunca aceita saída maior do que falta pagar
+      await updateDoc(doc(db, "users", uid, "cashflow", d.id), { sourceBillId: bill.id });
+      remaining = round2(remaining - amt);
+      linked = true;
+    }
+    if (!linked) return;
+
+    const totalPaid = round2(bill.amount - remaining);
+    if (remaining <= CENTS_EPSILON) {
+      await updateDoc(doc(db, "users", uid, "bills", bill.id), {
+        status: "pago", paidAt: today(), amountPaid: bill.amount, ...stampSettle(actor),
+      });
+    } else {
+      await updateDoc(doc(db, "users", uid, "bills", bill.id), {
+        amountPaid: totalPaid, ...stampSettle(actor),
+      });
+    }
+  } catch (err) {
+    console.error("Erro ao tentar dar baixa retroativa em Contas a Pagar:", err);
+  }
+}
+
+/**
+ * Mesma ideia da `autoSettleBillFromCashflow`, agora para Impostos — sentido
+ * contrário de `autoSettleMatchingTax` (CashFlow.tsx). Casa pelo `name` do
+ * imposto (ou o espelho "Imposto: {name}").
+ */
+export async function autoSettleTaxFromCashflow(
+  db: Firestore,
+  uid: string,
+  tax: { id: string; name: string; amount: number; amountPaid?: number },
+  actor: Actor
+): Promise<void> {
+  try {
+    const nome = (tax.name || "").trim().toLowerCase();
+    if (!nome) return;
+
+    let remaining = round2(tax.amount - (tax.amountPaid || 0));
+    if (remaining <= CENTS_EPSILON) return;
+
+    const { collection, query, where, getDocs, doc, updateDoc } = await import("firebase/firestore");
+
+    const taxesSnap = await getDocs(collection(db, "users", uid, "taxes"));
+    const hasAmbiguity = taxesSnap.docs.some((d) => {
+      if (d.id === tax.id) return false;
+      const data = d.data();
+      if (data.status === "pago") return false;
+      return (data.name || "").trim().toLowerCase() === nome;
+    });
+    if (hasAmbiguity) return;
+
+    const snap = await getDocs(query(collection(db, "users", uid, "cashflow"), where("type", "==", "saida")));
+    const candidates = snap.docs
+      .filter((d) => {
+        const data = d.data();
+        if (data.sourceBillId || data.settledTaxId || data.sourceTaxId) return false;
+        const desc = (data.description || "").trim().toLowerCase();
+        return desc === nome || desc === `imposto: ${nome}`;
+      })
+      .sort((a, b) => String(a.data().date || "").localeCompare(String(b.data().date || "")));
+
+    let linked = false;
+    for (const d of candidates) {
+      if (remaining <= CENTS_EPSILON) break;
+      const amt = Number(d.data().amount);
+      if (amt > remaining + CENTS_EPSILON) continue;
+      await updateDoc(doc(db, "users", uid, "cashflow", d.id), { settledTaxId: tax.id });
+      remaining = round2(remaining - amt);
+      linked = true;
+    }
+    if (!linked) return;
+
+    const totalPaid = round2(tax.amount - remaining);
+    if (remaining <= CENTS_EPSILON) {
+      await updateDoc(doc(db, "users", uid, "taxes", tax.id), {
+        status: "pago", paidAt: today(), amountPaid: tax.amount, ...stampSettle(actor),
+      });
+    } else {
+      await updateDoc(doc(db, "users", uid, "taxes", tax.id), {
+        amountPaid: totalPaid, ...stampSettle(actor),
+      });
+    }
+  } catch (err) {
+    console.error("Erro ao tentar dar baixa retroativa em Impostos:", err);
   }
 }

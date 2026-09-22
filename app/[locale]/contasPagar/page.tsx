@@ -1267,10 +1267,14 @@ export default function ContasPagarPage() {
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"todos" | BillStatus>("todos");
     const [filterCategory, setFilterCategory] = useState("todas");
-    // Mês em foco = seletor global da Navbar (usePeriod). A LISTA é filtrada
-    // por mês de vencimento; os alertas de "vence em breve / vencidas" seguem
-    // globais (ver header e KPIs).
-    const { monthKey, label: periodLabel } = usePeriod();
+    // Mês em foco = seletor global da Navbar (usePeriod). A LISTA e os KPIs
+    // são filtrados por vencimento dentro do período — mês (padrão) ou o ano
+    // inteiro do mês selecionado, via toggle Mensal/Anual (mesmo padrão do
+    // toggle da tela de Relatórios).
+    const { monthKey, label: navbarMonthLabel, refDate } = usePeriod();
+    const [filterPeriod, setFilterPeriod] = useState<"mes" | "ano">("mes");
+    const isAnnual = filterPeriod === "ano";
+    const periodLabel = isAnnual ? t("periodLabel.year", { year: refDate.getFullYear() }) : navbarMonthLabel;
 
     // Toast com suporte a múltiplos simultâneos
     const { toasts, show: showToast } = useToast();
@@ -1440,6 +1444,22 @@ export default function ContasPagarPage() {
             paidAt: data.paidAt,
             paidPaymentMethod: data.paidPaymentMethod as string | undefined,
         });
+
+        // Conta ainda não quitada → procura saídas do Fluxo de Caixa (extrato
+        // importado, por exemplo) que batem com o título/fornecedor ATUAL e
+        // ainda não foram vinculadas a nada. Cobre o caso de corrigir o título
+        // da conta pra igualar o nome que já sai no extrato: a correção agora
+        // dá baixa retroativa, sem precisar reimportar nada.
+        if (data.status !== "pago") {
+            const { autoSettleBillFromCashflow } = await import("@/lib/billTaxSync");
+            await autoSettleBillFromCashflow(db, uid, {
+                id: billId,
+                title: data.title,
+                partyName: data.partyName,
+                amount: data.amount,
+                amountPaid: editing?.amountPaid,
+            }, actor);
+        }
 
         // Editou uma parcela de série → oferece propagar pras próximas não pagas.
         if (editing?.seriesId) {
@@ -1634,17 +1654,25 @@ export default function ContasPagarPage() {
         bills.map(b => ({ ...b, _status: computeStatus(b) })),
         [bills]);
 
+    // Vencimento dentro do período em foco — mês (monthKey) ou o ano inteiro
+    // do mês selecionado, conforme o toggle Mensal/Anual.
+    const inPeriod = useCallback((dueDate: string) =>
+        isAnnual
+            ? (dueDate ?? "").slice(0, 4) === String(refDate.getFullYear())
+            : (dueDate ?? "").slice(0, 7) === monthKey,
+        [isAnnual, monthKey, refDate]);
+
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
         return enriched.filter(b => {
-            if ((b.dueDate ?? "").slice(0, 7) !== monthKey) return false;
+            if (!inPeriod(b.dueDate)) return false;
             if (filterStatus !== "todos" && b._status !== filterStatus) return false;
             if (filterCategory !== "todas" && b.category !== filterCategory) return false;
             if (q && !b.title.toLowerCase().includes(q) && !b.notes.toLowerCase().includes(q)
                 && !(b.partyName ?? "").toLowerCase().includes(q)) return false;
             return true;
         });
-    }, [enriched, filterStatus, filterCategory, search, monthKey]);
+    }, [enriched, filterStatus, filterCategory, search, inPeriod]);
 
     // Agrupa em seções ordenadas por prioridade
     const sections = useMemo(() => [
@@ -1654,24 +1682,25 @@ export default function ContasPagarPage() {
         { key: "pago", color: "var(--pos)", bills: filtered.filter(b => b._status === ("pago" as const)) },
     ].filter(s => s.bills.length > 0), [filtered]);
 
-    // KPIs
+    // KPIs — resultado do período em foco (mês ou ano), não o total histórico.
     const kpis = useMemo(() => {
-        const notPaid = enriched.filter(b => b._status !== ("pago" as const));
+        const periodBills = enriched.filter(b => inPeriod(b.dueDate));
+        const notPaid = periodBills.filter(b => b._status !== ("pago" as const));
         return {
             aPagar: notPaid.reduce((s, b) => s + b.amount, 0),
-            vencido: enriched.filter(b => b._status === ("vencido" as const)).reduce((s, b) => s + b.amount, 0),
-            pago: enriched.filter(b => b._status === ("pago" as const)).reduce((s, b) => s + b.amount, 0),
-            estimado: enriched.filter(b => b.estimatedAmount).reduce((s, b) => s + (b.estimatedAmount || 0), 0),
-            alert: enriched.filter(b => {
+            vencido: periodBills.filter(b => b._status === ("vencido" as const)).reduce((s, b) => s + b.amount, 0),
+            pago: periodBills.filter(b => b._status === ("pago" as const)).reduce((s, b) => s + b.amount, 0),
+            estimado: periodBills.filter(b => b.estimatedAmount).reduce((s, b) => s + (b.estimatedAmount || 0), 0),
+            alert: periodBills.filter(b => {
                 if (b._status === ("pago" as const)) return false;
                 const d = daysUntil(b.dueDate);
                 return d >= 0 && d <= alertDays;
             }).length,
             totalNotPaid: notPaid.length,
-            totalOverdue: enriched.filter(b => b._status === ("vencido" as const)).length,
-            totalPaid: enriched.filter(b => b._status === ("pago" as const)).length,
+            totalOverdue: periodBills.filter(b => b._status === ("vencido" as const)).length,
+            totalPaid: periodBills.filter(b => b._status === ("pago" as const)).length,
         };
-    }, [enriched, alertDays]);
+    }, [enriched, alertDays, inPeriod]);
 
     // ── Loading / Error ────────────────────────────────────────────────────────
 
@@ -1829,6 +1858,24 @@ export default function ContasPagarPage() {
                     </div>
                 </div>
 
+                {/* Período dos resultados (KPIs abaixo) — Mensal ou Anual */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
+                        {(["mes", "ano"] as const).map(p => (
+                            <button key={p} type="button" onClick={() => setFilterPeriod(p)}
+                                className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all"
+                                style={filterPeriod === p
+                                    ? { background: "var(--cf-card)", color: "var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }
+                                    : { background: "transparent", color: "var(--cf-text-2)" }}>
+                                {t(p === "mes" ? "period.monthly" : "period.annual")}
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }} title={t(isAnnual ? "toolbar.yearHint" : "toolbar.monthHint")}>
+                        {t("resultOf", { period: periodLabel })}
+                    </span>
+                </div>
+
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {[
@@ -1881,7 +1928,7 @@ export default function ContasPagarPage() {
                                 </select>
                             </div>
                             <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-                                title={t("toolbar.monthHint")}>
+                                title={t(isAnnual ? "toolbar.yearHint" : "toolbar.monthHint")}>
                                 {periodLabel}
                             </span>
                             <span className="text-xs font-medium" style={{ color: "var(--cf-text-3)" }}>
@@ -1906,7 +1953,7 @@ export default function ContasPagarPage() {
                         <p className="text-xs max-w-xs" style={{ color: "var(--cf-text-2)" }}>
                             {search || filterStatus !== "todos" || filterCategory !== "todas"
                                 ? t("empty.adjustFilters")
-                                : t("empty.noneThisMonth")}
+                                : t(isAnnual ? "empty.noneThisYear" : "empty.noneThisMonth")}
                         </p>
                         {!search && filterStatus === "todos" && filterCategory === "todas" && (
                             <button onClick={() => { setEditing(null); setModal(true); }}
