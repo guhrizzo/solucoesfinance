@@ -4,6 +4,9 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { getAdminBucket } from "@/lib/firebaseAdmin";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 // Cada chamada aqui dispara N requisições pagas à API da Anthropic (uma por
 // chunk de ~8000 chars). O caminho de texto colado segue anônimo (só
 // rate-limit por IP); o caminho de PDF exige login, porque a rota precisa
@@ -53,6 +56,12 @@ async function callAnthropic(userContent: any, maxTokens: number): Promise<any[]
 
   const data = await res.json();
   const rawText = (data.content as any[])?.map((c: any) => c.text || "").join("") ?? "";
+  if (data.stop_reason === "max_tokens") {
+    // A resposta foi cortada no meio do JSON — não dá pra interpretar. Isso
+    // acontece quando o documento tem lançamentos demais pra caber na
+    // resposta de uma só vez.
+    throw new Error("O extrato tem lançamentos demais para analisar de uma vez. Divida o PDF em partes menores ou cole o texto.");
+  }
   const clean = rawText.replace(/```json|```/g, "").trim();
   const parsed = JSON.parse(clean);
   return parsed.transactions ?? [];
@@ -69,7 +78,7 @@ const analyzePdf = (base64: string) =>
       { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
       { type: "text", text: "Extraia TODAS as transações deste extrato bancário." },
     ],
-    8192
+    16000
   );
 
 // Divide o texto em chunks de ~8000 chars, quebrando em linhas
