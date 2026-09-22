@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { File as StorageFile } from "@google-cloud/storage";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { requireScope, isScopeError } from "@/lib/apiScope";
+import { getAdminBucket } from "@/lib/firebaseAdmin";
 
 // Cada chamada aqui dispara N requisições pagas à API da Anthropic (uma por
-// chunk de ~8000 chars) e a rota não exige autenticação — sem limite,
-// qualquer um que descobrisse a URL podia gerar custo ilimitado na conta.
+// chunk de ~8000 chars). O caminho de texto colado segue anônimo (só
+// rate-limit por IP); o caminho de PDF exige login, porque a rota precisa
+// resolver o uid do dono do arquivo no Storage (ver storagePath abaixo).
 const RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 5 }; // 5 análises / 10 min por IP
 const MAX_CHUNKS = 30; // ~240k chars — teto de custo por requisição, mesmo dentro do limite de taxa
 
@@ -21,10 +25,10 @@ Regras:
 - note: vazio ("") sempre
 Seja conciso. Extraia todas as transações sem omitir nenhuma.`;
 
-// Teto do PDF em base64: ~4 MB de base64 ≈ 3 MB de arquivo. Fica abaixo do
-// limite de corpo de requisição da hospedagem serverless (~4,5 MB) e segura o
-// custo por chamada — extratos bancários reais são bem menores que isso.
-const MAX_PDF_BASE64 = 4_000_000;
+// O PDF chega via Storage (não mais em base64 no corpo) — a hospedagem
+// serverless trava o corpo em ~4,5 MB e o base64 inflaria o arquivo em ~33%,
+// então o teto de tamanho de verdade passa a ser só este aqui.
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 async function callAnthropic(userContent: any, maxTokens: number): Promise<any[]> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -87,29 +91,53 @@ function splitIntoChunks(text: string, maxChars = 8000): string[] {
 }
 
 export async function POST(req: NextRequest) {
-  const { limited, retryAfterSec } = checkRateLimit(`analyze-extract:${getClientIp(req)}`, RATE_LIMIT);
-  if (limited) {
-    return NextResponse.json(
-      { error: "Muitas análises em pouco tempo. Aguarde alguns minutos e tente novamente." },
-      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
-    );
-  }
+  const { text, storagePath } = await req.json();
 
+  let file: StorageFile | null = null;
   try {
-    const { text, pdf } = await req.json();
-
     const allTransactions: any[] = [];
 
-    if (typeof pdf === "string" && pdf.length > 0) {
-      // Caminho PDF: um único documento, uma única chamada.
-      if (pdf.length > MAX_PDF_BASE64) {
+    if (typeof storagePath === "string" && storagePath.length > 0) {
+      // Caminho PDF: exige login (o arquivo mora no Storage do dono da conta).
+      const scope = await requireScope(req, "fluxoCaixa");
+      if (isScopeError(scope)) {
+        return NextResponse.json({ error: scope.error }, { status: scope.status });
+      }
+      const { limited, retryAfterSec } = checkRateLimit(`analyze-extract:${scope.uid}`, RATE_LIMIT);
+      if (limited) {
         return NextResponse.json(
-          { error: "PDF muito grande. Envie um extrato menor (até ~3 MB) ou cole o texto." },
+          { error: "Muitas análises em pouco tempo. Aguarde alguns minutos e tente novamente." },
+          { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+        );
+      }
+      if (!storagePath.startsWith(`users/${scope.uid}/extract-tmp/`)) {
+        return NextResponse.json({ error: "Arquivo inválido." }, { status: 400 });
+      }
+
+      const bucket = await getAdminBucket();
+      file = bucket.file(storagePath);
+      const [metadata] = await file.getMetadata().catch(() => [null]);
+      const sizeBytes = Number(metadata?.size) || 0;
+      if (!metadata || sizeBytes === 0) {
+        return NextResponse.json({ error: "Arquivo não encontrado. Envie novamente." }, { status: 400 });
+      }
+      if (sizeBytes > MAX_PDF_BYTES) {
+        return NextResponse.json(
+          { error: "PDF muito grande. Envie um extrato menor (até 5 MB) ou cole o texto." },
           { status: 413 }
         );
       }
-      allTransactions.push(...await analyzePdf(pdf));
+
+      const [buffer] = await file.download();
+      allTransactions.push(...await analyzePdf(buffer.toString("base64")));
     } else {
+      const { limited, retryAfterSec } = checkRateLimit(`analyze-extract:${getClientIp(req)}`, RATE_LIMIT);
+      if (limited) {
+        return NextResponse.json(
+          { error: "Muitas análises em pouco tempo. Aguarde alguns minutos e tente novamente." },
+          { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+        );
+      }
       if (!text?.trim()) {
         return NextResponse.json({ error: "Texto vazio" }, { status: 400 });
       }
@@ -146,5 +174,8 @@ export async function POST(req: NextRequest) {
 
   } catch (e: any) {
     return NextResponse.json({ error: e.message ?? "Erro interno" }, { status: 500 });
+  } finally {
+    // Era só um arquivo de trabalho pra passar pela API — não fica no Storage.
+    await file?.delete().catch(() => {});
   }
 }

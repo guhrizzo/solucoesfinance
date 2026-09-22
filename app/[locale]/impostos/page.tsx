@@ -823,7 +823,7 @@ function LerNfModal({ open, uid, authUid, userName, onClose, onCreated }: {
     const tPin = useTranslations("common.pin");
     const locale = useLocale();
     const [step, setStep] = useState<NfStep>("input");
-    const [file, setFile] = useState<{ raw: File; base64: string; mediaType: string } | null>(null);
+    const [file, setFile] = useState<{ raw: File; mediaType: string } | null>(null);
     const [result, setResult] = useState<NfResult | null>(null);
     const [rows, setRows] = useState<NfRow[]>([]);
     const [pinOpen, setPinOpen] = useState(false);
@@ -843,25 +843,27 @@ function LerNfModal({ open, uid, authUid, userName, onClose, onCreated }: {
         const f = e.target.files?.[0];
         if (!f) return;
         setErr("");
-        if (f.size > 3 * 1024 * 1024) { setErr(t("tooBig")); return; }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const base64 = String(ev.target?.result ?? "").split(",")[1] ?? "";
-            const mediaType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
-            setFile({ raw: f, base64, mediaType });
-        };
-        reader.onerror = () => setErr(t("errReadFile"));
-        reader.readAsDataURL(f);
+        if (f.size > 5 * 1024 * 1024) { setErr(t("tooBig")); return; }
+        const mediaType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+        setFile({ raw: f, mediaType });
     }
 
     async function analyze() {
-        if (!file) return;
+        if (!file || !uid) return;
         setStep("loading"); setErr("");
         try {
+            const [{ getFirebase }, { ref, uploadBytes }] = await Promise.all([
+                import("@/lib/firebase"),
+                import("firebase/storage"),
+            ]);
+            const { storage } = await getFirebase();
+            const storagePath = `taxes/tmp/${uid}/${Date.now()}-${file.raw.name}`;
+            await uploadBytes(ref(storage, storagePath), file.raw);
+
             const res = await authedFetch("/api/analyze-nf-retencao", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ base64: file.base64, mediaType: file.mediaType }),
+                body: JSON.stringify({ storagePath, mediaType: file.mediaType }),
             });
             const data = await res.json();
             if (!res.ok || data.error) throw new Error(data.error ?? t("errApi"));

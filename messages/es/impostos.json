@@ -207,7 +207,7 @@
     "errReadFile": "Error al leer el archivo",
     "errApi": "Error al analizar la factura",
     "errParse": "No fue posible leer esta factura: {message}",
-    "tooBig": "Archivo demasiado grande. Sube un PDF o imagen de hasta 3 MB.",
+    "tooBig": "Archivo demasiado grande. Sube un PDF o imagen de hasta 5 MB.",
     "noRetentions": "Ninguna retención destacada en esta factura",
     "noRetentionsHint": "Esta factura no tiene impuestos retenidos por ti (el tomador del servicio) — no hay nada para agregar a Impuestos.",
     "notaInfo": "Factura {numero} · {prestador}",

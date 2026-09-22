@@ -142,7 +142,7 @@
     "upload": "Upload",
     "uploadHint": ".pdf, .txt or .csv from your bank",
     "pdfReady": "PDF ready to analyze",
-    "pdfTooBig": "PDF too large (max 3 MB). Paste the statement text instead.",
+    "pdfTooBig": "PDF too large (max 5 MB). Paste the statement text instead.",
     "errReadFile": "Could not read the file.",
     "orPasteText": "or paste text",
     "bankStatement": "Bank statement",
