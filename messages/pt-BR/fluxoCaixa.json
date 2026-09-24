@@ -166,5 +166,19 @@
     "errApi": "Erro na API",
     "errParse": "Erro ao interpretar: {message}",
     "noDescription": "Sem descrição"
+  },
+  "settlePick": {
+    "title": "Em qual conta dar baixa?",
+    "body": "A saída \"{description}\" de {amount} bate com mais de uma conta. Escolha qual está sendo paga.",
+    "kindBill": "Conta a pagar",
+    "kindTax": "Imposto",
+    "due": "Vence {date}",
+    "noDue": "Sem vencimento",
+    "installment": "Parcela {index}/{count}",
+    "partial": "Já pago {paid} · falta {remaining}",
+    "willSettle": "Quita",
+    "willPartial": "Pagamento parcial",
+    "exceeds": "Valor maior que o saldo ({remaining})",
+    "skip": "Não vincular a nenhuma"
   }
 }

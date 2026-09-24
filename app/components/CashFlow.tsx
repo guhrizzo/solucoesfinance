@@ -62,6 +62,8 @@ interface ForecastDoc {
   amount: number;
   dueDate: string;
   status: string;
+  /** Soma das baixas (parciais ou total) já feitas na conta. */
+  amountPaid?: number;
   category?: string;
   recurrence?: string;
   installmentIndex?: number;
@@ -97,9 +99,9 @@ interface Tx {
   costCenterName?: string;
   /** true quando a despesa em `sourceExpenseId` foi criada A PARTIR desta saída (não apenas casada com uma despesa pré-existente) — define se ela deve ser removida junto ao deletar este lançamento. */
   expenseAutoCreated?: boolean;
-  /** Id da conta a pagar baixada (total ou parcialmente) automaticamente por esta saída (ver `autoSettleMatchingBill`) — mesmo campo que `syncBillCashflow` usa pra achar o espelho, aqui gravado no sentido contrário (Fluxo de Caixa → Contas a Pagar). */
+  /** Id da conta a pagar baixada (total ou parcialmente) automaticamente por esta saída (ver `findSettleCandidates`/`applySettle`) — mesmo campo que `syncBillCashflow` usa pra achar o espelho, aqui gravado no sentido contrário (Fluxo de Caixa → Contas a Pagar). */
   sourceBillId?: string;
-  /** Id do imposto baixado (total ou parcialmente) automaticamente por esta saída (ver `autoSettleMatchingTax`). Campo próprio — NÃO é `sourceTaxId`, que marca o espelho criado pela página de Impostos e é apagado/regravado por `syncTaxCashflow`. */
+  /** Id do imposto baixado (total ou parcialmente) automaticamente por esta saída (ver `findSettleCandidates`/`applySettle`). Campo próprio — NÃO é `sourceTaxId`, que marca o espelho criado pela página de Impostos e é apagado/regravado por `syncTaxCashflow`. */
   settledTaxId?: string;
 }
 
@@ -213,136 +215,191 @@ async function autoSettleMatchingCostCenterExpense(
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const CENTS_EPSILON = 0.005;
 
+/** Conta a pagar ou imposto que uma saída do caixa pode quitar (total ou parcialmente). */
+interface SettleCandidate {
+  kind: "bill" | "tax";
+  id: string;
+  label: string;
+  dueDate: string;
+  amount: number;
+  amountPaid: number;
+  remaining: number;
+  /** A saída cabe no saldo em aberto (igual ou menor que o que falta pagar). */
+  fits: boolean;
+  status: string;
+  installmentIndex?: number;
+  installmentCount?: number;
+}
+
 /**
  * Mesma ideia da `autoSettleMatchingCostCenterExpense`, agora pra Contas a
- * Pagar: uma saída lançada aqui no Fluxo de Caixa (manual ou por importação)
- * que bate com uma conta pendente/vencida/agendada — por título OU pelo
- * fornecedor cadastrado na conta (`partyName`) — soma no saldo já pago dela
- * (`amountPaid`). Só marca a conta como "pago" quando essa soma atinge o
- * valor total; um valor menor (pagamento parcial) fica registrado em
- * `amountPaid` mas a conta continua pendente/vencida/agendada, porque o
- * pagamento ainda não foi completo. Só age com exatamente 1 correspondência;
- * ambíguo ou nenhum resultado não arrisca vincular errado.
- *
- * Diferente do Centro de Custo, Contas a Pagar tem trilha de auditoria
- * (`stampSettle`) — carimba com o mesmo `actor` que já validou o PIN pra
- * salvar esta transação (ver `handleSave`/`handleImport`), sem pedir um
- * segundo PIN só pra isso. Aplicada tanto na baixa parcial quanto na total.
+ * Pagar e Impostos: acha as contas ainda não quitadas que uma saída lançada
+ * aqui no Fluxo de Caixa (manual ou por importação) pode quitar.
+ * - Conta a pagar (users/{uid}/bills) pendente/vencida/agendada que bate pelo
+ *   título OU pelo fornecedor cadastrado (`partyName`).
+ * - Imposto (users/{uid}/taxes) não pago que bate pelo nome (`name`, ou
+ *   "Imposto: {name}" — a descrição do espelho que a página de Impostos grava).
+ * Devolve TODAS as que batem pelo nome, marcando em `fits` se a saída cabe no
+ * saldo em aberto — nunca se aceita mais do que falta pagar, só igual (quita)
+ * ou menor (parcial). Com 1 conta pelo nome a baixa é automática (se couber);
+ * com 2+ quem chama sempre pergunta ao usuário qual é (ver `SettlePickModal`),
+ * mostrando as que não comportam o valor desabilitadas.
  */
-async function autoSettleMatchingBill(
+async function findSettleCandidates(
   db: import("firebase/firestore").Firestore,
   uid: string,
-  tx: { description: string; amount: number },
-  actor: Actor
-): Promise<string | null> {
+  tx: { description: string; amount: number }
+): Promise<SettleCandidate[]> {
   const desc = (tx.description || "").trim().toLowerCase();
-  if (!desc) return null;
+  if (!desc) return [];
 
   try {
-    const { collection, getDocs, doc, updateDoc } = await import("firebase/firestore");
-    // Subcoleção já escopada por dono (users/{uid}/bills) — sem precisar de
-    // where nenhum, filtra tudo no cliente (mesmo espírito do Centro de Custo).
-    const snap = await getDocs(collection(db, "users", uid, "bills"));
+    const { collection, getDocs } = await import("firebase/firestore");
+    // Subcoleções já escopadas por dono — sem where nenhum, filtra tudo no
+    // cliente (mesmo espírito do Centro de Custo).
+    const [billsSnap, taxesSnap] = await Promise.all([
+      getDocs(collection(db, "users", uid, "bills")),
+      getDocs(collection(db, "users", uid, "taxes")),
+    ]);
+    const cabe = (remaining: number) => remaining > 0 && Number(tx.amount) <= remaining + CENTS_EPSILON;
+    const out: SettleCandidate[] = [];
 
-    const candidates = snap.docs
-      .map((d) => {
-        const data = d.data();
-        const remaining = round2(Number(data.amount) - Number(data.amountPaid || 0));
-        return { doc: d, data, remaining };
-      })
-      .filter(({ data, remaining }) => {
-        if (data.status !== "pendente" && data.status !== "vencido" && data.status !== "agendado") return false;
-        const titulo = (data.title || "").trim().toLowerCase();
-        const fornecedor = (data.partyName || "").trim().toLowerCase();
-        const bateDescricao = titulo === desc || (!!fornecedor && fornecedor === desc);
-        // Nunca aceita mais do que falta pagar — só igual (quita) ou menor (parcial).
-        return bateDescricao && remaining > 0 && Number(tx.amount) <= remaining + CENTS_EPSILON;
-      });
-    if (candidates.length !== 1) return null;
-
-    const { doc: matchedDoc, data, remaining } = candidates[0];
-    const quitaConta = Number(tx.amount) >= remaining - CENTS_EPSILON;
-
-    if (quitaConta) {
-      await updateDoc(doc(db, "users", uid, "bills", matchedDoc.id), {
-        status: "pago",
-        paidAt: TODAY,
-        amountPaid: data.amount,
-        ...stampSettle(actor),
-      });
-    } else {
-      await updateDoc(doc(db, "users", uid, "bills", matchedDoc.id), {
-        amountPaid: round2(Number(data.amountPaid || 0) + Number(tx.amount)),
-        ...stampSettle(actor),
+    for (const d of billsSnap.docs) {
+      const data = d.data();
+      if (data.status !== "pendente" && data.status !== "vencido" && data.status !== "agendado") continue;
+      const titulo = (data.title || "").trim().toLowerCase();
+      const fornecedor = (data.partyName || "").trim().toLowerCase();
+      if (titulo !== desc && !(fornecedor && fornecedor === desc)) continue;
+      const amountPaid = Number(data.amountPaid || 0);
+      const remaining = round2(Number(data.amount) - amountPaid);
+      out.push({
+        kind: "bill", id: d.id, label: data.title || data.partyName || "", dueDate: data.dueDate || "",
+        amount: Number(data.amount), amountPaid, remaining, fits: cabe(remaining), status: String(data.status),
+        installmentIndex: data.installmentIndex, installmentCount: data.installmentCount,
       });
     }
-    return matchedDoc.id;
+
+    for (const d of taxesSnap.docs) {
+      const data = d.data();
+      if (data.status === "pago") continue;
+      const nome = (data.name || "").trim().toLowerCase();
+      if (!nome || (nome !== desc && `imposto: ${nome}` !== desc)) continue;
+      const amountPaid = Number(data.amountPaid || 0);
+      const remaining = round2(Number(data.amount) - amountPaid);
+      out.push({
+        kind: "tax", id: d.id, label: data.name || "", dueDate: data.dueDate || "",
+        amount: Number(data.amount), amountPaid, remaining, fits: cabe(remaining), status: String(data.status || ""),
+      });
+    }
+
+    return out.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   } catch (err) {
     // Nunca deixa a baixa automática travar o salvamento da transação em si.
-    console.error("Erro ao tentar dar baixa automática em Contas a Pagar:", err);
-    return null;
+    console.error("Erro ao procurar conta/imposto para baixa automática:", err);
+    return [];
   }
 }
 
 /**
- * Mesma regra da `autoSettleMatchingBill`, agora pra Impostos
- * (users/{uid}/taxes): uma saída que bate com um imposto ainda não pago pelo
- * nome (`name`, ou "Imposto: {name}" — a descrição do espelho que a própria
- * página de Impostos grava) soma em `amountPaid`; só vira "pago" quando a
- * soma atinge o valor total. Só age com exatamente 1 correspondência.
- * O vínculo fica em `settledTaxId` na saída — nunca em `sourceTaxId`, senão o
- * `syncTaxCashflow` trataria o lançamento do extrato como espelho dele e o
- * apagaria/sobrescreveria ao editar o imposto.
+ * Dá a baixa da saída na conta/imposto escolhido: soma no saldo já pago
+ * (`amountPaid`) e só marca "pago" quando essa soma atinge o valor total — um
+ * valor menor (pagamento parcial) fica registrado mas a conta continua em
+ * aberto. Relê o doc antes de gravar (a escolha pode ter ficado esperando o
+ * usuário no modal) e carimba com o mesmo `actor` que já validou o PIN pra
+ * salvar esta transação, sem pedir um segundo PIN só pra isso.
+ * O vínculo do imposto fica em `settledTaxId` na saída — nunca em
+ * `sourceTaxId`, senão o `syncTaxCashflow` trataria o lançamento do extrato
+ * como espelho dele e o apagaria/sobrescreveria ao editar o imposto.
  */
-async function autoSettleMatchingTax(
+async function applySettle(
   db: import("firebase/firestore").Firestore,
   uid: string,
-  tx: { description: string; amount: number },
+  target: SettleCandidate,
+  amount: number,
   actor: Actor
-): Promise<string | null> {
-  const desc = (tx.description || "").trim().toLowerCase();
-  if (!desc) return null;
-
+): Promise<boolean> {
   try {
-    const { collection, getDocs, doc, updateDoc } = await import("firebase/firestore");
-    const snap = await getDocs(collection(db, "users", uid, "taxes"));
+    const { doc, getDoc, updateDoc } = await import("firebase/firestore");
+    const ref = doc(db, "users", uid, target.kind === "bill" ? "bills" : "taxes", target.id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return false;
+    const data = snap.data();
+    const remaining = round2(Number(data.amount) - Number(data.amountPaid || 0));
+    if (data.status === "pago" || remaining <= 0 || amount > remaining + CENTS_EPSILON) return false;
 
-    const candidates = snap.docs
-      .map((d) => {
-        const data = d.data();
-        const remaining = round2(Number(data.amount) - Number(data.amountPaid || 0));
-        return { doc: d, data, remaining };
-      })
-      .filter(({ data, remaining }) => {
-        if (data.status === "pago") return false;
-        const nome = (data.name || "").trim().toLowerCase();
-        const bateDescricao = !!nome && (nome === desc || `imposto: ${nome}` === desc);
-        return bateDescricao && remaining > 0 && Number(tx.amount) <= remaining + CENTS_EPSILON;
-      });
-    if (candidates.length !== 1) return null;
-
-    const { doc: matchedDoc, data, remaining } = candidates[0];
-    const quitaImposto = Number(tx.amount) >= remaining - CENTS_EPSILON;
-
-    if (quitaImposto) {
-      await updateDoc(doc(db, "users", uid, "taxes", matchedDoc.id), {
-        status: "pago",
-        paidAt: TODAY,
-        amountPaid: data.amount,
-        ...stampSettle(actor),
-      });
+    if (amount >= remaining - CENTS_EPSILON) {
+      await updateDoc(ref, { status: "pago", paidAt: TODAY, amountPaid: data.amount, ...stampSettle(actor) });
     } else {
-      await updateDoc(doc(db, "users", uid, "taxes", matchedDoc.id), {
-        amountPaid: round2(Number(data.amountPaid || 0) + Number(tx.amount)),
-        ...stampSettle(actor),
-      });
+      await updateDoc(ref, { amountPaid: round2(Number(data.amountPaid || 0) + amount), ...stampSettle(actor) });
     }
-    return matchedDoc.id;
+    return true;
   } catch (err) {
     // Nunca deixa a baixa automática travar o salvamento da transação em si.
-    console.error("Erro ao tentar dar baixa automática em Impostos:", err);
-    return null;
+    console.error("Erro ao dar baixa em Contas a Pagar/Impostos:", err);
+    return false;
   }
+}
+
+// ─── Modal: escolher em qual conta/imposto dar baixa ──────────────────────────
+
+function SettlePickModal({ pick, onChoose }: {
+  pick: { description: string; amount: number; candidates: SettleCandidate[] } | null;
+  onChoose: (c: SettleCandidate | null) => void;
+}) {
+  const t = useTranslations("fluxoCaixa.settlePick");
+  const locale = useLocale();
+  return (
+    <Modal open={!!pick} onClose={() => onChoose(null)} size="md" mobileSheet>
+      {pick && (
+        <div className="p-5 sm:p-6">
+          <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
+          <p className="text-xs mt-1 mb-4" style={{ color: "var(--cf-text-2)" }}>
+            {t("body", { description: pick.description, amount: toBRL(pick.amount, locale) })}
+          </p>
+          <div className="flex flex-col gap-2 max-h-[55vh] overflow-y-auto">
+            {pick.candidates.map(c => {
+              const quita = pick.amount >= c.remaining - CENTS_EPSILON;
+              return (
+                <button key={`${c.kind}-${c.id}`} type="button" onClick={() => onChoose(c)} disabled={!c.fits}
+                  className={`w-full text-left rounded-xl px-4 py-3 transition-colors ${c.fits ? "cursor-pointer hover:brightness-110" : "cursor-not-allowed opacity-50"}`}
+                  style={{ background: "var(--cf-surface)", border: "1px solid var(--cf-border)" }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5"
+                          style={c.kind === "bill"
+                            ? { background: "var(--brand-weak)", color: "var(--brand)" }
+                            : { background: "var(--warn-weak)", color: "var(--warn)" }}>
+                          {t(c.kind === "bill" ? "kindBill" : "kindTax")}
+                        </span>
+                        <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{c.label}</span>
+                      </div>
+                      <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>
+                        {c.dueDate ? t("due", { date: labelDate(c.dueDate, locale) }) : t("noDue")}
+                        {c.installmentIndex ? ` · ${t("installment", { index: c.installmentIndex, count: c.installmentCount ?? 0 })}` : ""}
+                      </p>
+                      {c.amountPaid > 0 && (
+                        <p className="text-xs mt-0.5" style={{ color: "var(--warn)" }}>
+                          {t("partial", { paid: toBRL(c.amountPaid, locale), remaining: toBRL(c.remaining, locale) })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-mono text-sm font-bold" style={{ color: "var(--cf-text)" }}>{toBRL(c.amount, locale)}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: !c.fits ? "var(--neg)" : quita ? "var(--pos)" : "var(--warn)" }}>
+                        {!c.fits ? t("exceeds", { remaining: toBRL(c.remaining, locale) }) : t(quita ? "willSettle" : "willPartial")}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <Button variant="secondary" onClick={() => onChoose(null)} className="w-full mt-4">{t("skip")}</Button>
+        </div>
+      )}
+    </Modal>
+  );
 }
 
 // ─── Modal de transação ───────────────────────────────────────────────────────
@@ -1217,7 +1274,7 @@ export default function CashFlowPage() {
   // de valor + vencimento; os campos de parcela alimentam o bloco "Previstos".
   const [bills, setBills] = useState<ForecastDoc[]>([]);
   const [receivables, setReceivables] = useState<ForecastDoc[]>([]);
-  const [taxes, setTaxes] = useState<{ id: string; name: string; type: string; status: string; amount: number; dueDate: string }[]>([]);
+  const [taxes, setTaxes] = useState<{ id: string; name: string; type: string; status: string; amount: number; amountPaid: number; dueDate: string }[]>([]);
   // Despesas reais dos centros de custo — só pra mostrar "realizado" (pago) vs
   // orçado no detalhamento do Orçamento. Não entra em nenhum total da tela.
   const [expenses, setExpenses] = useState<{ center: string; amount: number; status: string; date: string }[]>([]);
@@ -1332,6 +1389,7 @@ export default function CashFlowPage() {
                 amount: Number(x.amount) || 0,
                 dueDate: (x.dueDate as string) || "",
                 status: String(x.status || ""),
+                amountPaid: Number(x.amountPaid) || 0,
                 category: (x.category as string) || undefined,
                 recurrence: x.recurrence as string | undefined,
                 installmentIndex: x.installmentIndex as number | undefined,
@@ -1371,6 +1429,7 @@ export default function CashFlowPage() {
                     type: (x.type as string) || "outro",
                     status: String(x.status || ""),
                     amount: x.amount || 0,
+                    amountPaid: Number(x.amountPaid) || 0,
                     dueDate: (x.dueDate as string) || "",
                   };
                 }));
@@ -1413,6 +1472,37 @@ export default function CashFlowPage() {
     const { auth } = await getFirebase();
     await signOut(auth);
     window.location.href = "/login";
+  }
+
+  // Saída que bate com 2+ contas a pagar/impostos: pergunta em qual dar baixa.
+  // A promessa fica pendurada até o usuário escolher (ou pular) no modal.
+  const [settlePick, setSettlePick] = useState<{
+    description: string; amount: number; candidates: SettleCandidate[];
+    resolve: (c: SettleCandidate | null) => void;
+  } | null>(null);
+
+  const askSettleTarget = (description: string, amount: number, candidates: SettleCandidate[]) =>
+    new Promise<SettleCandidate | null>(resolve => setSettlePick({ description, amount, candidates, resolve }));
+
+  /** Baixa automática em Contas a Pagar/Impostos; grava o vínculo em `target`. */
+  async function settleBillOrTax(
+    db: import("firebase/firestore").Firestore,
+    tx: { description: string; amount: number },
+    actor: Actor,
+    target: Record<string, unknown>
+  ) {
+    if (!uid) return;
+    // 1 conta com esse nome: baixa direto (se o valor couber). 2+ com o mesmo
+    // nome: sempre pergunta, mesmo que o valor só caiba numa delas.
+    const candidates = await findSettleCandidates(db, uid, tx);
+    const cabem = candidates.filter(c => c.fits);
+    const chosen = cabem.length === 0 ? null
+      : candidates.length === 1 ? cabem[0]
+      : await askSettleTarget(tx.description, tx.amount, candidates);
+    if (!chosen) return;
+    if (!(await applySettle(db, uid, chosen, Number(tx.amount), actor))) return;
+    if (chosen.kind === "bill") target.sourceBillId = chosen.id;
+    else target.settledTaxId = chosen.id;
   }
 
   async function handleSave(data: Omit<Tx, "id">) {
@@ -1480,12 +1570,7 @@ export default function CashFlowPage() {
       if (data.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
         if (matchedId) clean.sourceExpenseId = matchedId;
-        const matchedBillId = await autoSettleMatchingBill(db, uid, { description: data.description, amount: data.amount }, actor);
-        if (matchedBillId) clean.sourceBillId = matchedBillId;
-        if (!matchedBillId) {
-          const matchedTaxId = await autoSettleMatchingTax(db, uid, { description: data.description, amount: data.amount }, actor);
-          if (matchedTaxId) clean.settledTaxId = matchedTaxId;
-        }
+        await settleBillOrTax(db, { description: data.description, amount: data.amount }, actor, clean);
       }
       await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
     }
@@ -1507,12 +1592,7 @@ export default function CashFlowPage() {
       if (tx.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: tx.description, amount: tx.amount });
         if (matchedId) entry.sourceExpenseId = matchedId;
-        const matchedBillId = await autoSettleMatchingBill(db, uid, { description: tx.description, amount: tx.amount }, importActor);
-        if (matchedBillId) entry.sourceBillId = matchedBillId;
-        if (!matchedBillId) {
-          const matchedTaxId = await autoSettleMatchingTax(db, uid, { description: tx.description, amount: tx.amount }, importActor);
-          if (matchedTaxId) entry.settledTaxId = matchedTaxId;
-        }
+        await settleBillOrTax(db, { description: tx.description, amount: tx.amount }, importActor, entry);
       }
       entries.push(entry);
     }
@@ -1578,7 +1658,32 @@ export default function CashFlowPage() {
     return centers + billsM + taxesM;
   }, [costCenters, bills, taxes, monthKey, currentMonthKey]);
 
-  const superavitDeficit = saldo - previsao;
+  // Quanto do Orçamento já foi pago no mês (o "Pago"/"Realizado" em verde do
+  // modal): contas/impostos quitados contam inteiros, os com baixa parcial
+  // contam o `amountPaid`; centros de custo contam o realizado até o orçado.
+  // Esses pagamentos já estão nas Saídas (e portanto no Saldo), então o
+  // Resultado só desconta do Saldo o que AINDA falta pagar do Orçamento —
+  // senão o mesmo valor seria abatido duas vezes.
+  const previsaoPaga = useMemo(() => {
+    const doMes = (iso: string) => (iso ?? "").slice(0, 7) === monthKey;
+    const pagoDe = (x: { amount: number; amountPaid?: number; status: string }, quitado: boolean) =>
+      quitado ? x.amount : Math.min(Math.max(x.amountPaid ?? 0, 0), x.amount);
+    const centers = costCenters.reduce((s, c) => {
+      const orcado = budgetForCenterMonth(c, monthKey, currentMonthKey);
+      if (orcado <= 0) return s;
+      const realizado = expenses
+        .filter(e => e.center === c.name && e.status === "pago" && doMes(e.date))
+        .reduce((a, e) => a + e.amount, 0);
+      return s + Math.min(realizado, orcado);
+    }, 0);
+    const billsP = bills.filter(b => doMes(b.dueDate))
+      .reduce((s, b) => s + pagoDe(b, normalizeBillStatus(b.status) === "pago"), 0);
+    const taxesP = taxes.filter(tx => doMes(tx.dueDate))
+      .reduce((s, tx) => s + pagoDe(tx, normalizeTaxStatus(tx.status) === "pago"), 0);
+    return centers + billsP + taxesP;
+  }, [costCenters, expenses, bills, taxes, monthKey, currentMonthKey]);
+
+  const superavitDeficit = saldo - Math.max(previsao - previsaoPaga, 0);
 
   // Quebra do Orçamento linha a linha — alimenta o modal que abre ao clicar no
   // KPI "Orçamento". A soma dos três grupos bate exatamente com `previsao`.
@@ -1618,7 +1723,9 @@ export default function CashFlowPage() {
       });
     const contas = groupBudgetLines(contasLines);
     const contasTotal = contasLines.reduce((s, l) => s + l.amount, 0);
-    const contasPago = contasLines.filter(l => l.status === "pago").reduce((s, l) => s + l.amount, 0);
+    // Pago = quitadas inteiras + baixas parciais (`amountPaid`) das em aberto.
+    const contasPago = bills.filter(b => doMes(b.dueDate))
+      .reduce((s, b) => s + (normalizeBillStatus(b.status) === "pago" ? b.amount : Math.min(Math.max(b.amountPaid ?? 0, 0), b.amount)), 0);
 
     // Impostos do mês, agrupados por esfera (Federais / Estaduais / Municipais).
     const impostosLines: BudgetLine[] = taxes
@@ -1638,7 +1745,8 @@ export default function CashFlowPage() {
       });
     const impostos = groupBudgetLines(impostosLines);
     const impostosTotal = impostosLines.reduce((s, l) => s + l.amount, 0);
-    const impostosPago = impostosLines.filter(l => l.status === "pago").reduce((s, l) => s + l.amount, 0);
+    const impostosPago = taxes.filter(tx => doMes(tx.dueDate))
+      .reduce((s, tx) => s + (normalizeTaxStatus(tx.status) === "pago" ? tx.amount : Math.min(Math.max(tx.amountPaid ?? 0, 0), tx.amount)), 0);
 
     return {
       centros, centrosOrcado, centrosRealizado,
@@ -1736,6 +1844,7 @@ export default function CashFlowPage() {
 
       <TransactionModal open={modal} editing={editing} uid={uid} authUid={authUid} costCenters={costCenters} onClose={() => { setModal(false); setEditing(null); }} onSave={handleSave} />
       <ImportModal open={importOpen} authUid={authUid} onClose={() => setImportOpen(false)} onImport={handleImport} />
+      <SettlePickModal pick={settlePick} onChoose={(c) => { settlePick?.resolve(c); setSettlePick(null); }} />
 
       <Modal open={!!confirmId && !deletePinOpen} onClose={() => { setConfirmId(null); setDeletePinErr(""); }} size="sm" closeDisabled={deleting}>
         <div className="p-6 text-center">

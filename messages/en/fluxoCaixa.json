@@ -166,5 +166,19 @@
     "errApi": "API error",
     "errParse": "Error parsing: {message}",
     "noDescription": "No description"
+  },
+  "settlePick": {
+    "title": "Which bill should this pay?",
+    "body": "The outflow \"{description}\" of {amount} matches more than one bill. Choose which one is being paid.",
+    "kindBill": "Bill",
+    "kindTax": "Tax",
+    "due": "Due {date}",
+    "noDue": "No due date",
+    "installment": "Installment {index}/{count}",
+    "partial": "Paid {paid} · {remaining} left",
+    "willSettle": "Settles",
+    "willPartial": "Partial payment",
+    "exceeds": "Amount exceeds balance ({remaining})",
+    "skip": "Don't link to any"
   }
 }
