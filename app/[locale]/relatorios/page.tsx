@@ -359,13 +359,15 @@ export default function RelatoriosPage() {
     const impostos = sum(bucket.impostos);
     const cmv = sum(bucket.cmv);
     const despesas = sum(bucket.despesas);
-    const receitaLiquida = receita - impostos;
-    const lucroBruto = receitaLiquida - cmv;
-    const lucroLiquido = lucroBruto - despesas;
+    // Impostos ficam por último, depois do LAIR (Lucro Antes do Imposto de
+    // Renda) — assim dá pra analisar o resultado operacional sem os tributos.
+    const lucroBruto = receita - cmv;
+    const lair = lucroBruto - despesas;
+    const lucroLiquido = lair - impostos;
     const margemLiquida = receita > 0 ? (lucroLiquido / receita) * 100 : 0;
 
     return {
-      receita, impostos, receitaLiquida, cmv, lucroBruto, despesas, lucroLiquido, margemLiquida,
+      receita, cmv, lucroBruto, despesas, lair, impostos, lucroLiquido, margemLiquida,
       receitaCats: toRows(bucket.receita),
       impostosCats: toRows(bucket.impostos),
       cmvCats: toRows(bucket.cmv),
@@ -1561,15 +1563,6 @@ export default function RelatoriosPage() {
                   hideValues={hideValues} variant="receita"
                 />
                 <DreLine
-                  label={t("dre.deductions")} prefix="(-)" amount={dreData.impostos} cats={dreData.impostosCats}
-                  open={dreOpen.has("impostos")} onToggle={() => toggleDre("impostos")}
-                  hideValues={hideValues} variant="deducao"
-                />
-                <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
-                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>{t("dre.netRevenue")}</span>
-                  <span className="font-mono text-sm font-semibold" style={{ color: "var(--db-text)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.receitaLiquida, locale)}</Sensitive>}</span>
-                </div>
-                <DreLine
                   label={t("dre.cmv")} prefix="(-)" amount={dreData.cmv} cats={dreData.cmvCats}
                   open={dreOpen.has("cmv")} onToggle={() => toggleDre("cmv")}
                   hideValues={hideValues} variant="deducao"
@@ -1581,6 +1574,15 @@ export default function RelatoriosPage() {
                 <DreLine
                   label={t("dre.opExpenses")} prefix="(-)" amount={dreData.despesas} cats={dreData.despesasCats}
                   open={dreOpen.has("despesas")} onToggle={() => toggleDre("despesas")}
+                  hideValues={hideValues} variant="deducao"
+                />
+                <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5" style={{ borderTop: "1px solid var(--db-border)", background: "var(--db-bg-alt)" }}>
+                  <span className="text-sm font-semibold pl-[22px]" style={{ color: "var(--db-text)" }}>{t("dre.lair")}</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: dreData.lair >= 0 ? "var(--db-text)" : "var(--danger)" }}>{<Sensitive hidden={hideValues}>{toBRL(dreData.lair, locale)}</Sensitive>}</span>
+                </div>
+                <DreLine
+                  label={t("dre.taxes")} prefix="(-)" amount={dreData.impostos} cats={dreData.impostosCats}
+                  open={dreOpen.has("impostos")} onToggle={() => toggleDre("impostos")}
                   hideValues={hideValues} variant="deducao"
                 />
                 <div
