@@ -31,7 +31,8 @@ export async function POST(request: Request) {
 
     const { limited, retryAfterSec } = checkRateLimit(
       `vendas:${getClientIp(request)}:${ownerUid}`,
-      RATE_LIMIT
+      RATE_LIMIT,
+      scope.isSupremeAdmin
     );
     if (limited) {
       return NextResponse.json(

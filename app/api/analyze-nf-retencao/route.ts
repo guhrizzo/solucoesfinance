@@ -11,7 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { File as StorageFile } from "@google-cloud/storage";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { getAdminDb, getAdminBucket } from "@/lib/firebaseAdmin";
-import { resolveSubscriptionState, isProAccess, type BillingDoc } from "@/lib/billing";
+import { isProAccess } from "@/lib/billing";
+import { resolveScopeSubscription } from "@/lib/scopeSubscription";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -51,9 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const db = await getAdminDb();
-    const billingSnap = await db.doc(`users/${scope.ownerUid}/profile/billing`).get();
-    const state = resolveSubscriptionState(billingSnap.exists ? (billingSnap.data() as BillingDoc) : null);
+    const state = await resolveScopeSubscription(await getAdminDb(), scope);
     if (!isProAccess(state)) {
       return NextResponse.json(
         { error: "A leitura de NF com retenção de impostos é exclusiva do plano Pro." },
@@ -64,7 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e.message ?? "Erro ao verificar assinatura" }, { status: 500 });
   }
 
-  const { limited, retryAfterSec } = checkRateLimit(`analyze-nf-retencao:${scope.ownerUid}`, RATE_LIMIT);
+  const { limited, retryAfterSec } = checkRateLimit(`analyze-nf-retencao:${scope.ownerUid}`, RATE_LIMIT, scope.isSupremeAdmin);
   if (limited) {
     return NextResponse.json(
       { error: "Muitas análises em pouco tempo. Aguarde alguns minutos e tente novamente." },
