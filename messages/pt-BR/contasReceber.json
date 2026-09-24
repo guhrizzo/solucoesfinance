@@ -80,7 +80,11 @@
     "received": "Recebido",
     "edit": "Editar",
     "delete": "Excluir",
-    "settleLabel": "Recebido"
+    "settleLabel": "Recebido",
+    "penalties": "Multa {fine}% · juros {interest}% a.m.",
+    "updatedAmount": "atualizado {amount}",
+    "chargeSent": "Cobrança enviada {date} para {email}",
+    "sendCharge": "Enviar cobrança por e-mail"
   },
   "modal": {
     "editTitle": "Editar cobrança",
@@ -122,7 +126,31 @@
     "pinConfirmEditTitle": "Confirmar edição",
     "pinConfirmCreateTitle": "Confirmar criação",
     "pinConfirmSaveSubtitle": "Digite seu PIN de 4 dígitos para salvar",
-    "saveError": "Erro ao salvar"
+    "saveError": "Erro ao salvar",
+    "charge": {
+      "title": "Cobrança ao cliente",
+      "name": "Nome",
+      "namePlaceholder": "Nome do cliente",
+      "doc": "CPF / CNPJ",
+      "email": "E-mail",
+      "emailInvalid": "E-mail inválido",
+      "phone": "Telefone",
+      "fine": "Multa por atraso",
+      "fineHint": "% sobre o valor",
+      "interest": "Juros por atraso",
+      "interestHint": "% ao mês",
+      "none": "Sem",
+      "other": "Outro",
+      "preview": "Com 30 dias de atraso: multa de {fine} + juros de {interest}.",
+      "send": "Enviar e-mail de cobrança ao cliente",
+      "sendHint": "O cliente recebe o aviso com valor, vencimento, multa e juros assim que a conta for salva.",
+      "sendHintSeries": "O aviso vai com a 1ª parcela; as demais podem ser enviadas pelo card de cada uma.",
+      "sendNeedsEmail": "Informe um e-mail válido do cliente para enviar.",
+      "sendDisabledReceived": "Conta já recebida — não há o que cobrar.",
+      "lockedTitle": "Cobrança por e-mail com multa e juros",
+      "lockedBody": "Envie avisos de cobrança ao cliente direto do app.",
+      "lockedCta": "Plano Pro"
+    }
   },
   "alertSettings": {
     "title": "Alertas de cobrança",
@@ -187,6 +215,8 @@
     "receivedPosted": "Recebido! Lançado no Fluxo de Caixa ✓",
     "installmentsRemoved": "{count, plural, one {# parcela removida.} other {# parcelas removidas.}}",
     "billRemoved": "Cobrança removida.",
-    "seriesUpdateError": "Erro ao atualizar a série"
+    "seriesUpdateError": "Erro ao atualizar a série",
+    "chargeEmailSent": "Cobrança enviada para {email}",
+    "chargeEmailError": "Não foi possível enviar a cobrança"
   }
 }

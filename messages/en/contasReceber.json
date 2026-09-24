@@ -80,7 +80,11 @@
     "received": "Received",
     "edit": "Edit",
     "delete": "Delete",
-    "settleLabel": "Received"
+    "settleLabel": "Received",
+    "penalties": "Fee {fine}% · interest {interest}%/mo",
+    "updatedAmount": "updated {amount}",
+    "chargeSent": "Notice sent {date} to {email}",
+    "sendCharge": "Email payment notice"
   },
   "modal": {
     "editTitle": "Edit invoice",
@@ -122,7 +126,31 @@
     "pinConfirmEditTitle": "Confirm edit",
     "pinConfirmCreateTitle": "Confirm creation",
     "pinConfirmSaveSubtitle": "Enter your 4-digit PIN to save",
-    "saveError": "Error saving"
+    "saveError": "Error saving",
+    "charge": {
+      "title": "Customer billing",
+      "name": "Name",
+      "namePlaceholder": "Customer name",
+      "doc": "Tax ID (CPF / CNPJ)",
+      "email": "Email",
+      "emailInvalid": "Invalid email",
+      "phone": "Phone",
+      "fine": "Late fee",
+      "fineHint": "% of the amount",
+      "interest": "Late interest",
+      "interestHint": "% per month",
+      "none": "None",
+      "other": "Other",
+      "preview": "After 30 days late: {fine} fee + {interest} interest.",
+      "send": "Email a payment notice to the customer",
+      "sendHint": "The customer gets the notice with amount, due date, fee and interest as soon as the bill is saved.",
+      "sendHintSeries": "The notice is sent with the 1st installment; the others can be sent from each card.",
+      "sendNeedsEmail": "Enter a valid customer email to send.",
+      "sendDisabledReceived": "Already received — nothing to charge.",
+      "lockedTitle": "Email billing with late fee and interest",
+      "lockedBody": "Send payment notices to customers right from the app.",
+      "lockedCta": "Pro plan"
+    }
   },
   "alertSettings": {
     "title": "Collection alerts",
@@ -187,6 +215,8 @@
     "receivedPosted": "Received! Posted to Cash Flow ✓",
     "installmentsRemoved": "{count, plural, one {# installment removed.} other {# installments removed.}}",
     "billRemoved": "Invoice removed.",
-    "seriesUpdateError": "Error updating the series"
+    "seriesUpdateError": "Error updating the series",
+    "chargeEmailSent": "Notice sent to {email}",
+    "chargeEmailError": "Could not send the notice"
   }
 }

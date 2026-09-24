@@ -389,3 +389,138 @@ export function contractCopyEmail(opts: {
 
   return { subject, html, text };
 }
+
+/**
+ * Aviso de cobrança enviado ao CLIENTE de quem usa o app (Contas a Receber,
+ * plano Pro). Leva a marca da empresa cobradora, não a da NexusFi — a NexusFi
+ * aparece só no rodapé como plataforma de envio. Valores já vêm formatados.
+ */
+export function receivableChargeEmail(opts: {
+  companyName: string;
+  customerName: string;
+  title: string;
+  amount: string;
+  dueDate: string;
+  overdue: boolean;
+  lateDays: number;
+  installment?: string;
+  paymentMethod?: string;
+  fineRate: number;
+  interestRate: number;
+  /** Só quando vencida e com multa/juros configurados. */
+  updated?: { fine: string; interest: string; total: string };
+  notes?: string;
+  replyTo?: string;
+  logoUrl?: string;
+}) {
+  const o = opts;
+  const pct = (n: number) => `${String(n).replace(".", ",")}%`;
+  const subject = o.overdue
+    ? `Cobrança em atraso — ${o.companyName}`
+    : `Aviso de cobrança — ${o.companyName}`;
+  const saudacao = o.customerName.trim() ? `Olá, ${o.customerName.trim()}!` : "Olá!";
+  const intro = o.overdue
+    ? `Identificamos que a cobrança abaixo, com vencimento em ${o.dueDate}, está em aberto há ${o.lateDays} ${o.lateDays === 1 ? "dia" : "dias"}.`
+    : `Este é um aviso da cobrança abaixo, com vencimento em ${o.dueDate}.`;
+  const encargos =
+    o.fineRate > 0 || o.interestRate > 0
+      ? `Em caso de atraso: multa de ${pct(o.fineRate)} e juros de ${pct(o.interestRate)} ao mês (pró-rata dia).`
+      : "";
+
+  const logoHtml = o.logoUrl
+    ? `<img src="${o.logoUrl}" width="120" height="34" alt="NexusFi" style="display:block;width:120px;height:auto;border:0;outline:none;text-decoration:none;" />`
+    : `<span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:-0.02em;">NexusFi</span>`;
+
+  const row = (rotulo: string, valor: string, strong = false) =>
+    `<tr>
+       <td style="padding:6px 0;color:#64748b;font-size:13px;">${escapeHtml(rotulo)}</td>
+       <td style="padding:6px 0;text-align:right;${strong ? "color:#1565c0;font-weight:800;font-size:15px;" : "color:#0d2247;font-size:13px;font-weight:600;"}">${escapeHtml(valor)}</td>
+     </tr>`;
+
+  const linhas = [
+    row("Descrição", o.title),
+    o.installment ? row("Parcela", o.installment) : "",
+    row("Vencimento", o.dueDate),
+    o.paymentMethod ? row("Forma de pagamento", o.paymentMethod) : "",
+    row(o.updated ? "Valor original" : "Valor", o.amount, !o.updated),
+    o.updated ? row(`Multa (${pct(o.fineRate)})`, o.updated.fine) : "",
+    o.updated ? row(`Juros (${o.lateDays} ${o.lateDays === 1 ? "dia" : "dias"})`, o.updated.interest) : "",
+    o.updated ? row("Valor atualizado", o.updated.total, true) : "",
+  ].join("");
+
+  const html = `
+<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:0;background:#f5f7fa;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fa;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+            <tr>
+              <td style="background:linear-gradient(135deg,#0a1628,#1565c0);padding:24px 32px;">
+                ${logoHtml}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <p style="margin:0 0 14px;">
+                  <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#e3f2fd;color:#1565c0;font-size:11px;font-weight:700;letter-spacing:0.02em;">
+                    ${escapeHtml(o.overdue ? "COBRANÇA EM ATRASO" : "AVISO DE COBRANÇA")} · ${escapeHtml(o.companyName)}
+                  </span>
+                </p>
+                <h1 style="margin:0 0 12px;color:#0d2247;font-size:20px;">${escapeHtml(saudacao)}</h1>
+                <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.6;">${escapeHtml(intro)}</p>
+
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 18px;margin:0 0 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${linhas}</table>
+                </div>
+
+                ${encargos ? `<p style="margin:0 0 16px;color:#64748b;font-size:12px;line-height:1.6;">${escapeHtml(encargos)}</p>` : ""}
+                ${o.notes?.trim() ? `<p style="margin:0 0 16px;color:#475569;font-size:13px;line-height:1.6;"><strong style="color:#0d2247;">Observação:</strong> ${escapeHtml(o.notes.trim())}</p>` : ""}
+
+                <p style="margin:0;color:#475569;font-size:13px;line-height:1.6;">
+                  Se o pagamento já foi feito, por favor desconsidere este aviso.${o.replyTo ? ` Dúvidas? Responda este e-mail ou escreva para ${escapeHtml(o.replyTo)}.` : ""}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
+                <p style="margin:0;color:#94a3b8;font-size:11px;">
+                  Cobrança enviada por ${escapeHtml(o.companyName)} através da NexusFi — gestão financeira empresarial.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`.trim();
+
+  const text = [
+    saudacao,
+    "",
+    intro,
+    "",
+    `Descrição: ${o.title}`,
+    o.installment ? `Parcela: ${o.installment}` : "",
+    `Vencimento: ${o.dueDate}`,
+    o.paymentMethod ? `Forma de pagamento: ${o.paymentMethod}` : "",
+    `${o.updated ? "Valor original" : "Valor"}: ${o.amount}`,
+    o.updated ? `Multa (${pct(o.fineRate)}): ${o.updated.fine}` : "",
+    o.updated ? `Juros (${o.lateDays} dias): ${o.updated.interest}` : "",
+    o.updated ? `Valor atualizado: ${o.updated.total}` : "",
+    "",
+    encargos,
+    o.notes?.trim() ? `Observação: ${o.notes.trim()}` : "",
+    "",
+    "Se o pagamento já foi feito, por favor desconsidere este aviso.",
+    o.replyTo ? `Dúvidas: ${o.replyTo}` : "",
+    "",
+    `— ${o.companyName} (enviado pela NexusFi)`,
+  ]
+    .filter((l, i, a) => l !== "" || (i > 0 && a[i - 1] !== ""))
+    .join("\n");
+
+  return { subject, html, text };
+}
