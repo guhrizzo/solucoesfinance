@@ -14,7 +14,7 @@
     "titleTrial": "Teste grátis — {days, plural, one {# dia restante} other {# dias restantes}}",
     "titleActive": "Sua assinatura está ativa",
     "subComped": "Sua conta tem acesso completo e ilimitado, sem cobrança. Nada a pagar.",
-    "subExpiredOwner": "Escolha um plano pra continuar usando o NexusFi. Pagamento via Pix ou cartão em até 12x.",
+    "subExpiredOwner": "Escolha um plano pra continuar usando o NexusFi. A assinatura renova automaticamente e você cancela quando quiser.",
     "subExpiredMember": "A assinatura desta conta está pendente. Fale com o titular pra regularizar o pagamento.",
     "subTrialOwner": "Assine agora e não perca o acesso quando o teste acabar.",
     "subTrialMember": "Conta em período de teste. O titular pode assinar a qualquer momento.",
@@ -29,7 +29,16 @@
     "annualSavings": "Economize {value} por ano",
     "subscribe": "Assinar",
     "subscribeNow": "Assinar agora",
-    "processedBy": "Pagamento processado pela InfinitePay.",
-    "logout": "Sair da conta"
+    "processedBy": "Pagamento processado pelo Mercado Pago.",
+    "logout": "Sair da conta",
+    "subActiveAuto": "Plano {plan} · próxima cobrança em {date}.",
+    "subActiveCancelled": "Plano {plan} · renovação cancelada, acesso até {date}.",
+    "subGrace": "Plano {plan} · estamos processando a cobrança da renovação. Seu acesso segue liberado por alguns dias.",
+    "autoRenewNote": "Assinatura com renovação automática: a cobrança se repete a cada período até você cancelar.",
+    "cancelRenewal": "Cancelar renovação automática",
+    "cancelConfirm": "Cancelar a renovação? Você mantém o acesso até {date} e não será cobrado novamente.",
+    "cancelling": "Cancelando…",
+    "cancelError": "Não foi possível cancelar a renovação. Tente novamente.",
+    "cancelledOk": "Renovação cancelada. Seu acesso continua até {date}."
   }
 }

@@ -10,7 +10,7 @@ import {
     CheckCircle2, CircleDollarSign, Repeat, Settings2,
     ArrowUpRight, Tag, Building2, Zap, Receipt,
     Bell, Image as ImageIcon, Trash, ChevronLeft, ChevronRight, type LucideIcon,
-    ShieldCheck,
+    ShieldCheck, Mail, Lock, Sparkles, Send,
 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
@@ -27,6 +27,14 @@ import { syncReceivableCashflow } from "@/lib/receivableCashflowSync";
 import { AuditTrail } from "@/app/components/AuditTrail";
 import SeriesScopeDialog, { type SeriesScope } from "@/app/components/SeriesScopeDialog";
 import { addMonthsClamped, monthLabel } from "@/lib/dateSeries";
+import { useSubscription } from "@/app/hooks/useSubscription";
+import { isProAccess } from "@/lib/billing";
+import { authedFetch } from "@/lib/authedFetch";
+import { Link } from "@/i18n/navigation";
+import {
+    FINE_PRESETS, INTEREST_PRESETS, MAX_FINE_RATE, MAX_INTEREST_RATE,
+    clampRate, isValidEmail, formatPhone, chargeWithPenalties,
+} from "@/lib/receivableCharge";
 
 const FOCUSABLE_SELECTOR =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -61,6 +69,14 @@ interface Receivable {
     paidPaymentMethod?: PaymentMethod;
     partyName?: string;                 // cliente vinculado (nome / razão social)
     partyDoc?: string;                  // cliente vinculado (CNPJ/CPF, só dígitos)
+    // Cobrança por e-mail (plano Pro) — ver lib/receivableCharge.ts
+    partyEmail?: string;
+    partyPhone?: string;                // só dígitos
+    fineRate?: number;                  // multa por atraso, % do valor
+    interestRate?: number;              // juros por atraso, % ao mês (pró-rata dia)
+    chargeEmailSentAt?: number;         // último aviso enviado (gravado pela API)
+    chargeEmailLastTo?: string;
+    chargeEmailCount?: number;
     createdBy?: string;                 // uid de quem criou (auditoria via PIN)
     createdByName?: string;
     updatedBy?: string;                 // uid de quem editou por último
@@ -177,15 +193,69 @@ function useToast() {
 
 // ─── Modal de conta a receber ─────────────────────────────────────────────────
 
+type ReceivableInput = Omit<Receivable, "id" | "userId" | "createdAt" | "chargeEmailSentAt" | "chargeEmailLastTo" | "chargeEmailCount">;
+
 interface ReceivableModalProps {
     open: boolean;
     editing: Receivable | null;
     uid: string | null;
+    isPro: boolean;
     onClose: () => void;
-    onSave: (data: Omit<Receivable, "id" | "userId" | "createdAt">) => Promise<void>;
+    onSave: (data: ReceivableInput, opts: { sendChargeEmail: boolean }) => Promise<void>;
 }
 
-function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModalProps) {
+// ─── Escolha de % (multa / juros): atalhos + "Outro" ──────────────────────────
+
+function RateChooser({ label, hint, presets, value, max, onChange }: {
+    label: string; hint: string; presets: readonly number[]; value: number; max: number;
+    onChange: (v: number) => void;
+}) {
+    const t = useTranslations("contasReceber.modal.charge");
+    const isPreset = presets.includes(value);
+    const [custom, setCustom] = useState(!isPreset);
+    const [raw, setRaw] = useState(isPreset ? "" : String(value).replace(".", ","));
+    const inputId = useId();
+    const pct = (n: number) => `${String(n).replace(".", ",")}%`;
+    return (
+        <fieldset className="space-y-1.5 border-0 p-0 m-0 min-w-0">
+            <legend className="text-[11px] font-semibold p-0" style={{ color: "var(--cf-text-2)" }}>{label}</legend>
+            <div className="grid grid-cols-4 gap-1.5">
+                {presets.map(v => {
+                    const sel = !custom && value === v;
+                    return (
+                        <button key={v} type="button" onClick={() => { setCustom(false); onChange(v); }}
+                            className="py-2 rounded-lg text-xs font-bold border-2 cursor-pointer transition-all"
+                            style={sel
+                                ? { borderColor: "var(--pos)", background: "var(--pos-weak)", color: "var(--pos)" }
+                                : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
+                            {v === 0 ? t("none") : pct(v)}
+                        </button>
+                    );
+                })}
+                <button type="button" onClick={() => { setCustom(true); onChange(clampRate(parseAmount(raw), max)); }}
+                    className="py-2 rounded-lg text-xs font-bold border-2 cursor-pointer transition-all"
+                    style={custom
+                        ? { borderColor: "var(--pos)", background: "var(--pos-weak)", color: "var(--pos)" }
+                        : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
+                    {t("other")}
+                </button>
+            </div>
+            {custom && (
+                <div className="flex items-center gap-2">
+                    <label htmlFor={inputId} className="sr-only">{label}</label>
+                    <input id={inputId} inputMode="decimal" value={raw}
+                        onChange={e => { const v = e.target.value.replace(/[^\d,.]/g, ""); setRaw(v); onChange(clampRate(parseAmount(v), max)); }}
+                        placeholder="0,00"
+                        className="w-24 rounded-lg px-3 py-2 text-sm outline-none font-mono"
+                        style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                    <span className="text-xs" style={{ color: "var(--cf-text-3)" }}>{hint}</span>
+                </div>
+            )}
+        </fieldset>
+    );
+}
+
+function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: ReceivableModalProps) {
     const t = useTranslations("contasReceber.modal");
     const tCat = useTranslations("contasReceber.categories");
     const tStatus = useTranslations("contasReceber.status");
@@ -203,6 +273,11 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [partyName, setPartyName] = useState("");
     const [partyDoc, setPartyDoc] = useState("");
+    const [partyEmail, setPartyEmail] = useState("");
+    const [partyPhone, setPartyPhone] = useState("");
+    const [fineRate, setFineRate] = useState(0);
+    const [interestRate, setInterestRate] = useState(0);
+    const [sendChargeEmail, setSendChargeEmail] = useState(false);
     const [tab, setTab] = useState<"conta" | "cadastro">("conta");
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -214,6 +289,11 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     const installmentsId = useId();
     const notesId = useId();
     const receivableTitleId = useId();
+    const chargeNameId = useId();
+    const chargeEmailId = useId();
+    const chargePhoneId = useId();
+    const chargeDocId = useId();
+    const chargeSendId = useId();
     const receivableDialogRef = useRef<HTMLDivElement>(null);
     const receivablePreviouslyFocused = useRef<HTMLElement | null>(null);
     const receivablePrevOpen = useRef(open);
@@ -239,6 +319,11 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
         setPaymentMethod((editing?.paymentMethod as PaymentMethod) ?? null);
         setPartyName(editing?.partyName ?? "");
         setPartyDoc(editing?.partyDoc ?? "");
+        setPartyEmail(editing?.partyEmail ?? "");
+        setPartyPhone(editing?.partyPhone ?? "");
+        setFineRate(editing?.fineRate ?? 0);
+        setInterestRate(editing?.interestRate ?? 0);
+        setSendChargeEmail(false);
         setTab("conta");
         setSaving(false);
         setErr("");
@@ -290,8 +375,11 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
     const isSeries = recurrence === "numeral";
     const numeralAllowed = !editing || !!editing.seriesId;
     const installmentsOk = !isSeries || (Number.isFinite(installments) && installments >= 2 && installments <= 60);
+    const emailOk = !partyEmail.trim() || isValidEmail(partyEmail);
+    const willSend = isPro && sendChargeEmail && status !== "recebido";
+    const chargeOk = emailOk && (!willSend || isValidEmail(partyEmail));
     const canSave =
-        title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null && installmentsOk;
+        title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null && installmentsOk && chargeOk;
 
     async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -353,8 +441,15 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                     paidPaymentMethod: editing?.paidPaymentMethod,
                     partyName: partyName.trim() || "",
                     partyDoc: partyDoc ? onlyDigits(partyDoc) : "",
+                    // Campos de cobrança só são gravados/alterados por quem é Pro.
+                    ...(isPro ? {
+                        partyEmail: partyEmail.trim(),
+                        partyPhone: onlyDigits(partyPhone),
+                        fineRate: clampRate(fineRate, MAX_FINE_RATE),
+                        interestRate: clampRate(interestRate, MAX_INTEREST_RATE),
+                    } : {}),
                     installmentCount: isSeries && !editing ? installments : undefined,
-                });
+                }, { sendChargeEmail: willSend });
                 onClose();
             } catch (e: any) {
                 setErr(e?.message ?? t("saveError"));
@@ -460,6 +555,92 @@ function ReceivableModal({ open, editing, uid, onClose, onSave }: ReceivableModa
                         onChange={v => { setTitle(v.title); setPartyName(v.partyName ?? ""); setPartyDoc(v.partyDoc ?? ""); }}
                         onNewCadastro={() => setTab("cadastro")}
                     />
+
+                    {/* Cobrança ao cliente (Pro): dados de contato, multa/juros e envio por e-mail */}
+                    {isPro ? (
+                        <fieldset className="space-y-3 rounded-xl p-3.5 m-0 min-w-0" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-input)" }}>
+                            <legend className="text-xs font-semibold uppercase tracking-wider px-1 flex items-center gap-1.5" style={{ color: "var(--cf-text-2)" }}>
+                                <Mail size={12} /> {t("charge.title")}
+                            </legend>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div className="space-y-1">
+                                    <label htmlFor={chargeNameId} className="text-[11px] font-semibold" style={{ color: "var(--cf-text-2)" }}>{t("charge.name")}</label>
+                                    <input id={chargeNameId} value={partyName} onChange={e => setPartyName(e.target.value)}
+                                        placeholder={t("charge.namePlaceholder")}
+                                        className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+                                        style={{ background: "var(--cf-card)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label htmlFor={chargeDocId} className="text-[11px] font-semibold" style={{ color: "var(--cf-text-2)" }}>{t("charge.doc")}</label>
+                                    <input id={chargeDocId} inputMode="numeric" value={formatDoc(partyDoc)} onChange={e => setPartyDoc(onlyDigits(e.target.value).slice(0, 14))}
+                                        placeholder="000.000.000-00"
+                                        className="w-full rounded-lg px-3 py-2.5 text-sm outline-none font-mono"
+                                        style={{ background: "var(--cf-card)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label htmlFor={chargeEmailId} className="text-[11px] font-semibold" style={{ color: "var(--cf-text-2)" }}>{t("charge.email")}</label>
+                                    <input id={chargeEmailId} type="email" inputMode="email" autoComplete="off" value={partyEmail} onChange={e => setPartyEmail(e.target.value)}
+                                        placeholder="cliente@empresa.com.br"
+                                        aria-invalid={!emailOk}
+                                        className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+                                        style={{ background: "var(--cf-card)", border: `2px solid ${emailOk ? "var(--cf-border)" : "var(--neg)"}`, color: "var(--cf-text)" }} />
+                                    {!emailOk && <p className="text-[11px]" style={{ color: "var(--neg)" }}>{t("charge.emailInvalid")}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <label htmlFor={chargePhoneId} className="text-[11px] font-semibold" style={{ color: "var(--cf-text-2)" }}>{t("charge.phone")}</label>
+                                    <input id={chargePhoneId} type="tel" inputMode="tel" value={formatPhone(partyPhone)} onChange={e => setPartyPhone(onlyDigits(e.target.value).slice(0, 11))}
+                                        placeholder="(11) 91234-5678"
+                                        className="w-full rounded-lg px-3 py-2.5 text-sm outline-none font-mono"
+                                        style={{ background: "var(--cf-card)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />
+                                </div>
+                            </div>
+
+                            <RateChooser key={`fine-${open}`} label={t("charge.fine")} hint={t("charge.fineHint")}
+                                presets={FINE_PRESETS} value={fineRate} max={MAX_FINE_RATE} onChange={setFineRate} />
+                            <RateChooser key={`interest-${open}`} label={t("charge.interest")} hint={t("charge.interestHint")}
+                                presets={INTEREST_PRESETS} value={interestRate} max={MAX_INTEREST_RATE} onChange={setInterestRate} />
+                            {(fineRate > 0 || interestRate > 0) && amount > 0 && (
+                                <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>
+                                    {t("charge.preview", {
+                                        fine: toBRL(chargeWithPenalties(amount, fineRate, interestRate, 30).fine, locale),
+                                        interest: toBRL(chargeWithPenalties(amount, fineRate, interestRate, 30).interest, locale),
+                                    })}
+                                </p>
+                            )}
+
+                            <label htmlFor={chargeSendId} aria-label={t("charge.send")}
+                                className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 ${status === "recebido" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                                style={{ background: "var(--cf-card)", border: `1px solid ${willSend ? "var(--pos)" : "var(--cf-border)"}` }}>
+                                <input id={chargeSendId} type="checkbox" checked={sendChargeEmail && status !== "recebido"}
+                                    disabled={status === "recebido"}
+                                    onChange={e => setSendChargeEmail(e.target.checked)}
+                                    className="mt-0.5 cursor-pointer accent-[var(--pos)]" />
+                                <span className="min-w-0">
+                                    <span className="block text-xs font-bold" style={{ color: "var(--cf-text)" }}>{t("charge.send")}</span>
+                                    <span className="block text-[11px] mt-0.5" style={{ color: willSend && !isValidEmail(partyEmail) ? "var(--neg)" : "var(--cf-text-3)" }}>
+                                        {status === "recebido" ? t("charge.sendDisabledReceived")
+                                            : willSend && !isValidEmail(partyEmail) ? t("charge.sendNeedsEmail")
+                                            : isSeries && !editing ? t("charge.sendHintSeries") : t("charge.sendHint")}
+                                    </span>
+                                </span>
+                            </label>
+                        </fieldset>
+                    ) : (
+                        <Link href="/assinatura"
+                            className="flex items-center gap-3 rounded-xl px-3.5 py-3 transition-all hover:opacity-90"
+                            style={{ border: "1px dashed var(--cf-border)", background: "var(--cf-input)" }}>
+                            <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--brand-weak)" }}>
+                                <Lock size={14} style={{ color: "var(--brand)" }} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-xs font-bold" style={{ color: "var(--cf-text)" }}>{t("charge.lockedTitle")}</span>
+                                <span className="block text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("charge.lockedBody")}</span>
+                            </span>
+                            <span className="text-[11px] font-bold flex items-center gap-1 shrink-0" style={{ color: "var(--brand)" }}>
+                                <Sparkles size={12} /> {t("charge.lockedCta")}
+                            </span>
+                        </Link>
+                    )}
 
                     {/* Valor + Vencimento */}
                     <div className="grid grid-cols-2 gap-3">
@@ -1004,13 +1185,17 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
 
 // ─── Receivable Card ──────────────────────────────────────────────────────────
 
-function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceiveModal }: {
+function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpenReceiveModal, onSendCharge }: {
     receivable: Receivable & { _status: ReceivableStatus };
     alertDays: number;
+    isPro: boolean;
     onEdit: () => void;
     onDelete: () => void;
     onOpenReceiveModal: () => void;
+    /** Reenvia o aviso de cobrança por e-mail (Pro). */
+    onSendCharge: () => Promise<void>;
 }) {
+    const [sendingCharge, setSendingCharge] = useState(false);
     const t = useTranslations("contasReceber.card");
     const tStatus = useTranslations("contasReceber.status");
     const locale = useLocale();
@@ -1123,6 +1308,28 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                         {receivable.notes && (
                             <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text-3)" }}>📝 {receivable.notes}</p>
                         )}
+
+                        {/* Multa/juros configurados + valor atualizado se vencida */}
+                        {status !== ("recebido" as const) && ((receivable.fineRate ?? 0) > 0 || (receivable.interestRate ?? 0) > 0) && (() => {
+                            const late = Math.max(0, -days);
+                            const pen = chargeWithPenalties(receivable.amount, receivable.fineRate ?? 0, receivable.interestRate ?? 0, late);
+                            return (
+                                <p className="text-xs mt-1.5" style={{ color: late > 0 ? "var(--neg)" : "var(--cf-text-3)" }}>
+                                    {t("penalties", { fine: receivable.fineRate ?? 0, interest: receivable.interestRate ?? 0 })}
+                                    {late > 0 && ` · ${t("updatedAmount", { amount: toBRL(pen.total, locale) })}`}
+                                </p>
+                            );
+                        })()}
+
+                        {receivable.chargeEmailSentAt && (
+                            <p className="text-[11px] mt-1.5 flex items-center gap-1" style={{ color: "var(--cf-text-3)" }}>
+                                <Mail size={11} />
+                                {t("chargeSent", {
+                                    date: new Date(receivable.chargeEmailSentAt).toLocaleString(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
+                                    email: receivable.chargeEmailLastTo ?? "",
+                                })}
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -1140,6 +1347,16 @@ function ReceivableCard({ receivable, alertDays, onEdit, onDelete, onOpenReceive
                             style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
                             <Check size={13} /> {t("received")}
                         </div>
+                    )}
+                    {isPro && status !== ("recebido" as const) && receivable.partyEmail && (
+                        <button
+                            onClick={async () => { if (sendingCharge) return; setSendingCharge(true); try { await onSendCharge(); } finally { setSendingCharge(false); } }}
+                            disabled={sendingCharge}
+                            className="p-2 rounded-xl cursor-pointer disabled:cursor-wait"
+                            aria-label={t("sendCharge")} title={t("sendCharge")}
+                            style={{ background: "var(--cf-input)", color: "var(--brand)" }}>
+                            {sendingCharge ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                        </button>
                     )}
                     <button onClick={onEdit} className="p-2 rounded-xl cursor-pointer" aria-label={t("edit")}
                         style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
@@ -1209,7 +1426,7 @@ export default function ContasReceberPage() {
     const [pinOpenDelete, setPinOpenDelete] = useState(false);
 
     // Séries "numeral" (parcelas)
-    const [seriesEdit, setSeriesEdit] = useState<{ base: Receivable; data: Omit<Receivable, "id" | "userId" | "createdAt"> } | null>(null);
+    const [seriesEdit, setSeriesEdit] = useState<{ base: Receivable; data: ReceivableInput } | null>(null);
     const [seriesBusy, setSeriesBusy] = useState(false);
     const [seriesDelete, setSeriesDelete] = useState<Receivable | null>(null);
     const [deleteScope, setDeleteScope] = useState<SeriesScope>("one");
@@ -1233,6 +1450,27 @@ export default function ContasReceberPage() {
 
     // Toast com suporte a múltiplos simultâneos
     const { toasts, show: showToast } = useToast();
+
+    // Cobrança por e-mail é do plano Pro (o servidor confere de novo).
+    const sub = useSubscription();
+    const isPro = isProAccess(sub);
+
+    async function sendChargeEmail(receivableId: string): Promise<boolean> {
+        try {
+            const res = await authedFetch("/api/receivables/charge-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ receivableId }),
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) { showToast(json.error || t("toast.chargeEmailError"), "err"); return false; }
+            showToast(t("toast.chargeEmailSent", { email: json.to ?? "" }));
+            return true;
+        } catch (e) {
+            showToast((e as Error)?.message || t("toast.chargeEmailError"), "err");
+            return false;
+        }
+    }
 
     // Carrega alertDays do localStorage
     useEffect(() => {
@@ -1326,7 +1564,7 @@ export default function ContasReceberPage() {
     }
 
     // ── Salvar cobrança ────────────────────────────────────────────────────────
-    async function handleSave(data: Omit<Receivable, "id" | "userId" | "createdAt">) {
+    async function handleSave(data: ReceivableInput, opts: { sendChargeEmail: boolean } = { sendChargeEmail: false }) {
         if (!uid) throw new Error(tPin("notConfigured"));
         const [{ getFirebase }, { doc, updateDoc, collection, addDoc, writeBatch }] = await Promise.all([
             import("@/lib/firebase"),
@@ -1340,8 +1578,10 @@ export default function ContasReceberPage() {
             const n = Math.min(60, Math.max(2, Math.round(data.installmentCount || 2)));
             const seriesId = (crypto as Crypto).randomUUID();
             const batch = writeBatch(db);
+            let firstId = "";
             for (let i = 0; i < n; i++) {
                 const ref = doc(collection(db, "users", uid, "receivables"));
+                if (i === 0) firstId = ref.id;
                 const parcela = Object.fromEntries(
                     Object.entries({
                         ...data,
@@ -1363,6 +1603,8 @@ export default function ContasReceberPage() {
             await batch.commit();
             const last = addMonthsClamped(data.dueDate, n - 1);
             showToast(t("toast.installmentsCreated", { count: n, from: monthLabel(data.dueDate), to: monthLabel(last) }));
+            // Série: o aviso vai só da 1ª parcela (as demais podem ser enviadas pelo card).
+            if (opts.sendChargeEmail && firstId) await sendChargeEmail(firstId);
             return;
         }
 
@@ -1408,6 +1650,8 @@ export default function ContasReceberPage() {
             paidPaymentMethod: paidPaymentMethod as string | undefined,
         });
 
+        if (opts.sendChargeEmail) await sendChargeEmail(receivableId);
+
         if (editing?.seriesId) setSeriesEdit({ base: editing, data });
     }
 
@@ -1439,6 +1683,14 @@ export default function ContasReceberPage() {
                     category: data.category,
                     notes: data.notes,
                     paymentMethod: data.paymentMethod ?? null,
+                    // Dados de cobrança (só vêm preenchidos quando quem editou é Pro).
+                    ...Object.fromEntries(
+                        Object.entries({
+                            partyName: data.partyName, partyDoc: data.partyDoc,
+                            partyEmail: data.partyEmail, partyPhone: data.partyPhone,
+                            fineRate: data.fineRate, interestRate: data.interestRate,
+                        }).filter(([, v]) => v !== undefined)
+                    ),
                     ...stampUpdate(actor),
                 });
                 count++;
@@ -1639,7 +1891,7 @@ export default function ContasReceberPage() {
 
             {/* Modais */}
             <ReceivableModal
-                open={modal} editing={editing} uid={authUid}
+                open={modal} editing={editing} uid={authUid} isPro={isPro}
                 onClose={() => { setModal(false); setEditing(null); }}
                 onSave={handleSave}
             />
@@ -1870,6 +2122,8 @@ export default function ContasReceberPage() {
                                             key={receivable.id}
                                             receivable={receivable}
                                             alertDays={alertDays}
+                                            isPro={isPro}
+                                            onSendCharge={async () => { await sendChargeEmail(receivable.id); }}
                                             onEdit={() => { setEditing(receivable); setModal(true); }}
                                             onDelete={() => onDeleteRequested(receivable)}
                                             onOpenReceiveModal={() => {

@@ -37,12 +37,12 @@
     "cpf": "CPF",
     "email": "Email",
     "emailPlaceholder": "you@company.com",
-    "acceptTerms": "I have read and accept the terms of this contract. I declare that the information provided is true and that I have authority to represent the CLIENT company. The electronic acceptance will be recorded with date, time and IP.",
+    "acceptTerms": "I have read and accept the terms of this contract. I declare that the information provided is true and that I have authority to represent the CLIENT company. The electronic acceptance will be recorded with date, time and IP. I understand the subscription renews automatically and I authorize the recurring charges until I cancel.",
     "registerFailed": "The contract could not be registered.",
     "processError": "Error processing the contract.",
     "submitting": "Recording acceptance…",
     "submit": "Sign and proceed to payment",
-    "paymentNote": "Payment processed by InfinitePay (Pix or card).",
+    "paymentNote": "Payment processed by Mercado Pago. The subscription renews automatically every period until you cancel.",
     "contractedParty": "PROVIDER:",
     "ptOnlyNotice": "The contract below is written in Portuguese (Brazil) and cites Brazilian law; it is the legally valid version."
   }

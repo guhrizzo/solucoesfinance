@@ -108,16 +108,23 @@ export function renderContractText(p: ContractParties): RenderedContract {
     {
       heading: "Cláusula 2 — Do prazo e da vigência",
       body: [
-        `2.1. Este Contrato entra em vigor na data da confirmação do pagamento e ` +
-          `vigora pelo período correspondente ao Plano contratado: ${dias} (${
+        `2.1. Este Contrato entra em vigor na data da confirmação do primeiro ` +
+          `pagamento e vigora por prazo indeterminado, em ciclos de cobrança de ` +
+          `${dias} (${
             dias === 365 ? "trezentos e sessenta e cinco" : "trinta"
-          }) dias corridos.`,
-        `2.2. O modelo de contratação é pré-pago, SEM renovação automática e SEM ` +
-          `prazo de fidelidade. Cada novo pagamento estende o período de acesso ` +
-          `pelo prazo do respectivo Plano, contado a partir do maior valor entre ` +
-          `a data do pagamento e o término do período vigente.`,
-        `2.3. Não havendo novo pagamento, o acesso é encerrado automaticamente ao ` +
-          `fim do período vigente, sem incidência de multa.`,
+          }) dias corridos, conforme o Plano contratado, até o cancelamento ` +
+          `pela CONTRATANTE.`,
+        `2.2. O modelo de contratação é de assinatura com RENOVAÇÃO AUTOMÁTICA e ` +
+          `SEM prazo de fidelidade. Ao final de cada ciclo, o valor do Plano é ` +
+          `cobrado novamente, no meio de pagamento autorizado pela CONTRATANTE, e ` +
+          `o período de acesso é estendido pelo prazo do respectivo Plano. A ` +
+          `CONTRATANTE pode cancelar a renovação a qualquer tempo, pela própria ` +
+          `Plataforma, sem multa.`,
+        `2.3. Cancelada a renovação, ou não confirmado o pagamento de um ciclo ` +
+          `após as novas tentativas de cobrança realizadas pelo processador, o ` +
+          `acesso é encerrado ao fim do período vigente, acrescido de tolerância ` +
+          `de até 3 (três) dias enquanto a cobrança estiver sendo reprocessada, ` +
+          `sem incidência de multa.`,
       ],
     },
     {
@@ -125,14 +132,18 @@ export function renderContractText(p: ContractParties): RenderedContract {
       body: [
         `3.1. Pela licença objeto deste Contrato, a CONTRATANTE pagará à ` +
           `CONTRATADA o valor de ${valor} por período do Plano ${p.planLabel}.`,
-        `3.2. O pagamento é pré-pago e processado pela InfinitePay, por meio de ` +
-          `Pix ou cartão de crédito, podendo o cartão ser parcelado conforme as ` +
-          `condições oferecidas pelo processador, hipótese em que eventuais ` +
-          `encargos de parcelamento são de responsabilidade da CONTRATANTE.`,
-        `3.3. O acesso à Plataforma é liberado após a confirmação do pagamento ` +
-          `pelo processador.`,
-        `3.4. Os valores poderão ser reajustados pela CONTRATADA para contratações ` +
-          `futuras, mediante comunicação prévia, não afetando períodos já pagos.`,
+        `3.2. O pagamento é processado pelo Mercado Pago, por meio do meio de ` +
+          `pagamento autorizado pela CONTRATANTE no momento da contratação. Ao ` +
+          `contratar, a CONTRATANTE autoriza expressamente as cobranças ` +
+          `recorrentes do valor do Plano a cada ciclo, até o cancelamento. As ` +
+          `cobranças recorrentes não são parceladas.`,
+        `3.3. O acesso à Plataforma é liberado após a confirmação do primeiro ` +
+          `pagamento pelo processador e mantido enquanto os ciclos seguintes ` +
+          `forem confirmados.`,
+        `3.4. Os valores poderão ser reajustados pela CONTRATADA, mediante ` +
+          `comunicação com antecedência mínima de 30 (trinta) dias, não afetando ` +
+          `períodos já pagos. Discordando do reajuste, a CONTRATANTE poderá ` +
+          `cancelar a renovação antes da próxima cobrança.`,
       ],
     },
     {
@@ -148,7 +159,8 @@ export function renderContractText(p: ContractParties): RenderedContract {
           `término do período já pago.`,
         `4.3. As solicitações de arrependimento ou cancelamento são feitas pelos ` +
           `canais de atendimento da Plataforma ou pelo e-mail de contato da ` +
-          `CONTRATADA.`,
+          `CONTRATADA. O cancelamento da renovação automática também pode ser ` +
+          `feito diretamente na Plataforma, pelo titular da conta.`,
       ],
     },
     {

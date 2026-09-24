@@ -39,7 +39,7 @@ export function isTaxRegime(v: unknown): v is TaxRegime {
 // Incremente sempre que o texto de lib/contractText.ts mudar de forma
 // relevante. Fica gravado no ContractDoc e no hash — contratos antigos
 // continuam identificando a versão que a pessoa realmente aceitou.
-export const CONTRACT_VERSION = 1;
+export const CONTRACT_VERSION = 2; // v2: assinatura recorrente (Mercado Pago)
 
 // ─── Limites de tamanho dos campos do formulário ─────────────────────────────
 export const CONTRACT_LIMITS = {
@@ -92,6 +92,8 @@ export interface ContractDoc {
   status: ContractStatus;
 
   orderNsu: string | null;
+  /** Id da assinatura recorrente no Mercado Pago (preenchido no checkout). */
+  preapprovalId?: string | null;
   transactionNsu: string | null;
   paidAt: number | null;
   periodEnd: number | null;

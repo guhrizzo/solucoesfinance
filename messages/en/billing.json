@@ -14,7 +14,7 @@
     "titleTrial": "Free trial — {days, plural, one {# day left} other {# days left}}",
     "titleActive": "Your subscription is active",
     "subComped": "Your account has full, unlimited access at no charge. Nothing to pay.",
-    "subExpiredOwner": "Choose a plan to keep using NexusFi. Payment via Pix or card in up to 12 installments.",
+    "subExpiredOwner": "Choose a plan to keep using NexusFi. The subscription renews automatically and you can cancel any time.",
     "subExpiredMember": "This account's subscription is past due. Talk to the owner to sort out the payment.",
     "subTrialOwner": "Subscribe now and don't lose access when the trial ends.",
     "subTrialMember": "Account is in the trial period. The owner can subscribe at any time.",
@@ -29,7 +29,16 @@
     "annualSavings": "Save {value} per year",
     "subscribe": "Subscribe",
     "subscribeNow": "Subscribe now",
-    "processedBy": "Payment processed by InfinitePay.",
-    "logout": "Log out"
+    "processedBy": "Payment processed by Mercado Pago.",
+    "logout": "Log out",
+    "subActiveAuto": "{plan} plan · next charge on {date}.",
+    "subActiveCancelled": "{plan} plan · renewal cancelled, access until {date}.",
+    "subGrace": "{plan} plan · we are processing your renewal charge. Your access stays on for a few days.",
+    "autoRenewNote": "Auto-renewing subscription: you are charged every period until you cancel.",
+    "cancelRenewal": "Cancel auto-renewal",
+    "cancelConfirm": "Cancel the renewal? You keep access until {date} and will not be charged again.",
+    "cancelling": "Cancelling…",
+    "cancelError": "Could not cancel the renewal. Please try again.",
+    "cancelledOk": "Renewal cancelled. Your access continues until {date}."
   }
 }

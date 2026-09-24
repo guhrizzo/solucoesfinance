@@ -80,7 +80,11 @@
     "received": "Cobrado",
     "edit": "Editar",
     "delete": "Eliminar",
-    "settleLabel": "Cobrado"
+    "settleLabel": "Cobrado",
+    "penalties": "Multa {fine}% · intereses {interest}% al mes",
+    "updatedAmount": "actualizado {amount}",
+    "chargeSent": "Cobro enviado {date} a {email}",
+    "sendCharge": "Enviar cobro por correo"
   },
   "modal": {
     "editTitle": "Editar cobro",
@@ -122,7 +126,31 @@
     "pinConfirmEditTitle": "Confirmar edición",
     "pinConfirmCreateTitle": "Confirmar creación",
     "pinConfirmSaveSubtitle": "Ingresa tu PIN de 4 dígitos para guardar",
-    "saveError": "Error al guardar"
+    "saveError": "Error al guardar",
+    "charge": {
+      "title": "Cobro al cliente",
+      "name": "Nombre",
+      "namePlaceholder": "Nombre del cliente",
+      "doc": "CPF / CNPJ",
+      "email": "Correo",
+      "emailInvalid": "Correo inválido",
+      "phone": "Teléfono",
+      "fine": "Multa por atraso",
+      "fineHint": "% sobre el valor",
+      "interest": "Intereses por atraso",
+      "interestHint": "% al mes",
+      "none": "Sin",
+      "other": "Otro",
+      "preview": "Con 30 días de atraso: multa de {fine} + intereses de {interest}.",
+      "send": "Enviar correo de cobro al cliente",
+      "sendHint": "El cliente recibe el aviso con valor, vencimiento, multa e intereses al guardar la cuenta.",
+      "sendHintSeries": "El aviso va con la 1ª cuota; las demás se pueden enviar desde cada tarjeta.",
+      "sendNeedsEmail": "Informa un correo válido del cliente para enviar.",
+      "sendDisabledReceived": "Cuenta ya recibida — no hay nada que cobrar.",
+      "lockedTitle": "Cobro por correo con multa e intereses",
+      "lockedBody": "Envía avisos de cobro al cliente desde la app.",
+      "lockedCta": "Plan Pro"
+    }
   },
   "alertSettings": {
     "title": "Alertas de cobro",
@@ -187,6 +215,8 @@
     "receivedPosted": "¡Cobrado! Registrado en el Flujo de Caja ✓",
     "installmentsRemoved": "{count, plural, one {# cuota eliminada.} other {# cuotas eliminadas.}}",
     "billRemoved": "Cobro eliminado.",
-    "seriesUpdateError": "Error al actualizar la serie"
+    "seriesUpdateError": "Error al actualizar la serie",
+    "chargeEmailSent": "Cobro enviado a {email}",
+    "chargeEmailError": "No se pudo enviar el cobro"
   }
 }

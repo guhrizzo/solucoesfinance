@@ -4,8 +4,10 @@
 // (Admin SDK): a conta lê pra saber se está liberada, mas nunca escreve
 // (firestore.rules trava, no mesmo espírito de `profile/access`).
 //
-// Modelo pré-pago: não há débito automático. Cada pagamento estende
-// `currentPeriodEnd`. `isActive` = agora < max(trialEndsAt, currentPeriodEnd).
+// Cada pagamento aprovado estende `currentPeriodEnd`. Assinaturas novas são
+// RECORRENTES (o Mercado Pago cobra sozinho a cada ciclo e avisa por webhook);
+// as antigas, pagas avulso pela InfinitePay, seguem valendo até o fim do período.
+// `isActive` = agora < max(trialEndsAt, currentPeriodEnd [+ carência se há renovação automática]).
 
 import { TRIAL_DAYS, type PlanId, getPlan } from "./billingPlans";
 import { COMP_ACCESS_UNTIL } from "./compAccounts";
@@ -26,6 +28,14 @@ export interface BillingDoc {
    * Marcado pelo servidor quando o dono está em lib/compAccounts.
    */
   comped?: boolean;
+  /** Gateway da última cobrança. Ausente = legado (InfinitePay, avulso). */
+  gateway?: "infinitepay" | "mercadopago";
+  /** Id da assinatura recorrente no Mercado Pago (preapproval). */
+  subscriptionId?: string | null;
+  /** Estado da assinatura recorrente, espelhado do MP via webhook. */
+  subscriptionStatus?: "pending" | "authorized" | "paused" | "cancelled" | null;
+  /** Quando o cliente cancelou a renovação (ms epoch). O acesso pago segue até `currentPeriodEnd`. */
+  cancelledAt?: number | null;
 }
 
 export type BillingStatus = "trialing" | "active" | "past_due";
@@ -41,7 +51,20 @@ export interface SubscriptionState {
   inTrial: boolean;
   /** true = conta cortesia (adm supremo): sempre ativa, nunca cobrada. */
   comped: boolean;
+  /** true = há assinatura recorrente autorizada (o MP cobra o próximo ciclo sozinho). */
+  autoRenews: boolean;
+  /** true = o cliente cancelou a renovação; o acesso vale só até `accessUntil`. */
+  cancelled: boolean;
+  /** true = passou do fim do período mas ainda está na carência (cobrança sendo reprocessada). */
+  inGrace: boolean;
 }
+
+/**
+ * Tolerância depois do fim do período quando há assinatura recorrente
+ * autorizada: a cobrança do ciclo pode atrasar ou ser reprocessada pelo MP
+ * (cartão recusado, Pix pendente) e não queremos travar o cliente na hora.
+ */
+export const RENEWAL_GRACE_DAYS = 3;
 
 export function trialEndFrom(startMs: number): number {
   return startMs + TRIAL_DAYS * 24 * 60 * 60 * 1000;
@@ -113,14 +136,27 @@ export function resolveSubscriptionState(
       plan: (doc?.plan as PlanId) || null,
       inTrial: false,
       comped: true,
+      autoRenews: false,
+      cancelled: false,
+      inGrace: false,
     };
   }
 
   const trialEndsAt = Number(doc?.trialEndsAt) || 0;
   const currentPeriodEnd = Number(doc?.currentPeriodEnd) || 0;
+  const autoRenews = doc?.subscriptionStatus === "authorized";
+  const cancelled = doc?.subscriptionStatus === "cancelled";
+
+  // Só quem tem renovação automática viva ganha carência; cancelada/pausada/
+  // legada vence exatamente no fim do período.
+  const graceMs = autoRenews && currentPeriodEnd ? RENEWAL_GRACE_DAYS * 24 * 60 * 60 * 1000 : 0;
+  const paidActive = currentPeriodEnd > 0 && nowMs < currentPeriodEnd + graceMs;
+  const trialActive = nowMs < trialEndsAt;
+
   const accessUntil = Math.max(trialEndsAt, currentPeriodEnd);
-  const isActive = nowMs < accessUntil;
-  const inTrial = isActive && currentPeriodEnd <= nowMs;
+  const isActive = paidActive || trialActive;
+  const inTrial = trialActive && !paidActive;
+  const inGrace = paidActive && nowMs >= currentPeriodEnd;
 
   const status: BillingStatus = !isActive ? "past_due" : inTrial ? "trialing" : "active";
   // Dia de calendário, não bloco de 24h: decrementa na virada da meia-noite
@@ -136,6 +172,9 @@ export function resolveSubscriptionState(
     plan: (doc?.plan as PlanId) || null,
     inTrial,
     comped: false,
+    autoRenews,
+    cancelled,
+    inGrace,
   };
 }
 

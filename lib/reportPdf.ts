@@ -48,8 +48,8 @@ export interface ReportData {
   };
 
   dre?: {
-    receita: number; impostos: number; receitaLiquida: number; cmv: number;
-    lucroBruto: number; despesas: number; lucroLiquido: number; margemLiquida: number;
+    receita: number; cmv: number; lucroBruto: number; despesas: number;
+    lair: number; impostos: number; lucroLiquido: number; margemLiquida: number;
     receitaCats?: { name: string; total: number }[];
     impostosCats?: { name: string; total: number }[];
     cmvCats?: { name: string; total: number }[];
@@ -327,14 +327,14 @@ export async function exportReportPdf(data: ReportData): Promise<void> {
     const body = [
       [t("dreGrossRevenue"), BRL(d.receita)],
       ...detail(d.receitaCats),
-      [t("dreDeductions"), `-${BRL(d.impostos)}`],
-      ...detail(d.impostosCats),
-      [t("dreNetRevenue"), BRL(d.receitaLiquida)],
       [t("dreCmv"), `-${BRL(d.cmv)}`],
       ...detail(d.cmvCats),
       [t("dreGrossProfit"), BRL(d.lucroBruto)],
       [t("dreOpExpenses"), `-${BRL(d.despesas)}`],
       ...detail(d.despesasCats),
+      [t("dreLair"), BRL(d.lair)],
+      [t("dreTaxes"), `-${BRL(d.impostos)}`],
+      ...detail(d.impostosCats),
       [t("dreNetProfit"), BRL(d.lucroLiquido)],
       [t("dreMargin"), `${d.margemLiquida.toFixed(1)}%`],
     ];

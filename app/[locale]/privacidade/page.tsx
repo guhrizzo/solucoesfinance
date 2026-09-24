@@ -228,7 +228,7 @@ export default async function PrivacidadePage() {
           </li>
           <li>
             <strong className="font-semibold text-[var(--text)]">
-              InfinitePay
+              Mercado Pago
             </strong>{" "}
             — processamento dos pagamentos da assinatura.
           </li>
