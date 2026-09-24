@@ -41,7 +41,8 @@ export async function GET(request: Request) {
 
   const { limited, retryAfterSec } = checkRateLimit(
     `shopee-repasse:${getClientIp(request)}:${userId}`,
-    RATE_LIMIT
+    RATE_LIMIT,
+    scope.isSupremeAdmin
   );
   if (limited) {
     return NextResponse.json(

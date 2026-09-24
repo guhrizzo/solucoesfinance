@@ -10,6 +10,7 @@
 
 import { getAdminAuth, getAdminDb } from "./firebaseAdmin";
 import { hasPermission, type PermissionKey } from "./accountScope";
+import { isSupremeAdminEmail } from "./compAccounts";
 
 export interface ApiScope {
   /** uid do Firebase Auth de quem fez a requisição (do ID token). */
@@ -18,6 +19,13 @@ export interface ApiScope {
   ownerUid: string;
   isOwner: boolean;
   permissions: "all" | PermissionKey[];
+  /** E-mail do login (do ID token verificado). */
+  email: string | null;
+  /**
+   * Adm supremo (lib/compAccounts): nenhuma limitação — plano, recurso Pro ou
+   * rate limit — vale pra conta dele, seja dono ou membro de outra conta.
+   */
+  isSupremeAdmin: boolean;
 }
 
 export type ApiScopeResult = ApiScope | { error: string; status: number };
@@ -51,8 +59,11 @@ export async function requireScope(
 
   const auth = await getAdminAuth();
   let uid: string;
+  let email: string | null;
   try {
-    uid = (await auth.verifyIdToken(token)).uid;
+    const decoded = await auth.verifyIdToken(token);
+    uid = decoded.uid;
+    email = decoded.email ?? null;
   } catch {
     return { error: "Sessão inválida ou expirada. Entre novamente.", status: 401 };
   }
@@ -63,7 +74,7 @@ export async function requireScope(
   let scope: ApiScope;
   if (!snap.exists) {
     // Sem doc de acesso → é dono da própria conta (acesso total).
-    scope = { uid, ownerUid: uid, isOwner: true, permissions: "all" };
+    scope = { uid, ownerUid: uid, isOwner: true, permissions: "all", email, isSupremeAdmin: isSupremeAdminEmail(email) };
   } else {
     const data = (snap.data() ?? {}) as { ownerId?: string; permissions?: PermissionKey[] };
     const ownerUid = typeof data.ownerId === "string" && data.ownerId ? data.ownerId : uid;
@@ -72,6 +83,8 @@ export async function requireScope(
       ownerUid,
       isOwner: ownerUid === uid,
       permissions: Array.isArray(data.permissions) ? data.permissions : [],
+      email,
+      isSupremeAdmin: isSupremeAdminEmail(email),
     };
   }
 

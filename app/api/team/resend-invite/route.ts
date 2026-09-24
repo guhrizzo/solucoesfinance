@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireOwner } from "@/lib/teamAuth";
 import { teamInviteEmail } from "@/lib/emailTemplates";
+import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { PERMISSION_CATEGORIES } from "@/lib/accountScope";
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   const memberUid = typeof body?.memberUid === "string" ? body.memberUid : "";
   if (!memberUid) return NextResponse.json({ error: "Membro inválido." }, { status: 400 });
 
-  const { limited, retryAfterSec } = checkRateLimit(`team-resend:${memberUid}`, { windowMs: 15 * 60 * 1000, max: 3 });
+  const { limited, retryAfterSec } = checkRateLimit(`team-resend:${memberUid}`, { windowMs: 15 * 60 * 1000, max: 3 }, isSupremeAdminEmail(auth.ownerEmail));
   if (limited) {
     return NextResponse.json(
       { error: "Muitos reenvios em pouco tempo. Aguarde alguns minutos." },

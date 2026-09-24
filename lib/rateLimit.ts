@@ -43,8 +43,12 @@ export interface RateLimitResult {
   retryAfterSec: number;
 }
 
-/** Registra um pedido para `key` e diz se ele deve ser bloqueado pela janela deslizante. */
-export function checkRateLimit(key: string, { windowMs, max }: RateLimitOptions): RateLimitResult {
+/**
+ * Registra um pedido para `key` e diz se ele deve ser bloqueado pela janela deslizante.
+ * `bypass` (ex.: `scope.isSupremeAdmin`) libera sem contar — adm supremo não tem limite.
+ */
+export function checkRateLimit(key: string, { windowMs, max }: RateLimitOptions, bypass = false): RateLimitResult {
+  if (bypass) return { limited: false, remaining: max, retryAfterSec: 0 };
   ensureCleanup();
   const now = Date.now();
   const bucket = buckets.get(key) ?? { timestamps: [] };

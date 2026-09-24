@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       if (isScopeError(scope)) {
         return NextResponse.json({ error: scope.error }, { status: scope.status });
       }
-      const { limited, retryAfterSec } = checkRateLimit(`analyze-extract:${scope.uid}`, RATE_LIMIT);
+      const { limited, retryAfterSec } = checkRateLimit(`analyze-extract:${scope.uid}`, RATE_LIMIT, scope.isSupremeAdmin);
       if (limited) {
         return NextResponse.json(
           { error: "Muitas análises em pouco tempo. Aguarde alguns minutos e tente novamente." },

@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireOwner } from "@/lib/teamAuth";
 import { teamInviteEmail } from "@/lib/emailTemplates";
+import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { PERMISSION_CATEGORIES, type PermissionKey } from "@/lib/accountScope";
 
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
   const { limited, retryAfterSec } = checkRateLimit(`team-invite:${auth.ownerUid}`, {
     windowMs: 60 * 60 * 1000,
     max: 20,
-  });
+  }, isSupremeAdminEmail(auth.ownerEmail));
   if (limited) {
     return NextResponse.json(
       { error: "Muitos convites em pouco tempo. Aguarde e tente novamente." },

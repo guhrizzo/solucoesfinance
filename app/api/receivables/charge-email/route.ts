@@ -12,7 +12,8 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
-import { resolveSubscriptionState, isProAccess, type BillingDoc } from "@/lib/billing";
+import { isProAccess } from "@/lib/billing";
+import { resolveScopeSubscription } from "@/lib/scopeSubscription";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { receivableChargeEmail } from "@/lib/emailTemplates";
 import { formatMoney } from "@/lib/format";
@@ -50,13 +51,12 @@ export async function POST(request: Request) {
 
   const db = await getAdminDb();
 
-  const billingSnap = await db.doc(`users/${scope.ownerUid}/profile/billing`).get();
-  const state = resolveSubscriptionState(billingSnap.exists ? (billingSnap.data() as BillingDoc) : null);
+  const state = await resolveScopeSubscription(db, scope);
   if (!isProAccess(state)) {
     return NextResponse.json({ error: "O envio de cobrança por e-mail é exclusivo do plano Pro." }, { status: 403 });
   }
 
-  const { limited } = checkRateLimit(`charge-email:${scope.ownerUid}`, RATE_LIMIT);
+  const { limited } = checkRateLimit(`charge-email:${scope.ownerUid}`, RATE_LIMIT, scope.isSupremeAdmin);
   if (limited) {
     return NextResponse.json({ error: "Muitos envios em pouco tempo. Aguarde alguns minutos." }, { status: 429 });
   }

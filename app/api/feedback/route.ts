@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const { limited, retryAfterSec } = checkRateLimit(`feedback:${scope.uid}`, {
     windowMs: 60 * 60 * 1000,
     max: 15,
-  });
+  }, scope.isSupremeAdmin);
   if (limited) {
     return NextResponse.json(
       { error: "Você enviou muitos relatos em pouco tempo. Aguarde um pouco." },
