@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
+import { withWebhookLog } from "@/lib/webhookLog";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { infinitepayConfigured } from "@/lib/infinitepay";
 import { applyPaidOrder } from "@/lib/billingApply";
@@ -17,7 +18,7 @@ import { applyPaidOrder } from "@/lib/billingApply";
 // Resposta: 200 = processado ou ignorado de propósito; 400 = falha
 // transitória, a InfinitePay pode reenviar.
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   let body: any;
   try {
     body = await request.json();
@@ -53,3 +54,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err?.message || "erro interno" }, { status: 400 });
   }
 }
+
+// Cada chamada fica registrada em `webhookLogs` (ver lib/webhookLog.ts).
+export const POST = withWebhookLog("infinitepay-webhook", handlePost);

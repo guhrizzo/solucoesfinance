@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 import { NextResponse } from "next/server";
+import { withWebhookLog } from "@/lib/webhookLog";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { infinitepayConfigured, parseOrderNsu } from "@/lib/infinitepay";
@@ -19,7 +20,7 @@ import { mercadopagoConfigured } from "@/lib/mercadopago";
 // chegar antes (ou o webhook falhar) — aqui o próprio usuário força a
 // reconferência. Os dois caminhos são idempotentes, então rodar ambos é seguro.
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const scope = await requireScope(request);
   if (isScopeError(scope)) {
     return NextResponse.json({ error: scope.error }, { status: scope.status });
@@ -96,3 +97,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err?.message || "Erro ao confirmar pagamento." }, { status: 500 });
   }
 }
+
+// Cada chamada fica registrada em `webhookLogs` (ver lib/webhookLog.ts).
+export const POST = withWebhookLog("billing-confirm", handlePost);

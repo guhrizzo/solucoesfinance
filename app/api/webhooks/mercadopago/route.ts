@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
+import { withWebhookLog } from "@/lib/webhookLog";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { mercadopagoConfigured, verifyWebhookSignature } from "@/lib/mercadopago";
 import { applyAuthorizedPayment, syncPreapproval } from "@/lib/billingApplyMp";
@@ -21,7 +22,7 @@ import { applyAuthorizedPayment, syncPreapproval } from "@/lib/billingApplyMp";
 // Resposta: 200 = processado ou ignorado de propósito; 5xx = falha transitória
 // (Firestore, rede) e o MP reenvia (a cada ~15 min).
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   if (!mercadopagoConfigured()) {
     console.error("[MP webhook] MERCADOPAGO_ACCESS_TOKEN ausente");
     return NextResponse.json({ error: "não configurado" }, { status: 503 });
@@ -84,3 +85,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err?.message || "erro interno" }, { status: 500 });
   }
 }
+
+// Cada chamada fica registrada em `webhookLogs` (ver lib/webhookLog.ts).
+export const POST = withWebhookLog("mercadopago-webhook", handlePost);
