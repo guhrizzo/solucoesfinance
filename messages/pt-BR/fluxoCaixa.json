@@ -8,7 +8,10 @@
   "unknownError": "Erro desconhecido",
   "tryAgain": "Tentar novamente",
   "notAuthenticated": "Usuário não autenticado",
-  "type": { "inflow": "Entrada", "outflow": "Saída" },
+  "type": {
+    "inflow": "Entrada",
+    "outflow": "Saída"
+  },
   "kpi": {
     "budget": "Orçamento",
     "inflows": "Entradas",
@@ -179,6 +182,11 @@
     "willSettle": "Quita",
     "willPartial": "Pagamento parcial",
     "exceeds": "Valor maior que o saldo ({remaining})",
-    "skip": "Não vincular a nenhuma"
+    "skip": "Não vincular a nenhuma",
+    "titleIn": "Em qual conta a receber dar baixa?",
+    "bodyIn": "A entrada \"{description}\" de {amount} bate com mais de uma conta a receber. Escolha qual está sendo recebida.",
+    "kindReceivable": "Conta a receber",
+    "partialIn": "Já recebido {paid} · falta {remaining}",
+    "willPartialIn": "Recebimento parcial"
   }
 }

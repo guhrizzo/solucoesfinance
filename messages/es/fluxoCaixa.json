@@ -8,7 +8,10 @@
   "unknownError": "Error desconocido",
   "tryAgain": "Reintentar",
   "notAuthenticated": "Usuario no autenticado",
-  "type": { "inflow": "Ingreso", "outflow": "Egreso" },
+  "type": {
+    "inflow": "Ingreso",
+    "outflow": "Egreso"
+  },
   "kpi": {
     "budget": "Presupuesto",
     "inflows": "Ingresos",
@@ -179,6 +182,11 @@
     "willSettle": "Liquida",
     "willPartial": "Pago parcial",
     "exceeds": "Valor mayor que el saldo ({remaining})",
-    "skip": "No vincular a ninguna"
+    "skip": "No vincular a ninguna",
+    "titleIn": "¿Qué cuenta por cobrar dar de baja?",
+    "bodyIn": "La entrada \"{description}\" de {amount} coincide con más de una cuenta por cobrar. Elige cuál se está cobrando.",
+    "kindReceivable": "Cuenta por cobrar",
+    "partialIn": "Cobrado {paid} · faltan {remaining}",
+    "willPartialIn": "Cobro parcial"
   }
 }

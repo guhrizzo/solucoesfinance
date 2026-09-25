@@ -103,6 +103,8 @@ interface Tx {
   sourceBillId?: string;
   /** Id do imposto baixado (total ou parcialmente) automaticamente por esta saída (ver `findSettleCandidates`/`applySettle`). Campo próprio — NÃO é `sourceTaxId`, que marca o espelho criado pela página de Impostos e é apagado/regravado por `syncTaxCashflow`. */
   settledTaxId?: string;
+  /** Id da conta a receber baixada (total ou parcialmente) automaticamente por esta entrada (ver `findSettleCandidates`/`applySettle`). Campo próprio — NÃO é `sourceReceivableId`, que marca o espelho criado pela página de Contas a Receber e é apagado/regravado por `syncReceivableCashflow`. */
+  settledReceivableId?: string;
 }
 
 interface CostCenterOption {
@@ -215,9 +217,13 @@ async function autoSettleMatchingCostCenterExpense(
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const CENTS_EPSILON = 0.005;
 
-/** Conta a pagar ou imposto que uma saída do caixa pode quitar (total ou parcialmente). */
+/**
+ * Conta a pagar ou imposto que uma saída do caixa pode quitar — ou conta a
+ * receber que uma entrada pode quitar (total ou parcialmente). Em conta a
+ * receber, `amountPaid` aqui é o `amountReceived` gravado no doc.
+ */
 interface SettleCandidate {
-  kind: "bill" | "tax";
+  kind: "bill" | "tax" | "receivable";
   id: string;
   label: string;
   dueDate: string;
@@ -244,17 +250,42 @@ interface SettleCandidate {
  * ou menor (parcial). Com 1 conta pelo nome a baixa é automática (se couber);
  * com 2+ quem chama sempre pergunta ao usuário qual é (ver `SettlePickModal`),
  * mostrando as que não comportam o valor desabilitadas.
+ * Entrada segue a mesma regra contra Contas a Receber (título ou cliente).
  */
 async function findSettleCandidates(
   db: import("firebase/firestore").Firestore,
   uid: string,
-  tx: { description: string; amount: number }
+  tx: { type: TxType; description: string; amount: number }
 ): Promise<SettleCandidate[]> {
   const desc = (tx.description || "").trim().toLowerCase();
   if (!desc) return [];
 
   try {
     const { collection, getDocs } = await import("firebase/firestore");
+
+    // Entrada → Contas a Receber (users/{uid}/receivables) ainda não recebida
+    // que bate pelo título OU pelo cliente cadastrado (`partyName`).
+    if (tx.type === "entrada") {
+      const snap = await getDocs(collection(db, "users", uid, "receivables"));
+      const cabeR = (remaining: number) => remaining > 0 && Number(tx.amount) <= remaining + CENTS_EPSILON;
+      const out: SettleCandidate[] = [];
+      for (const d of snap.docs) {
+        const data = d.data();
+        if (data.status !== "pendente" && data.status !== "atrasado" && data.status !== "agendado") continue;
+        const titulo = (data.title || "").trim().toLowerCase();
+        const cliente = (data.partyName || "").trim().toLowerCase();
+        if (titulo !== desc && !(cliente && cliente === desc)) continue;
+        const amountPaid = Number(data.amountReceived || 0);
+        const remaining = round2(Number(data.amount) - amountPaid);
+        out.push({
+          kind: "receivable", id: d.id, label: data.title || data.partyName || "", dueDate: data.dueDate || "",
+          amount: Number(data.amount), amountPaid, remaining, fits: cabeR(remaining), status: String(data.status),
+          installmentIndex: data.installmentIndex, installmentCount: data.installmentCount,
+        });
+      }
+      return out.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    }
+
     // Subcoleções já escopadas por dono — sem where nenhum, filtra tudo no
     // cliente (mesmo espírito do Centro de Custo).
     const [billsSnap, taxesSnap] = await Promise.all([
@@ -316,14 +347,32 @@ async function applySettle(
   uid: string,
   target: SettleCandidate,
   amount: number,
-  actor: Actor
+  actor: Actor,
+  /** Data da entrada — vira o `receivedAt` da conta a receber quando quita. */
+  receivedAt?: string
 ): Promise<boolean> {
   try {
     const { doc, getDoc, updateDoc } = await import("firebase/firestore");
-    const ref = doc(db, "users", uid, target.kind === "bill" ? "bills" : "taxes", target.id);
+    const col = target.kind === "bill" ? "bills" : target.kind === "tax" ? "taxes" : "receivables";
+    const ref = doc(db, "users", uid, col, target.id);
     const snap = await getDoc(ref);
     if (!snap.exists()) return false;
     const data = snap.data();
+
+    // Conta a receber: mesma regra, com `amountReceived` e status "recebido".
+    if (target.kind === "receivable") {
+      const received = Number(data.amountReceived || 0);
+      const left = round2(Number(data.amount) - received);
+      if (data.status === "recebido" || left <= 0 || amount > left + CENTS_EPSILON) return false;
+      if (amount >= left - CENTS_EPSILON) {
+        await updateDoc(ref, {
+          status: "recebido", receivedAt: receivedAt || TODAY, amountReceived: data.amount, ...stampSettle(actor),
+        });
+      } else {
+        await updateDoc(ref, { amountReceived: round2(received + amount), ...stampSettle(actor) });
+      }
+      return true;
+    }
     const remaining = round2(Number(data.amount) - Number(data.amountPaid || 0));
     if (data.status === "pago" || remaining <= 0 || amount > remaining + CENTS_EPSILON) return false;
 
@@ -343,18 +392,19 @@ async function applySettle(
 // ─── Modal: escolher em qual conta/imposto dar baixa ──────────────────────────
 
 function SettlePickModal({ pick, onChoose }: {
-  pick: { description: string; amount: number; candidates: SettleCandidate[] } | null;
+  pick: { type: TxType; description: string; amount: number; candidates: SettleCandidate[] } | null;
   onChoose: (c: SettleCandidate | null) => void;
 }) {
   const t = useTranslations("fluxoCaixa.settlePick");
   const locale = useLocale();
+  const isIn = pick?.type === "entrada";
   return (
     <Modal open={!!pick} onClose={() => onChoose(null)} size="md" mobileSheet>
       {pick && (
         <div className="p-5 sm:p-6">
-          <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t("title")}</p>
+          <p className="font-heading text-base font-bold" style={{ color: "var(--cf-text)" }}>{t(isIn ? "titleIn" : "title")}</p>
           <p className="text-xs mt-1 mb-4" style={{ color: "var(--cf-text-2)" }}>
-            {t("body", { description: pick.description, amount: toBRL(pick.amount, locale) })}
+            {t(isIn ? "bodyIn" : "body", { description: pick.description, amount: toBRL(pick.amount, locale) })}
           </p>
           <div className="flex flex-col gap-2 max-h-[55vh] overflow-y-auto">
             {pick.candidates.map(c => {
@@ -369,8 +419,10 @@ function SettlePickModal({ pick, onChoose }: {
                         <span className="text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5"
                           style={c.kind === "bill"
                             ? { background: "var(--brand-weak)", color: "var(--brand)" }
-                            : { background: "var(--warn-weak)", color: "var(--warn)" }}>
-                          {t(c.kind === "bill" ? "kindBill" : "kindTax")}
+                            : c.kind === "receivable"
+                              ? { background: "var(--pos-weak)", color: "var(--pos)" }
+                              : { background: "var(--warn-weak)", color: "var(--warn)" }}>
+                          {t(c.kind === "bill" ? "kindBill" : c.kind === "receivable" ? "kindReceivable" : "kindTax")}
                         </span>
                         <span className="text-sm font-semibold truncate" style={{ color: "var(--cf-text)" }}>{c.label}</span>
                       </div>
@@ -380,14 +432,14 @@ function SettlePickModal({ pick, onChoose }: {
                       </p>
                       {c.amountPaid > 0 && (
                         <p className="text-xs mt-0.5" style={{ color: "var(--warn)" }}>
-                          {t("partial", { paid: toBRL(c.amountPaid, locale), remaining: toBRL(c.remaining, locale) })}
+                          {t(isIn ? "partialIn" : "partial", { paid: toBRL(c.amountPaid, locale), remaining: toBRL(c.remaining, locale) })}
                         </p>
                       )}
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-mono text-sm font-bold" style={{ color: "var(--cf-text)" }}>{toBRL(c.amount, locale)}</p>
                       <p className="text-[11px] mt-0.5" style={{ color: !c.fits ? "var(--neg)" : quita ? "var(--pos)" : "var(--warn)" }}>
-                        {!c.fits ? t("exceeds", { remaining: toBRL(c.remaining, locale) }) : t(quita ? "willSettle" : "willPartial")}
+                        {!c.fits ? t("exceeds", { remaining: toBRL(c.remaining, locale) }) : t(quita ? "willSettle" : isIn ? "willPartialIn" : "willPartial")}
                       </p>
                     </div>
                   </div>
@@ -1474,20 +1526,24 @@ export default function CashFlowPage() {
     window.location.href = "/login";
   }
 
-  // Saída que bate com 2+ contas a pagar/impostos: pergunta em qual dar baixa.
-  // A promessa fica pendurada até o usuário escolher (ou pular) no modal.
+  // Saída que bate com 2+ contas a pagar/impostos (ou entrada que bate com 2+
+  // contas a receber): pergunta em qual dar baixa. A promessa fica pendurada
+  // até o usuário escolher (ou pular) no modal.
   const [settlePick, setSettlePick] = useState<{
-    description: string; amount: number; candidates: SettleCandidate[];
+    type: TxType; description: string; amount: number; candidates: SettleCandidate[];
     resolve: (c: SettleCandidate | null) => void;
   } | null>(null);
 
-  const askSettleTarget = (description: string, amount: number, candidates: SettleCandidate[]) =>
-    new Promise<SettleCandidate | null>(resolve => setSettlePick({ description, amount, candidates, resolve }));
+  const askSettleTarget = (type: TxType, description: string, amount: number, candidates: SettleCandidate[]) =>
+    new Promise<SettleCandidate | null>(resolve => setSettlePick({ type, description, amount, candidates, resolve }));
 
-  /** Baixa automática em Contas a Pagar/Impostos; grava o vínculo em `target`. */
+  /**
+   * Baixa automática: saída → Contas a Pagar/Impostos; entrada → Contas a
+   * Receber. Grava o vínculo em `target`.
+   */
   async function settleBillOrTax(
     db: import("firebase/firestore").Firestore,
-    tx: { description: string; amount: number },
+    tx: { type: TxType; description: string; amount: number; date?: string },
     actor: Actor,
     target: Record<string, unknown>
   ) {
@@ -1498,11 +1554,12 @@ export default function CashFlowPage() {
     const cabem = candidates.filter(c => c.fits);
     const chosen = cabem.length === 0 ? null
       : candidates.length === 1 ? cabem[0]
-      : await askSettleTarget(tx.description, tx.amount, candidates);
+      : await askSettleTarget(tx.type, tx.description, tx.amount, candidates);
     if (!chosen) return;
-    if (!(await applySettle(db, uid, chosen, Number(tx.amount), actor))) return;
+    if (!(await applySettle(db, uid, chosen, Number(tx.amount), actor, tx.date))) return;
     if (chosen.kind === "bill") target.sourceBillId = chosen.id;
-    else target.settledTaxId = chosen.id;
+    else if (chosen.kind === "tax") target.settledTaxId = chosen.id;
+    else target.settledReceivableId = chosen.id;
   }
 
   async function handleSave(data: Omit<Tx, "id">) {
@@ -1570,8 +1627,9 @@ export default function CashFlowPage() {
       if (data.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
         if (matchedId) clean.sourceExpenseId = matchedId;
-        await settleBillOrTax(db, { description: data.description, amount: data.amount }, actor, clean);
       }
+      // Saída → Contas a Pagar/Impostos; entrada → Contas a Receber.
+      await settleBillOrTax(db, { type: data.type, description: data.description, amount: data.amount, date: data.date }, actor, clean);
       await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
     }
   }
@@ -1592,8 +1650,8 @@ export default function CashFlowPage() {
       if (tx.type === "saida") {
         const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: tx.description, amount: tx.amount });
         if (matchedId) entry.sourceExpenseId = matchedId;
-        await settleBillOrTax(db, { description: tx.description, amount: tx.amount }, importActor, entry);
       }
+      await settleBillOrTax(db, { type: tx.type, description: tx.description, amount: tx.amount, date: tx.date }, importActor, entry);
       entries.push(entry);
     }
     await Promise.all(entries.map((entry) => addDoc(collection(db, "users", uid, "cashflow"), entry)));

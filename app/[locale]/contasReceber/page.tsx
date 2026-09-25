@@ -23,7 +23,7 @@ import { verifyPin, loadPinHash, getPinLockStatus } from "@/app/hooks/usePin";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney } from "@/lib/format";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
-import { syncReceivableCashflow } from "@/lib/receivableCashflowSync";
+import { syncReceivableCashflow, autoSettleReceivableFromCashflow } from "@/lib/receivableCashflowSync";
 import { AuditTrail } from "@/app/components/AuditTrail";
 import SeriesScopeDialog, { type SeriesScope } from "@/app/components/SeriesScopeDialog";
 import { addMonthsClamped, monthLabel } from "@/lib/dateSeries";
@@ -63,6 +63,7 @@ interface Receivable {
     notes: string;
     photos: string[];      // URLs de Storage
     receivedAt?: string;
+    amountReceived?: number;           // soma das entradas do Fluxo de Caixa baixadas aqui (recebimento parcial) — ver CashFlow.tsx applySettle
     createdAt: number;
     userId: string;
     cashflowId?: string;
@@ -1418,6 +1419,16 @@ function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpen
                             </div>
                         )}
 
+                        {status !== ("recebido" as const) && (receivable.amountReceived ?? 0) > 0 && (
+                            <p className="text-xs mt-1.5 font-medium" style={{ color: "var(--warn)" }}>
+                                {t("partialReceived", {
+                                    paid: toBRL(receivable.amountReceived ?? 0, locale),
+                                    total: toBRL(receivable.amount, locale),
+                                    remaining: toBRL(Math.round((receivable.amount - (receivable.amountReceived ?? 0)) * 100) / 100, locale),
+                                })}
+                            </p>
+                        )}
+
                         {receivable.notes && (
                             <p className="text-xs mt-1.5 truncate" style={{ color: "var(--cf-text-3)" }}>📝 {receivable.notes}</p>
                         )}
@@ -1425,7 +1436,9 @@ function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpen
                         {/* Multa/juros configurados + valor atualizado se vencida */}
                         {status !== ("recebido" as const) && ((receivable.fineRate ?? 0) > 0 || (receivable.interestRate ?? 0) > 0) && (() => {
                             const late = Math.max(0, -days);
-                            const pen = chargeWithPenalties(receivable.amount, receivable.fineRate ?? 0, receivable.interestRate ?? 0, late);
+                            // Com recebimento parcial, multa/juros incidem só sobre o saldo em aberto (igual ao e-mail).
+                            const open = Math.round((receivable.amount - (receivable.amountReceived ?? 0)) * 100) / 100;
+                            const pen = chargeWithPenalties(open, receivable.fineRate ?? 0, receivable.interestRate ?? 0, late);
                             return (
                                 <p className="text-xs mt-1.5" style={{ color: late > 0 ? "var(--neg)" : "var(--cf-text-3)" }}>
                                     {t("penalties", { fine: receivable.fineRate ?? 0, interest: receivable.interestRate ?? 0 })}
@@ -1741,9 +1754,16 @@ export default function ContasReceberPage() {
         );
         if (data.recurrence !== "numeral") delete (clean as Record<string, unknown>).installmentCount;
 
+        // Reabrir uma cobrança que estava recebida zera o acumulado de baixas do
+        // extrato, senão ela reapareceria como "recebida parcialmente".
+        const reopened = !!editing && editing.status === "recebido" && data.status !== "recebido";
+        const amountReceived = reopened ? 0 : editing?.amountReceived;
+
         let receivableId: string;
         if (editing) {
-            await updateDoc(doc(db, "users", uid, "receivables", editing.id), { ...clean, ...stampUpdate(actor) } as any);
+            await updateDoc(doc(db, "users", uid, "receivables", editing.id), {
+                ...clean, ...(reopened ? { amountReceived: 0 } : {}), ...stampUpdate(actor),
+            } as any);
             receivableId = editing.id;
             showToast(t("toast.billUpdated"));
         } else {
@@ -1766,7 +1786,22 @@ export default function ContasReceberPage() {
             installmentCount: editing?.installmentCount,
             receivedAt: receivedAt as string | undefined,
             paidPaymentMethod: paidPaymentMethod as string | undefined,
+            amountReceived,
         });
+
+        // Cobrança ainda não recebida → procura entradas do Fluxo de Caixa
+        // (extrato importado, por exemplo) que batem com o título/cliente ATUAL
+        // e ainda não foram vinculadas a nada: corrigir o nome dá baixa
+        // retroativa, sem precisar reimportar.
+        if (data.status !== "recebido") {
+            await autoSettleReceivableFromCashflow(db, uid, {
+                id: receivableId,
+                title: data.title,
+                partyName: data.partyName,
+                amount: data.amount,
+                amountReceived,
+            }, actor);
+        }
 
         if (opts.sendChargeEmail) await sendChargeEmail(receivableId);
 
