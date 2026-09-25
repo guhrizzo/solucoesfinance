@@ -123,7 +123,8 @@ function Contrato() {
       }
       if (cancelled) return;
       setRazaoSocial((v) => v || company.razaoSocial);
-      setCnpj((v) => v || (company.cnpj ? maskCnpj(company.cnpj) : ""));
+      // Configurações aceita CPF ou CNPJ; o contrato só pré-preenche CNPJ.
+      setCnpj((v) => v || (company.cnpj.replace(/\D/g, "").length === 14 ? maskCnpj(company.cnpj) : ""));
       setEndereco((v) => v || company.endereco);
       setNome((v) => v || user.displayName || "");
       setEmail((v) => v || user.email || "");

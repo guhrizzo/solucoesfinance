@@ -28,9 +28,15 @@ const EMPTY_COMPANY: CompanyData = { nomeFantasia: "", razaoSocial: "", cnpj: ""
 const errMsg = (err: unknown, fallback: string) =>
   err instanceof Error && err.message ? err.message : fallback;
 
-/** Máscara simples de CNPJ (00.000.000/0000-00) aplicada enquanto digita. */
-function maskCnpj(raw: string): string {
+/** Máscara de CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) enquanto digita. */
+function maskDoc(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 14);
+  if (d.length <= 11) {
+    return d
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2");
+  }
   return d
     .replace(/^(\d{2})(\d)/, "$1.$2")
     .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
@@ -281,9 +287,9 @@ export default function PerfilTab({
           <Input
             id={cnpjId}
             value={company.cnpj}
-            onChange={(e) => setCompany((c) => ({ ...c, cnpj: maskCnpj(e.target.value) }))}
+            onChange={(e) => setCompany((c) => ({ ...c, cnpj: maskDoc(e.target.value) }))}
             disabled={!canEditCompany}
-            placeholder="00.000.000/0000-00"
+            placeholder="000.000.000-00 / 00.000.000/0000-00"
             inputMode="numeric"
             className="mono"
           />

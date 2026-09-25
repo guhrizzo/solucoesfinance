@@ -84,7 +84,8 @@
     "penalties": "Fee {fine}% · interest {interest}%/mo",
     "updatedAmount": "updated {amount}",
     "chargeSent": "Notice sent {date} to {email}",
-    "sendCharge": "Email payment notice"
+    "sendCharge": "Email payment notice",
+    "reminderOn": "Automatic reminders on (5 days before and on the due date)"
   },
   "modal": {
     "editTitle": "Edit invoice",
@@ -149,7 +150,26 @@
       "sendDisabledReceived": "Already received — nothing to charge.",
       "lockedTitle": "Email billing with late fee and interest",
       "lockedBody": "Send payment notices to customers right from the app.",
-      "lockedCta": "Pro plan"
+      "lockedCta": "Pro plan",
+      "pixKey": "Receiving Pix key",
+      "pixKeyType": "Pix key type",
+      "pixTypes": {
+        "cpfcnpj": "CPF/CNPJ",
+        "email": "Email",
+        "phone": "Phone",
+        "evp": "Random"
+      },
+      "pixPlaceholders": {
+        "cpfcnpj": "00.000.000/0000-00",
+        "email": "billing@company.com",
+        "phone": "(11) 91234-5678",
+        "evp": "123e4567-e89b-12d3-a456-426614174000"
+      },
+      "pixHint": "Key of the bank account where the company receives. Sent in the email with a Pix copy-and-paste code including the amount; saved as default.",
+      "pixInvalid": "Invalid Pix key for the selected type.",
+      "reminder": "Automatic due-date reminders",
+      "reminderHint": "5 days before and on the due date, by email and WhatsApp, with the Pix for payment.",
+      "reminderNeedsContact": "Enter the customer's email or phone to send reminders."
     }
   },
   "alertSettings": {

@@ -28,6 +28,7 @@ import { AuditTrail } from "@/app/components/AuditTrail";
 import SeriesScopeDialog, { type SeriesScope } from "@/app/components/SeriesScopeDialog";
 import { addMonthsClamped, monthLabel } from "@/lib/dateSeries";
 import { useSubscription } from "@/app/hooks/useSubscription";
+import { PIX_KEY_TYPES, normalizePixKey, formatPixKey, type PixKeyType } from "@/lib/pix";
 import { isProAccess } from "@/lib/billing";
 import { authedFetch } from "@/lib/authedFetch";
 import { Link } from "@/i18n/navigation";
@@ -77,6 +78,12 @@ interface Receivable {
     chargeEmailSentAt?: number;         // último aviso enviado (gravado pela API)
     chargeEmailLastTo?: string;
     chargeEmailCount?: number;
+    chargeWhatsAppSentAt?: number;      // último WhatsApp (lembrete automático)
+    chargeWhatsAppCount?: number;
+    pixKeyType?: PixKeyType;            // chave Pix recebedora — ver lib/pix.ts
+    pixKey?: string;                    // normalizada (CPF/CNPJ só dígitos, +55…)
+    autoReminder?: boolean;             // lembretes 5 dias antes e no vencimento (cron)
+    reminders?: Partial<Record<"d5" | "d0", { dueDate?: string; at?: number }>>;
     createdBy?: string;                 // uid de quem criou (auditoria via PIN)
     createdByName?: string;
     updatedBy?: string;                 // uid de quem editou por último
@@ -193,7 +200,7 @@ function useToast() {
 
 // ─── Modal de conta a receber ─────────────────────────────────────────────────
 
-type ReceivableInput = Omit<Receivable, "id" | "userId" | "createdAt" | "chargeEmailSentAt" | "chargeEmailLastTo" | "chargeEmailCount">;
+type ReceivableInput = Omit<Receivable, "id" | "userId" | "createdAt" | "chargeEmailSentAt" | "chargeEmailLastTo" | "chargeEmailCount" | "chargeWhatsAppSentAt" | "chargeWhatsAppCount" | "reminders">;
 
 interface ReceivableModalProps {
     open: boolean;
@@ -278,6 +285,11 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
     const [fineRate, setFineRate] = useState(0);
     const [interestRate, setInterestRate] = useState(0);
     const [sendChargeEmail, setSendChargeEmail] = useState(false);
+    const [pixKeyType, setPixKeyType] = useState<PixKeyType>("cpfcnpj");
+    const [pixKey, setPixKey] = useState("");
+    const [autoReminder, setAutoReminder] = useState(false);
+    // Chave padrão da empresa (profile/company) — pré-preenche e é atualizada ao salvar.
+    const [companyPix, setCompanyPix] = useState<{ type?: PixKeyType; key?: string } | null>(null);
     const [tab, setTab] = useState<"conta" | "cadastro">("conta");
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -294,6 +306,8 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
     const chargePhoneId = useId();
     const chargeDocId = useId();
     const chargeSendId = useId();
+    const chargePixId = useId();
+    const chargeReminderId = useId();
     const receivableDialogRef = useRef<HTMLDivElement>(null);
     const receivablePreviouslyFocused = useRef<HTMLElement | null>(null);
     const receivablePrevOpen = useRef(open);
@@ -324,12 +338,41 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
         setFineRate(editing?.fineRate ?? 0);
         setInterestRate(editing?.interestRate ?? 0);
         setSendChargeEmail(false);
+        setPixKeyType(editing?.pixKeyType ?? "cpfcnpj");
+        setPixKey(editing?.pixKey ? formatPixKey(editing.pixKeyType, editing.pixKey) : "");
+        setAutoReminder(editing?.autoReminder ?? false);
+        setCompanyPix(null);
         setTab("conta");
         setSaving(false);
         setErr("");
         setPinOpen(false);
         setPinErr("");
     }, [open]);
+
+    // Chave Pix padrão da empresa: pré-preenche quando a conta ainda não tem uma.
+    useEffect(() => {
+        if (!open || !uid || !isPro) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const [{ getFirebase }, { doc, getDoc }] = await Promise.all([
+                    import("@/lib/firebase"),
+                    import("firebase/firestore"),
+                ]);
+                const { db } = await getFirebase();
+                const snap = await getDoc(doc(db, "users", uid, "profile", "company"));
+                if (cancelled) return;
+                const d = snap.exists() ? snap.data() : {};
+                const def = { type: d.pixKeyType as PixKeyType | undefined, key: d.pixKey as string | undefined };
+                setCompanyPix(def);
+                if (!editing?.pixKey && def.key && def.type) {
+                    setPixKeyType(def.type);
+                    setPixKey(formatPixKey(def.type, def.key));
+                }
+            } catch { /* pré-preenchimento é best-effort */ }
+        })();
+        return () => { cancelled = true; };
+    }, [open, uid, isPro]);
 
     // Série "numeral" nasce toda pendente — não se pré-baixa um parcelamento.
     useEffect(() => {
@@ -377,7 +420,11 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
     const installmentsOk = !isSeries || (Number.isFinite(installments) && installments >= 2 && installments <= 60);
     const emailOk = !partyEmail.trim() || isValidEmail(partyEmail);
     const willSend = isPro && sendChargeEmail && status !== "recebido";
-    const chargeOk = emailOk && (!willSend || isValidEmail(partyEmail));
+    const pixNormalized = normalizePixKey(pixKeyType, pixKey);
+    const pixOk = !pixKey.trim() || pixNormalized !== null;
+    const reminderHasContact = isValidEmail(partyEmail) || onlyDigits(partyPhone).length >= 10;
+    const reminderOk = !isPro || !autoReminder || reminderHasContact;
+    const chargeOk = emailOk && (!willSend || isValidEmail(partyEmail)) && (!isPro || pixOk) && reminderOk;
     const canSave =
         title.trim().length >= 2 && amount > 0 && dueDate !== "" && paymentMethod !== null && installmentsOk && chargeOk;
 
@@ -447,9 +494,24 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
                         partyPhone: onlyDigits(partyPhone),
                         fineRate: clampRate(fineRate, MAX_FINE_RATE),
                         interestRate: clampRate(interestRate, MAX_INTEREST_RATE),
+                        pixKeyType,
+                        pixKey: pixNormalized ?? "",
+                        autoReminder,
                     } : {}),
                     installmentCount: isSeries && !editing ? installments : undefined,
                 }, { sendChargeEmail: willSend });
+                // Chave nova vira a padrão da empresa pras próximas cobranças.
+                if (isPro && pixNormalized && (companyPix?.key !== pixNormalized || companyPix?.type !== pixKeyType)) {
+                    try {
+                        const [{ getFirebase }, { doc, setDoc }] = await Promise.all([
+                            import("@/lib/firebase"),
+                            import("firebase/firestore"),
+                        ]);
+                        const { db } = await getFirebase();
+                        await setDoc(doc(db, "users", uid, "profile", "company"),
+                            { pixKeyType, pixKey: pixNormalized, updatedAt: Date.now() }, { merge: true });
+                    } catch { /* a conta já foi salva com a chave; o padrão é conveniência */ }
+                }
                 onClose();
             } catch (e: any) {
                 setErr(e?.message ?? t("saveError"));
@@ -595,6 +657,41 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
                                 </div>
                             </div>
 
+                            <div className="space-y-1.5">
+                                <label htmlFor={chargePixId} className="text-[11px] font-semibold" style={{ color: "var(--cf-text-2)" }}>{t("charge.pixKey")}</label>
+                                <div className="grid grid-cols-4 gap-1.5" role="group" aria-label={t("charge.pixKeyType")}>
+                                    {PIX_KEY_TYPES.map(k => {
+                                        const sel = pixKeyType === k;
+                                        return (
+                                            <button key={k} type="button" aria-pressed={sel}
+                                                onClick={() => { if (k !== pixKeyType) { setPixKeyType(k); setPixKey(""); } }}
+                                                className="py-1.5 rounded-lg text-[11px] font-bold border-2 cursor-pointer transition-all"
+                                                style={sel
+                                                    ? { borderColor: "var(--pos)", background: "var(--pos-weak)", color: "var(--pos)" }
+                                                    : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
+                                                {t(`charge.pixTypes.${k}`)}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <input id={chargePixId} value={pixKey}
+                                    inputMode={pixKeyType === "cpfcnpj" || pixKeyType === "phone" ? "numeric" : pixKeyType === "email" ? "email" : "text"}
+                                    autoComplete="off"
+                                    onChange={e => {
+                                        const v = e.target.value;
+                                        setPixKey(pixKeyType === "cpfcnpj" ? formatDoc(onlyDigits(v).slice(0, 14))
+                                            : pixKeyType === "phone" ? formatPhone(onlyDigits(v).slice(0, 11))
+                                            : v.trim());
+                                    }}
+                                    placeholder={t(`charge.pixPlaceholders.${pixKeyType}`)}
+                                    aria-invalid={!pixOk}
+                                    className="w-full rounded-lg px-3 py-2.5 text-sm outline-none font-mono"
+                                    style={{ background: "var(--cf-card)", border: `2px solid ${pixOk ? "var(--cf-border)" : "var(--neg)"}`, color: "var(--cf-text)" }} />
+                                <p className="text-[11px]" style={{ color: pixOk ? "var(--cf-text-3)" : "var(--neg)" }}>
+                                    {pixOk ? t("charge.pixHint") : t("charge.pixInvalid")}
+                                </p>
+                            </div>
+
                             <RateChooser key={`fine-${open}`} label={t("charge.fine")} hint={t("charge.fineHint")}
                                 presets={FINE_PRESETS} value={fineRate} max={MAX_FINE_RATE} onChange={setFineRate} />
                             <RateChooser key={`interest-${open}`} label={t("charge.interest")} hint={t("charge.interestHint")}
@@ -621,6 +718,22 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
                                         {status === "recebido" ? t("charge.sendDisabledReceived")
                                             : willSend && !isValidEmail(partyEmail) ? t("charge.sendNeedsEmail")
                                             : isSeries && !editing ? t("charge.sendHintSeries") : t("charge.sendHint")}
+                                    </span>
+                                </span>
+                            </label>
+                            <label htmlFor={chargeReminderId}
+                                className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 ${status === "recebido" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                                style={{ background: "var(--cf-card)", border: `1px solid ${autoReminder && status !== "recebido" ? "var(--pos)" : "var(--cf-border)"}` }}>
+                                <input id={chargeReminderId} type="checkbox" checked={autoReminder && status !== "recebido"}
+                                    disabled={status === "recebido"}
+                                    onChange={e => setAutoReminder(e.target.checked)}
+                                    className="mt-0.5 cursor-pointer accent-[var(--pos)]" />
+                                <span className="min-w-0">
+                                    <span className="block text-xs font-bold flex items-center gap-1.5" style={{ color: "var(--cf-text)" }}>
+                                        <Bell size={12} /> {t("charge.reminder")}
+                                    </span>
+                                    <span className="block text-[11px] mt-0.5" style={{ color: autoReminder && !reminderHasContact ? "var(--neg)" : "var(--cf-text-3)" }}>
+                                        {autoReminder && !reminderHasContact ? t("charge.reminderNeedsContact") : t("charge.reminderHint")}
                                     </span>
                                 </span>
                             </label>
@@ -1321,6 +1434,11 @@ function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpen
                             );
                         })()}
 
+                        {receivable.autoReminder && status !== ("recebido" as const) && (
+                            <p className="text-[11px] mt-1.5 flex items-center gap-1" style={{ color: "var(--cf-text-3)" }}>
+                                <Bell size={11} /> {t("reminderOn")}
+                            </p>
+                        )}
                         {receivable.chargeEmailSentAt && (
                             <p className="text-[11px] mt-1.5 flex items-center gap-1" style={{ color: "var(--cf-text-3)" }}>
                                 <Mail size={11} />
@@ -1689,6 +1807,7 @@ export default function ContasReceberPage() {
                             partyName: data.partyName, partyDoc: data.partyDoc,
                             partyEmail: data.partyEmail, partyPhone: data.partyPhone,
                             fineRate: data.fineRate, interestRate: data.interestRate,
+                            pixKeyType: data.pixKeyType, pixKey: data.pixKey, autoReminder: data.autoReminder,
                         }).filter(([, v]) => v !== undefined)
                     ),
                     ...stampUpdate(actor),

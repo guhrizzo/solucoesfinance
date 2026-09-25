@@ -32,7 +32,7 @@
       "tradeNamePlaceholder": "Ex.: NexusFi",
       "legalName": "Razão social",
       "legalNamePlaceholder": "Ex.: NexusFi Tecnologia Ltda.",
-      "cnpj": "CNPJ",
+      "cnpj": "CPF/CNPJ",
       "industry": "Ramo de atuação",
       "industryUndefined": "Não definido",
       "industryHint": "Definido no primeiro acesso — controla quais módulos aparecem no menu.",

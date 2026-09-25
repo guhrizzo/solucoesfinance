@@ -84,7 +84,8 @@
     "penalties": "Multa {fine}% · juros {interest}% a.m.",
     "updatedAmount": "atualizado {amount}",
     "chargeSent": "Cobrança enviada {date} para {email}",
-    "sendCharge": "Enviar cobrança por e-mail"
+    "sendCharge": "Enviar cobrança por e-mail",
+    "reminderOn": "Lembretes automáticos ativos (5 dias antes e no vencimento)"
   },
   "modal": {
     "editTitle": "Editar cobrança",
@@ -149,7 +150,26 @@
       "sendDisabledReceived": "Conta já recebida — não há o que cobrar.",
       "lockedTitle": "Cobrança por e-mail com multa e juros",
       "lockedBody": "Envie avisos de cobrança ao cliente direto do app.",
-      "lockedCta": "Plano Pro"
+      "lockedCta": "Plano Pro",
+      "pixKey": "Chave Pix recebedora",
+      "pixKeyType": "Tipo da chave Pix",
+      "pixTypes": {
+        "cpfcnpj": "CPF/CNPJ",
+        "email": "E-mail",
+        "phone": "Telefone",
+        "evp": "Aleatória"
+      },
+      "pixPlaceholders": {
+        "cpfcnpj": "00.000.000/0000-00",
+        "email": "financeiro@empresa.com.br",
+        "phone": "(11) 91234-5678",
+        "evp": "123e4567-e89b-12d3-a456-426614174000"
+      },
+      "pixHint": "Chave do banco onde a empresa recebe. Vai no e-mail com o Pix copia e cola já com o valor; fica salva como padrão.",
+      "pixInvalid": "Chave Pix inválida para o tipo escolhido.",
+      "reminder": "Lembretes automáticos de vencimento",
+      "reminderHint": "5 dias antes e no dia do vencimento, por e-mail e WhatsApp, com o Pix para pagamento.",
+      "reminderNeedsContact": "Informe o e-mail ou o telefone do cliente para enviar os lembretes."
     }
   },
   "alertSettings": {
