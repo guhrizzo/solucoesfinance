@@ -71,6 +71,7 @@
     "photoCount": "{count, plural, one {# foto} other {# fotos}}",
     "viewPhotos": "{count, plural, one {Ver # foto adjunta} other {Ver # fotos adjuntas}}",
     "receivedOn": "Cobrado el {date}",
+    "partialReceived": "Cobrado parcialmente: {paid} de {total} · faltan {remaining}",
     "overdueBy": "{count, plural, one {Atrasado hace # día} other {Atrasado hace # días}} · {date}",
     "dueToday": "⚠️ ¡Vence hoy! · {date}",
     "dueIn": "{count, plural, one {Vence en # día} other {Vence en # días}} · {date}",

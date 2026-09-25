@@ -8,7 +8,10 @@
   "unknownError": "Unknown error",
   "tryAgain": "Try again",
   "notAuthenticated": "User not authenticated",
-  "type": { "inflow": "Inflow", "outflow": "Outflow" },
+  "type": {
+    "inflow": "Inflow",
+    "outflow": "Outflow"
+  },
   "kpi": {
     "budget": "Budget",
     "inflows": "Inflows",
@@ -179,6 +182,11 @@
     "willSettle": "Settles",
     "willPartial": "Partial payment",
     "exceeds": "Amount exceeds balance ({remaining})",
-    "skip": "Don't link to any"
+    "skip": "Don't link to any",
+    "titleIn": "Which receivable should this settle?",
+    "bodyIn": "The inflow \"{description}\" of {amount} matches more than one receivable. Choose which one is being received.",
+    "kindReceivable": "Receivable",
+    "partialIn": "Received {paid} · {remaining} left",
+    "willPartialIn": "Partial receipt"
   }
 }
