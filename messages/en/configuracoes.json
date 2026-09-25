@@ -32,7 +32,7 @@
       "tradeNamePlaceholder": "e.g. NexusFi",
       "legalName": "Legal name",
       "legalNamePlaceholder": "e.g. NexusFi Tecnologia Ltda.",
-      "cnpj": "CNPJ",
+      "cnpj": "CPF/CNPJ",
       "industry": "Industry",
       "industryUndefined": "Not set",
       "industryHint": "Set on first sign-in — controls which modules appear in the menu.",
