@@ -268,13 +268,7 @@ export default function Paywall({ state, blocking = false, initialError = null }
             </>
           )}
 
-          {mostrarPlanos && (
-            <p className="mt-5 text-xs" style={{ color: "var(--db-text-3)" }}>
-              {t("autoRenewNote")}
-            </p>
-          )}
-
-          <p className="flex items-center gap-1.5 mt-3 text-xs" style={{ color: "var(--db-text-4)" }}>
+          <p className="flex items-center gap-1.5 mt-6 text-xs" style={{ color: "var(--db-text-4)" }}>
             <ShieldCheck size={12} /> {t("processedBy")}
           </p>
         </div>
