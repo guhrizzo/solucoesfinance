@@ -37,12 +37,12 @@
     "cpf": "CPF",
     "email": "E-mail",
     "emailPlaceholder": "voce@empresa.com.br",
-    "acceptTerms": "Li e aceito os termos deste contrato. Declaro que as informações prestadas são verdadeiras e que tenho poderes para representar a empresa CONTRATANTE. O aceite eletrônico será registrado com data, hora e IP. Estou ciente de que a assinatura renova automaticamente e autorizo as cobranças recorrentes até o cancelamento.",
+    "acceptTerms": "Li e aceito os termos deste contrato. Declaro que as informações prestadas são verdadeiras e que tenho poderes para representar a empresa CONTRATANTE. O aceite eletrônico será registrado com data, hora e IP.",
     "registerFailed": "Não foi possível registrar o contrato.",
     "processError": "Erro ao processar o contrato.",
     "submitting": "Registrando o aceite…",
     "submit": "Assinar e ir para o pagamento",
-    "paymentNote": "Pagamento processado pelo Mercado Pago. A assinatura renova automaticamente a cada período até você cancelar.",
+    "paymentNote": "Pagamento processado pela InfinitePay (Pix ou cartão).",
     "contractedParty": "CONTRATADA:",
     "ptOnlyNotice": "O contrato abaixo é redigido em português (Brasil) e cita a legislação brasileira; é a versão juridicamente válida."
   }

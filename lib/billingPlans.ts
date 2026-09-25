@@ -95,7 +95,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     label: "Básico mensal",
     priceCents: 4990,
     months: 1,
-    description: "Acesso completo ao Básico, cobrado a cada 30 dias até você cancelar.",
+    description: "Acesso completo ao Básico, renovação a cada 30 dias.",
   },
   {
     id: "basico-anual",
@@ -105,7 +105,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     label: "Básico anual",
     priceCents: 53890,
     months: 12,
-    description: "Acesso ao Básico por 12 meses, com desconto, renovado anualmente até você cancelar.",
+    description: "Acesso ao Básico por 12 meses, com desconto no valor à vista.",
   },
   {
     id: "pro-mensal",
@@ -115,7 +115,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     label: "Pro mensal",
     priceCents: 6990,
     months: 1,
-    description: "Acesso completo ao Pro, cobrado a cada 30 dias até você cancelar.",
+    description: "Acesso completo ao Pro, renovação a cada 30 dias.",
   },
   {
     id: "pro-anual",
@@ -125,7 +125,7 @@ export const BILLING_PLANS: BillingPlan[] = [
     label: "Pro anual",
     priceCents: 75990,
     months: 12,
-    description: "Acesso ao Pro por 12 meses, com desconto, renovado anualmente até você cancelar.",
+    description: "Acesso ao Pro por 12 meses, com desconto no valor à vista.",
   },
 ];
 

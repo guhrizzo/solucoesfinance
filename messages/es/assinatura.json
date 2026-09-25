@@ -37,12 +37,12 @@
     "cpf": "CPF",
     "email": "Correo electrónico",
     "emailPlaceholder": "tu@empresa.com",
-    "acceptTerms": "He leído y acepto los términos de este contrato. Declaro que la información proporcionada es verdadera y que tengo poderes para representar a la empresa CONTRATANTE. La aceptación electrónica se registrará con fecha, hora e IP. Entiendo que la suscripción se renueva automáticamente y autorizo los cobros recurrentes hasta que cancele.",
+    "acceptTerms": "He leído y acepto los términos de este contrato. Declaro que la información proporcionada es verdadera y que tengo poderes para representar a la empresa CONTRATANTE. La aceptación electrónica se registrará con fecha, hora e IP.",
     "registerFailed": "No se pudo registrar el contrato.",
     "processError": "Error al procesar el contrato.",
     "submitting": "Registrando la aceptación…",
     "submit": "Firmar e ir al pago",
-    "paymentNote": "Pago procesado por Mercado Pago. La suscripción se renueva automáticamente cada período hasta que canceles.",
+    "paymentNote": "Pago procesado por InfinitePay (Pix o tarjeta).",
     "contractedParty": "CONTRATADA:",
     "ptOnlyNotice": "El contrato de abajo está redactado en portugués (Brasil) y cita la legislación brasileña; es la versión jurídicamente válida."
   }

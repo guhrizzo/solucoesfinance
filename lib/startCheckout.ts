@@ -1,6 +1,6 @@
 // lib/startCheckout.ts
-// Client: dispara o checkout de um plano e redireciona pra autorização da
-// assinatura recorrente no Mercado Pago. Compartilhado pela página /assinatura, pelo <Paywall> e pelo
+// Client: dispara o checkout de um plano e redireciona pro pagamento da
+// InfinitePay. Compartilhado pela página /assinatura, pelo <Paywall> e pelo
 // fluxo pós-cadastro (?plano= → /assinatura?checkout=).
 
 import { BILLING_PLANS } from "./billingPlans";
