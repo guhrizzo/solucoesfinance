@@ -6,6 +6,7 @@ import {
   CANAIS_QUEBRA, TODOS_CANAIS, monthKey, prevMonthKey,
   type Canal, type CashflowTx, type Integracao, type ProdutoEstoque, type VendasFiltros,
 } from "./shared";
+import type { LancarNoCaixa } from "./ConfigVendasModal";
 
 // Fonte do orçamento do mês (mesmo cálculo do KPI "Orçamento" do Fluxo de
 // Caixa — ver app/components/CashFlow.tsx e lib/costCenterSync.ts): orçamento
@@ -61,6 +62,8 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
   const [bills, setBills] = useState<ForecastAmount[]>([]);
   const [taxes, setTaxes] = useState<ForecastAmount[]>([]);
   const [loading, setLoading] = useState(true);
+  // Configuração: vendas de cada marketplace entram no caixa? (profile/vendas)
+  const [lancarNoCaixa, setLancarNoCaixa] = useState<LancarNoCaixa>({});
 
   useEffect(() => {
     if (!ownerUid) return;
@@ -71,7 +74,7 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
       try {
         const { getFirebase } = await import("@/lib/firebase");
         const { db } = await getFirebase();
-        const { collection, onSnapshot, query, where, orderBy } = await import("firebase/firestore");
+        const { collection, doc, onSnapshot, query, where, orderBy } = await import("firebase/firestore");
         if (cancelled) return;
 
         const qTx = query(collection(db, "users", ownerUid, "cashflow"), orderBy("createdAt", "desc"));
@@ -79,6 +82,10 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
           setTxsCaixa(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CashflowTx)));
           setLoading(false);
         }, (err) => { console.error("Erro vendas/cashflow:", err); setLoading(false); }));
+
+        unsubs.push(onSnapshot(doc(db, "users", ownerUid, "profile", "vendas"), (snap) => {
+          setLancarNoCaixa((snap.data()?.lancarNoCaixa as LancarNoCaixa) || {});
+        }, (err) => console.debug("Aviso ao ler configuração de vendas:", err.code)));
 
         unsubs.push(onSnapshot(collection(db, "users", ownerUid, "vendas"), (snap) => {
           setTxsForaCaixa(snap.docs.map((d) => ({ id: d.id, ...d.data(), offCashflow: true } as CashflowTx)));
@@ -277,6 +284,6 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
 
   return {
     loading, produtos, vendas, resumo, resumoAnterior, porCanal, pontoEquilibrio,
-    serie, topProdutos, estoqueResumo, canaisConectados, opcoesProduto,
+    serie, topProdutos, estoqueResumo, canaisConectados, opcoesProduto, lancarNoCaixa,
   };
 }

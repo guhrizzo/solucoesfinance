@@ -34,7 +34,8 @@
   "channels": {
     "connected": "conectado",
     "notConnected": "não conectado",
-    "manual": "Venda manual"
+    "manual": "Venda manual",
+    "offCashflow": "fora do caixa"
   },
   "kpi": {
     "gross": "Receita bruta",
@@ -143,5 +144,21 @@
     "colCashflow": "No Fluxo de Caixa",
     "yes": "Sim",
     "no": "Não"
+  },
+  "config": {
+    "cta": "Configurações",
+    "title": "Configurações de vendas",
+    "close": "Fechar",
+    "marketplaceTitle": "Vendas dos marketplaces no Fluxo de Caixa",
+    "marketplaceHint": "Escolha, por canal, se os pedidos recebidos entram como receita no Fluxo de Caixa ou ficam só no Painel de Vendas. O estoque é baixado nos dois casos.",
+    "notConnected": "não conectado",
+    "onDesc": "Pedidos entram no Fluxo de Caixa (receita + taxas).",
+    "offDesc": "Pedidos ficam só no Painel de Vendas — não mexem no caixa, Dashboard nem relatórios.",
+    "switchLabel": "Lançar vendas do {channel} no Fluxo de Caixa",
+    "futureOnly": "Vale para os próximos pedidos. Vendas que já foram lançadas não mudam de lugar.",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "saved": "Configurações de vendas salvas.",
+    "saveError": "Não foi possível salvar as configurações."
   }
 }

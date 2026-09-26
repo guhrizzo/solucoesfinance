@@ -9,7 +9,7 @@ import { usePeriod } from "@/app/hooks/usePeriod";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, PageHeader, Button } from "@/app/components/ui";
-import { LayoutGrid, Calculator, Plus, X, Check } from "lucide-react";
+import { LayoutGrid, Calculator, Plus, X, Check, Settings } from "lucide-react";
 import type { VendasFiltros } from "./_components/shared";
 import { useVendasData } from "./_components/useVendasData";
 import { FilterBar } from "./_components/FilterBar";
@@ -20,6 +20,7 @@ import { TopProdutos, ResumoEstoque } from "./_components/ProdutosEstoque";
 import { SalesList } from "./_components/SalesList";
 import { PrecificacaoTab } from "./_components/PrecificacaoTab";
 import { NovaVendaModal } from "./_components/NovaVendaModal";
+import { ConfigVendasModal } from "./_components/ConfigVendasModal";
 
 type Aba = "geral" | "precificacao";
 
@@ -72,6 +73,7 @@ export default function VendasPage() {
   const [aba, setAba] = useState<Aba>("geral");
   const [filtros, setFiltros] = useState<VendasFiltros>({ canal: "todos", sku: "" });
   const [novaVendaOpen, setNovaVendaOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
@@ -109,6 +111,15 @@ export default function VendasPage() {
         onDone={(msg, type) => { showToast(msg, type); if (type === "success") setNovaVendaOpen(false); }}
       />
 
+      <ConfigVendasModal
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        ownerUid={ownerUid}
+        atual={d.lancarNoCaixa}
+        conectados={d.canaisConectados}
+        onSaved={showToast}
+      />
+
       <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6 pb-24 sm:px-6">
         <nav aria-label={t("breadcrumb.label")} className="text-xs" style={{ color: "var(--text-subtle)" }}>
           {t("breadcrumb.root")} <span aria-hidden="true">/</span>{" "}
@@ -119,9 +130,14 @@ export default function VendasPage() {
           title={t("meta.title")}
           subtitle={t.rich("meta.subtitle", { strong: (c) => <span className="font-semibold" style={{ color: "var(--text)" }}>{c}</span> })}
           actions={
+            <>
+            <Button variant="secondary" icon={Settings} onClick={() => setConfigOpen(true)}>
+              {t("config.cta")}
+            </Button>
             <Button icon={Plus} onClick={() => setNovaVendaOpen(true)} disabled={d.produtos.length === 0}>
               {t("newSale.cta")}
             </Button>
+            </>
           }
         />
 
@@ -169,6 +185,7 @@ export default function VendasPage() {
               <ChannelBreakdown
                 linhas={d.porCanal}
                 conectados={d.canaisConectados}
+                lancarNoCaixa={d.lancarNoCaixa}
                 selecionado={filtros.canal}
                 onSelect={(canal) => setFiltros((f) => ({ ...f, canal }))}
               />

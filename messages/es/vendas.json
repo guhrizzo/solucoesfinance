@@ -34,7 +34,8 @@
   "channels": {
     "connected": "conectado",
     "notConnected": "no conectado",
-    "manual": "Venta manual"
+    "manual": "Venta manual",
+    "offCashflow": "fuera de caja"
   },
   "kpi": {
     "gross": "Ingreso bruto",
@@ -143,5 +144,21 @@
     "colCashflow": "En el Flujo de Caja",
     "yes": "Sí",
     "no": "No"
+  },
+  "config": {
+    "cta": "Configuración",
+    "title": "Configuración de ventas",
+    "close": "Cerrar",
+    "marketplaceTitle": "Ventas de marketplaces en el Flujo de Caja",
+    "marketplaceHint": "Elige, por canal, si los pedidos recibidos entran como ingreso en el Flujo de Caja o quedan solo en el Panel de Ventas. El stock se descuenta en ambos casos.",
+    "notConnected": "no conectado",
+    "onDesc": "Los pedidos entran en el Flujo de Caja (ingreso + comisiones).",
+    "offDesc": "Los pedidos quedan solo en el Panel de Ventas — no afectan el Flujo de Caja, el Dashboard ni los informes.",
+    "switchLabel": "Registrar ventas de {channel} en el Flujo de Caja",
+    "futureOnly": "Aplica a los próximos pedidos. Las ventas ya registradas no cambian de lugar.",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saved": "Configuración de ventas guardada.",
+    "saveError": "No se pudo guardar la configuración."
   }
 }

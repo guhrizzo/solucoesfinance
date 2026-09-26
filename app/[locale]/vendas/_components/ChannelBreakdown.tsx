@@ -13,10 +13,11 @@ interface LinhaCanal {
 
 /** Participação de cada canal no mês + status de conexão dos marketplaces. */
 export function ChannelBreakdown({
-  linhas, conectados, selecionado, onSelect,
+  linhas, conectados, lancarNoCaixa, selecionado, onSelect,
 }: {
   linhas: LinhaCanal[];
   conectados: Record<Canal, boolean>;
+  lancarNoCaixa: Partial<Record<Canal, boolean>>;
   selecionado: Canal | "todos";
   onSelect: (c: Canal | "todos") => void;
 }) {
@@ -69,6 +70,7 @@ export function ChannelBreakdown({
           <span key={c} className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: conectados[c] ? "var(--pos)" : "var(--border-strong)" }} />
             {CANAL_INFO[c].label} · {conectados[c] ? t("channels.connected") : t("channels.notConnected")}
+            {lancarNoCaixa[c] === false && ` · ${t("channels.offCashflow")}`}
           </span>
         ))}
       </div>

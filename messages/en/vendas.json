@@ -34,7 +34,8 @@
   "channels": {
     "connected": "connected",
     "notConnected": "not connected",
-    "manual": "Manual sale"
+    "manual": "Manual sale",
+    "offCashflow": "not in cash flow"
   },
   "kpi": {
     "gross": "Gross revenue",
@@ -143,5 +144,21 @@
     "colCashflow": "In Cash Flow",
     "yes": "Yes",
     "no": "No"
+  },
+  "config": {
+    "cta": "Settings",
+    "title": "Sales settings",
+    "close": "Close",
+    "marketplaceTitle": "Marketplace sales in Cash Flow",
+    "marketplaceHint": "Choose, per channel, whether incoming orders are recorded as income in Cash Flow or stay only in the Sales panel. Stock is deducted either way.",
+    "notConnected": "not connected",
+    "onDesc": "Orders go into Cash Flow (income + fees).",
+    "offDesc": "Orders stay only in the Sales panel — they don't affect Cash Flow, the Dashboard or reports.",
+    "switchLabel": "Record {channel} sales in Cash Flow",
+    "futureOnly": "Applies to new orders. Sales already recorded stay where they are.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saved": "Sales settings saved.",
+    "saveError": "Couldn't save the settings."
   }
 }

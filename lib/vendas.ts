@@ -10,8 +10,10 @@
 // de caixa, só com metadados extras (`saleChannel`, `saleSku`, `saleQty`,
 // `saleUnitPrice`, `saleAdId`, `orderId`, `source: "marketplace"`).
 //
-// Exceção: com `foraDoCaixa` (opção da venda manual no Painel de Vendas) o
-// lançamento vai pra `users/{ownerUid}/vendas` — mesmo formato, mas fora do
+// Exceção: fora do caixa — venda manual com a caixa "Lançar no Fluxo de Caixa"
+// desmarcada, ou venda de marketplace de um canal desligado em Configurações
+// de vendas (`users/{ownerUid}/profile/vendas`). Aí o lançamento vai pra
+// `users/{ownerUid}/vendas` — mesmo formato, mas fora do
 // que o Dashboard / Fluxo de Caixa / relatórios leem. Só o Painel de Vendas lê
 // as duas coleções.
 //
@@ -109,12 +111,41 @@ function buildFeeEntry(v: VendaInput) {
   };
 }
 
-// ─── Admin SDK (rotas migradas: webhook do Mercado Livre) ────────────────────
+// ─── Configuração: vendas de marketplace no caixa? ───────────────────────────
+//
+// Por canal, a conta escolhe se as vendas recebidas dos marketplaces entram no
+// Fluxo de Caixa (padrão) ou ficam só no Painel de Vendas. Mora em
+// users/{ownerUid}/profile/vendas → { lancarNoCaixa: { mercadolivre: false, ... } }.
+// Canal ausente = true (comportamento de sempre).
+
+export type MarketplaceChannel = Exclude<VendaChannel, "manual">;
+
+export interface ConfigVendas {
+  lancarNoCaixa: Partial<Record<MarketplaceChannel, boolean>>;
+}
+
+/** Lê a configuração de vendas da conta (Admin SDK). Falha = padrão (tudo no caixa). */
+export async function lerConfigVendasAdmin(db: any, ownerUid: string): Promise<ConfigVendas> {
+  try {
+    const snap = await db.collection("users").doc(ownerUid).collection("profile").doc("vendas").get();
+    const data = snap.exists ? snap.data() : null;
+    return { lancarNoCaixa: (data && data.lancarNoCaixa) || {} };
+  } catch (err) {
+    console.error("[vendas] falha ao ler configuração de vendas:", err);
+    return { lancarNoCaixa: {} };
+  }
+}
+
+// ─── Admin SDK (webhooks e /api/vendas) ─────────────────────────────────────
 
 /**
- * Grava a venda como entrada no caixa usando o Firestore do Admin SDK
- * (getAdminDb()). Retorna o id do lançamento, ou null se já existia (dedupe por
- * orderId) ou se algo falhou — nunca lança, pra não derrubar o webhook.
+ * Grava a venda usando o Firestore do Admin SDK (getAdminDb()): no caixa
+ * (`cashflow`) ou, fora dele, em `vendas`. Retorna o id do lançamento, ou
+ * null se já existia (dedupe por orderId) ou se algo falhou — nunca lança, pra
+ * não derrubar o webhook.
+ *
+ * `opts.foraDoCaixa` explícito (venda manual do painel) manda. Sem ele, venda
+ * de marketplace segue a configuração da conta (`profile/vendas`).
  */
 export async function registrarVendaAdmin(
   db: any,
@@ -123,38 +154,47 @@ export async function registrarVendaAdmin(
   opts: { foraDoCaixa?: boolean } = {}
 ): Promise<string | null> {
   try {
-    const col = db.collection("users").doc(ownerUid).collection(opts.foraDoCaixa ? "vendas" : "cashflow");
-    const entry = { ...buildCashflowEntry(venda), ...(opts.foraDoCaixa ? { offCashflow: true } : {}) };
-
-    if (entry.orderId) {
-      const existing = await col
-        .where("orderId", "==", entry.orderId)
-        .where("saleChannel", "==", venda.channel)
-        .limit(1)
-        .get();
-      if (!existing.empty) return null;
+    let foraDoCaixa = opts.foraDoCaixa;
+    if (foraDoCaixa === undefined && venda.channel !== "manual") {
+      const cfg = await lerConfigVendasAdmin(db, ownerUid);
+      foraDoCaixa = cfg.lancarNoCaixa[venda.channel] === false;
     }
 
-    const ref = await col.add(entry);
+    const userRef = db.collection("users").doc(ownerUid);
+    const col = userRef.collection(foraDoCaixa ? "vendas" : "cashflow");
+    const marca = foraDoCaixa ? { offCashflow: true } : {};
+    const entry = { ...buildCashflowEntry(venda), ...marca };
 
-    // Lança as taxas do marketplace como SAÍDA atrelada ao pedido.
-    const fee = buildFeeEntry(venda);
-    if (fee.amount > 0) {
-      let jaLancada = false;
-      if (fee.orderId) {
-        const dup = await col
-          .where("orderId", "==", fee.orderId)
+    // Dedupe nas DUAS coleções: se a configuração mudar entre um webhook e o
+    // reenvio dele, o pedido não pode ser gravado de novo (nem baixar estoque
+    // de novo — os webhooks só baixam quando isto devolve um id).
+    const jaExiste = async (orderId: string) => {
+      for (const nome of ["cashflow", "vendas"]) {
+        const snap = await userRef.collection(nome)
+          .where("orderId", "==", orderId)
           .where("saleChannel", "==", venda.channel)
           .limit(1)
           .get();
-        jaLancada = !dup.empty;
+        if (!snap.empty) return true;
       }
-      if (!jaLancada) await col.add(fee);
+      return false;
+    };
+
+    if (entry.orderId && (await jaExiste(entry.orderId))) return null;
+
+    const ref = await col.add(entry);
+
+    // Lança as taxas do marketplace como SAÍDA atrelada ao pedido (na mesma
+    // coleção da venda — fora do caixa, as taxas também ficam fora).
+    const fee = buildFeeEntry(venda);
+    if (fee.amount > 0) {
+      const jaLancada = fee.orderId ? await jaExiste(fee.orderId) : false;
+      if (!jaLancada) await col.add({ ...fee, ...marca });
     }
 
     return ref.id;
   } catch (err) {
-    console.error("[vendas] falha ao registrar venda (admin) no caixa:", err);
+    console.error("[vendas] falha ao registrar venda (admin):", err);
     return null;
   }
 }
