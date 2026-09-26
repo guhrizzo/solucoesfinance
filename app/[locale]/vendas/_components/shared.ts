@@ -50,6 +50,8 @@ export interface CashflowTx {
   orderId?: string;
   source?: string;
   isMarketplaceFee?: boolean;
+  /** Venda registrada SEM lançamento no Fluxo de Caixa (coleção users/{uid}/vendas). */
+  offCashflow?: boolean;
 }
 
 export interface ProdutoEstoque {

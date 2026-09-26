@@ -28,6 +28,7 @@ const SUPREME_ADMIN_EMAILS = [
 /** E-mails com acesso vitalício e gratuito, sem privilégio de admin. */
 const COURTESY_ONLY_EMAILS = [
   "atelieda.ni25@gmail.com",
+  "assessoriaxfamily@gmail.com",
 ];
 
 /** E-mails com acesso vitalício e gratuito. Não remover sem alinhar com o dono. */

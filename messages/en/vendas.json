@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Sales Dashboard",
-    "subtitle": "Every sale is recorded as <strong>income in Cash Flow</strong> and deducted from stock right away."
+    "subtitle": "Record your sales here — they update stock right away and, if you want, go into <strong>Cash Flow as income</strong>."
   },
   "newSale": {
     "cta": "New sale",
@@ -21,7 +21,11 @@
     "success": "Sale of {qty}× {name} recorded.",
     "errorGeneric": "Could not record the sale.",
     "pinTitle": "Confirm sale",
-    "pinSubtitle": "Enter your 4-digit PIN to record the sale"
+    "pinSubtitle": "Enter your 4-digit PIN to record the sale",
+    "hintNoCashflow": "The sale is recorded only in the Sales panel and deducted from stock — your Cash Flow balance doesn't change.",
+    "cashflowToggle": "Add to Cash Flow",
+    "cashflowToggleOn": "The sale is recorded as income (Sales category).",
+    "cashflowToggleOff": "The sale won't go to Cash Flow, the Dashboard or reports."
   },
   "tabs": {
     "geral": "Overview",
@@ -134,6 +138,10 @@
     "noResults": "No sales match this search",
     "pageInfo": "{from}–{to} of {total}",
     "prevPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "offCashflow": "Not in cash flow",
+    "colCashflow": "In Cash Flow",
+    "yes": "Yes",
+    "no": "No"
   }
 }

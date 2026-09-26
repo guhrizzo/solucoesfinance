@@ -15,7 +15,9 @@ const RATE_LIMIT = { windowMs: 60_000, max: 20 }; // 20 vendas / min por IP+cont
 
 /**
  * Registra uma venda feita à mão no Painel de Vendas:
- *   1. lança a venda como ENTRADA no Fluxo de Caixa (lib/vendas → dedupe por orderId);
+ *   1. lança a venda como ENTRADA no Fluxo de Caixa (lib/vendas → dedupe por orderId)
+ *      — ou, se o usuário desmarcou "Lançar no Fluxo de Caixa", só no Painel
+ *      de Vendas (users/{uid}/vendas);
  *   2. baixa o estoque central do SKU e propaga a nova quantidade pros anúncios
  *      vinculados (Mercado Livre / Shopee) via API.
  *
@@ -48,6 +50,9 @@ export async function POST(request: Request) {
     const unitPrice = Math.max(0, Number(body.unitPrice) || 0);
     const productName = String(body.productName ?? sku).trim();
     const orderId = String(body.orderId ?? "").trim() || null;
+    // Opção do usuário no modal: false = a venda NÃO entra no Fluxo de Caixa
+    // (fica só no Painel de Vendas, em users/{uid}/vendas). Default: entra.
+    const lancarNoCaixa = body.lancarNoCaixa !== false;
 
     if (!sku) {
       return NextResponse.json({ error: "Selecione um produto." }, { status: 400 });
@@ -69,7 +74,7 @@ export async function POST(request: Request) {
       quantity,
       unitPrice,
       orderId,
-    });
+    }, { foraDoCaixa: !lancarNoCaixa });
 
     if (!vendaId) {
       return NextResponse.json({ ok: true, duplicated: true });

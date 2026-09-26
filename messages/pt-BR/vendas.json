@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Painel de Vendas",
-    "subtitle": "Cada venda entra como <strong>receita no Fluxo de Caixa</strong> e baixa o estoque na hora."
+    "subtitle": "Registre suas vendas aqui — elas baixam o estoque na hora e, se você quiser, entram como <strong>receita no Fluxo de Caixa</strong>."
   },
   "newSale": {
     "cta": "Nova venda",
@@ -21,7 +21,11 @@
     "success": "Venda de {qty}× {name} registrada.",
     "errorGeneric": "Não foi possível registrar a venda.",
     "pinTitle": "Confirmar venda",
-    "pinSubtitle": "Digite seu PIN de 4 dígitos para registrar a venda"
+    "pinSubtitle": "Digite seu PIN de 4 dígitos para registrar a venda",
+    "hintNoCashflow": "A venda fica registrada só no Painel de Vendas e dá baixa no estoque — o saldo do Fluxo de Caixa não muda.",
+    "cashflowToggle": "Lançar no Fluxo de Caixa",
+    "cashflowToggleOn": "A venda entra como receita (categoria Vendas).",
+    "cashflowToggleOff": "A venda não vai para o caixa, Dashboard nem relatórios."
   },
   "tabs": {
     "geral": "Visão geral",
@@ -134,6 +138,10 @@
     "noResults": "Nenhuma venda encontrada para essa busca",
     "pageInfo": "{from}–{to} de {total}",
     "prevPage": "Página anterior",
-    "nextPage": "Próxima página"
+    "nextPage": "Próxima página",
+    "offCashflow": "Fora do caixa",
+    "colCashflow": "No Fluxo de Caixa",
+    "yes": "Sim",
+    "no": "Não"
   }
 }

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Panel de Ventas",
-    "subtitle": "Cada venta entra como <strong>ingreso en el Flujo de Caja</strong> y descuenta el stock al instante."
+    "subtitle": "Registra tus ventas aquí — descuentan el stock al instante y, si quieres, entran como <strong>ingreso en el Flujo de Caja</strong>."
   },
   "newSale": {
     "cta": "Nueva venta",
@@ -21,7 +21,11 @@
     "success": "Venta de {qty}× {name} registrada.",
     "errorGeneric": "No se pudo registrar la venta.",
     "pinTitle": "Confirmar venta",
-    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para registrar la venta"
+    "pinSubtitle": "Ingresa tu PIN de 4 dígitos para registrar la venta",
+    "hintNoCashflow": "La venta queda registrada solo en el Panel de Ventas y descuenta el stock — el saldo del Flujo de Caja no cambia.",
+    "cashflowToggle": "Registrar en el Flujo de Caja",
+    "cashflowToggleOn": "La venta entra como ingreso (categoría Ventas).",
+    "cashflowToggleOff": "La venta no va al Flujo de Caja, al Dashboard ni a los informes."
   },
   "tabs": {
     "geral": "Visión general",
@@ -134,6 +138,10 @@
     "noResults": "Ninguna venta coincide con la búsqueda",
     "pageInfo": "{from}–{to} de {total}",
     "prevPage": "Página anterior",
-    "nextPage": "Página siguiente"
+    "nextPage": "Página siguiente",
+    "offCashflow": "Fuera de caja",
+    "colCashflow": "En el Flujo de Caja",
+    "yes": "Sí",
+    "no": "No"
   }
 }

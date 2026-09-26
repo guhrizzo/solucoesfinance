@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Search, ShoppingCart } from "lucide-react";
-import { Button, EmptyState, Table } from "@/app/components/ui";
+import { Button, EmptyState, Pill, Table } from "@/app/components/ui";
 import { CANAL_INFO, nomeDaVenda, toBRL, type Canal, type CashflowTx } from "./shared";
 
 type SortKey = "date" | "qty" | "total";
@@ -81,7 +81,7 @@ export function SalesList({ vendas, mes }: { vendas: CashflowTx[]; mes: string }
 
   const exportar = () => {
     baixarCsv(`vendas-${mes}.csv`, [
-      [t("colDate"), t("colChannel"), t("colProduct"), "SKU", t("colOrder"), t("colQty"), t("colUnit"), t("colTotal")],
+      [t("colDate"), t("colChannel"), t("colProduct"), "SKU", t("colOrder"), t("colQty"), t("colUnit"), t("colTotal"), t("colCashflow")],
       ...linhas.map((v) => [
         v.date,
         canalLabel((v.saleChannel || "manual") as Canal),
@@ -91,6 +91,7 @@ export function SalesList({ vendas, mes }: { vendas: CashflowTx[]; mes: string }
         v.saleQty || 1,
         unit(v).toFixed(2).replace(".", ","),
         (v.amount || 0).toFixed(2).replace(".", ","),
+        v.offCashflow ? t("no") : t("yes"),
       ]),
     ]);
   };
@@ -160,7 +161,10 @@ export function SalesList({ vendas, mes }: { vendas: CashflowTx[]; mes: string }
               case "produto":
                 return (
                   <div className="min-w-0">
-                    <div className="font-medium">{nomeDaVenda(v.description)}</div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-medium">{nomeDaVenda(v.description)}</span>
+                      {v.offCashflow && <Pill tone="muted">{t("offCashflow")}</Pill>}
+                    </div>
                     {v.saleSku && <div className="mono text-[11px]" style={{ color: "var(--text-subtle)" }}>{v.saleSku}</div>}
                   </div>
                 );

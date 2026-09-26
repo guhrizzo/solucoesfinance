@@ -18,6 +18,8 @@ import {
 // ou cadastrado manualmente). Pede o PIN e chama POST /api/vendas, que lança a
 // ENTRADA no Fluxo de Caixa e baixa/propaga o estoque pros canais vinculados.
 
+const CAIXA_PREF_KEY = "nexusfi-venda-lancar-caixa";
+
 export function NovaVendaModal({
   open, onClose, produtos, authUid, canaisConectados, onDone,
 }: {
@@ -39,10 +41,14 @@ export function NovaVendaModal({
   const [submitting, setSubmitting] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
   const [err, setErr] = useState("");
+  // Lançar no Fluxo de Caixa? Default: sim. A última escolha fica lembrada
+  // neste navegador (conveniência — não é configuração da conta).
+  const [lancarNoCaixa, setLancarNoCaixa] = useState(true);
 
   const skuId = useId();
   const qtyId = useId();
   const priceId = useId();
+  const caixaId = useId();
 
   const canais: Canal[] = [
     "manual",
@@ -68,7 +74,13 @@ export function NovaVendaModal({
     setSubmitting(false);
     setPinOpen(false);
     setErr("");
+    try { setLancarNoCaixa(localStorage.getItem(CAIXA_PREF_KEY) !== "0"); } catch { /* sem storage: default */ }
   }, [open, produtos]);
+
+  const onCaixaChange = (v: boolean) => {
+    setLancarNoCaixa(v);
+    try { localStorage.setItem(CAIXA_PREF_KEY, v ? "1" : "0"); } catch { /* noop */ }
+  };
 
   const onSkuChange = (next: string) => {
     setSku(next);
@@ -112,6 +124,7 @@ export function NovaVendaModal({
           quantity: qtyNum,
           unitPrice: priceNum,
           orderId: `manual-${(crypto as Crypto).randomUUID()}`,
+          lancarNoCaixa,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -149,7 +162,7 @@ export function NovaVendaModal({
           </div>
 
           <p className="text-[11px] leading-relaxed rounded-xl px-3 py-2.5" style={{ background: "var(--pos-weak)", color: "var(--pos)" }}>
-            {t("hint")}
+            {lancarNoCaixa ? t("hint") : t("hintNoCashflow")}
           </p>
 
           {err && (
@@ -235,6 +248,25 @@ export function NovaVendaModal({
               <AlertTriangle size={12} /> {t("lowStockWarn", { available: produto?.quantity ?? 0 })}
             </p>
           )}
+
+          {/* Lançar no caixa ou só registrar a venda (sem mexer no saldo). */}
+          <label
+            htmlFor={caixaId}
+            className="flex cursor-pointer items-start gap-2.5 rounded-xl px-3 py-2.5"
+            style={{ background: "var(--sunken)", border: "1px solid var(--border)" }}
+          >
+            <input
+              id={caixaId}
+              type="checkbox"
+              checked={lancarNoCaixa}
+              onChange={(e) => onCaixaChange(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--brand)]"
+            />
+            <span className="text-xs leading-snug">
+              <span className="block font-semibold" style={{ color: "var(--text)" }}>{t("cashflowToggle")}</span>
+              <span style={{ color: "var(--text-subtle)" }}>{lancarNoCaixa ? t("cashflowToggleOn") : t("cashflowToggleOff")}</span>
+            </span>
+          </label>
 
           <Button onClick={requestPin} disabled={!canSave} loading={submitting} icon={Check} variant="success" size="lg" className="w-full">
             {t("submit")}

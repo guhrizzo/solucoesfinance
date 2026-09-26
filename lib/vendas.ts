@@ -10,6 +10,11 @@
 // de caixa, só com metadados extras (`saleChannel`, `saleSku`, `saleQty`,
 // `saleUnitPrice`, `saleAdId`, `orderId`, `source: "marketplace"`).
 //
+// Exceção: com `foraDoCaixa` (opção da venda manual no Painel de Vendas) o
+// lançamento vai pra `users/{ownerUid}/vendas` — mesmo formato, mas fora do
+// que o Dashboard / Fluxo de Caixa / relatórios leem. Só o Painel de Vendas lê
+// as duas coleções.
+//
 // Idempotência: o ML reenvia o mesmo webhook várias vezes. Antes de gravar,
 // procura um lançamento com o mesmo `orderId` (quando houver) e, se já existir,
 // não duplica.
@@ -114,11 +119,12 @@ function buildFeeEntry(v: VendaInput) {
 export async function registrarVendaAdmin(
   db: any,
   ownerUid: string,
-  venda: VendaInput
+  venda: VendaInput,
+  opts: { foraDoCaixa?: boolean } = {}
 ): Promise<string | null> {
   try {
-    const col = db.collection("users").doc(ownerUid).collection("cashflow");
-    const entry = buildCashflowEntry(venda);
+    const col = db.collection("users").doc(ownerUid).collection(opts.foraDoCaixa ? "vendas" : "cashflow");
+    const entry = { ...buildCashflowEntry(venda), ...(opts.foraDoCaixa ? { offCashflow: true } : {}) };
 
     if (entry.orderId) {
       const existing = await col

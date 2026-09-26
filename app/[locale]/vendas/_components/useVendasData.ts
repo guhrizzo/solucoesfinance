@@ -51,7 +51,10 @@ const resumir = (vendas: CashflowTx[], taxas: CashflowTx[]): Resumo => {
  * entram aqui e valem pra KPIs, gráfico, rankings e lista.
  */
 export function useVendasData(ownerUid: string, mesSelecionado: string, filtros: VendasFiltros) {
-  const [txs, setTxs] = useState<CashflowTx[]>([]);
+  const [txsCaixa, setTxsCaixa] = useState<CashflowTx[]>([]);
+  // Vendas manuais que o usuário escolheu NÃO lançar no caixa (users/{uid}/vendas).
+  const [txsForaCaixa, setTxsForaCaixa] = useState<CashflowTx[]>([]);
+  const txs = useMemo(() => [...txsCaixa, ...txsForaCaixa], [txsCaixa, txsForaCaixa]);
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenterBudget[]>([]);
@@ -73,9 +76,13 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
 
         const qTx = query(collection(db, "users", ownerUid, "cashflow"), orderBy("createdAt", "desc"));
         unsubs.push(onSnapshot(qTx, (snap) => {
-          setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CashflowTx)));
+          setTxsCaixa(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CashflowTx)));
           setLoading(false);
         }, (err) => { console.error("Erro vendas/cashflow:", err); setLoading(false); }));
+
+        unsubs.push(onSnapshot(collection(db, "users", ownerUid, "vendas"), (snap) => {
+          setTxsForaCaixa(snap.docs.map((d) => ({ id: d.id, ...d.data(), offCashflow: true } as CashflowTx)));
+        }, (err) => console.debug("Aviso ao sincronizar vendas fora do caixa:", err.code)));
 
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", ownerUid));
         unsubs.push(onSnapshot(qEstoque, (snap) => {
