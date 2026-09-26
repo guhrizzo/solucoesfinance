@@ -105,6 +105,8 @@ interface Tx {
   settledTaxId?: string;
   /** Id da conta a receber baixada (total ou parcialmente) automaticamente por esta entrada (ver `findSettleCandidates`/`applySettle`). Campo próprio — NÃO é `sourceReceivableId`, que marca o espelho criado pela página de Contas a Receber e é apagado/regravado por `syncReceivableCashflow`. */
   settledReceivableId?: string;
+  /** Id da conta a receber da qual esta entrada é o espelho (gravado por `syncReceivableCashflow`, lib/receivableCashflowSync.ts). */
+  sourceReceivableId?: string;
 }
 
 interface CostCenterOption {
@@ -1741,7 +1743,18 @@ export default function CashFlowPage() {
     return centers + billsP + taxesP;
   }, [costCenters, expenses, bills, taxes, monthKey, currentMonthKey]);
 
-  const superavitDeficit = saldo - Math.max(previsao - previsaoPaga, 0);
+  // Entradas do mês que vieram de Contas a Receber — o espelho da cobrança
+  // recebida (`sourceReceivableId`) e as entradas que deram baixa numa conta a
+  // receber (`settledReceivableId`). Continuam em Entradas e no Saldo, mas NÃO
+  // somam no Resultado.
+  const entradasReceber = useMemo(
+    () => monthTxs
+      .filter(t => t.type === "entrada" && (t.sourceReceivableId || t.settledReceivableId))
+      .reduce((s, t) => s + t.amount, 0),
+    [monthTxs]
+  );
+
+  const superavitDeficit = saldo - entradasReceber - Math.max(previsao - previsaoPaga, 0);
 
   // Quebra do Orçamento linha a linha — alimenta o modal que abre ao clicar no
   // KPI "Orçamento". A soma dos três grupos bate exatamente com `previsao`.
