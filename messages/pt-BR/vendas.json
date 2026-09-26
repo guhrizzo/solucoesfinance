@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Painel de Vendas",
-    "subtitle": "Registre uma venda aqui — ela entra como <strong>entrada no Fluxo de Caixa</strong> e baixa o estoque na hora."
+    "subtitle": "Cada venda entra como <strong>receita no Fluxo de Caixa</strong> e baixa o estoque na hora."
   },
   "newSale": {
     "cta": "Nova venda",
@@ -28,19 +28,19 @@
     "precificacao": "Precificação"
   },
   "channels": {
-    "label": "Canais:",
     "connected": "conectado",
     "notConnected": "não conectado",
     "manual": "Venda manual"
   },
   "kpi": {
-    "salesValue": "Valor de vendas",
-    "salesCount": "Nº de vendas",
+    "gross": "Receita bruta",
+    "net": "Receita líquida",
+    "orders": "Pedidos",
     "avgTicket": "Ticket médio",
-    "unitsSold": "Unidades vendidas",
-    "unitsHint": "{count, plural, one {# unidade vendida} other {# unidades vendidas}}",
-    "avgTicketHint": "Valor médio por pedido",
-    "skusHint": "{count, plural, one {# SKU diferente} other {# SKUs diferentes}}"
+    "vsPrev": "{value} vs. mês anterior",
+    "noHistory": "Sem histórico no mês anterior",
+    "feesHint": "Taxas de marketplace: {value}",
+    "unitsHint": "{count, plural, one {# unidade} other {# unidades}}"
   },
   "byChannel": {
     "title": "Vendas por canal",
@@ -49,24 +49,20 @@
   "breakEven": {
     "title": "Ponto de equilíbrio",
     "subtitle": "Faturamento do mês necessário pra cobrir o orçamento (Centro de Custo, Contas a Pagar e Impostos)",
-    "target": "Meta do mês",
-    "soldThisMonth": "Vendido no mês",
-    "missing": "Faltam {value} para o ponto de equilíbrio",
-    "surplus": "Ponto de equilíbrio atingido · superávit de {value}",
-    "noBudget": "Nenhum orçamento configurado para este mês ainda. Cadastre um orçamento em Centro de Custo, Contas a Pagar ou Impostos para calcular o ponto de equilíbrio."
-  },
-  "shopeeNet": {
-    "label": "Líquido a receber da Shopee",
-    "simulated": "SIMULADO",
-    "released": "Já liberado (60d): {value}",
-    "fees": "Taxas: {value}"
+    "noBudgetShort": "Sem orçamento no mês. Cadastre em Centro de Custo, Contas a Pagar ou Impostos.",
+    "ofTarget": "de {value}",
+    "missingShort": "Faltam {value}",
+    "surplusShort": "Superávit de {value}"
   },
   "chart": {
-    "title": "Evolução das vendas",
+    "title": "Vendas diárias",
     "empty": "Sem vendas no período.",
-    "ariaLabel": "Gráfico de barras: vendas do Mercado Livre por período — detalhamento na tabela abaixo",
-    "caption": "Vendas do Mercado Livre por período",
-    "colPeriod": "Período"
+    "ariaLabel": "Gráfico de barras: vendas diárias do mês por canal — detalhamento na tabela a seguir",
+    "caption": "Vendas diárias por canal",
+    "colPeriod": "Período",
+    "dailyTarget": "Meta diária (ponto de equilíbrio): {value}",
+    "daysBelow": "{count, plural, one {# dia com venda abaixo da meta} other {# dias com venda abaixo da meta}}",
+    "targetLegend": "Meta diária"
   },
   "topProducts": {
     "title": "Produtos mais vendidos",
@@ -88,19 +84,6 @@
     "noStock": "Sem estoque",
     "footer": "{count, plural, one {# produto cadastrado.} other {# produtos cadastrados.}} Cada venda dá baixa automática e sincroniza os canais vinculados."
   },
-  "recentSales": {
-    "title": "Vendas recentes",
-    "subtitle": "Últimas vendas registradas e pedidos dos marketplaces",
-    "syncedBadge": "Lançado no caixa",
-    "colDate": "Data",
-    "colChannel": "Canal",
-    "colProduct": "Produto",
-    "colQty": "Qtd",
-    "colUnit": "Unitário",
-    "colTotal": "Total",
-    "empty": "Nenhuma venda no período.",
-    "emptyHint": "Vendas registradas aqui ou recebidas dos marketplaces aparecem nesta lista."
-  },
   "pricing": {
     "title": "Calculadora de Precificação",
     "intro": "Descubra o preço de venda que garante a margem desejada depois de pagar impostos e os custos variáveis por unidade (embalagem, frete, comissão).",
@@ -119,5 +102,38 @@
     "rowVariableCost": "Custo variável",
     "rowTaxes": "Impostos e taxas ({pct}%)",
     "rowProfit": "Lucro líquido ({pct}%)"
+  },
+  "breadcrumb": {
+    "label": "Navegação",
+    "root": "Vendas"
+  },
+  "filters": {
+    "period": "Período",
+    "channel": "Canal",
+    "product": "Produto",
+    "allChannels": "Todos os canais",
+    "allProducts": "Todos os produtos",
+    "compareHint": "Comparando com o mês anterior",
+    "clear": "Limpar filtros"
+  },
+  "salesList": {
+    "title": "Vendas",
+    "search": "Buscar vendas",
+    "searchPlaceholder": "Produto, SKU ou pedido",
+    "export": "Exportar CSV",
+    "colDate": "Data",
+    "colChannel": "Canal",
+    "colProduct": "Produto",
+    "colOrder": "Pedido",
+    "colQty": "Qtd",
+    "colUnit": "Unitário",
+    "colTotal": "Total",
+    "sortBy": "Ordenar por {col}",
+    "empty": "Nenhuma venda no período",
+    "emptyHint": "Vendas registradas aqui ou recebidas dos marketplaces aparecem nesta lista.",
+    "noResults": "Nenhuma venda encontrada para essa busca",
+    "pageInfo": "{from}–{to} de {total}",
+    "prevPage": "Página anterior",
+    "nextPage": "Próxima página"
   }
 }

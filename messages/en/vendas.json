@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Sales Dashboard",
-    "subtitle": "Record a sale here — it posts as a <strong>Cash Flow inflow</strong> and deducts stock right away."
+    "subtitle": "Every sale is recorded as <strong>income in Cash Flow</strong> and deducted from stock right away."
   },
   "newSale": {
     "cta": "New sale",
@@ -28,19 +28,19 @@
     "precificacao": "Pricing"
   },
   "channels": {
-    "label": "Channels:",
     "connected": "connected",
     "notConnected": "not connected",
     "manual": "Manual sale"
   },
   "kpi": {
-    "salesValue": "Sales value",
-    "salesCount": "Sales count",
+    "gross": "Gross revenue",
+    "net": "Net revenue",
+    "orders": "Orders",
     "avgTicket": "Average ticket",
-    "unitsSold": "Units sold",
-    "unitsHint": "{count, plural, one {# unit sold} other {# units sold}}",
-    "avgTicketHint": "Average value per order",
-    "skusHint": "{count, plural, one {# different SKU} other {# different SKUs}}"
+    "vsPrev": "{value} vs. previous month",
+    "noHistory": "No history last month",
+    "feesHint": "Marketplace fees: {value}",
+    "unitsHint": "{count, plural, one {# unit} other {# units}}"
   },
   "byChannel": {
     "title": "Sales by channel",
@@ -49,24 +49,20 @@
   "breakEven": {
     "title": "Break-even point",
     "subtitle": "Revenue needed this month to cover the budget (Cost Center, Bills and Taxes)",
-    "target": "Monthly target",
-    "soldThisMonth": "Sold this month",
-    "missing": "{value} left to reach the break-even point",
-    "surplus": "Break-even point reached · {value} surplus",
-    "noBudget": "No budget set for this month yet. Set a budget in Cost Center, Bills or Taxes to calculate the break-even point."
-  },
-  "shopeeNet": {
-    "label": "Shopee net receivable",
-    "simulated": "SIMULATED",
-    "released": "Released (60d): {value}",
-    "fees": "Fees: {value}"
+    "noBudgetShort": "No budget this month. Add one in Cost Centers, Bills or Taxes.",
+    "ofTarget": "of {value}",
+    "missingShort": "{value} to go",
+    "surplusShort": "Surplus of {value}"
   },
   "chart": {
-    "title": "Sales trend",
+    "title": "Daily sales",
     "empty": "No sales in the period.",
-    "ariaLabel": "Bar chart: Mercado Livre sales by period — breakdown in the table below",
-    "caption": "Mercado Livre sales by period",
-    "colPeriod": "Period"
+    "ariaLabel": "Bar chart: daily sales for the month by channel — details in the table below",
+    "caption": "Daily sales by channel",
+    "colPeriod": "Period",
+    "dailyTarget": "Daily target (break-even): {value}",
+    "daysBelow": "{count, plural, one {# day with sales below target} other {# days with sales below target}}",
+    "targetLegend": "Daily target"
   },
   "topProducts": {
     "title": "Best-selling products",
@@ -88,19 +84,6 @@
     "noStock": "Out of stock",
     "footer": "{count, plural, one {# product registered.} other {# products registered.}} Each sale deducts stock automatically and syncs the linked channels."
   },
-  "recentSales": {
-    "title": "Recent sales",
-    "subtitle": "Latest recorded sales and marketplace orders",
-    "syncedBadge": "Posted to cash flow",
-    "colDate": "Date",
-    "colChannel": "Channel",
-    "colProduct": "Product",
-    "colQty": "Qty",
-    "colUnit": "Unit",
-    "colTotal": "Total",
-    "empty": "No sales in the period.",
-    "emptyHint": "Sales recorded here or received from the marketplaces show up in this list."
-  },
   "pricing": {
     "title": "Pricing Calculator",
     "intro": "Find the sale price that secures your target margin after paying taxes and the variable costs per unit (packaging, shipping, commission).",
@@ -119,5 +102,38 @@
     "rowVariableCost": "Variable cost",
     "rowTaxes": "Taxes and fees ({pct}%)",
     "rowProfit": "Net profit ({pct}%)"
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "root": "Sales"
+  },
+  "filters": {
+    "period": "Period",
+    "channel": "Channel",
+    "product": "Product",
+    "allChannels": "All channels",
+    "allProducts": "All products",
+    "compareHint": "Compared with previous month",
+    "clear": "Clear filters"
+  },
+  "salesList": {
+    "title": "Sales",
+    "search": "Search sales",
+    "searchPlaceholder": "Product, SKU or order",
+    "export": "Export CSV",
+    "colDate": "Date",
+    "colChannel": "Channel",
+    "colProduct": "Product",
+    "colOrder": "Order",
+    "colQty": "Qty",
+    "colUnit": "Unit",
+    "colTotal": "Total",
+    "sortBy": "Sort by {col}",
+    "empty": "No sales in this period",
+    "emptyHint": "Sales recorded here or received from marketplaces show up in this list.",
+    "noResults": "No sales match this search",
+    "pageInfo": "{from}–{to} of {total}",
+    "prevPage": "Previous page",
+    "nextPage": "Next page"
   }
 }

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Panel de Ventas",
-    "subtitle": "Registra una venta aquí — entra como <strong>ingreso en el Flujo de Caja</strong> y descuenta el stock al instante."
+    "subtitle": "Cada venta entra como <strong>ingreso en el Flujo de Caja</strong> y descuenta el stock al instante."
   },
   "newSale": {
     "cta": "Nueva venta",
@@ -28,19 +28,19 @@
     "precificacao": "Precios"
   },
   "channels": {
-    "label": "Canales:",
     "connected": "conectado",
     "notConnected": "no conectado",
     "manual": "Venta manual"
   },
   "kpi": {
-    "salesValue": "Valor de ventas",
-    "salesCount": "N.º de ventas",
+    "gross": "Ingreso bruto",
+    "net": "Ingreso neto",
+    "orders": "Pedidos",
     "avgTicket": "Ticket promedio",
-    "unitsSold": "Unidades vendidas",
-    "unitsHint": "{count, plural, one {# unidad vendida} other {# unidades vendidas}}",
-    "avgTicketHint": "Valor promedio por pedido",
-    "skusHint": "{count, plural, one {# SKU distinto} other {# SKU distintos}}"
+    "vsPrev": "{value} vs. mes anterior",
+    "noHistory": "Sin historial el mes anterior",
+    "feesHint": "Comisiones de marketplace: {value}",
+    "unitsHint": "{count, plural, one {# unidad} other {# unidades}}"
   },
   "byChannel": {
     "title": "Ventas por canal",
@@ -49,24 +49,20 @@
   "breakEven": {
     "title": "Punto de equilibrio",
     "subtitle": "Facturación del mes necesaria para cubrir el presupuesto (Centro de Costos, Cuentas por Pagar e Impuestos)",
-    "target": "Meta del mes",
-    "soldThisMonth": "Vendido este mes",
-    "missing": "Faltan {value} para el punto de equilibrio",
-    "surplus": "Punto de equilibrio alcanzado · superávit de {value}",
-    "noBudget": "Aún no hay presupuesto configurado para este mes. Configura un presupuesto en Centro de Costos, Cuentas por Pagar o Impuestos para calcular el punto de equilibrio."
-  },
-  "shopeeNet": {
-    "label": "Neto a recibir de Shopee",
-    "simulated": "SIMULADO",
-    "released": "Ya liberado (60d): {value}",
-    "fees": "Comisiones: {value}"
+    "noBudgetShort": "Sin presupuesto este mes. Regístralo en Centro de Costos, Cuentas por Pagar o Impuestos.",
+    "ofTarget": "de {value}",
+    "missingShort": "Faltan {value}",
+    "surplusShort": "Superávit de {value}"
   },
   "chart": {
-    "title": "Evolución de las ventas",
+    "title": "Ventas diarias",
     "empty": "Sin ventas en el período.",
-    "ariaLabel": "Gráfico de barras: ventas de Mercado Livre por período — detalle en la tabla de abajo",
-    "caption": "Ventas de Mercado Livre por período",
-    "colPeriod": "Período"
+    "ariaLabel": "Gráfico de barras: ventas diarias del mes por canal — detalle en la tabla siguiente",
+    "caption": "Ventas diarias por canal",
+    "colPeriod": "Período",
+    "dailyTarget": "Meta diaria (punto de equilibrio): {value}",
+    "daysBelow": "{count, plural, one {# día con ventas bajo la meta} other {# días con ventas bajo la meta}}",
+    "targetLegend": "Meta diaria"
   },
   "topProducts": {
     "title": "Productos más vendidos",
@@ -88,19 +84,6 @@
     "noStock": "Sin stock",
     "footer": "{count, plural, one {# producto registrado.} other {# productos registrados.}} Cada venta descuenta stock automáticamente y sincroniza los canales vinculados."
   },
-  "recentSales": {
-    "title": "Ventas recientes",
-    "subtitle": "Últimas ventas registradas y pedidos de los marketplaces",
-    "syncedBadge": "Registrado en caja",
-    "colDate": "Fecha",
-    "colChannel": "Canal",
-    "colProduct": "Producto",
-    "colQty": "Cant.",
-    "colUnit": "Unitario",
-    "colTotal": "Total",
-    "empty": "Ninguna venta en el período.",
-    "emptyHint": "Las ventas registradas aquí o recibidas de los marketplaces aparecen en esta lista."
-  },
   "pricing": {
     "title": "Calculadora de Precios",
     "intro": "Descubre el precio de venta que garantiza el margen deseado después de pagar impuestos y los costos variables por unidad (embalaje, envío, comisión).",
@@ -119,5 +102,38 @@
     "rowVariableCost": "Costo variable",
     "rowTaxes": "Impuestos y comisiones ({pct}%)",
     "rowProfit": "Ganancia neta ({pct}%)"
+  },
+  "breadcrumb": {
+    "label": "Navegación",
+    "root": "Ventas"
+  },
+  "filters": {
+    "period": "Período",
+    "channel": "Canal",
+    "product": "Producto",
+    "allChannels": "Todos los canales",
+    "allProducts": "Todos los productos",
+    "compareHint": "Comparando con el mes anterior",
+    "clear": "Limpiar filtros"
+  },
+  "salesList": {
+    "title": "Ventas",
+    "search": "Buscar ventas",
+    "searchPlaceholder": "Producto, SKU o pedido",
+    "export": "Exportar CSV",
+    "colDate": "Fecha",
+    "colChannel": "Canal",
+    "colProduct": "Producto",
+    "colOrder": "Pedido",
+    "colQty": "Cant.",
+    "colUnit": "Unitario",
+    "colTotal": "Total",
+    "sortBy": "Ordenar por {col}",
+    "empty": "No hay ventas en el período",
+    "emptyHint": "Las ventas registradas aquí o recibidas de los marketplaces aparecen en esta lista.",
+    "noResults": "Ninguna venta coincide con la búsqueda",
+    "pageInfo": "{from}–{to} de {total}",
+    "prevPage": "Página anterior",
+    "nextPage": "Página siguiente"
   }
 }
