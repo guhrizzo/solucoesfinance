@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useId } from "react";
+import { useState, useEffect, useMemo, useId, type ReactNode } from "react";
+import { useHScroll } from "@/app/hooks/useHScroll";
 import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/app/hooks/useAuth";
 import Navbar from "@/app/components/Navbar";
@@ -10,7 +11,7 @@ import ConfirmModal from "@/app/components/ConfirmModal";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
-  Loader2, ArrowRight, Package, X, CheckCircle, Download
+  Loader2, ArrowRight, Package, X, CheckCircle, Download, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
@@ -993,7 +994,7 @@ export default function EstoquePage() {
           <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
 
             {/* Abas */}
-            <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+            <HScrollTabs className="md:flex-1">
               {[
                 { id: "todos", label: t("tabs.todos"), icon: null },
                 { id: "mercadolivre", label: "", ariaLabel: t("tabs.filterML"), image: "/Logotipo_MercadoLivre.png" },
@@ -1014,7 +1015,7 @@ export default function EstoquePage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     aria-label={tab.label ? undefined : tab.ariaLabel}
-                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold border-none transition-all cursor-pointer whitespace-nowrap flex items-center gap-2"
+                    className="shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold border-none transition-all cursor-pointer whitespace-nowrap flex items-center gap-2"
                     style={activeTab === tab.id
                       ? { background: "var(--primary)", color: "white" }
                       : { background: "var(--cf-input)", color: "var(--cf-text-2)" }
@@ -1026,10 +1027,10 @@ export default function EstoquePage() {
                   </button>
                 );
               })}
-            </div>
+            </HScrollTabs>
 
             {/* Busca + Sync manual */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-3 w-full md:w-auto md:shrink-0">
               <div className="relative flex-1 md:w-64">
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--cf-text-3)" }} />
                 <input
@@ -1743,6 +1744,37 @@ export default function EstoquePage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Faixa horizontal com rolagem: mostra setas laterais quando há abas escondidas.
+function HScrollTabs({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const { ref, canLeft, canRight, scrollBy } = useHScroll();
+
+  const arrow = (dir: -1 | 1) => (
+    <button
+      type="button"
+      onClick={() => scrollBy(dir)}
+      aria-label={dir < 0 ? "Rolar para a esquerda" : "Rolar para a direita"}
+      className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center border-none cursor-pointer"
+      style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
+    >
+      {dir < 0 ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+    </button>
+  );
+
+  return (
+    <div className={`flex items-center gap-1 min-w-0 ${className}`}>
+      {canLeft && arrow(-1)}
+      <div
+        ref={ref}
+        className="flex gap-1 overflow-x-auto scrollbar-none min-w-0 flex-1"
+        style={{ scrollSnapType: "x proximity" }}
+      >
+        {children}
+      </div>
+      {canRight && arrow(1)}
     </div>
   );
 }

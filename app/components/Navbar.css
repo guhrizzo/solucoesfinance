@@ -55,12 +55,48 @@
   color: var(--brand);
 }
 
+/* Menu horizontal: rola de lado quando os itens não cabem (setas nas pontas). */
+.nxfi-nav-links-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
 .nxfi-nav-links {
   display: flex;
   align-items: center;
   gap: 2px;
   flex: 1;
-  overflow: hidden;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nxfi-nav-links::-webkit-scrollbar {
+  display: none;
+}
+.nxfi-nav-links > .nxfi-nav-link {
+  flex-shrink: 0;
+}
+.nxfi-nav-scroll-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  background: var(--nav-icon-bg);
+  color: var(--nav-text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.nxfi-nav-scroll-btn:hover {
+  background: var(--nav-icon-hover);
+  color: var(--nav-link-hover-color);
 }
 .nxfi-nav-link {
   display: flex;
@@ -811,6 +847,7 @@
 }
 
 @media (max-width: 1024px) {
+  .nxfi-nav-links-wrap,
   .nxfi-nav-links,
   .nxfi-search-wrap {
     display: none;

@@ -13,6 +13,7 @@ import {
 import { Avatar } from "./ui";
 import { useTheme } from "../hooks/useTheme";
 import { useNavbarLayout } from "../hooks/useNavbarLayout";
+import { useHScroll } from "../hooks/useHScroll";
 import { useProfilePhoto } from "../hooks/useProfilePhoto";
 import { useToast } from "./useToast";
 import { ToastContainer } from "./ToastContainer";
@@ -158,6 +159,7 @@ export default function Navbar({
   const router = useRouter();
   const { dark, toggle } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
+  const navScroll = useHScroll();
   const { toasts, show: showToast, remove: removeToast } = useToast();
   const { billSummary } = useBillBadges();
   const { receivableSummary } = useReceivableBadges();
@@ -582,7 +584,13 @@ export default function Navbar({
           <img src={dark ? "/nexus_fi_logo_branco.png" : "/nexus_fi_logo_preto.png"} alt="NexusFi" style={{ height: 30, width: "auto" }} />
         </a>
 
-        <div className="nxfi-nav-links">
+        <div className="nxfi-nav-links-wrap">
+        {navScroll.canLeft && (
+          <button type="button" className="nxfi-nav-scroll-btn" onClick={() => navScroll.scrollBy(-1)} aria-label="Rolar menu para a esquerda">
+            <ChevronLeft size={15} />
+          </button>
+        )}
+        <div className="nxfi-nav-links" ref={navScroll.ref}>
           {navItemsWithBadges.map((item) => (
             <a key={item.key} href={item.href} className={`nxfi-nav-link ${activePath === item.href ? "active" : ""}`}>
               <item.icon size={14} />
@@ -592,6 +600,12 @@ export default function Navbar({
               )}
             </a>
           ))}
+        </div>
+        {navScroll.canRight && (
+          <button type="button" className="nxfi-nav-scroll-btn" onClick={() => navScroll.scrollBy(1)} aria-label="Rolar menu para a direita">
+            <ChevronRight size={15} />
+          </button>
+        )}
         </div>
 
         <div className="nxfi-actions">
