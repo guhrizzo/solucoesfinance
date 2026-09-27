@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Sora, JetBrains_Mono, Hanken_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "../globals.css";
 import { routing } from "@/i18n/routing";
 import { SITE_URL, localePath, alternatesFor } from "@/lib/seo";
@@ -14,24 +14,30 @@ import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { LocaleSync } from "@/app/components/LocaleSync";
 import { PlatformAnalytics } from "@/app/components/PlatformAnalytics";
 
-const sora = Sora({
+// Fontes self-hosted (app/fonts, variáveis, subset latin). next/font/google
+// quebrava o build na Vercel (Turbopack: "next/font/google queries have
+// exactly one entry"), então não dependemos mais do Google no build.
+const sora = localFont({
+  src: "../fonts/sora.woff2",
   variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: "300 800",
+  display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: "../fonts/jetbrains-mono.woff2",
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: "400 500",
+  display: "swap",
 });
 
 // Corpo, tabelas e formulários do app interno (redesign 2026-09).
 // Sora fica só em títulos/rótulos (.font-heading / --font-display).
-const hanken = Hanken_Grotesk({
+const hanken = localFont({
+  src: "../fonts/hanken-grotesk.woff2",
   variable: "--font-hanken",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
+  display: "swap",
 });
 
 export function generateStaticParams() {
