@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, useId } from "react";
 import {
-  TrendingUp, Plus, X, Check, ArrowUpRight, ArrowDownRight,
+  TrendingUp, TrendingDown, Plus, X, Check, ArrowUpRight, ArrowDownRight,
   Search, Calendar, ChevronDown, Trash2, Edit3, ClipboardList,
   FileText, Wallet, Loader2,
   ShoppingCart, Briefcase, UserCheck, PiggyBank, CircleDollarSign,
@@ -107,6 +107,8 @@ interface Tx {
   settledReceivableId?: string;
   /** Id da conta a receber da qual esta entrada é o espelho (gravado por `syncReceivableCashflow`, lib/receivableCashflowSync.ts). */
   sourceReceivableId?: string;
+  /** Id do imposto do qual esta saída é o espelho (gravado por `syncTaxCashflow`, lib/billTaxSync.ts). */
+  sourceTaxId?: string;
 }
 
 interface CostCenterOption {
@@ -1293,6 +1295,194 @@ function CenterBudgetRow({ name, orcado, realizado, hideValues }: {
   );
 }
 
+// ─── Detalhamento dos KPIs (Entradas / Saídas / Saldo / Resultado) ───────────
+
+type KpiKey = "budget" | "inflows" | "outflows" | "balance" | "result";
+
+interface TxLine {
+  key: string;
+  label: string;
+  sub: string;
+  amount: number;
+  /** chave de agrupamento e rótulo já traduzido */
+  group: string;
+  groupLabel: string;
+}
+interface TxGroup { group: string; groupLabel: string; total: number; items: TxLine[] }
+
+function groupTxLines(rows: TxLine[]): TxGroup[] {
+  const m = new Map<string, TxLine[]>();
+  for (const r of rows) m.set(r.group, [...(m.get(r.group) ?? []), r]);
+  return [...m.entries()]
+    .map(([group, items]) => ({
+      group,
+      groupLabel: items[0]?.groupLabel ?? group,
+      items: items.sort((a, b) => b.sub.localeCompare(a.sub)),
+      total: items.reduce((s, i) => s + i.amount, 0),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+function TxGroupBlock({ group, hideValues, color }: { group: TxGroup; hideValues: boolean; color: string }) {
+  const locale = useLocale();
+  return (
+    <div className="cf-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2" style={{ background: "var(--cf-txhdr)", borderBottom: "1px solid var(--cf-border)" }}>
+        <span className="text-xs font-bold truncate" style={{ color: "var(--cf-text-2)" }}>{group.groupLabel} · {group.items.length}</span>
+        <span className="text-xs font-bold mono shrink-0" style={{ color: "var(--cf-text-2)" }}>
+          <Sensitive hidden={hideValues}>{toBRL(group.total, locale)}</Sensitive>
+        </span>
+      </div>
+      {group.items.map(it => (
+        <div key={it.key} className="flex items-center gap-2.5 px-4 py-2.5 border-b last:border-b-0" style={{ borderColor: "var(--cf-border)" }}>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate" style={{ color: "var(--cf-text)" }}>{it.label}</p>
+            <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--cf-text-3)" }}>{it.sub}</p>
+          </div>
+          <span className="text-sm font-semibold mono shrink-0" style={{ color }}>
+            <Sensitive hidden={hideValues}>{toBRL(it.amount, locale)}</Sensitive>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DetailSection({ icon: Icon, title, hint, subtotal, hideValues, children }: {
+  icon: LucideIcon; title: string; hint?: string; subtotal: number; hideValues: boolean; children?: React.ReactNode;
+}) {
+  const locale = useLocale();
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon size={14} className="shrink-0" style={{ color: "var(--cf-text-2)" }} />
+          <span className="text-xs font-bold uppercase tracking-wider truncate" style={{ color: "var(--cf-text-2)" }}>{title}</span>
+        </div>
+        <span className="text-sm font-bold mono shrink-0" style={{ color: "var(--cf-text)" }}>
+          <Sensitive hidden={hideValues}>{toBRL(subtotal, locale)}</Sensitive>
+        </span>
+      </div>
+      {hint && <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>{hint}</p>}
+      {children}
+    </div>
+  );
+}
+
+/** Linha de conta (+/−) dos modais de Saldo e Resultado. */
+function CalcRow({ label, hint, value, sign, hideValues }: {
+  label: string; hint?: string; value: number; sign: "+" | "−"; hideValues: boolean;
+}) {
+  const locale = useLocale();
+  const color = sign === "+" ? "var(--pos)" : "var(--neg)";
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0" style={{ borderColor: "var(--cf-border)" }}>
+      <span className="w-6 h-6 rounded-md flex items-center justify-center text-sm font-bold shrink-0"
+        style={{ background: sign === "+" ? "var(--pos-weak)" : "var(--neg-weak)", color }}>{sign}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium" style={{ color: "var(--cf-text)" }}>{label}</p>
+        {hint && <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{hint}</p>}
+      </div>
+      <span className="text-sm font-semibold mono shrink-0" style={{ color }}>
+        <Sensitive hidden={hideValues}>{toBRL(value, locale)}</Sensitive>
+      </span>
+    </div>
+  );
+}
+
+/** Degrau da conta passo a passo do Resultado: valor do passo + acumulado até
+ *  ali; quando tem `children`, abre/fecha mostrando os lançamentos do passo. */
+function WaterfallRow({ sign, label, hint, value, running, hideValues, children }: {
+  sign: "+" | "−" | "="; label: string; hint?: string; value: number; running: number;
+  hideValues: boolean; children?: React.ReactNode;
+}) {
+  const locale = useLocale();
+  const t = useTranslations("fluxoCaixa.detailModal");
+  const [open, setOpen] = useState(false);
+  const expandable = !!children;
+  const subtotal = sign === "=";
+  const color = subtotal ? "var(--cf-text)" : sign === "+" ? "var(--pos)" : "var(--neg)";
+  const badgeBg = subtotal ? "var(--brand-weak)" : sign === "+" ? "var(--pos-weak)" : "var(--neg-weak)";
+  return (
+    <div className="border-b last:border-b-0" style={{ borderColor: "var(--cf-border)", background: subtotal ? "var(--cf-txhdr)" : undefined }}>
+      <button
+        type="button"
+        onClick={expandable ? () => setOpen(o => !o) : undefined}
+        aria-expanded={expandable ? open : undefined}
+        className={`w-full flex items-center gap-3 px-4 py-3 text-left ${expandable ? "cursor-pointer hover:bg-[var(--cf-hover)]" : "cursor-default"}`}
+      >
+        <span className="w-6 h-6 rounded-md flex items-center justify-center text-sm font-bold shrink-0"
+          style={{ background: badgeBg, color: subtotal ? "var(--brand)" : color }}>{sign}</span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm ${subtotal ? "font-bold" : "font-medium"}`} style={{ color: "var(--cf-text)" }}>{label}</p>
+          {hint && <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{hint}</p>}
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-semibold mono" style={{ color }}>
+            <Sensitive hidden={hideValues}>{toBRL(value, locale)}</Sensitive>
+          </p>
+          {!subtotal && (
+            <p className="text-[10px] mono mt-0.5" style={{ color: "var(--cf-text-3)" }}>
+              {t("runningTotal")} <Sensitive hidden={hideValues}>{toBRL(running, locale)}</Sensitive>
+            </p>
+          )}
+        </div>
+        {expandable
+          ? <ChevronDown size={14} className="shrink-0 transition-transform" style={{ color: "var(--cf-text-3)", transform: open ? "rotate(180deg)" : undefined }} />
+          : <span className="w-3.5 shrink-0" />}
+      </button>
+      {expandable && open && <div className="px-3 pb-3 space-y-2">{children}</div>}
+    </div>
+  );
+}
+
+/** Indicador percentual do topo do modal do Resultado. */
+function RatioTile({ label, hint, pct, color }: { label: string; hint: string; pct: number | null; color: string }) {
+  return (
+    <div className="cf-card p-3 flex flex-col gap-1 min-w-0">
+      <p className="text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: "var(--cf-text-2)" }}>{label}</p>
+      <p className="font-heading text-lg font-bold mono leading-tight" style={{ color: pct === null ? "var(--cf-text-3)" : color }}>
+        {pct === null ? "—" : `${pct.toFixed(0)}%`}
+      </p>
+      <p className="text-[10px] leading-snug" style={{ color: "var(--cf-text-3)" }}>{hint}</p>
+    </div>
+  );
+}
+
+/** Moldura comum dos modais de detalhamento dos KPIs (cabeçalho, corpo rolável, rodapé com total). */
+function KpiModalShell({ open, onClose, icon: Icon, iconBg, iconColor, title, subtitle, totalLabel, total, totalColor, children }: {
+  open: boolean; onClose: () => void; icon: LucideIcon; iconBg: string; iconColor: string;
+  title: string; subtitle: string; totalLabel: string; total: React.ReactNode; totalColor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} size="md" mobileSheet>
+      <div style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+        <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: iconBg }}>
+              <Icon size={16} style={{ color: iconColor }} />
+            </div>
+            <div className="min-w-0">
+              <p className="font-heading text-base font-bold truncate" style={{ color: "var(--cf-text)" }}>{title}</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>{subtitle}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer shrink-0"
+            style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">{children}</div>
+        <div className="px-5 py-4 shrink-0 flex items-center justify-between" style={{ borderTop: "1px solid var(--cf-border)" }}>
+          <span className="text-sm font-semibold" style={{ color: "var(--cf-text-2)" }}>{totalLabel}</span>
+          <span className="font-heading text-lg font-bold mono" style={{ color: totalColor }}>{total}</span>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
@@ -1323,7 +1513,8 @@ export default function CashFlowPage() {
   const [deletePinOpen, setDeletePinOpen] = useState(false);
   const [deletePinErr, setDeletePinErr] = useState("");
   const [hideValues, setHideValues] = useState(false);
-  const [budgetOpen, setBudgetOpen] = useState(false);
+  // KPI cujo modal de detalhamento está aberto (todos os cards abrem um).
+  const [detail, setDetail] = useState<KpiKey | null>(null);
   // Contas a pagar / a receber / impostos do dono. O Orçamento do mês só precisa
   // de valor + vencimento; os campos de parcela alimentam o bloco "Previstos".
   const [bills, setBills] = useState<ForecastDoc[]>([]);
@@ -1754,7 +1945,47 @@ export default function CashFlowPage() {
     [monthTxs]
   );
 
-  const superavitDeficit = saldo - entradasReceber - Math.max(previsao - previsaoPaga, 0);
+  // Resultado = entradas extras − TODAS as saídas do Fluxo de Caixa − o que
+  // ainda falta pagar do Orçamento. Pagar uma conta/imposto/centro de custo
+  // entra como saída e ao mesmo tempo reduz o Orçamento a pagar (sem contar
+  // duas vezes). As entradas que não vieram de Contas a Receber somam como
+  // superávit.
+  const entradasExtras = entradas - entradasReceber;
+  const orcamentoPendente = Math.max(previsao - previsaoPaga, 0);
+  const superavitDeficit = entradasExtras - saidas - orcamentoPendente;
+
+  // Lançamentos do mês agrupados — alimentam os modais de Entradas e Saídas.
+  const txDetalhe = useMemo(() => {
+    const uncat = t("budgetModal.uncategorized");
+    const toLine = (x: Tx, group?: string): TxLine => ({
+      key: x.id,
+      label: x.description || (x.category ? categoryLabel(x.category, tCat) : uncat),
+      sub: labelDate(x.date, locale),
+      amount: x.amount,
+      group: group ?? (x.category || "__uncat__"),
+      groupLabel: group ?? (x.category ? categoryLabel(x.category, tCat) : uncat),
+    });
+    const ins = monthTxs.filter(x => x.type === "entrada");
+    const outs = monthTxs.filter(x => x.type === "saida");
+    const isReceber = (x: Tx) => !!(x.sourceReceivableId || x.settledReceivableId);
+    const origem = (x: Tx) =>
+      x.sourceBillId ? "bills"
+      : (x.settledTaxId || x.sourceTaxId) ? "taxes"
+      : (x.sourceExpenseId || x.costCenterId) ? "centers"
+      : "loose";
+    const sum = (rows: TxLine[]) => rows.reduce((s, r) => s + r.amount, 0);
+    const pack = (rows: TxLine[]) => ({ groups: groupTxLines(rows), total: sum(rows), count: rows.length });
+
+    return {
+      extras: pack(ins.filter(x => !isReceber(x)).map(x => toLine(x))),
+      receber: pack(ins.filter(isReceber).map(x => toLine(x))),
+      bills: pack(outs.filter(x => origem(x) === "bills").map(x => toLine(x))),
+      taxes: pack(outs.filter(x => origem(x) === "taxes").map(x => toLine(x))),
+      // Centros de custo agrupados pelo nome do centro, quando houver.
+      centers: pack(outs.filter(x => origem(x) === "centers").map(x => toLine(x, x.costCenterName || undefined))),
+      loose: pack(outs.filter(x => origem(x) === "loose").map(x => toLine(x))),
+    };
+  }, [monthTxs, locale, t, tCat]);
 
   // Quebra do Orçamento linha a linha — alimenta o modal que abre ao clicar no
   // KPI "Orçamento". A soma dos três grupos bate exatamente com `previsao`.
@@ -1826,6 +2057,38 @@ export default function CashFlowPage() {
     };
   }, [costCenters, bills, taxes, expenses, monthKey, currentMonthKey, locale, t, tCat]);
 
+  // Detalhamento do Resultado: o que falta pagar item a item, a cobertura do
+  // Orçamento por origem e de onde vem o excedente (saídas acima do orçado).
+  const resultadoDetalhe = useMemo(() => {
+    const doMes = (iso: string) => (iso ?? "").slice(0, 7) === monthKey;
+    const falta = (amount: number, paid: number | undefined, quitado: boolean) =>
+      quitado ? 0 : Math.max(amount - Math.min(Math.max(paid ?? 0, 0), amount), 0);
+    const gBills = t("budgetModal.bills"), gTaxes = t("budgetModal.taxes"), gCenters = t("budgetModal.costCenters");
+
+    const pend: TxLine[] = [];
+    for (const c of previsaoDetalhe.centros) {
+      const r = c.orcado - Math.min(c.realizado, c.orcado);
+      if (r > 0.004) pend.push({ key: `c-${c.id}`, label: c.name, sub: t("detailModal.centerUnspent"), amount: r, group: "centers", groupLabel: gCenters });
+    }
+    for (const b of bills.filter(b => doMes(b.dueDate))) {
+      const r = falta(b.amount, b.amountPaid, normalizeBillStatus(b.status) === "pago");
+      if (r > 0.004) pend.push({ key: `b-${b.id}`, label: b.title || t("budgetModal.billFallback"), sub: t("detailModal.dueOn", { date: labelDate(b.dueDate, locale) }), amount: r, group: "bills", groupLabel: gBills });
+    }
+    taxes.filter(tx => doMes(tx.dueDate)).forEach((tx, i) => {
+      const r = falta(tx.amount, tx.amountPaid, normalizeTaxStatus(tx.status) === "pago");
+      if (r > 0.004) pend.push({ key: `t-${tx.id || i}`, label: tx.name || t("budgetModal.taxFallback"), sub: t("detailModal.dueOn", { date: labelDate(tx.dueDate, locale) }), amount: r, group: "taxes", groupLabel: gTaxes });
+    });
+
+    const centrosPago = previsaoDetalhe.centros.reduce((s, c) => s + Math.min(c.realizado, c.orcado), 0);
+    const origens = [
+      { key: "centers", icon: Building2, label: gCenters, total: previsaoDetalhe.centrosOrcado, pago: centrosPago },
+      { key: "bills", icon: Truck, label: gBills, total: previsaoDetalhe.contasTotal, pago: previsaoDetalhe.contasPago },
+      { key: "taxes", icon: Receipt, label: gTaxes, total: previsaoDetalhe.impostosTotal, pago: previsaoDetalhe.impostosPago },
+    ].filter(o => o.total > 0);
+
+    return { pendentes: groupTxLines(pend), origens };
+  }, [previsaoDetalhe, bills, taxes, monthKey, locale, t]);
+
   // ─── Lançamentos PREVISTOS (informativo) ────────────────────────────────────
   // Só parcelas de série "numeral" ainda não quitadas, com vencimento no mês em
   // foco. Nada é gravado na coleção cashflow — é derivado de bills/receivables.
@@ -1886,12 +2149,19 @@ export default function CashFlowPage() {
 
   const displayValue = (val: number) => <Sensitive hidden={hideValues}>{toBRL(val, locale)}</Sensitive>;
 
+  // O último card se apresenta como Superávit ou Déficit conforme o sinal, e
+  // o subtítulo diz se as entradas extras deram conta do Orçamento.
+  const resultadoLabel = superavitDeficit > 0 ? t("kpi.surplus") : superavitDeficit < 0 ? t("kpi.deficit") : t("kpi.breakEven");
+  const resultadoSub = superavitDeficit < 0
+    ? (entradasExtras > 0 ? t("kpi.extrasShort") : t("kpi.budgetUncovered"))
+    : orcamentoPendente === 0 ? t("kpi.budgetCovered") : t("kpi.extrasCover");
+
   const kpis = [
     { key: "budget", label: t("kpi.budget"), val: previsao, Icon: ClipboardList, ibg: "var(--brand-weak)", color: "var(--brand)" },
     { key: "inflows", label: t("kpi.inflows"), val: entradas, Icon: ArrowUpRight, ibg: "var(--pos-weak)", color: "var(--pos)", sub: t("kpi.entries", { count: monthTxs.filter(x => x.type === "entrada").length }) },
     { key: "outflows", label: t("kpi.outflows"), val: saidas, Icon: ArrowDownRight, ibg: "var(--neg-weak)", color: "var(--neg)", sub: t("kpi.entries", { count: monthTxs.filter(x => x.type === "saida").length }) },
     { key: "balance", label: t("kpi.balance"), val: saldo, Icon: Wallet, ibg: saldo >= 0 ? "var(--brand-weak)" : "var(--neg-weak)", color: saldo >= 0 ? "var(--brand)" : "var(--neg)", sub: saldo >= 0 ? t("kpi.positive") : t("kpi.negative") },
-    { key: "result", label: t("kpi.result"), val: superavitDeficit, Icon: TrendingUp, ibg: superavitDeficit >= 0 ? "var(--pos-weak)" : "var(--neg-weak)", color: superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)", sub: superavitDeficit >= 0 ? t("kpi.aboveTarget") : t("kpi.belowTarget") },
+    { key: "result", label: resultadoLabel, val: superavitDeficit, Icon: superavitDeficit < 0 ? TrendingDown : TrendingUp, ibg: superavitDeficit >= 0 ? "var(--pos-weak)" : "var(--neg-weak)", color: superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)", sub: resultadoSub },
   ];
 
   if (pageState === "blocked") return <AccessDenied category={tNav("items.fluxoCaixa")} />;
@@ -1943,24 +2213,12 @@ export default function CashFlowPage() {
       />
 
       {/* Detalhamento do Orçamento */}
-      <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} size="md" mobileSheet>
-        <div style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-          <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--cf-border)" }}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--brand-weak)" }}>
-                <ClipboardList size={16} style={{ color: "var(--brand)" }} />
-              </div>
-              <div className="min-w-0">
-                <p className="font-heading text-base font-bold truncate" style={{ color: "var(--cf-text)" }}>{t("budgetModal.title", { period: periodLabel })}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-2)" }}>{t("budgetModal.subtitle")}</p>
-              </div>
-            </div>
-            <button onClick={() => setBudgetOpen(false)} className="p-1.5 rounded-lg cursor-pointer shrink-0"
-              style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
-              <X size={16} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+      <KpiModalShell
+        open={detail === "budget"} onClose={() => setDetail(null)}
+        icon={ClipboardList} iconBg="var(--brand-weak)" iconColor="var(--brand)"
+        title={t("budgetModal.title", { period: periodLabel })} subtitle={t("budgetModal.subtitle")}
+        totalLabel={t("budgetModal.total")} total={displayValue(previsao)} totalColor="var(--brand)"
+      >
             {previsao === 0 ? (
               <p className="text-sm text-center py-10" style={{ color: "var(--cf-text-2)" }}>
                 {t("budgetModal.empty", { period: periodLabel })}
@@ -2014,13 +2272,189 @@ export default function CashFlowPage() {
                 )}
               </>
             )}
+      </KpiModalShell>
+
+      {/* Detalhamento das Entradas */}
+      <KpiModalShell
+        open={detail === "inflows"} onClose={() => setDetail(null)}
+        icon={ArrowUpRight} iconBg="var(--pos-weak)" iconColor="var(--pos)"
+        title={t("detailModal.inflowsTitle", { period: periodLabel })} subtitle={t("detailModal.inflowsSubtitle")}
+        totalLabel={t("detailModal.inflowsTotal")} total={displayValue(entradas)} totalColor="var(--pos)"
+      >
+        {entradas === 0 && txDetalhe.extras.count + txDetalhe.receber.count === 0 ? (
+          <p className="text-sm text-center py-10" style={{ color: "var(--cf-text-2)" }}>{t("detailModal.inflowsEmpty", { period: periodLabel })}</p>
+        ) : (
+          <>
+            {txDetalhe.extras.count > 0 && (
+              <DetailSection icon={Sparkles} title={t("detailModal.extras")} hint={t("detailModal.extrasHint")} subtotal={txDetalhe.extras.total} hideValues={hideValues}>
+                {txDetalhe.extras.groups.map(g => <TxGroupBlock key={g.group} group={g} hideValues={hideValues} color="var(--pos)" />)}
+              </DetailSection>
+            )}
+            {txDetalhe.receber.count > 0 && (
+              <DetailSection icon={BanknoteArrowUp} title={t("detailModal.fromReceivables")} hint={t("detailModal.fromReceivablesHint")} subtotal={txDetalhe.receber.total} hideValues={hideValues}>
+                {txDetalhe.receber.groups.map(g => <TxGroupBlock key={g.group} group={g} hideValues={hideValues} color="var(--pos)" />)}
+              </DetailSection>
+            )}
+          </>
+        )}
+      </KpiModalShell>
+
+      {/* Detalhamento das Saídas — separadas pela origem */}
+      <KpiModalShell
+        open={detail === "outflows"} onClose={() => setDetail(null)}
+        icon={ArrowDownRight} iconBg="var(--neg-weak)" iconColor="var(--neg)"
+        title={t("detailModal.outflowsTitle", { period: periodLabel })} subtitle={t("detailModal.outflowsSubtitle")}
+        totalLabel={t("detailModal.outflowsTotal")} total={displayValue(saidas)} totalColor="var(--neg)"
+      >
+        {monthTxs.every(x => x.type !== "saida") ? (
+          <p className="text-sm text-center py-10" style={{ color: "var(--cf-text-2)" }}>{t("detailModal.outflowsEmpty", { period: periodLabel })}</p>
+        ) : (
+          ([
+            ["bills", Truck, t("budgetModal.bills"), t("detailModal.billsHint")],
+            ["taxes", Receipt, t("budgetModal.taxes"), t("detailModal.taxesHint")],
+            ["centers", Building2, t("budgetModal.costCenters"), t("detailModal.centersHint")],
+            ["loose", Wallet, t("detailModal.loose"), t("detailModal.looseHint")],
+          ] as const).map(([k, Icon, title, hint]) => txDetalhe[k].count > 0 && (
+            <DetailSection key={k} icon={Icon} title={title} hint={hint} subtotal={txDetalhe[k].total} hideValues={hideValues}>
+              {txDetalhe[k].groups.map(g => <TxGroupBlock key={g.group} group={g} hideValues={hideValues} color="var(--neg)" />)}
+            </DetailSection>
+          ))
+        )}
+      </KpiModalShell>
+
+      {/* Detalhamento do Saldo */}
+      <KpiModalShell
+        open={detail === "balance"} onClose={() => setDetail(null)}
+        icon={Wallet} iconBg={saldo >= 0 ? "var(--brand-weak)" : "var(--neg-weak)"} iconColor={saldo >= 0 ? "var(--brand)" : "var(--neg)"}
+        title={t("detailModal.balanceTitle", { period: periodLabel })} subtitle={t("detailModal.balanceSubtitle")}
+        totalLabel={t("kpi.balance")} total={<>{saldo > 0 ? "+" : ""}{displayValue(saldo)}</>} totalColor={saldo >= 0 ? "var(--brand)" : "var(--neg)"}
+      >
+        <div className="cf-card overflow-hidden">
+          <CalcRow sign="+" label={t("kpi.inflows")} hint={t("kpi.entries", { count: txDetalhe.extras.count + txDetalhe.receber.count })} value={entradas} hideValues={hideValues} />
+          <CalcRow sign="−" label={t("kpi.outflows")} hint={t("kpi.entries", { count: monthTxs.length - txDetalhe.extras.count - txDetalhe.receber.count })} value={saidas} hideValues={hideValues} />
+        </div>
+        <p className="text-[11px]" style={{ color: "var(--cf-text-3)" }}>{t("detailModal.balanceNote")}</p>
+      </KpiModalShell>
+
+      {/* Detalhamento do Resultado — a conta completa do superávit/déficit */}
+      <KpiModalShell
+        open={detail === "result"} onClose={() => setDetail(null)}
+        icon={superavitDeficit < 0 ? TrendingDown : TrendingUp} iconBg={superavitDeficit >= 0 ? "var(--pos-weak)" : "var(--neg-weak)"} iconColor={superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)"}
+        title={`${resultadoLabel} · ${periodLabel}`}
+        subtitle={superavitDeficit >= 0 ? t("detailModal.surplus") : t("detailModal.deficit")}
+        totalLabel={t("kpi.result")} total={<>{superavitDeficit > 0 ? "+" : ""}{displayValue(superavitDeficit)}</>}
+        totalColor={superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)"}
+      >
+        {/* Indicadores */}
+        <div className="grid grid-cols-3 gap-2">
+          <RatioTile
+            label={t("detailModal.coverageRate")} hint={t("detailModal.coverageRateHint")}
+            pct={previsao > 0 ? (previsaoPaga / previsao) * 100 : null}
+            color={previsaoPaga >= previsao ? "var(--pos)" : "var(--warn)"}
+          />
+          <RatioTile
+            label={t("detailModal.marginRate")} hint={t("detailModal.marginRateHint")}
+            pct={entradasExtras > 0 ? (superavitDeficit / entradasExtras) * 100 : null}
+            color={superavitDeficit >= 0 ? "var(--pos)" : "var(--neg)"}
+          />
+          <RatioTile
+            label={t("detailModal.budgetWeight")} hint={t("detailModal.budgetWeightHint")}
+            pct={entradasExtras > 0 ? (previsao / entradasExtras) * 100 : null}
+            color={previsao <= entradasExtras ? "var(--brand)" : "var(--neg)"}
+          />
+        </div>
+
+        {/* Conta passo a passo, com acumulado; cada degrau abre os lançamentos */}
+        <div className="space-y-2">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("detailModal.stepsTitle")}</p>
+            <p className="text-[11px] mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("detailModal.stepsHint")}</p>
           </div>
-          <div className="px-5 py-4 shrink-0 flex items-center justify-between" style={{ borderTop: "1px solid var(--cf-border)" }}>
-            <span className="text-sm font-semibold" style={{ color: "var(--cf-text-2)" }}>{t("budgetModal.total")}</span>
-            <span className="font-heading text-lg font-bold mono" style={{ color: "var(--brand)" }}>{displayValue(previsao)}</span>
+          <div className="cf-card overflow-hidden">
+            <WaterfallRow sign="+" label={t("detailModal.monthInflows")} hint={t("kpi.entries", { count: txDetalhe.extras.count + txDetalhe.receber.count })}
+              value={entradas} running={entradas} hideValues={hideValues} />
+            {entradasReceber > 0 && (
+              <WaterfallRow sign="−" label={t("detailModal.fromReceivables")} hint={t("detailModal.receivablesOutHint")}
+                value={entradasReceber} running={entradasExtras} hideValues={hideValues}>
+                {txDetalhe.receber.groups.map(g => <TxGroupBlock key={g.group} group={g} hideValues={hideValues} color="var(--pos)" />)}
+              </WaterfallRow>
+            )}
+            <WaterfallRow sign="=" label={t("detailModal.extras")} hint={t("detailModal.extrasHint")}
+              value={entradasExtras} running={entradasExtras} hideValues={hideValues}>
+              {txDetalhe.extras.count > 0
+                ? txDetalhe.extras.groups.map(g => <TxGroupBlock key={g.group} group={g} hideValues={hideValues} color="var(--pos)" />)
+                : <p className="text-[11px] px-1" style={{ color: "var(--cf-text-3)" }}>{t("detailModal.nothingHere")}</p>}
+            </WaterfallRow>
+            <WaterfallRow sign="−" label={t("detailModal.allOutflows")} hint={t("kpi.entries", { count: monthTxs.length - txDetalhe.extras.count - txDetalhe.receber.count })}
+              value={saidas} running={entradasExtras - saidas} hideValues={hideValues}>
+              {saidas > 0
+                ? ([
+                    ["bills", t("budgetModal.bills")],
+                    ["taxes", t("budgetModal.taxes")],
+                    ["centers", t("budgetModal.costCenters")],
+                    ["loose", t("detailModal.loose")],
+                  ] as const).filter(([k]) => txDetalhe[k].count > 0).map(([k, label]) => (
+                    <TxGroupBlock key={k} hideValues={hideValues} color="var(--neg)" group={{
+                      group: k, groupLabel: label, total: txDetalhe[k].total,
+                      items: txDetalhe[k].groups.flatMap(g => g.items),
+                    }} />
+                  ))
+                : <p className="text-[11px] px-1" style={{ color: "var(--cf-text-3)" }}>{t("detailModal.nothingHere")}</p>}
+            </WaterfallRow>
+            <WaterfallRow sign="−" label={t("detailModal.pendingBudget")} hint={t("detailModal.pendingBudgetHint")}
+              value={orcamentoPendente} running={superavitDeficit} hideValues={hideValues}>
+              {resultadoDetalhe.pendentes.length > 0
+                ? resultadoDetalhe.pendentes.map(g => <TxGroupBlock key={g.group} group={g} hideValues={hideValues} color="var(--warn)" />)
+                : <p className="text-[11px] px-1" style={{ color: "var(--pos)" }}>{t("detailModal.pendingEmpty")}</p>}
+            </WaterfallRow>
           </div>
         </div>
-      </Modal>
+
+        {/* Cobertura do Orçamento — total e por origem */}
+        <DetailSection icon={ClipboardList} title={t("detailModal.budgetCoverage")} subtotal={previsao} hideValues={hideValues}>
+          <div className="cf-progress">
+            <div className="cf-progress-fill" style={{ width: `${previsao > 0 ? Math.min((previsaoPaga / previsao) * 100, 100) : 0}%`, background: "var(--pos)" }} />
+          </div>
+          <div className="flex items-center justify-between text-[11px]">
+            <span style={{ color: "var(--pos)" }}>{t("detailModal.covered")} <Sensitive hidden={hideValues}>{toBRL(previsaoPaga, locale)}</Sensitive></span>
+            <span style={{ color: "var(--warn)" }}>{t("budgetModal.remaining")} <Sensitive hidden={hideValues}>{toBRL(orcamentoPendente, locale)}</Sensitive></span>
+          </div>
+          {resultadoDetalhe.origens.length > 0 && (
+            <div className="cf-card overflow-hidden">
+              {resultadoDetalhe.origens.map(({ key, icon: Icon, label, total, pago }) => {
+                const pct = total > 0 ? Math.min((pago / total) * 100, 100) : 0;
+                return (
+                  <div key={key} className="px-4 py-3 border-b last:border-b-0" style={{ borderColor: "var(--cf-border)" }}>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Icon size={13} className="shrink-0" style={{ color: "var(--cf-text-2)" }} />
+                        <p className="text-sm font-medium truncate" style={{ color: "var(--cf-text)" }}>{label}</p>
+                      </div>
+                      <span className="text-xs font-bold mono shrink-0" style={{ color: pct >= 100 ? "var(--pos)" : "var(--cf-text-2)" }}>{pct.toFixed(0)}%</span>
+                    </div>
+                    <div className="cf-progress">
+                      <div className="cf-progress-fill" style={{ width: `${pct}%`, background: pct >= 100 ? "var(--pos)" : "var(--brand)" }} />
+                    </div>
+                    <div className="flex items-center justify-between mt-1 text-[11px]" style={{ color: "var(--cf-text-3)" }}>
+                      <span>{t("detailModal.covered")} <b style={{ color: "var(--pos)" }}><Sensitive hidden={hideValues}>{toBRL(pago, locale)}</Sensitive></b> / <Sensitive hidden={hideValues}>{toBRL(total, locale)}</Sensitive></span>
+                      <span>{t("budgetModal.remaining")} <b style={{ color: total - pago > 0.004 ? "var(--warn)" : "var(--cf-text-2)" }}><Sensitive hidden={hideValues}>{toBRL(Math.max(total - pago, 0), locale)}</Sensitive></b></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DetailSection>
+
+        <div className="rounded-xl p-3 space-y-1.5 text-[11px]" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}>
+          <p className="font-bold" style={{ color: "var(--cf-text)" }}>{t("detailModal.notCounted")}</p>
+          <div className="flex items-center justify-between gap-2">
+            <span>{t("detailModal.fromReceivables")}</span>
+            <span className="mono shrink-0"><Sensitive hidden={hideValues}>{toBRL(entradasReceber, locale)}</Sensitive></span>
+          </div>
+          <p className="pt-1" style={{ color: "var(--cf-text-3)" }}>{t("detailModal.resultNote")}</p>
+        </div>
+      </KpiModalShell>
 
       <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 overflow-y-auto overflow-x-hidden pb-24 lg:pb-8">
         <div className="flex items-center justify-between gap-3">
@@ -2048,15 +2482,14 @@ export default function CashFlowPage() {
             const pct = total > 0 ? (Math.abs(val) / total) * 100 : 0;
             const showBar = key === "inflows" || key === "outflows";
             const isSaldo = key === "balance" || key === "result";
-            const clickable = key === "budget";
             return (
               <div
                 key={key}
-                className={`cf-kpi kin p-3 sm:p-4 flex flex-col gap-2 ${clickable ? "clickable" : ""}`}
-                onClick={clickable ? () => setBudgetOpen(true) : undefined}
-                role={clickable ? "button" : undefined}
-                tabIndex={clickable ? 0 : undefined}
-                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBudgetOpen(true); } } : undefined}
+                className="cf-kpi kin clickable p-3 sm:p-4 flex flex-col gap-2"
+                onClick={() => setDetail(key as KpiKey)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetail(key as KpiKey); } }}
               >
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold" style={{ color: "var(--cf-text-2)" }}>{label}</p>
@@ -2068,9 +2501,8 @@ export default function CashFlowPage() {
                   <p className="font-heading font-bold text-base sm:text-[17px] mono leading-tight tracking-tight" style={{ color }}>
                     {isSaldo && val > 0 ? "+" : ""}{displayValue(val)}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: clickable ? "var(--brand)" : "var(--cf-text-3)" }}>
-                    {clickable ? t("kpi.seeBreakdown") : sub}
-                  </p>
+                  {sub && <p className="text-xs mt-1" style={{ color: "var(--cf-text-3)" }}>{sub}</p>}
+                  <p className="text-xs mt-1" style={{ color: "var(--brand)" }}>{t("kpi.seeBreakdown")}</p>
                 </div>
                 {showBar && total > 0 && (
                   <div className="cf-progress">

@@ -22,7 +22,8 @@ import type { PaymentMethod } from "@/app/types/payment";
 import { verifyPin, loadPinHash, getPinLockStatus } from "@/app/hooks/usePin";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney } from "@/lib/format";
-import { syncBillCashflow } from "@/lib/billTaxSync";
+import { syncBillCashflow, CAT_TO_CASHFLOW } from "@/lib/billTaxSync";
+import { CASHFLOW_CATEGORIES, categoryLabel } from "@/lib/cashflowCategories";
 import { stampCreate, stampUpdate, stampSettle } from "@/lib/audit";
 import { AuditTrail } from "@/app/components/AuditTrail";
 import SeriesScopeDialog, { type SeriesScope } from "@/app/components/SeriesScopeDialog";
@@ -77,16 +78,31 @@ interface Bill {
 
 const TODAY = new Date().toISOString().split("T")[0];
 
-// `label` é o VALOR gravado no Firestore (`bill.category`) e casado por string
-// no billTaxSync — NÃO traduzir. `key` indexa contasPagar.categories p/ exibição.
-const CATEGORIES: { label: string; key: string; icon: LucideIcon; color: string }[] = [
-    { label: "Aluguel", key: "aluguel", icon: Building2, color: "var(--brand)" },
-    { label: "Fornecedores", key: "fornecedores", icon: Receipt, color: "var(--warn)" },
-    { label: "Folha", key: "folha", icon: CircleDollarSign, color: "var(--pos)" },
-    { label: "Impostos", key: "impostos", icon: Tag, color: "var(--neg)" },
-    { label: "Serviços", key: "servicos", icon: Zap, color: "var(--brand)" },
-    { label: "Outros", key: "outros", icon: ArrowDownRight, color: "var(--brand)" },
+// Categorias da conta = as mesmas de SAÍDA do Fluxo de Caixa (fonte única em
+// lib/cashflowCategories.ts). O valor gravado em `bill.category` é o próprio
+// nome da categoria do Fluxo — NÃO traduzir; a exibição usa `categoryLabel`.
+const CATEGORIES = CASHFLOW_CATEGORIES.saida;
+const DEFAULT_CATEGORY = "Outros gastos";
+
+// Valores antigos (lista curta de antes) que contas já gravadas ainda usam.
+// Continuam válidos: exibidos pela chave de contasPagar.categories e mapeados
+// pro Fluxo de Caixa por CAT_TO_CASHFLOW (lib/billTaxSync.ts).
+const LEGACY_CATEGORY_KEY: Record<string, string> = { "Folha": "folha", "Serviços": "servicos", "Outros": "outros" };
+
+/** Categoria no vocabulário do Fluxo de Caixa (legado → equivalente). */
+const normalizeCategory = (value: string) => CAT_TO_CASHFLOW[value] ?? value;
+
+// Ícone/cor do card por família de categoria (o resto cai na seta genérica).
+const CAT_FAMILY: { icon: LucideIcon; color: string; match: RegExp }[] = [
+    { icon: Tag, color: "var(--neg)", match: /imposto|iof|tributo|taxa|tarifa|juros|multa/i },
+    { icon: CircleDollarSign, color: "var(--pos)", match: /folha|encargo|benef|f[ée]rias|rescis|pr[óo]-labore|treinamento|retirada|comiss/i },
+    { icon: Building2, color: "var(--brand)", match: /aluguel|condom[íi]nio|energia|limpeza|manuten|escrit[óo]rio|seguro/i },
+    { icon: Receipt, color: "var(--warn)", match: /fornecedor|compra|embalage|transporte|combust|viage|aliment/i },
+    { icon: Zap, color: "var(--brand)", match: /servi[çc]o|consultor|contabil|jur[íi]dico|ti \/|software|marketing/i },
 ];
+
+const getCatMeta = (value: string) =>
+    CAT_FAMILY.find(f => f.match.test(normalizeCategory(value))) ?? { icon: ArrowDownRight, color: "var(--brand)" };
 
 // Só tokens de cor por status — o rótulo vem de contasPagar.status.<key>.
 const STATUS_META: Record<BillStatus, { bg: string; color: string; border: string }> = {
@@ -124,8 +140,6 @@ const computeStatus = (bill: Bill): BillStatus => {
      return "pendente" as const;
 };
 
-const getCatMeta = (label: string) =>
-    CATEGORIES.find(c => c.label === label) ?? CATEGORIES[CATEGORIES.length - 1];
 
 function parseAmount(raw: string): number {
     const s = raw.trim().replace(/[^\d,.]/g, "");
@@ -190,6 +204,7 @@ interface BillModalProps {
 function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const t = useTranslations("contasPagar.modal");
     const tCat = useTranslations("contasPagar.categories");
+    const tCats = useTranslations("categories");
     const tStatus = useTranslations("contasPagar.status");
     const tPin = useTranslations("common.pin");
     const locale = useLocale();
@@ -197,7 +212,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const [rawAmt, setRawAmt] = useState("");
     const [estimatedRawAmt, setEstimatedRawAmt] = useState("");
     const [dueDate, setDueDate] = useState(TODAY);
-    const [category, setCategory] = useState("Outros");
+    const [category, setCategory] = useState(DEFAULT_CATEGORY);
     const [recurrence, setRecurrence] = useState<Recurrence>("unica");
     const [installments, setInstallments] = useState(2);
     const [notes, setNotes] = useState("");
@@ -218,6 +233,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
     const installmentsId = useId();
     const notesId = useId();
     const billTitleId = useId();
+    const categoryId = useId();
     const billDialogRef = useRef<HTMLDivElement>(null);
     const billPreviouslyFocused = useRef<HTMLElement | null>(null);
     const billPrevOpen = useRef(open);
@@ -238,7 +254,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
         setRawAmt(editing ? editing.amount.toFixed(2).replace(".", ",") : "");
         setEstimatedRawAmt(editing?.estimatedAmount ? editing.estimatedAmount.toFixed(2).replace(".", ",") : "");
         setDueDate(editing?.dueDate ?? TODAY);
-        setCategory(editing?.category ?? "Outros");
+        setCategory(editing?.category || DEFAULT_CATEGORY);
         setRecurrence(editing?.recurrence === "numeral" ? "numeral" : "unica");
         setInstallments(editing?.installmentCount && editing.installmentCount >= 2 ? editing.installmentCount : 2);
         setNotes(editing?.notes ?? "");
@@ -511,24 +527,28 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                     </div>
 
                     {/* Categoria */}
-                    <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-                        <legend className="text-xs font-semibold uppercase tracking-wider p-0" style={{ color: "var(--cf-text-2)" }}>{t("category")}</legend>
-                        <div className="grid grid-cols-3 gap-2">
-                            {CATEGORIES.map(cat => {
-                                const sel = category === cat.label;
-                                return (
-                                    <button key={cat.label} type="button" onClick={() => setCategory(cat.label)}
-                                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 cursor-pointer transition-all"
-                                        style={sel
-                                            ? { borderColor: cat.color, background: cat.color + "18", color: cat.color }
-                                            : { borderColor: "var(--cf-border)", background: "transparent", color: "var(--cf-text-2)" }}>
-                                        <cat.icon size={13} />
-                                        {tCat(cat.key)}
-                                    </button>
-                                );
-                            })}
+                    {/* Mesma lista de saídas do Fluxo de Caixa. Conta antiga com
+                        categoria legada mantém a sua como opção extra, pra não
+                        trocar a categoria sem o usuário escolher. */}
+                    <div className="space-y-2">
+                        <label htmlFor={categoryId} className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--cf-text-2)" }}>{t("category")}</label>
+                        <div className="relative">
+                            {(() => { const { icon: CatIcon, color } = getCatMeta(category); return (
+                                <CatIcon size={15} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color }} />
+                            ); })()}
+                            <select id={categoryId} value={category} onChange={e => setCategory(e.target.value)}
+                                className="w-full rounded-xl pl-11 pr-4 py-3 text-sm outline-none cursor-pointer"
+                                style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }}>
+                                {LEGACY_CATEGORY_KEY[category] && (
+                                    <option value={category}>{tCat(LEGACY_CATEGORY_KEY[category])}</option>
+                                )}
+                                {!LEGACY_CATEGORY_KEY[category] && !CATEGORIES.includes(category) && (
+                                    <option value={category}>{category}</option>
+                                )}
+                                {CATEGORIES.map(c => <option key={c} value={c}>{categoryLabel(c, tCats)}</option>)}
+                            </select>
                         </div>
-                    </fieldset>
+                    </div>
 
                     {/* Recorrência */}
                     <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
@@ -1234,6 +1254,7 @@ function ToastStack({ toasts }: { toasts: ToastItem[] }) {
 
 export default function ContasPagarPage() {
     const t = useTranslations("contasPagar");
+    const tCats = useTranslations("categories");
     const tPin = useTranslations("common.pin");
     const tNav = useTranslations("nav");
     const locale = useLocale();
@@ -1667,7 +1688,8 @@ export default function ContasPagarPage() {
         return enriched.filter(b => {
             if (!inPeriod(b.dueDate)) return false;
             if (filterStatus !== "todos" && b._status !== filterStatus) return false;
-            if (filterCategory !== "todas" && b.category !== filterCategory) return false;
+            // Compara já normalizado: filtrar "Folha de pagamento" pega também as contas antigas em "Folha".
+            if (filterCategory !== "todas" && normalizeCategory(b.category) !== filterCategory) return false;
             if (q && !b.title.toLowerCase().includes(q) && !b.notes.toLowerCase().includes(q)
                 && !(b.partyName ?? "").toLowerCase().includes(q)) return false;
             return true;
@@ -1924,7 +1946,7 @@ export default function ContasPagarPage() {
                                     className="pl-7 pr-6 py-1.5 rounded-full text-xs font-semibold border cursor-pointer appearance-none outline-none"
                                     style={{ background: "var(--cf-input)", borderColor: "var(--cf-border)", color: "var(--cf-text)" }}>
                                     <option value="todas">{t("toolbar.categoryAll")}</option>
-                                    {CATEGORIES.map(c => <option key={c.label} value={c.label}>{t(`categories.${c.key}`)}</option>)}
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{categoryLabel(c, tCats)}</option>)}
                                 </select>
                             </div>
                             <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}

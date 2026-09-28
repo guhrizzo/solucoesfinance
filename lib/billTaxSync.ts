@@ -15,9 +15,11 @@
 import type { Firestore } from "firebase/firestore";
 import type { Actor } from "@/lib/audit";
 import { stampSettle } from "@/lib/audit";
+import { CASHFLOW_CATEGORIES } from "@/lib/cashflowCategories";
 
-// Categoria da conta a pagar → categoria equivalente do Fluxo de Caixa
-// (precisa bater com uma das opções de CAT.saida em app/components/CashFlow.tsx).
+// Categorias LEGADAS da conta a pagar → equivalente do Fluxo de Caixa. Contas
+// novas já gravam a própria categoria de saída do Fluxo (CASHFLOW_CATEGORIES),
+// que passa direto — ver `billCashflowCategory`.
 export const CAT_TO_CASHFLOW: Record<string, string> = {
   "Aluguel": "Aluguel",
   "Fornecedores": "Fornecedores",
@@ -26,6 +28,12 @@ export const CAT_TO_CASHFLOW: Record<string, string> = {
   "Serviços": "TI / Software",
   "Outros": "Outros gastos",
 };
+
+/** Categoria do lançamento espelho no Fluxo de Caixa pra uma conta a pagar. */
+export function billCashflowCategory(category: string): string {
+  if (CAT_TO_CASHFLOW[category]) return CAT_TO_CASHFLOW[category];
+  return CASHFLOW_CATEGORIES.saida.includes(category) ? category : "Outros gastos";
+}
 
 const RECURRENCE_LABEL: Record<string, string> = {
   unica: "Única",
@@ -93,7 +101,7 @@ export async function syncBillCashflow(db: Firestore, uid: string, bill: BillLik
     const data: Record<string, unknown> = {
       type: "saida",
       description: bill.title,
-      category: CAT_TO_CASHFLOW[bill.category] ?? "Outros gastos",
+      category: billCashflowCategory(bill.category),
       amount: bill.amount,
       date: bill.paidAt || bill.dueDate || today(),
       note:
