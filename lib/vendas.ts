@@ -44,6 +44,25 @@ export interface VendaInput {
    * líquido a receber, mantendo receita e custo visíveis separadamente.
    */
   feeAmount?: number;
+  /**
+   * Venda do PDV (/vendas/pdv): numeração, caixa (turno) e pagamento. Muda a
+   * descrição ("Venda PDV #12 · Nome"), a nota ("PDV #12 · Crédito 3x") e
+   * grava os metadados pra rastrear o lançamento até a venda e o turno.
+   */
+  pdv?: {
+    saleId: string;
+    numero: number;
+    caixaId: string;
+    paymentMethod: string;
+    installments: number;
+    /** Nota pronta do pagamento, ex.: "Crédito 3x". */
+    paymentLabel: string;
+    unit: string;
+  };
+  /** Aceita quantidade fracionada (KG, L…) em vez de arredondar pra inteiro. */
+  fractionalQty?: boolean;
+  /** Data do lançamento (YYYY-MM-DD) no fuso de quem vendeu. Default: occurredAt em UTC. */
+  date?: string;
 }
 
 const CHANNEL_LABEL: Record<VendaChannel, string> = {
@@ -54,19 +73,28 @@ const CHANNEL_LABEL: Record<VendaChannel, string> = {
   manual: "Venda manual",
 };
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 function buildCashflowEntry(v: VendaInput) {
-  const quantity = Math.max(1, Math.round(v.quantity || 1));
+  const quantity = v.fractionalQty
+    ? Math.max(0.001, Math.round((Number(v.quantity) || 0) * 1000) / 1000)
+    : Math.max(1, Math.round(v.quantity || 1));
   const unitPrice = Math.max(0, Number(v.unitPrice) || 0);
   const amount = Math.round(unitPrice * quantity * 100) / 100;
   const when = v.occurredAt ? new Date(v.occurredAt) : new Date();
-  const date = when.toISOString().split("T")[0];
+  const date = v.date && DATE_RE.test(v.date) ? v.date : when.toISOString().split("T")[0];
   const orderId = (v.orderId || "").toString().trim();
   const name = (v.productName || v.sku || "Produto").toString().trim();
 
-  const description =
-    v.channel === "manual"
+  const description = v.pdv
+    ? `Venda PDV #${v.pdv.numero} · ${name}`
+    : v.channel === "manual"
       ? `Venda · ${name}`
       : `Venda ${CHANNEL_LABEL[v.channel]} · ${name}`;
+
+  const note = v.pdv
+    ? `PDV #${v.pdv.numero} · ${v.pdv.paymentLabel}`
+    : orderId ? `Pedido ${orderId}` : "";
 
   return {
     type: "entrada" as const,
@@ -74,7 +102,7 @@ function buildCashflowEntry(v: VendaInput) {
     category: "Vendas",
     amount,
     date,
-    note: orderId ? `Pedido ${orderId}` : "",
+    note,
     createdAt: Date.now(),
     // ── metadados da venda ──
     source: v.channel === "manual" ? "manual" : "marketplace",
@@ -84,6 +112,16 @@ function buildCashflowEntry(v: VendaInput) {
     saleUnitPrice: unitPrice,
     saleAdId: (v.adId || "").toString(),
     orderId,
+    ...(v.pdv
+      ? {
+          pdvSaleId: v.pdv.saleId,
+          pdvNumero: v.pdv.numero,
+          pdvCaixaId: v.pdv.caixaId,
+          paymentMethod: v.pdv.paymentMethod,
+          installments: v.pdv.installments,
+          saleUnit: v.pdv.unit,
+        }
+      : {}),
   };
 }
 

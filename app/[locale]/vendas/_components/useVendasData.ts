@@ -35,7 +35,8 @@ export interface Resumo {
 const resumir = (vendas: CashflowTx[], taxas: CashflowTx[]): Resumo => {
   const bruto = vendas.reduce((s, v) => s + (v.amount || 0), 0);
   const tx = taxas.reduce((s, v) => s + (v.amount || 0), 0);
-  const pedidos = vendas.length;
+  // Venda do PDV com vários itens = vários lançamentos, mas UM pedido.
+  const pedidos = new Set(vendas.map((v) => v.pdvSaleId || v.id)).size;
   return {
     bruto,
     taxas: tx,
@@ -181,7 +182,7 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
       return {
         canal: c,
         total: valor,
-        pedidos: list.length,
+        pedidos: new Set(list.map((v) => v.pdvSaleId || v.id)).size,
         unidades: list.reduce((s, v) => s + (v.saleQty || 1), 0),
         pct: total > 0 ? (valor / total) * 100 : 0,
       };

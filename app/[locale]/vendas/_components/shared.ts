@@ -52,6 +52,8 @@ export interface CashflowTx {
   isMarketplaceFee?: boolean;
   /** Venda registrada SEM lançamento no Fluxo de Caixa (coleção users/{uid}/vendas). */
   offCashflow?: boolean;
+  /** Venda do PDV (/vendas/pdv): uma venda com N itens vira N lançamentos com o mesmo id. */
+  pdvSaleId?: string;
 }
 
 export interface ProdutoEstoque {
@@ -103,4 +105,4 @@ export const pctChange = (cur: number, prev: number): number | null =>
 
 /** Nome do produto a partir da descrição do lançamento ("Venda · Nome"). */
 export const nomeDaVenda = (description: string) =>
-  description.replace(/^Venda(?: (?:Mercado Livre|Shopee|TikTok Shop|Shein))? · /, "");
+  description.replace(/^Venda(?: (?:Mercado Livre|Shopee|TikTok Shop|Shein|PDV #\d+))? · /, "");

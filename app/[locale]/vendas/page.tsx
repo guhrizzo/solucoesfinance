@@ -9,7 +9,8 @@ import { usePeriod } from "@/app/hooks/usePeriod";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, PageHeader, Button } from "@/app/components/ui";
-import { LayoutGrid, Calculator, Plus, X, Check, Settings } from "lucide-react";
+import { LayoutGrid, Calculator, Plus, X, Check, Settings, Store } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import type { VendasFiltros } from "./_components/shared";
 import { useVendasData } from "./_components/useVendasData";
 import { FilterBar } from "./_components/FilterBar";
@@ -134,6 +135,14 @@ export default function VendasPage() {
             <Button variant="secondary" icon={Settings} onClick={() => setConfigOpen(true)}>
               {t("config.cta")}
             </Button>
+            <Link
+              href="/vendas/pdv"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold no-underline transition-colors hover:bg-[var(--sunken)]"
+              style={{ borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+            >
+              <Store size={15} /> {t("pdv.cta")}
+              <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: "var(--brand-weak)", color: "var(--brand)" }}>PRO</span>
+            </Link>
             <Button icon={Plus} onClick={() => setNovaVendaOpen(true)} disabled={d.produtos.length === 0}>
               {t("newSale.cta")}
             </Button>

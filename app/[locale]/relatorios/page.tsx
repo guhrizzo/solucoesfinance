@@ -11,7 +11,7 @@ import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, Badge, Sensitive } from "@/app/components/ui";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isRedemption } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
 
@@ -339,6 +339,9 @@ export default function RelatoriosPage() {
     filteredTxs.forEach(tx => {
       // Transferência entre contas do mesmo titular não é resultado — fica fora do DRE.
       if (isSameOwnerTransfer(tx.category)) return;
+      // Aplicação / resgate / investimento é dinheiro do titular mudando de
+      // lugar, não resultado — também fica fora do DRE.
+      if (isInvestmentMovement(tx.category, tx.description)) return;
       const catLower = tx.category.toLowerCase();
       const name = tx.category || noCategory;
       if (tx.type === "entrada") {
@@ -381,9 +384,11 @@ export default function RelatoriosPage() {
     let total = 0;
     filteredTxs.forEach(tx => {
       if (tx.type !== "saida") return;
-      // Resgate de aplicação é o dinheiro do próprio titular voltando pra conta,
-      // não uma despesa — fica de fora só deste relatório.
-      if (isRedemption(tx.category, tx.description)) return;
+      // Aplicação / resgate / investimento é o dinheiro do próprio titular
+      // mudando de lugar, não uma despesa — fica de fora deste relatório.
+      if (isInvestmentMovement(tx.category, tx.description)) return;
+      // Transferência entre contas do mesmo titular também não é gasto.
+      if (isSameOwnerTransfer(tx.category)) return;
       total += tx.amount;
       const name = tx.category || noCategory;
       const g = map.get(name) ?? { total: 0, txs: [] };

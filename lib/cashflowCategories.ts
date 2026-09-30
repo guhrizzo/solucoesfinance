@@ -102,13 +102,26 @@ export function isSameOwnerTransfer(category: string): boolean {
 /** Resgate de aplicação — "Resgate", "Resgate de investimento", "resgate
  *  automático" etc. É o dinheiro do próprio titular voltando pra conta, então
  *  não é gasto: fica de fora do Relatório de Gastos (aba Gastos de
- *  app/[locale]/relatorios). Segue aparecendo no Fluxo de Caixa, no DRE e nas
- *  demais abas.
+ *  app/[locale]/relatorios) e do DRE, via isInvestmentMovement.
+ *  Segue aparecendo no Fluxo de Caixa e nas demais abas.
  *
  *  Casa por TERMO (e não por categoria fixa) porque o resgate chega tanto como
  *  categoria livre quanto só na descrição vinda da importação de extrato. */
 export function isRedemption(category: string, description = ""): boolean {
   return norm(`${category} ${description}`).includes("resgate");
+}
+
+/** Aplicação financeira, resgate e investimento — dinheiro do próprio titular
+ *  indo pra (ou voltando de) uma aplicação. Não é receita nem despesa, então
+ *  fica de fora do DRE e do Relatório de Gastos. "Rendimentos financeiros" (o juro ganho) NÃO entra
+ *  aqui: esse é resultado de verdade.
+ *
+ *  "aplicacao"/"investimento" casam só na categoria (na descrição pegariam
+ *  texto solto demais); "resgate" casa também na descrição, como em
+ *  isRedemption, pra cobrir o que vem da importação de extrato. */
+export function isInvestmentMovement(category: string, description = ""): boolean {
+  const cat = norm(category);
+  return cat.includes("aplicacao") || cat.includes("investimento") || isRedemption(category, description);
 }
 
 // Sentinela usada nos <select> de categoria. Quando escolhida, a UI troca por
