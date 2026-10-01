@@ -239,5 +239,21 @@
     "seriesUpdateError": "Error al actualizar la serie",
     "chargeEmailSent": "Cobro enviado a {email}",
     "chargeEmailError": "No se pudo enviar el cobro"
+  },
+  "pixLink": {
+    "metaTitle": "Pagar con Pix",
+    "title": "Pagar con Pix",
+    "to": "Para {name}",
+    "amount": "Monto",
+    "due": "Vence el {date}",
+    "keyLabel": "Clave Pix ({type})",
+    "copyKey": "Copiar clave Pix",
+    "brCodeLabel": "Pix copia y pega (con el monto incluido)",
+    "copyBrCode": "Copiar código copia y pega",
+    "copied": "¡Copiado!",
+    "howTo": "En la app de tu banco, abre Pix y pega la clave (tú escribes el monto) o usa Pix copia y pega (el monto ya viene completo).",
+    "paid": "Este cobro ya fue pagado. ¡Gracias!",
+    "invalid": "Este enlace de pago ya no es válido. Pide un nuevo cobro a quien envió el correo.",
+    "footer": "Cobro enviado por NexusFi — gestión financiera empresarial."
   }
 }

@@ -424,7 +424,11 @@ export function receivableChargeEmail(opts: {
   /** Lembrete automático: "d5" = 5 dias antes, "d0" = no dia do vencimento. */
   stage?: "d5" | "d0";
   /** Chave Pix recebedora e o copia e cola com o valor da cobrança. */
-  pix?: { keyLabel: string; key: string; copiaECola: string };
+  pix?: {
+    keyLabel: string; key: string; copiaECola: string;
+    /** Página pública /pix/{token} com botões de copiar (e-mail não roda JS) — ver lib/pixLink.ts. */
+    copyUrl?: string; iconUrl?: string;
+  };
   /** Boleto registrado num provedor — ver lib/boleto.ts. */
   boleto?: {
     bankCode?: string;
@@ -615,6 +619,16 @@ export function receivableChargeEmail(opts: {
                 <div style="border:1px solid #bfdbfe;background:#f0f7ff;border-radius:10px;padding:14px 16px;margin:0 0 16px;">
                   <div style="font-size:13px;font-weight:800;color:#0d2247;margin:0 0 4px;">Pague com Pix</div>
                   ${o.pix ? `<div style="font-size:12px;color:#334155;margin:0 0 8px;">Chave ${e(o.pix.keyLabel)}: <strong>${e(o.pix.key)}</strong> · Recebedor: ${e(beneficiaryLine)}</div>` : ""}
+                  ${o.pix?.copyUrl ? `
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 12px;">
+                    <tr>
+                      <td style="background:#0e7c72;border-radius:8px;">
+                        <a href="${e(o.pix.copyUrl)}" target="_blank" style="display:inline-block;padding:10px 18px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;line-height:20px;">
+                          ${o.pix.iconUrl ? `<img src="${e(o.pix.iconUrl)}" width="18" height="18" alt="" style="vertical-align:-4px;border:0;margin-right:8px;">` : ""}Copiar chave Pix
+                        </a>
+                      </td>
+                    </tr>
+                  </table>` : ""}
                   <div style="${LABEL}margin:0 0 4px;">Pix copia e cola (já com o valor)</div>
                   <div style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.5;color:#0f172a;background:#ffffff;border:1px dashed #94a3b8;border-radius:6px;padding:8px;word-break:break-all;">${e(pixCode)}</div>
                   <div style="font-size:11px;color:#64748b;margin:6px 0 0;">No app do seu banco: Pix › Pix copia e cola › cole o código acima.</div>
@@ -676,6 +690,7 @@ export function receivableChargeEmail(opts: {
     o.boleto?.nossoNumero ? `Nosso número: ${o.boleto.nossoNumero}` : "",
     o.boleto?.pdfUrl ? `Boleto (PDF): ${o.boleto.pdfUrl}` : "",
     o.pix ? `Chave Pix (${o.pix.keyLabel}): ${o.pix.key}` : "",
+    o.pix?.copyUrl ? `Copiar chave Pix: ${o.pix.copyUrl}` : "",
     pixCode ? `Pix copia e cola (já com o valor): ${pixCode}` : "",
     `Local de pagamento: ${localPagamento}`,
     "",
