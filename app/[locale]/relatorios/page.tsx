@@ -14,6 +14,7 @@ import { usePeriod } from "@/app/hooks/usePeriod";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
+import { DreSummary } from "./DreSummary";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -1606,6 +1607,13 @@ export default function RelatoriosPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-xl px-4 py-3.5" style={{ border: "1px solid var(--db-border)" }}>
+                <DreSummary
+                  receita={dreData.receita} cmv={dreData.cmv} despesas={dreData.despesas} impostos={dreData.impostos}
+                  lucroLiquido={dreData.lucroLiquido} cmvCats={dreData.cmvCats} despesasCats={dreData.despesasCats} impostosCats={dreData.impostosCats}
+                />
               </div>
 
               <p className="text-[11px] mt-3" style={{ color: "var(--db-text-3)" }}>

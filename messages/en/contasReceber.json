@@ -239,5 +239,21 @@
     "seriesUpdateError": "Error updating the series",
     "chargeEmailSent": "Notice sent to {email}",
     "chargeEmailError": "Could not send the notice"
+  },
+  "pixLink": {
+    "metaTitle": "Pay with Pix",
+    "title": "Pay with Pix",
+    "to": "To {name}",
+    "amount": "Amount",
+    "due": "Due {date}",
+    "keyLabel": "Pix key ({type})",
+    "copyKey": "Copy Pix key",
+    "brCodeLabel": "Pix copy-and-paste code (amount included)",
+    "copyBrCode": "Copy copy-and-paste code",
+    "copied": "Copied!",
+    "howTo": "In your bank app, open Pix and paste the key (you type the amount) or use Pix copy and paste (the amount is already filled in).",
+    "paid": "This charge has already been paid. Thank you!",
+    "invalid": "This payment link is no longer valid. Ask the sender for a new charge.",
+    "footer": "Charge sent via NexusFi — business financial management."
   }
 }

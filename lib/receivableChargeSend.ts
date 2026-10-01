@@ -21,6 +21,7 @@ import {
 } from "@/lib/boleto";
 import { buildPixCopiaECola, formatPixKey, normalizePixKey, type PixKeyType } from "@/lib/pix";
 import { sendWhatsAppCharge, type WhatsAppResult } from "@/lib/whatsapp";
+import { upsertPixLink, pixLinkUrl, pixIconUrl } from "@/lib/pixLink";
 
 export type ChargeStage = "manual" | "d5" | "d0";
 
@@ -31,6 +32,7 @@ export interface ReceivableChargeDoc {
   pixKey?: string; pixKeyType?: PixKeyType; autoReminder?: boolean;
   reminders?: Partial<Record<"d5" | "d0", { dueDate?: string; at?: number }>>;
   boleto?: BoletoData;
+  pixLinkToken?: string;
 }
 
 export const PIX_KEY_LABEL: Record<PixKeyType, string> = {
@@ -138,6 +140,28 @@ export async function sendReceivableCharge(opts: {
     if (!isValidEmail(to)) {
       result.email = { ok: false, error: "Cadastre um e-mail válido do cliente na cobrança." };
     } else {
+      // Botão "Copiar chave Pix": e-mail não roda JS, então aponta pra página
+      // pública /pix/{token} (lib/pixLink.ts). Falhou? O e-mail sai sem o botão.
+      let pixCopyUrl: string | undefined;
+      if (pix && pixKeyType) {
+        try {
+          const token = await upsertPixLink(db, r.pixLinkToken, {
+            ownerUid, receivableId,
+            beneficiary: legalName || companyName,
+            keyLabel: pix.keyLabel,
+            keyDisplay: pix.key,
+            keyCopy: normalizePixKey(pixKeyType, pixKeyRaw) ?? pix.key,
+            copiaECola: pix.copiaECola,
+            amount: brl(overdue ? pen.total : amount),
+            dueDate: brDate(dueDate),
+          });
+          if (token !== r.pixLinkToken) await ref.set({ pixLinkToken: token }, { merge: true });
+          pixCopyUrl = pixLinkUrl(token);
+        } catch (err) {
+          console.error("Erro ao gerar link do Pix:", err);
+        }
+      }
+
       const createdAt = Number(r.createdAt);
       const { subject, html, text } = receivableChargeEmail({
         beneficiary: {
@@ -176,7 +200,7 @@ export async function sendReceivableCharge(opts: {
         notes: String(r.notes ?? ""),
         replyTo,
         stage: stage === "manual" ? undefined : stage,
-        pix,
+        pix: pix ? { ...pix, copyUrl: pixCopyUrl, iconUrl: pixCopyUrl ? pixIconUrl() : undefined } : undefined,
         boleto: boleto
           ? {
               bankCode: boleto.bankCode,

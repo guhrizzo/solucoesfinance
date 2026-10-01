@@ -146,7 +146,20 @@
     "margin": "margin {value}%",
     "noCategory": "No category",
     "footnoteAnnual": "Click the rows with an arrow to see the categories that make up each value. Period: Annual.",
-    "footnoteMonthly": "Click the rows with an arrow to see the categories that make up each value. Period: Monthly."
+    "footnoteMonthly": "Click the rows with an arrow to see the categories that make up each value. Period: Monthly.",
+    "summary": {
+      "title": "Period summary",
+      "cmv": "COGS",
+      "opExpenses": "Operating expenses",
+      "taxes": "Taxes",
+      "profit": "Profit",
+      "per100": "Out of every {base} that came in, {cmv} went to COGS, {despesas} to operating expenses and {impostos} to taxes —",
+      "resultProfit": "leaving {value} of profit.",
+      "resultLoss": "outflows added up to {pct}% of revenue, a loss of {value} for every {base100}.",
+      "biggest": "Biggest weight: {line}, at {pct}% of revenue — driven mainly by {cat} ({catPct}% of that line).",
+      "biggestNoCat": "Biggest weight: {line}, at {pct}% of revenue.",
+      "noRevenue": "No revenue in this period — each line's weight is calculated over revenue, so it shows up once there are inflows."
+    }
   },
   "countLabels": {
     "monthsElapsedCurrent": "{count, plural, one {# month elapsed} other {# months elapsed}}",

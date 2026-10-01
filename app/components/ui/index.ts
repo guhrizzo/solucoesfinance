@@ -12,3 +12,5 @@ export { PageHeader } from "./PageHeader";
 export { EmptyState } from "./EmptyState";
 export { PageLoader } from "./PageLoader";
 export { Sensitive } from "./Sensitive";
+export { SmoothLine, smoothPath, type Pt } from "./SmoothLine";
+export { AreaLineChart, type AreaSeries } from "./AreaLineChart";

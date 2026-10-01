@@ -146,7 +146,20 @@
     "margin": "margen {value}%",
     "noCategory": "Sin categoría",
     "footnoteAnnual": "Haz clic en las filas con flecha para ver las categorías que componen cada valor. Período: Anual.",
-    "footnoteMonthly": "Haz clic en las filas con flecha para ver las categorías que componen cada valor. Período: Mensual."
+    "footnoteMonthly": "Haz clic en las filas con flecha para ver las categorías que componen cada valor. Período: Mensual.",
+    "summary": {
+      "title": "Resumen del período",
+      "cmv": "CMV",
+      "opExpenses": "Gastos operativos",
+      "taxes": "Impuestos",
+      "profit": "Ganancia",
+      "per100": "De cada {base} que entraron, {cmv} fueron al CMV, {despesas} a gastos operativos y {impostos} a impuestos —",
+      "resultProfit": "quedaron {value} de ganancia.",
+      "resultLoss": "las salidas sumaron el {pct}% de los ingresos, una pérdida de {value} por cada {base100}.",
+      "biggest": "Mayor peso: {line}, con el {pct}% de los ingresos — impulsado principalmente por {cat} ({catPct}% de esa línea).",
+      "biggestNoCat": "Mayor peso: {line}, con el {pct}% de los ingresos.",
+      "noRevenue": "Sin ingresos en el período — el peso de cada línea se calcula sobre los ingresos, así que aparece cuando haya entradas."
+    }
   },
   "countLabels": {
     "monthsElapsedCurrent": "{count, plural, one {# mes transcurrido} other {# meses transcurridos}}",

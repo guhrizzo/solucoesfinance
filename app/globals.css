@@ -28,6 +28,11 @@
   --brand-hover: #1a5fd0;
   --brand-weak: #e9f1fd;
   --brand-on: #ffffff;
+
+  /* Pix (botões de copiar chave — página pública /pix e e-mail de cobrança).
+     Tom escuro do verde-água do Pix: texto branco com contraste AA (~5:1). */
+  --pix: #0e7c72;
+  --pix-on: #ffffff;
   /* Texto/ícone sobre preenchimento saturado (--pos, --neg, gradientes). Sempre claro. */
   --on-accent: #ffffff;
 
@@ -1432,3 +1437,21 @@ html[data-underline-links="1"] a[href] {
 
 [data-theme="dark"] .mkt .hover\:bg-blue-50:hover { background-color: var(--mkt-brand-weak); }
 [data-theme="dark"] .mkt .hover\:border-blue-300:hover { border-color: var(--mkt-brand); }
+/* ── Gráfico de linha: curva + área em degradê (<SmoothLine>) ─────────────────
+   A linha "se desenha" da esquerda pra direita (pathLength=1 no SVG, então o
+   dash de 1 cobre a curva toda) e a área esmaece logo atrás. */
+.smooth-line-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: smooth-line-draw 1.1s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+}
+.smooth-line-area {
+  opacity: 0;
+  animation: smooth-line-fade 0.9s 0.35s ease-out forwards;
+}
+.smooth-line-fade {
+  opacity: 0;
+  animation: smooth-line-fade 0.6s 0.2s ease-out forwards;
+}
+@keyframes smooth-line-draw { to { stroke-dashoffset: 0; } }
+@keyframes smooth-line-fade { to { opacity: 1; } }

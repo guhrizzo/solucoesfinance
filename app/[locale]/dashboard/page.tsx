@@ -13,7 +13,7 @@ import { useLocale, useTranslations } from "next-intl";
 import OnboardingModal, { type OnboardingAnswers } from "@/app/components/OnboardingModal";
 import CreatePasswordGate from "@/app/components/CreatePasswordGate";
 import Navbar from "@/app/components/Navbar";
-import { Badge, PageLoader, Sensitive, Modal } from "@/app/components/ui";
+import { Badge, PageLoader, Sensitive, Modal, SmoothLine, AreaLineChart } from "@/app/components/ui";
 import AccessDenied from "@/app/components/AccessDenied";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney, formatDateTime } from "@/lib/format";
@@ -1000,10 +1000,10 @@ export default function Dashboard() {
                   <span className="w-2.5 h-2.5 rounded-full inline-block border-2" style={{ borderColor: "var(--warn)", background: "transparent" }} /> {t("chart.budget")}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-500)" }} /> {t("chart.revenue")}
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: chartType === "line" ? "var(--pos)" : "var(--brand-500)" }} /> {t("chart.revenue")}
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "var(--brand-400)" }} /> {t("chart.expense")}
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: chartType === "line" ? "var(--neg)" : "var(--brand-400)" }} /> {t("chart.expense")}
                 </div>
                 <button
                   onClick={() => setHideValues(!hideValues)}
@@ -1054,12 +1054,26 @@ export default function Dashboard() {
                   );
                 })()}
               </div>
+            ) : chartType === "line" ? (
+              <AreaLineChart
+                height={260}
+                categories={months}
+                hideValues={hideValues}
+                formatValue={toBRL}
+                formatAxis={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(Math.round(v)))}
+                ariaLabel={t("chart.ariaBarLine", { type: t("chart.typeLine"), year: refDate.getFullYear() })}
+                series={[
+                  { name: t("chart.revenue"), data: chartData.revenues, color: "var(--pos)" },
+                  { name: t("chart.expense"), data: chartData.expenses, color: "var(--neg)" },
+                  { name: t("chart.budget"), data: chartData.budget, color: "var(--warn)", dashed: true },
+                ]}
+              />
             ) : (
               <div className="relative">
               <svg
                 viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}
                 role="img"
-                aria-label={t("chart.ariaBarLine", { type: chartType === "line" ? t("chart.typeLine") : t("chart.typeBar"), year: refDate.getFullYear() })}
+                aria-label={t("chart.ariaBarLine", { type: t("chart.typeBar"), year: refDate.getFullYear() })}
               >
                 {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => (
                   <g key={i}>
@@ -1072,26 +1086,7 @@ export default function Dashboard() {
                 {hoverMonth !== null && (
                   <rect x={49 + hoverMonth * 44} y={10} width={44} height={160} rx={4} fill="var(--brand-500)" opacity={0.07} />
                 )}
-                {chartType === "line" ? (
-                  (() => {
-                    const px = (i: number) => 48 + i * 44 + 11;
-                    const py = (v: number) => 170 - (v / chartData.maxVal) * 160;
-                    const pts = (arr: number[]) => arr.map((v, i) => `${px(i)},${py(v)}`).join(" ");
-                    const dim = (i: number) => (hoverMonth === null || hoverMonth === i ? 1 : 0.3);
-                    return (
-                      <>
-                        <polyline fill="none" stroke="var(--warn)" strokeWidth="1.75" strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.budget)} />
-                        <polyline className="bar-rev-anim" fill="none" stroke="var(--brand-500)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.revenues)} />
-                        <polyline className="bar-exp-anim" fill="none" stroke="var(--brand-400)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts(chartData.expenses)} />
-                        {chartData.revenues.map((v, i) => <circle key={`r${i}`} cx={px(i)} cy={py(v)} r={hoverMonth === i ? 3.5 : 2.5} fill="var(--brand-500)" opacity={dim(i)} style={{ transition: "opacity .15s" }} />)}
-                        {chartData.expenses.map((v, i) => <circle key={`e${i}`} cx={px(i)} cy={py(v)} r={hoverMonth === i ? 3.5 : 2.5} fill="var(--brand-400)" opacity={dim(i)} style={{ transition: "opacity .15s" }} />)}
-                        {months.map((m, i) => (
-                          <text key={m} x={px(i)} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
-                        ))}
-                      </>
-                    );
-                  })()
-                ) : (
+                {(
                   <>
                     {months.map((m, i) => {
                       const rev = chartData.revenues[i];
@@ -1106,9 +1101,9 @@ export default function Dashboard() {
                         </g>
                       );
                     })}
-                    <polyline
-                      fill="none" stroke="var(--warn)" strokeWidth="1.75" strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round"
-                      points={chartData.budget.map((v, i) => `${48 + i * 44 + 23},${170 - (v / chartData.maxVal) * 160}`).join(" ")}
+                    <SmoothLine
+                      color="var(--warn)" strokeWidth={1.75} dashed
+                      points={chartData.budget.map((v, i) => [48 + i * 44 + 23, 170 - (v / chartData.maxVal) * 160] as const)}
                     />
                   </>
                 )}
@@ -1131,7 +1126,7 @@ export default function Dashboard() {
                   className="pointer-events-none absolute z-20 rounded-lg shadow-lg px-2.5 py-2"
                   style={{
                     top: 0,
-                    left: `${(((chartType === "line" ? 59 : 71) + hoverMonth * 44) / 600) * 100}%`,
+                    left: `${((71 + hoverMonth * 44) / 600) * 100}%`,
                     transform: `translateX(${hoverMonth <= 1 ? "-12%" : hoverMonth >= 10 ? "-88%" : "-50%"})`,
                     background: "var(--db-card)",
                     border: "1px solid var(--db-border)",
@@ -1342,13 +1337,9 @@ export default function Dashboard() {
                     return el;
                   });
                 })()}
-                {hideValues ? (
-                  <rect x="42" y="57" width="56" height="12" rx="3" fill="var(--db-text-3)" />
-                ) : (
-                  <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
-                    {toBRL(costCenterData.totalExpenses)}
-                  </text>
-                )}
+                <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
+                  <Sensitive hidden={hideValues} svg>{toBRL(costCenterData.totalExpenses)}</Sensitive>
+                </text>
                 <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text-3)" fontFamily="Sora">{t("costCenter.totalExpenses")}</text>
               </svg>
             </div>
