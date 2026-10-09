@@ -21,7 +21,8 @@ export type AsaasBillingType = "BOLETO" | "CREDIT_CARD";
 export type AsaasCycle = "MONTHLY" | "YEARLY";
 
 export function asaasApiKey(): string {
-  return (process.env.ASAAS_API_KEY || "").trim();
+  // Tolera aspas e "\$" colados do .env na hora de configurar o painel da Vercel.
+  return (process.env.ASAAS_API_KEY || "").trim().replace(/^["']|["']$/g, "").replace(/^\\(?=\$)/, "");
 }
 
 export function asaasConfigured(): boolean {
