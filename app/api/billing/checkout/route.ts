@@ -9,11 +9,23 @@ import { getPlan } from "@/lib/billingPlans";
 import { createCheckoutLink, buildOrderNsu, infinitepayConfigured } from "@/lib/infinitepay";
 import { isCompedEmail } from "@/lib/compAccounts";
 import type { ContractDoc } from "@/lib/contract";
+import {
+  asaasConfigured,
+  cancelSubscription,
+  createCustomer,
+  createSubscription,
+  listSubscriptionPayments,
+  todayBR,
+  type AsaasBillingType,
+} from "@/lib/asaas";
+import { freshBillingDoc, type BillingDoc } from "@/lib/billing";
 
-// POST /api/billing/checkout   body: { plan: "mensal" | "anual" }
+// POST /api/billing/checkout   body: { plan, contractId, method?: "card" | "boleto" }
 //
-// Autenticado, SÓ O DONO da conta. Gera o link de pagamento da InfinitePay e
-// devolve { url } pro client redirecionar. O `order_nsu` carrega ownerUid+plano
+// Autenticado, SÓ O DONO da conta. Com ASAAS_API_KEY configurada, cria uma
+// assinatura recorrente no Asaas (cartão recorrente ou boleto a cada ciclo) e
+// devolve { url } da fatura hospedada; sem ela, cai no link avulso da
+// InfinitePay. O externalReference/`order_nsu` carrega ownerUid+plano+contrato
 // e volta intacto no webhook/redirect.
 
 function appUrl(): string {
@@ -45,8 +57,9 @@ export async function POST(request: Request) {
     /* sem e-mail → segue o fluxo normal de cobrança */
   }
 
-  if (!infinitepayConfigured()) {
-    return NextResponse.json({ error: "Pagamento não configurado (INFINITEPAY_HANDLE ausente)." }, { status: 503 });
+  const useAsaas = asaasConfigured();
+  if (!useAsaas && !infinitepayConfigured()) {
+    return NextResponse.json({ error: "Pagamento não configurado (ASAAS_API_KEY ausente)." }, { status: 503 });
   }
 
   const base = appUrl();
@@ -54,7 +67,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "NEXT_PUBLIC_APP_URL não configurado." }, { status: 503 });
   }
 
-  const { plan: planId, contractId } = await request.json().catch(() => ({}));
+  const { plan: planId, contractId, method } = await request.json().catch(() => ({}));
   const plan = getPlan(String(planId || ""));
   if (!plan) {
     return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
@@ -99,6 +112,89 @@ export async function POST(request: Request) {
       };
     } catch {
       /* prefill é opcional */
+    }
+  }
+
+  if (useAsaas) {
+    const billingType: AsaasBillingType = method === "boleto" ? "BOLETO" : "CREDIT_CARD";
+    const cnpjDigits = contract.contratante.cnpj.replace(/\D/g, "");
+    if (cnpjDigits.length !== 14) {
+      return NextResponse.json({ error: "CNPJ do contrato inválido. Refaça o aceite." }, { status: 400 });
+    }
+
+    try {
+      const billingRef = db.doc(`users/${scope.ownerUid}/profile/billing`);
+      const billingSnap = await billingRef.get();
+      const billing = billingSnap.exists ? (billingSnap.data() as BillingDoc) : freshBillingDoc();
+
+      // Já tem renovação automática viva → não cria uma segunda cobrança por cima.
+      if (billing.gateway === "asaas" && billing.subscriptionStatus === "authorized") {
+        return NextResponse.json(
+          { error: "Você já tem uma assinatura com renovação automática. Cancele a renovação antes de contratar de novo." },
+          { status: 409 }
+        );
+      }
+      // Tentativa anterior nunca paga (pending): descarta pra não deixar cobrança órfã.
+      if (billing.gateway === "asaas" && billing.subscriptionId && billing.subscriptionStatus === "pending") {
+        await cancelSubscription(billing.subscriptionId).catch(() => undefined);
+      }
+
+      const orderNsu = buildOrderNsu(scope.ownerUid, plan.id, cid);
+      const customer = await createCustomer({
+        name: contract.contratante.razaoSocial,
+        email: contract.signatario.email,
+        cpfCnpj: cnpjDigits,
+        externalReference: scope.ownerUid,
+      });
+      const today = todayBR();
+      // Boleto: 3 dias de prazo na 1ª cobrança. Cartão: cobra já.
+      const dueDate = billingType === "BOLETO" ? todayBR(Date.now() + 3 * 24 * 60 * 60 * 1000) : today;
+
+      const sub = await createSubscription({
+        customerId: customer.id,
+        billingType,
+        priceCents: plan.priceCents,
+        cycle: plan.months === 12 ? "YEARLY" : "MONTHLY",
+        nextDueDate: dueDate,
+        description: `NexusFi — Plano ${plan.label}`,
+        externalReference: orderNsu,
+        successUrl: `${base}/assinatura/retorno?gateway=asaas`,
+      });
+
+      // A 1ª cobrança nasce junto com a assinatura; dá uma folga se demorar.
+      let invoiceUrl: string | null = null;
+      for (let i = 0; i < 4 && !invoiceUrl; i++) {
+        if (i > 0) await new Promise((r) => setTimeout(r, 1000));
+        const pays = await listSubscriptionPayments(sub.id).catch(() => []);
+        invoiceUrl = pays.find((p) => p.invoiceUrl)?.invoiceUrl ?? null;
+      }
+      if (!invoiceUrl) {
+        await cancelSubscription(sub.id).catch(() => undefined);
+        throw new Error("O Asaas criou a assinatura mas não gerou a fatura. Tente novamente.");
+      }
+
+      const now = Date.now();
+      await billingRef.set(
+        {
+          ...billing,
+          gateway: "asaas",
+          subscriptionId: sub.id,
+          subscriptionStatus: "pending",
+          cancelledAt: null,
+          paymentMethod: billingType,
+          updatedAt: now,
+        } satisfies BillingDoc,
+        { merge: true }
+      );
+      await db
+        .doc(`users/${scope.ownerUid}/contracts/${cid}`)
+        .update({ orderNsu, updatedAt: now })
+        .catch(() => undefined);
+
+      return NextResponse.json({ url: invoiceUrl, orderNsu });
+    } catch (err: any) {
+      console.error("Erro ao criar assinatura Asaas:", err);
+      return NextResponse.json({ error: err?.message || "Falha ao gerar a cobrança." }, { status: 502 });
     }
   }
 

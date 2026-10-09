@@ -10,9 +10,12 @@ import { infinitepayConfigured, parseOrderNsu } from "@/lib/infinitepay";
 import { applyPaidOrder } from "@/lib/billingApply";
 import { confirmFromReturn } from "@/lib/billingApplyMp";
 import { mercadopagoConfigured } from "@/lib/mercadopago";
+import { asaasConfigured } from "@/lib/asaas";
+import { confirmAsaasFromReturn } from "@/lib/billingApplyAsaas";
 
 // POST /api/billing/confirm
-//   Mercado Pago (recorrente): body { preapproval_id }
+//   Asaas (recorrente): body { gateway: "asaas" } — a assinatura é a gravada no checkout
+//   Mercado Pago (recorrente, dormente): body { preapproval_id }
 //   InfinitePay (legado, links já emitidos): body { order_nsu, transaction_nsu, slug }
 //
 // Chamada pela página /assinatura/retorno depois que o gateway redireciona o
@@ -26,7 +29,29 @@ async function handlePost(request: Request) {
     return NextResponse.json({ error: scope.error }, { status: scope.status });
   }
 
-  const { order_nsu, transaction_nsu, slug, preapproval_id } = await request.json().catch(() => ({}));
+  const { order_nsu, transaction_nsu, slug, preapproval_id, gateway } = await request.json().catch(() => ({}));
+
+  // ── Asaas ──
+  if (gateway === "asaas") {
+    if (!asaasConfigured()) {
+      return NextResponse.json({ error: "Pagamento não configurado." }, { status: 503 });
+    }
+    try {
+      const db = await getAdminDb();
+      const r = await confirmAsaasFromReturn(db, scope.ownerUid);
+      if (!r.found) {
+        return NextResponse.json({ error: "Nenhuma assinatura em andamento nesta conta." }, { status: 400 });
+      }
+      if (r.applied) {
+        return NextResponse.json({ ok: true, contractId: r.contractId, currentPeriodEnd: r.currentPeriodEnd });
+      }
+      // Cartão em análise ou boleto ainda não compensado — o webhook conclui.
+      return NextResponse.json({ ok: false, pending: true, contractId: r.contractId });
+    } catch (err: any) {
+      console.error("Erro em /api/billing/confirm (Asaas):", err);
+      return NextResponse.json({ error: err?.message || "Erro ao confirmar assinatura." }, { status: 500 });
+    }
+  }
 
   // ── Mercado Pago ──
   if (preapproval_id) {

@@ -7,11 +7,12 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { cancelPreapproval, mercadopagoConfigured } from "@/lib/mercadopago";
 import { syncPreapproval } from "@/lib/billingApplyMp";
+import { asaasConfigured, cancelSubscription } from "@/lib/asaas";
 import type { BillingDoc } from "@/lib/billing";
 
 // POST /api/billing/cancel
 //
-// Autenticado, SÓ O DONO. Cancela a renovação automática no Mercado Pago:
+// Autenticado, SÓ O DONO. Cancela a renovação automática (Asaas ou Mercado Pago):
 // nenhuma cobrança futura. O acesso já pago segue até `currentPeriodEnd`
 // (contrato, cláusula 4.2 — sem reembolso do período em curso).
 
@@ -26,20 +27,35 @@ export async function POST(request: Request) {
       { status: 403 }
     );
   }
-  if (!mercadopagoConfigured()) {
-    return NextResponse.json({ error: "Pagamento não configurado." }, { status: 503 });
-  }
-
   try {
     const db = await getAdminDb();
     const snap = await db.doc(`users/${scope.ownerUid}/profile/billing`).get();
     const doc = snap.exists ? (snap.data() as BillingDoc) : null;
 
-    if (!doc?.subscriptionId || doc.gateway !== "mercadopago") {
+    if (!doc?.subscriptionId || (doc.gateway !== "mercadopago" && doc.gateway !== "asaas")) {
       return NextResponse.json({ error: "Não há assinatura com renovação automática para cancelar." }, { status: 404 });
     }
     if (doc.subscriptionStatus === "cancelled") {
       return NextResponse.json({ ok: true, alreadyCancelled: true, currentPeriodEnd: doc.currentPeriodEnd });
+    }
+
+    if (doc.gateway === "asaas") {
+      if (!asaasConfigured()) {
+        return NextResponse.json({ error: "Pagamento não configurado." }, { status: 503 });
+      }
+      // Cancela no Asaas e espelha localmente na hora (o webhook SUBSCRIPTION_DELETED
+      // chega depois e é idempotente).
+      await cancelSubscription(doc.subscriptionId);
+      const now = Date.now();
+      await db.doc(`users/${scope.ownerUid}/profile/billing`).set(
+        { subscriptionStatus: "cancelled", cancelledAt: now, updatedAt: now },
+        { merge: true }
+      );
+      return NextResponse.json({ ok: true, currentPeriodEnd: doc.currentPeriodEnd });
+    }
+
+    if (!mercadopagoConfigured()) {
+      return NextResponse.json({ error: "Pagamento não configurado." }, { status: 503 });
     }
 
     // Cancela no MP e espelha o estado retornado (não presume: usa a resposta).

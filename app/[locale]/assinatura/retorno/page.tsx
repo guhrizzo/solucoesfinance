@@ -24,6 +24,8 @@ function Retorno() {
   // Mercado Pago (assinatura recorrente) volta com `preapproval_id`;
   // InfinitePay (links legados) volta com order_nsu/transaction_nsu/slug.
   const preapprovalId = params.get("preapproval_id") || "";
+  // Asaas volta com ?gateway=asaas (a assinatura é a gravada no checkout).
+  const isAsaas = params.get("gateway") === "asaas";
   const orderNsu = params.get("order_nsu") || "";
   const transactionNsu = params.get("transaction_nsu") || "";
   const slug = params.get("slug") || params.get("invoice_slug") || "";
@@ -66,7 +68,7 @@ function Retorno() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!preapprovalId && (!orderNsu || !transactionNsu || !slug)) {
+    if (!isAsaas && !preapprovalId && (!orderNsu || !transactionNsu || !slug)) {
       setPhase("error");
       setMsg(t("incompleteReturn"));
       return;
@@ -80,7 +82,9 @@ function Retorno() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
-            preapprovalId
+            isAsaas
+              ? { gateway: "asaas" }
+              : preapprovalId
               ? { preapproval_id: preapprovalId }
               : { order_nsu: orderNsu, transaction_nsu: transactionNsu, slug }
           ),
@@ -110,7 +114,7 @@ function Retorno() {
     return () => {
       stop = true;
     };
-  }, [authLoading, preapprovalId, orderNsu, transactionNsu, slug, t]);
+  }, [authLoading, isAsaas, preapprovalId, orderNsu, transactionNsu, slug, t]);
 
   // Se a assinatura ficou ativa (via webhook, em paralelo), trata como sucesso
   // sem depender do resultado do /confirm.

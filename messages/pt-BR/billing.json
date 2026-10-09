@@ -29,7 +29,7 @@
     "annualSavings": "Economize {value} por ano",
     "subscribe": "Assinar",
     "subscribeNow": "Assinar agora",
-    "processedBy": "Pagamento processado pela InfinitePay.",
+    "processedBy": "Pagamento processado pelo Asaas (cartão recorrente ou boleto).",
     "logout": "Sair da conta",
     "subActiveAuto": "Plano {plan} · próxima cobrança em {date}.",
     "subActiveCancelled": "Plano {plan} · renovação cancelada, acesso até {date}.",
