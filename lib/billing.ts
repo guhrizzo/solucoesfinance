@@ -5,7 +5,7 @@
 // (firestore.rules trava, no mesmo espírito de `profile/access`).
 //
 // Cada pagamento aprovado estende `currentPeriodEnd`. Assinaturas novas são
-// RECORRENTES (o Mercado Pago cobra sozinho a cada ciclo e avisa por webhook);
+// RECORRENTES (o gateway — Asaas, ou o Mercado Pago dormente — cobra sozinho a cada ciclo e avisa por webhook);
 // as antigas, pagas avulso pela InfinitePay, seguem valendo até o fim do período.
 // `isActive` = agora < max(trialEndsAt, currentPeriodEnd [+ carência se há renovação automática]).
 
@@ -29,13 +29,15 @@ export interface BillingDoc {
    */
   comped?: boolean;
   /** Gateway da última cobrança. Ausente = legado (InfinitePay, avulso). */
-  gateway?: "infinitepay" | "mercadopago";
-  /** Id da assinatura recorrente no Mercado Pago (preapproval). */
+  gateway?: "infinitepay" | "mercadopago" | "asaas";
+  /** Id da assinatura recorrente no gateway (Mercado Pago: preapproval; Asaas: subscription). */
   subscriptionId?: string | null;
   /** Estado da assinatura recorrente, espelhado do MP via webhook. */
   subscriptionStatus?: "pending" | "authorized" | "paused" | "cancelled" | null;
   /** Quando o cliente cancelou a renovação (ms epoch). O acesso pago segue até `currentPeriodEnd`. */
   cancelledAt?: number | null;
+  /** Meio de pagamento escolhido na assinatura Asaas. */
+  paymentMethod?: "BOLETO" | "CREDIT_CARD" | null;
 }
 
 export type BillingStatus = "trialing" | "active" | "past_due";

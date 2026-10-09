@@ -11,7 +11,7 @@ import { useAuth } from "@/app/hooks/useAuth";
 import { useSubscription } from "@/app/hooks/useSubscription";
 import { PageLoader } from "@/app/components/ui";
 import { getPlan, formatBRLFromCents } from "@/lib/billingPlans";
-import { isPlanId, startCheckout } from "@/lib/startCheckout";
+import { isPlanId, startCheckout, type CheckoutMethod } from "@/lib/startCheckout";
 import {
   TAX_REGIMES,
   REGIME_LABEL,
@@ -59,6 +59,7 @@ function Contrato() {
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [aceito, setAceito] = useState(false);
+  const [method, setMethod] = useState<CheckoutMethod>("card");
 
   const [prefillDone, setPrefillDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -192,7 +193,7 @@ function Contrato() {
         throw new Error(data?.error || t("registerFailed"));
       }
       // Aceito → segue direto pro pagamento seguro.
-      await startCheckout(plan.id, data.contractId);
+      await startCheckout(plan.id, data.contractId, method);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("processError"));
       setSubmitting(false);
@@ -350,6 +351,38 @@ function Contrato() {
                     placeholder={t("emailPlaceholder")}
                     type="email"
                   />
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <h2 className="text-sm font-bold mb-2" style={{ color: "var(--db-text)" }}>
+                  {t("paymentMethod")}
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-3" role="radiogroup" aria-label={t("paymentMethod")}>
+                  {(["card", "boleto"] as const).map((m) => {
+                    const selected = method === m;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setMethod(m)}
+                        className="text-left rounded-xl px-3.5 py-3 cursor-pointer transition-all"
+                        style={{
+                          background: selected ? "var(--db-sub)" : "var(--db-card-alt)",
+                          border: `1px solid ${selected ? "var(--brand-500)" : "var(--db-border)"}`,
+                        }}
+                      >
+                        <span className="block text-sm font-semibold" style={{ color: "var(--db-text)" }}>
+                          {t(m === "card" ? "methodCard" : "methodBoleto")}
+                        </span>
+                        <span className="block text-[11px] mt-0.5" style={{ color: "var(--db-text-3)" }}>
+                          {t(m === "card" ? "methodCardHint" : "methodBoletoHint")}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

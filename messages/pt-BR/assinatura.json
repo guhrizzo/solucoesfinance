@@ -42,8 +42,13 @@
     "processError": "Erro ao processar o contrato.",
     "submitting": "Registrando o aceite…",
     "submit": "Assinar e ir para o pagamento",
-    "paymentNote": "Pagamento processado pela InfinitePay (Pix ou cartão).",
+    "paymentNote": "Pagamento processado pelo Asaas, em ambiente seguro. Você pode cancelar a renovação quando quiser.",
     "contractedParty": "CONTRATADA:",
-    "ptOnlyNotice": "O contrato abaixo é redigido em português (Brasil) e cita a legislação brasileira; é a versão juridicamente válida."
+    "ptOnlyNotice": "O contrato abaixo é redigido em português (Brasil) e cita a legislação brasileira; é a versão juridicamente válida.",
+    "paymentMethod": "Forma de pagamento",
+    "methodCard": "Cartão de crédito",
+    "methodCardHint": "Renovação automática no cartão a cada período.",
+    "methodBoleto": "Boleto",
+    "methodBoletoHint": "Um boleto novo é enviado por e-mail a cada período."
   }
 }

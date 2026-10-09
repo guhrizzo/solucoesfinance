@@ -42,8 +42,13 @@
     "processError": "Error processing the contract.",
     "submitting": "Recording acceptance…",
     "submit": "Sign and proceed to payment",
-    "paymentNote": "Payment processed by InfinitePay (Pix or card).",
+    "paymentNote": "Payment processed by Asaas in a secure environment. You can cancel renewal at any time.",
     "contractedParty": "PROVIDER:",
-    "ptOnlyNotice": "The contract below is written in Portuguese (Brazil) and cites Brazilian law; it is the legally valid version."
+    "ptOnlyNotice": "The contract below is written in Portuguese (Brazil) and cites Brazilian law; it is the legally valid version.",
+    "paymentMethod": "Payment method",
+    "methodCard": "Credit card",
+    "methodCardHint": "Automatic card renewal every period.",
+    "methodBoleto": "Boleto (bank slip)",
+    "methodBoletoHint": "A new boleto is emailed to you every period."
   }
 }

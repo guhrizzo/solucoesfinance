@@ -14,7 +14,7 @@
 
 import { getAdminDb } from "./firebaseAdmin";
 
-export type WebhookLogSource = "infinitepay-webhook" | "mercadopago-webhook" | "billing-confirm";
+export type WebhookLogSource = "infinitepay-webhook" | "mercadopago-webhook" | "asaas-webhook" | "billing-confirm";
 
 const MAX_BODY_CHARS = 8000;
 const RETENTION_DAYS = 90;
@@ -45,8 +45,14 @@ function extractRefs(body: Record<string, unknown> | null, url: URL) {
     amount: typeof body?.amount === "number" ? body.amount : null,
     // order_nsu = ownerUid__plano__[contrato__]ts (ver lib/infinitepay.ts)
     ownerUid: orderNsu ? orderNsu.split("__")[0] || null : null,
-    topic: str(body?.type ?? url.searchParams.get("type") ?? url.searchParams.get("topic")),
-    dataId: str(data.id ?? url.searchParams.get("data.id") ?? url.searchParams.get("id")),
+    topic: str(body?.type ?? body?.event ?? url.searchParams.get("type") ?? url.searchParams.get("topic")),
+    dataId: str(
+      data.id ??
+        (body?.payment as Record<string, unknown> | undefined)?.id ??
+        (body?.subscription as Record<string, unknown> | undefined)?.id ??
+        url.searchParams.get("data.id") ??
+        url.searchParams.get("id")
+    ),
     preapprovalId: str(body?.preapproval_id),
   };
 }
@@ -85,7 +91,7 @@ export function withWebhookLog(
         ip: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
         userAgent: request.headers.get("user-agent"),
         mpRequestId: request.headers.get("x-request-id"),
-        hasSignature: !!request.headers.get("x-signature"),
+        hasSignature: !!(request.headers.get("x-signature") || request.headers.get("asaas-access-token")),
         ...extractRefs(parsedBody, url),
         body: truncate(rawBody),
         responseStatus: response?.status ?? 500,

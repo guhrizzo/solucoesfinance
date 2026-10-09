@@ -1,6 +1,6 @@
 // lib/startCheckout.ts
 // Client: dispara o checkout de um plano e redireciona pro pagamento da
-// InfinitePay. Compartilhado pela página /assinatura, pelo <Paywall> e pelo
+// gateway (Asaas, ou InfinitePay como fallback). Compartilhado pela página /assinatura, pelo <Paywall> e pelo
 // fluxo pós-cadastro (?plano= → /assinatura?checkout=).
 
 import { BILLING_PLANS } from "./billingPlans";
@@ -17,12 +17,18 @@ export function isPlanId(v: unknown): v is string {
  * sem um contrato aceito) — a página /assinatura/contrato o obtém antes de
  * chamar aqui.
  */
-export async function startCheckout(planId: string, contractId?: string): Promise<void> {
+export type CheckoutMethod = "card" | "boleto";
+
+export async function startCheckout(
+  planId: string,
+  contractId?: string,
+  method: CheckoutMethod = "card"
+): Promise<void> {
   const { authedFetch } = await import("./authedFetch");
   const res = await authedFetch("/api/billing/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan: planId, ...(contractId ? { contractId } : {}) }),
+    body: JSON.stringify({ plan: planId, method, ...(contractId ? { contractId } : {}) }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.url) {
