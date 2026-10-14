@@ -6,7 +6,8 @@
     "aparencia": "Aparência",
     "feedback": "Bugs & sugestões",
     "feedbackAdmin": "Chamados",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "whatsapp": "WhatsApp"
   },
   "perfil": {
     "fallbackUser": "Usuário",
@@ -204,6 +205,71 @@
       "emptyTitle": "Nenhum instalador publicado ainda",
       "emptyDesc": "Assim que houver uma release com o instalador no GitHub, os downloads aparecem aqui.",
       "loadError": "Não foi possível consultar o GitHub agora. Os demais números não foram afetados."
+    }
+  },
+  "whatsapp": {
+    "loading": "Carregando…",
+    "loadError": "Não foi possível carregar os avisos por WhatsApp.",
+    "title": "Avisos por WhatsApp",
+    "desc": "Receba no seu WhatsApp os avisos importantes da empresa. As mensagens saem do número oficial da NexusFi.",
+    "descMember": "Só o dono da conta altera o número e os avisos.",
+    "phone": "Seu WhatsApp",
+    "name": "Seu nome (usado na saudação)",
+    "kindsTitle": "Quais avisos você quer receber",
+    "kinds": {
+      "caixa": {
+        "title": "Fechamento de caixa",
+        "desc": "Resumo do PDV quando um caixa é fechado: vendas por forma de pagamento e diferença na conferência."
+      },
+      "estoque": {
+        "title": "Estoque baixo",
+        "desc": "Quando um produto chega na quantidade mínima ou acaba."
+      },
+      "contas": {
+        "title": "Contas a pagar",
+        "desc": "Impostos e contas a pagar que vencem em 3 dias, amanhã e hoje, e aviso de atraso (1 e 7 dias). Todo dia às 8h."
+      },
+      "receber": {
+        "title": "Contas a receber",
+        "desc": "Cobranças dos seus clientes que vencem em 3 dias, amanhã e hoje, e as que atrasaram."
+      },
+      "saldo": {
+        "title": "Alerta de caixa",
+        "desc": "Quando o saldo projetado ficar negativo nos próximos dias ou cair abaixo do mínimo que você definir."
+      },
+      "categorizar": {
+        "title": "Lançamentos sem categoria",
+        "desc": "Toda segunda, quantos lançamentos estão sem categoria. Melhora o DRE e o fluxo de caixa."
+      },
+      "orcamento": {
+        "title": "Orçamento dos centros de custo",
+        "desc": "Quando um centro de custo usar 90% e quando estourar o orçamento do mês."
+      },
+      "resumo": {
+        "title": "Resumo financeiro",
+        "desc": "Receita, despesa, resultado e os 3 maiores gastos do período."
+      }
+    },
+    "consent": "Ao salvar, você autoriza a NexusFi a enviar esses avisos para este número. Desligue a qualquer momento aqui.",
+    "save": "Salvar",
+    "saved": "Avisos por WhatsApp salvos.",
+    "saveError": "Não foi possível salvar.",
+    "test": "Enviar teste",
+    "testSent": "Mensagem de teste enviada. Confira seu WhatsApp.",
+    "testError": "Não foi possível enviar o teste.",
+    "saveFirst": "Salve antes de testar.",
+    "lastOk": "Último envio: {when} — entregue à Meta.",
+    "lastError": "Último envio falhou em {when}: {detail}",
+    "notConfigured": "O envio por WhatsApp da plataforma ainda não foi ativado. Você já pode salvar suas preferências; os avisos começam assim que for ligado.",
+    "proTitle": "Avisos por WhatsApp são do plano Pro",
+    "proBody": "Receba no WhatsApp o fechamento do caixa, o estoque baixo e as contas que vencem no dia.",
+    "proCta": "Conhecer o Pro",
+    "minBalance": "Saldo mínimo (R$)",
+    "horizonDays": "Projetar quantos dias (1 a 90)",
+    "resumoFreq": "Resumo",
+    "freq": {
+      "semanal": "Semanal (toda segunda)",
+      "mensal": "Mensal (dia 1)"
     }
   }
 }

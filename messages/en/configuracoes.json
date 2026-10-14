@@ -6,7 +6,8 @@
     "aparencia": "Appearance",
     "feedback": "Bugs & suggestions",
     "feedbackAdmin": "Tickets",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "whatsapp": "WhatsApp"
   },
   "perfil": {
     "fallbackUser": "User",
@@ -204,6 +205,71 @@
       "emptyTitle": "No installer published yet",
       "emptyDesc": "As soon as a GitHub release with the installer exists, downloads show up here.",
       "loadError": "Could not query GitHub right now. The other numbers are unaffected."
+    }
+  },
+  "whatsapp": {
+    "loading": "Loading…",
+    "loadError": "Couldn't load WhatsApp alerts.",
+    "title": "WhatsApp alerts",
+    "desc": "Get your company's important alerts on WhatsApp. Messages are sent from NexusFi's official number.",
+    "descMember": "Only the account owner can change the number and alerts.",
+    "phone": "Your WhatsApp",
+    "name": "Your name (used in the greeting)",
+    "kindsTitle": "Which alerts you want to receive",
+    "kinds": {
+      "caixa": {
+        "title": "Cash register closing",
+        "desc": "POS summary when a register is closed: sales by payment method and counting difference."
+      },
+      "estoque": {
+        "title": "Low stock",
+        "desc": "When a product reaches its minimum quantity or runs out."
+      },
+      "contas": {
+        "title": "Bills payable",
+        "desc": "Taxes and bills due in 3 days, tomorrow and today, plus overdue notices (1 and 7 days). Every day at 8 am."
+      },
+      "receber": {
+        "title": "Receivables",
+        "desc": "Customer invoices due in 3 days, tomorrow and today, and the ones that are overdue."
+      },
+      "saldo": {
+        "title": "Cash alert",
+        "desc": "When the projected balance turns negative in the coming days or drops below the minimum you set."
+      },
+      "categorizar": {
+        "title": "Uncategorized entries",
+        "desc": "Every Monday, how many entries have no category. Improves your P&L and cash flow."
+      },
+      "orcamento": {
+        "title": "Cost center budgets",
+        "desc": "When a cost center reaches 90% and when it exceeds the month's budget."
+      },
+      "resumo": {
+        "title": "Financial summary",
+        "desc": "Revenue, expenses, result and the 3 biggest expenses of the period."
+      }
+    },
+    "consent": "By saving, you authorize NexusFi to send these alerts to this number. Turn them off here at any time.",
+    "save": "Save",
+    "saved": "WhatsApp alerts saved.",
+    "saveError": "Couldn't save.",
+    "test": "Send test",
+    "testSent": "Test message sent. Check your WhatsApp.",
+    "testError": "Couldn't send the test.",
+    "saveFirst": "Save before testing.",
+    "lastOk": "Last send: {when} — delivered to Meta.",
+    "lastError": "Last send failed at {when}: {detail}",
+    "notConfigured": "The platform's WhatsApp sending isn't active yet. You can already save your preferences; alerts start as soon as it's turned on.",
+    "proTitle": "WhatsApp alerts are a Pro plan feature",
+    "proBody": "Get the register closing, low stock and bills due today on WhatsApp.",
+    "proCta": "See the Pro plan",
+    "minBalance": "Minimum balance (R$)",
+    "horizonDays": "Days to project (1 to 90)",
+    "resumoFreq": "Summary",
+    "freq": {
+      "semanal": "Weekly (every Monday)",
+      "mensal": "Monthly (1st of the month)"
     }
   }
 }

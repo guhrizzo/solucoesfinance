@@ -13,6 +13,19 @@
 //   Olá, {{1}}! {{2}}: a cobrança de {{3}} de {{4}} vence {{5}}.
 //   Pague com Pix copia e cola: {{6}}
 // Sem as variáveis de ambiente, `sendWhatsAppCharge` só devolve "not_configured".
+//
+// Avisos pro DONO da conta (lib/ownerAlerts.ts) usam um segundo template:
+//   WHATSAPP_TEMPLATE_ALERT   nome do template (padrão "aviso_nexusfi")
+// Template esperado (categoria UTILITY), 3 variáveis no corpo:
+//   Olá, {{1}}! Aviso da NexusFi sobre {{2}}: {{3}}. Acesse o painel para ver os detalhes.
+//
+// Botões de ação (opcional): WHATSAPP_TEMPLATE_ALERT_ACTIONS = nome de um
+// template com o MESMO corpo e 2 botões de resposta rápida ("Marcar como pago",
+// "Ver detalhes"). Usado no aviso de contas a pagar; sem a variável, o aviso
+// sai sem botões.
+// Recebimento (webhook): WHATSAPP_VERIFY_TOKEN e WHATSAPP_APP_SECRET —
+// ver app/api/webhooks/whatsapp e lib/whatsappInbound.ts.
+// Passo a passo da configuração na Meta: docs/whatsapp-meta-setup.md.
 
 const GRAPH_VERSION = "v21.0";
 
@@ -43,8 +56,72 @@ export async function sendWhatsAppCharge(opts: {
   when: string;
   pixCopiaECola?: string | null;
 }): Promise<WhatsAppResult> {
+  return sendTemplate(opts.phone, process.env.WHATSAPP_TEMPLATE_CHARGE || "lembrete_cobranca", [
+    opts.customerName || "cliente",
+    opts.headline,
+    opts.amount,
+    opts.companyName,
+    opts.when,
+    opts.pixCopiaECola || "combine o pagamento com a empresa",
+  ]);
+}
+
+/** Aviso pro dono da conta (fechamento de caixa, estoque baixo, contas vencendo…). */
+export async function sendWhatsAppAlert(opts: {
+  phone: string | undefined | null;
+  /** Primeiro nome de quem recebe. */
+  name: string;
+  /** Nome da empresa (o aviso é "sobre" ela). */
+  companyName: string;
+  /** O aviso em uma linha (sem quebra — o template não aceita). */
+  text: string;
+  /** Usa o template com botões (se WHATSAPP_TEMPLATE_ALERT_ACTIONS existir). */
+  actions?: boolean;
+}): Promise<WhatsAppResult> {
+  const withButtons = opts.actions && process.env.WHATSAPP_TEMPLATE_ALERT_ACTIONS;
+  return sendTemplate(
+    opts.phone,
+    withButtons || process.env.WHATSAPP_TEMPLATE_ALERT || "aviso_nexusfi",
+    [
+      opts.name || "tudo bem",
+      opts.companyName || "sua empresa",
+      // A Meta limita cada variável; o aviso cabe folgado em 900 caracteres.
+      opts.text.slice(0, 900),
+    ],
+    withButtons ? ["PAGO", "DETALHES"] : undefined
+  );
+}
+
+/** Texto livre — só vale dentro da janela de 24h aberta por uma mensagem do cliente. */
+export async function sendWhatsAppText(phone: string | undefined | null, text: string): Promise<WhatsAppResult> {
   if (!isWhatsAppConfigured()) return { ok: false, reason: "not_configured" };
-  const to = toWhatsAppNumber(opts.phone);
+  const to = toWhatsAppNumber(phone);
+  if (!to) return { ok: false, reason: "invalid_phone" };
+  return graphPost({ messaging_product: "whatsapp", to, type: "text", text: { body: text.slice(0, 4000) } });
+}
+
+/** Baixa o arquivo (imagem/PDF) que o cliente mandou. */
+export async function downloadWhatsAppMedia(mediaId: string): Promise<{ base64: string; mimeType: string } | null> {
+  try {
+    const auth = { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` };
+    const meta = (await (await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${mediaId}`, { headers: auth })).json()) as { url?: string; mime_type?: string };
+    if (!meta.url) return null;
+    const res = await fetch(meta.url, { headers: auth });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 8 * 1024 * 1024) return null;
+    return { base64: buf.toString("base64"), mimeType: meta.mime_type || "image/jpeg" };
+  } catch {
+    return null;
+  }
+}
+
+/** Envia um template aprovado com as variáveis do corpo, na ordem. */
+async function sendTemplate(
+  phone: string | undefined | null, name: string, vars: string[], buttonPayloads?: string[]
+): Promise<WhatsAppResult> {
+  if (!isWhatsAppConfigured()) return { ok: false, reason: "not_configured" };
+  const to = toWhatsAppNumber(phone);
   if (!to) return { ok: false, reason: "invalid_phone" };
 
   const body = {
@@ -52,24 +129,20 @@ export async function sendWhatsAppCharge(opts: {
     to,
     type: "template",
     template: {
-      name: process.env.WHATSAPP_TEMPLATE_CHARGE || "lembrete_cobranca",
+      name,
       language: { code: process.env.WHATSAPP_TEMPLATE_LANG || "pt_BR" },
       components: [
-        {
-          type: "body",
-          parameters: [
-            param(opts.customerName || "cliente"),
-            param(opts.headline),
-            param(opts.amount),
-            param(opts.companyName),
-            param(opts.when),
-            param(opts.pixCopiaECola || "combine o pagamento com a empresa"),
-          ],
-        },
+        { type: "body", parameters: vars.map(param) },
+        ...(buttonPayloads ?? []).map((payload, index) => ({
+          type: "button", sub_type: "quick_reply", index: String(index), parameters: [{ type: "payload", payload }],
+        })),
       ],
     },
   };
+  return graphPost(body);
+}
 
+async function graphPost(body: Record<string, unknown>): Promise<WhatsAppResult> {
   try {
     const res = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
