@@ -124,6 +124,13 @@ export function isInvestmentMovement(category: string, description = ""): boolea
   return cat.includes("aplicacao") || cat.includes("investimento") || isRedemption(category, description);
 }
 
+/** Empréstimo recebido — entra no caixa mas é dívida, não receita: fica de fora
+ *  do DRE. Só vale pra ENTRADA; a saída "Empréstimos / Financiamentos" segue
+ *  como está. */
+export function isLoanReceipt(category: string): boolean {
+  return norm(category).includes("emprestimo");
+}
+
 // Sentinela usada nos <select> de categoria. Quando escolhida, a UI troca por
 // um input livre e o valor salvo passa a ser o texto que o usuário digitar.
 export const CUSTOM_CATEGORY = "__custom__";
