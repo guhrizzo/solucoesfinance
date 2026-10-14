@@ -126,12 +126,13 @@ export function isInvestmentMovement(category: string, description = ""): boolea
 
 /** Movimentos de financiamento / capital — dívida (empréstimo, financiamento,
  *  antecipação de recebíveis), capital dos sócios (aporte, retirada de lucros /
- *  dividendos) e venda de imobilizado. Entram ou saem do caixa mas não são
+ *  dividendos), venda de imobilizado e estorno / reembolso. Entram ou saem do caixa mas não são
  *  receita nem despesa operacional: ficam de fora do DRE (seguem no Fluxo de
  *  Caixa). Casa na categoria e também na descrição (importação de extrato). */
 const NON_OPERATING_TERMS = [
   "emprestimo", "financiamento", "antecipacao de recebiveis",
   "aporte", "retirada de lucro", "dividendo", "venda de imobilizado",
+  "estorno", "reembolso",
 ];
 export function isFinancingMovement(category: string, description = ""): boolean {
   const t = norm(`${category} ${description}`);
