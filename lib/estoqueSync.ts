@@ -254,10 +254,23 @@ export async function baixarEstoqueEPropagar(
   if (snapEstoque.empty) return null;
 
   const estoqueDoc = snapEstoque.docs[0];
-  const atual = estoqueDoc.data().quantity || 0;
+  const dados = estoqueDoc.data();
+  const atual = dados.quantity || 0;
   const nova = Math.max(0, atual - Math.max(0, quantitySold || 0));
 
   await db.collection("estoque").doc(estoqueDoc.id).update({ quantity: nova, updatedAt: Date.now() });
   await propagarEstoque(db, userId, sku, nova, origem);
+
+  // Aviso de estoque baixo por WhatsApp — só quando ESTA baixa cruzou o
+  // mínimo (ou zerou), pra não repetir a cada venda abaixo dele.
+  const minimo = Number(dados.minQuantity) || 0;
+  if ((atual > minimo && nova <= minimo) || (atual > 0 && nova === 0)) {
+    const { notifyOwner } = await import("@/lib/ownerAlerts");
+    const nome = String(dados.name || sku);
+    await notifyOwner(db, userId, "estoque",
+      nova === 0
+        ? `o produto ${nome} (SKU ${sku}) acabou no estoque`
+        : `o produto ${nome} (SKU ${sku}) chegou a ${nova} ${nova === 1 ? "unidade" : "unidades"}, no mínimo de ${minimo} ou abaixo dele`);
+  }
   return nova;
 }

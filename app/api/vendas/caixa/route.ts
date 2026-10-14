@@ -8,6 +8,7 @@ import { requireScope, isScopeError } from "@/lib/apiScope";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { isProAccess } from "@/lib/billing";
 import { resolveScopeSubscription } from "@/lib/scopeSubscription";
+import { brl, notifyOwner } from "@/lib/ownerAlerts";
 import {
   FORMAS_PAGAMENTO, esperadoNoFechamento, localDateKey, r2, somaTotais, zeroTotais,
   type TotaisPorForma,
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
       const result = await db.runTransaction(async (tx: Transaction) => {
         const snap = await tx.get(caixaRef);
         if (!snap.exists) return { error: "Caixa não encontrado.", status: 404 };
-        const c = snap.data() as { status?: string; trocoInicial: number; totais: TotaisPorForma };
+        const c = snap.data() as { status?: string; trocoInicial: number; totais: TotaisPorForma; operador?: string; qtdVendas?: number; totalVendas?: number };
         if (c.status !== "aberto") return { error: "Este caixa já foi fechado.", status: 409 };
         const cfg = await tx.get(cfgRef);
 
@@ -146,12 +147,29 @@ export async function POST(request: Request) {
         if (cfg.exists && cfg.data()?.caixaAbertoId === caixaId) {
           tx.set(cfgRef, { caixaAbertoId: null }, { merge: true });
         }
-        return { ok: true };
+        return {
+          ok: true,
+          resumo: {
+            operador: c.operador || nome,
+            qtdVendas: c.qtdVendas || 0,
+            totalVendas: c.totalVendas || 0,
+            totais: { ...zeroTotais(), ...(c.totais || {}) },
+            diferencaTotal: r2(somaTotais(conferido) - somaTotais(esperado)),
+          },
+        };
       });
 
       if ("error" in result) {
         return NextResponse.json({ error: result.error }, { status: result.status });
       }
+
+      // Aviso por WhatsApp pro dono (se ele ligou) — nunca derruba o fechamento.
+      const r = result.resumo;
+      const dif = r.diferencaTotal === 0 ? "sem diferença na conferência" : `diferença de ${brl(r.diferencaTotal)} na conferência`;
+      await notifyOwner(db, ownerUid, "caixa",
+        `caixa fechado por ${r.operador} com ${r.qtdVendas} ${r.qtdVendas === 1 ? "venda" : "vendas"}, total ${brl(r.totalVendas)} ` +
+        `(Dinheiro ${brl(r.totais.dinheiro)}, Pix ${brl(r.totais.pix)}, Débito ${brl(r.totais.debito)}, Crédito ${brl(r.totais.credito)}), ${dif}`);
+
       return NextResponse.json({ ok: true });
     }
 
