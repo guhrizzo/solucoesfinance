@@ -894,20 +894,25 @@ export default function RelatoriosPage() {
                 const entHeight = (data.entrada / max) * 160;
                 const saiHeight = (data.saida / max) * 160;
                 return (
-                  <div key={i} className="flex flex-col items-center gap-2 flex-1 group">
-                    <div className="flex items-end gap-1.5 h-44">
-                      <div className="w-2.5 sm:w-3.5 bg-emerald-500 rounded-t-md transition-all duration-300 relative" style={{ height: `${Math.max(entHeight, 4)}px` }}>
+                  <div key={i} className="flex flex-col items-center gap-2 flex-1 min-w-0 group">
+                    <div className="flex items-end justify-center gap-px sm:gap-1 h-44 w-full">
+                      <div className="flex-1 max-w-3.5 bg-emerald-500 rounded-t-md transition-all duration-300 relative" style={{ height: `${Math.max(entHeight, 4)}px` }}>
                         <span className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded text-white bg-slate-900 pointer-events-none transition-opacity whitespace-nowrap z-30">
                           +{toBRL(data.entrada, locale)}
                         </span>
                       </div>
-                      <div className="w-2.5 sm:w-3.5 bg-rose-500 rounded-t-md transition-all duration-300 relative" style={{ height: `${Math.max(saiHeight, 4)}px` }}>
+                      <div className="flex-1 max-w-3.5 bg-rose-500 rounded-t-md transition-all duration-300 relative" style={{ height: `${Math.max(saiHeight, 4)}px` }}>
                         <span className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded text-white bg-slate-900 pointer-events-none transition-opacity whitespace-nowrap z-30">
                           -{toBRL(data.saida, locale)}
                         </span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-semibold tracking-wider uppercase" style={{ color: "var(--db-text-2)" }}>{data.label}</span>
+                    <span
+                      className="text-[10px] font-semibold tracking-wider uppercase whitespace-nowrap h-3"
+                      style={{ color: "var(--db-text-2)" }}
+                    >
+                      {svgChartData.length <= 14 || i % Math.ceil(svgChartData.length / 14) === 0 ? data.label : ""}
+                    </span>
                   </div>
                 );
               })}
