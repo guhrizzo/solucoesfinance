@@ -124,11 +124,18 @@ export function isInvestmentMovement(category: string, description = ""): boolea
   return cat.includes("aplicacao") || cat.includes("investimento") || isRedemption(category, description);
 }
 
-/** Empréstimo recebido — entra no caixa mas é dívida, não receita: fica de fora
- *  do DRE. Só vale pra ENTRADA; a saída "Empréstimos / Financiamentos" segue
- *  como está. */
-export function isLoanReceipt(category: string): boolean {
-  return norm(category).includes("emprestimo");
+/** Movimentos de financiamento / capital — dívida (empréstimo, financiamento,
+ *  antecipação de recebíveis), capital dos sócios (aporte, retirada de lucros /
+ *  dividendos) e venda de imobilizado. Entram ou saem do caixa mas não são
+ *  receita nem despesa operacional: ficam de fora do DRE (seguem no Fluxo de
+ *  Caixa). Casa na categoria e também na descrição (importação de extrato). */
+const NON_OPERATING_TERMS = [
+  "emprestimo", "financiamento", "antecipacao de recebiveis",
+  "aporte", "retirada de lucro", "dividendo", "venda de imobilizado",
+];
+export function isFinancingMovement(category: string, description = ""): boolean {
+  const t = norm(`${category} ${description}`);
+  return NON_OPERATING_TERMS.some(term => t.includes(term));
 }
 
 // Sentinela usada nos <select> de categoria. Quando escolhida, a UI troca por

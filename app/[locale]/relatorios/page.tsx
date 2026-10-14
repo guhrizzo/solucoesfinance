@@ -11,7 +11,7 @@ import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, Badge, Sensitive } from "@/app/components/ui";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement, isLoanReceipt } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement, isFinancingMovement } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
 import { DreSummary } from "./DreSummary";
@@ -343,8 +343,9 @@ export default function RelatoriosPage() {
       // Aplicação / resgate / investimento é dinheiro do titular mudando de
       // lugar, não resultado — também fica fora do DRE.
       if (isInvestmentMovement(tx.category, tx.description)) return;
-      // Empréstimo recebido é dívida, não receita — fora do DRE.
-      if (tx.type === "entrada" && isLoanReceipt(tx.category)) return;
+      // Dívida, capital dos sócios e venda de imobilizado não são resultado
+      // operacional — fora do DRE.
+      if (isFinancingMovement(tx.category, tx.description)) return;
       const catLower = tx.category.toLowerCase();
       const name = tx.category || noCategory;
       if (tx.type === "entrada") {
