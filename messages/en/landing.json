@@ -100,6 +100,11 @@
     "onTarget": "on target",
     "attention": "attention"
   },
+  "integrations": {
+    "label": "Our integrations",
+    "differentialsLabel": "Differentials",
+    "differentials": ["AI invoice reader", "Point of sale with cash register", "Pix billing by email", "Sales from every channel in one dashboard"]
+  },
   "ticker": {
     "monthRevenue": "Month revenue",
     "monthExpenses": "Month expenses",
@@ -108,10 +113,7 @@
     "projectedFlow": "Projected flow",
     "dueToday": "Bills due today",
     "clientNps": "Client NPS",
-    "opCost": "Operating cost",
-    "integrationMl": "Mercado Livre integration",
-    "integrationShein": "Shein integration",
-    "available": "Available"
+    "opCost": "Operating cost"
   },
   "stats": {
     "vsPreviousYear": "vs. previous year",

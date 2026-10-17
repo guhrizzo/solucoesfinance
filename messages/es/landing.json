@@ -100,6 +100,11 @@
     "onTarget": "dentro del objetivo",
     "attention": "atención"
   },
+  "integrations": {
+    "label": "Nuestras integraciones",
+    "differentialsLabel": "Diferenciales",
+    "differentials": ["Lector de facturas con IA", "Punto de venta con caja", "Cobro con Pix por correo", "Ventas de todos los canales en un panel"]
+  },
   "ticker": {
     "monthRevenue": "Ingresos del mes",
     "monthExpenses": "Gastos del mes",
@@ -108,10 +113,7 @@
     "projectedFlow": "Flujo proyectado",
     "dueToday": "Cuentas que vencen hoy",
     "clientNps": "NPS de clientes",
-    "opCost": "Costo operativo",
-    "integrationMl": "Integración Mercado Livre",
-    "integrationShein": "Integración Shein",
-    "available": "Disponible"
+    "opCost": "Costo operativo"
   },
   "stats": {
     "vsPreviousYear": "vs. año anterior",
