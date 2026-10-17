@@ -108,7 +108,10 @@
     "projectedFlow": "Flujo proyectado",
     "dueToday": "Cuentas que vencen hoy",
     "clientNps": "NPS de clientes",
-    "opCost": "Costo operativo"
+    "opCost": "Costo operativo",
+    "integrationMl": "Integración Mercado Livre",
+    "integrationShein": "Integración Shein",
+    "available": "Disponible"
   },
   "stats": {
     "vsPreviousYear": "vs. año anterior",

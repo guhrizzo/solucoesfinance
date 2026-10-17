@@ -87,8 +87,10 @@ const TICKER_KEYS = [
   "dueToday",
   "clientNps",
   "opCost",
+  "integrationMl",
+  "integrationShein",
 ] as const;
-const TICKER_VALUES: Record<(typeof TICKER_KEYS)[number], { value: string; up: boolean }> = {
+const TICKER_VALUES: Record<(typeof TICKER_KEYS)[number], { value: string; up: boolean; valueKey?: string }> = {
   monthRevenue: { value: "R$ 1.24M", up: true },
   monthExpenses: { value: "R$ 890K", up: false },
   netMargin: { value: "28.2%", up: true },
@@ -97,6 +99,8 @@ const TICKER_VALUES: Record<(typeof TICKER_KEYS)[number], { value: string; up: b
   dueToday: { value: "12", up: false },
   clientNps: { value: "74", up: true },
   opCost: { value: "R$ 412K", up: false },
+  integrationMl: { value: "", valueKey: "ticker.available", up: true },
+  integrationShein: { value: "", valueKey: "ticker.available", up: true },
 };
 
 export default function FinanceHome() {
@@ -524,7 +528,7 @@ export default function FinanceHome() {
               return (
                 <div key={i} className="flex items-center gap-2 shrink-0">
                   <span className="text-blue-300/75 text-xs mono">{t(`ticker.${key}`)}</span>
-                  <span className="text-white text-xs font-semibold mono">{tk.value}</span>
+                  <span className="text-white text-xs font-semibold mono">{tk.valueKey ? t(tk.valueKey) : tk.value}</span>
                   <span className={`text-xs mono ${tk.up ? "text-green-400" : "text-red-400"}`}>
                     {tk.up ? "▲" : "▼"}
                   </span>
