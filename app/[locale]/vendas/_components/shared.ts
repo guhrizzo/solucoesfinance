@@ -14,9 +14,9 @@ export const SHOPEE_UI_VISIVEL = false;
 // TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
 export const TIKTOKSHOP_UI_VISIVEL = true;
 
-// Shein: integração nova, backend pronto mas ainda sem credenciais reais —
-// mesma lógica da Shopee acima (ver app/[locale]/estoque/page.tsx).
-export const SHEIN_UI_VISIVEL = false;
+// Shein: visível por decisão do dono, mesmo antes da aprovação do app na Shein
+// (ver app/[locale]/estoque/page.tsx).
+export const SHEIN_UI_VISIVEL = true;
 
 // Canais de MARKETPLACE exibidos na interface.
 export const CANAIS_VISIVEIS: Canal[] = [
