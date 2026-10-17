@@ -35,6 +35,7 @@ import {
   Check,
   Download,
   Monitor,
+  Plug,
 } from "lucide-react";
 import Footer from "@/app/components/Footer";
 import { WhatsAppFab } from "@/app/components/WhatsAppFab";
@@ -87,8 +88,6 @@ const TICKER_KEYS = [
   "dueToday",
   "clientNps",
   "opCost",
-  "integrationMl",
-  "integrationShein",
 ] as const;
 const TICKER_VALUES: Record<(typeof TICKER_KEYS)[number], { value: string; up: boolean; valueKey?: string }> = {
   monthRevenue: { value: "R$ 1.24M", up: true },
@@ -99,8 +98,6 @@ const TICKER_VALUES: Record<(typeof TICKER_KEYS)[number], { value: string; up: b
   dueToday: { value: "12", up: false },
   clientNps: { value: "74", up: true },
   opCost: { value: "R$ 412K", up: false },
-  integrationMl: { value: "", valueKey: "ticker.available", up: true },
-  integrationShein: { value: "", valueKey: "ticker.available", up: true },
 };
 
 export default function FinanceHome() {
@@ -528,7 +525,7 @@ export default function FinanceHome() {
               return (
                 <div key={i} className="flex items-center gap-2 shrink-0">
                   <span className="text-blue-300/75 text-xs mono">{t(`ticker.${key}`)}</span>
-                  <span className="text-white text-xs font-semibold mono">{tk.valueKey ? t(tk.valueKey) : tk.value}</span>
+                  <span className="text-white text-xs font-semibold mono">{tk.value}</span>
                   <span className={`text-xs mono ${tk.up ? "text-green-400" : "text-red-400"}`}>
                     {tk.up ? "▲" : "▼"}
                   </span>
@@ -536,6 +533,35 @@ export default function FinanceHome() {
                 </div>
               );
             })}
+          </div>
+        </div>
+        {/* Integrações e diferenciais */}
+        <div className="relative z-10 bg-blue-950/80 border-t border-white/5">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 text-blue-300/75 text-xs font-semibold uppercase tracking-wider">
+                <Plug size={13} /> {t("integrations.label")}
+              </span>
+              {["Mercado Livre", "Shein"].map((name) => (
+                <span
+                  key={name}
+                  className="inline-flex items-center rounded-full border border-blue-300/30 bg-white/10 px-4 py-1.5 text-sm font-bold text-white shadow-sm shadow-blue-950/40"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+            <span aria-hidden="true" className="hidden md:block h-6 w-px bg-white/15" />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-blue-300/75 text-xs font-semibold uppercase tracking-wider mr-1">
+                <Zap size={13} /> {t("integrations.differentialsLabel")}
+              </span>
+              {(t.raw("integrations.differentials") as string[]).map((d) => (
+                <span key={d} className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-medium text-blue-100">
+                  {d}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
