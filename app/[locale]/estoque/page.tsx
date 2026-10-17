@@ -28,10 +28,11 @@ const SHOPEE_UI_VISIVEL = false;
 // TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
 const TIKTOKSHOP_UI_VISIVEL = true;
 
-// Shein: integração nova, backend pronto mas ainda sem credenciais reais
-// (SHEIN_APP_ID/APP_SECRET) — mesma lógica da Shopee acima. Troque para
-// `true` quando o app for aprovado e testado contra a conta real.
-const SHEIN_UI_VISIVEL = false;
+// Shein: visível desde 2026-10 por decisão do dono, MESMO antes da aprovação do
+// app na Shein — até haver SHEIN_APP_ID/APP_SECRET reais a conexão não
+// funciona. Volte para `false` (aqui e em vendas/_components/shared.ts) se
+// precisar esconder de novo.
+const SHEIN_UI_VISIVEL = true;
 
 type Plataforma = "mercadolivre" | "shopee" | "tiktokshop" | "shein";
 
