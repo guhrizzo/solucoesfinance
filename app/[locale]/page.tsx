@@ -261,6 +261,7 @@ export default function FinanceHome() {
           white-space: nowrap;
           animation: ticker 40s linear infinite;
         }
+        .ticker-track-fast { animation-duration: 22s; }
         @keyframes ticker {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
@@ -535,35 +536,6 @@ export default function FinanceHome() {
             })}
           </div>
         </div>
-        {/* Integrações e diferenciais */}
-        <div className="relative z-10 bg-blue-950/80 border-t border-white/5">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 text-blue-300/75 text-xs font-semibold uppercase tracking-wider">
-                <Plug size={13} /> {t("integrations.label")}
-              </span>
-              {["Mercado Livre", "Shein"].map((name) => (
-                <span
-                  key={name}
-                  className="inline-flex items-center rounded-full border border-blue-300/30 bg-white/10 px-4 py-1.5 text-sm font-bold text-white shadow-sm shadow-blue-950/40"
-                >
-                  {name}
-                </span>
-              ))}
-            </div>
-            <span aria-hidden="true" className="hidden md:block h-6 w-px bg-white/15" />
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-blue-300/75 text-xs font-semibold uppercase tracking-wider mr-1">
-                <Zap size={13} /> {t("integrations.differentialsLabel")}
-              </span>
-              {(t.raw("integrations.differentials") as string[]).map((d) => (
-                <span key={d} className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-medium text-blue-100">
-                  {d}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Stats */}
@@ -658,6 +630,41 @@ export default function FinanceHome() {
             })}
           </div>
         </div>
+      </section>
+
+      {/* Integrações e diferenciais — faixa própria, mesma animação do letreiro do hero */}
+      <section aria-label={t("integrations.label")}>
+      <div className="relative overflow-hidden border-y border-white/5 py-4" style={{ background: "#0a1a3d" }}>
+        <div className="ticker-track ticker-track-fast items-center" style={{ gap: 0 }}>
+          {Array.from({ length: 6 }, (_, copy) => (
+            <div key={copy} aria-hidden={copy > 0 ? true : undefined} className="flex items-center shrink-0" style={{ gap: "3.5rem", paddingRight: "3.5rem" }}>
+              <div className="flex items-center gap-4 shrink-0">
+                <span className="inline-flex items-center gap-1.5 text-blue-300/75 text-xs font-semibold uppercase tracking-wider">
+                  <Plug size={13} /> {t("integrations.label")}
+                </span>
+                {/* fundo branco fixo (inline): a camada .mkt remapeia bg-white no tema escuro */}
+                <span className="inline-flex items-center rounded-lg px-3.5 py-1.5 shadow-md shadow-blue-950/50" style={{ background: "#ffffff" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/Logotipo_MercadoLivre.png" alt="Mercado Livre" className="h-7 w-auto" />
+                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Shein.svg" alt="Shein" className="h-10 w-auto rounded-lg shadow-md shadow-blue-950/50" />
+              </div>
+              <span aria-hidden="true" className="h-6 w-px bg-white/15 shrink-0" />
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="inline-flex items-center gap-1.5 text-blue-300/75 text-xs font-semibold uppercase tracking-wider">
+                  <Zap size={13} /> {t("integrations.differentialsLabel")}
+                </span>
+                {(t.raw("integrations.differentials") as string[]).map((d) => (
+                  <span key={d} className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-medium text-blue-100">
+                    {d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
       </section>
 
       {/* Pricing Cards */}
