@@ -16,9 +16,9 @@
   },
   "kpi": {
     "toReceive": "A receber",
-    "overdue": "Atrasadas",
+    "overdue": "Vencidas",
     "received": "Recebidas",
-    "alert": "Alerta ({days}d)",
+    "awaiting": "Aguardando pagamento",
     "billCount": "{count, plural, one {# cobrança} other {# cobranças}}",
     "dueSoon": "vence em breve"
   },

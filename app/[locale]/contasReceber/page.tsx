@@ -2014,6 +2014,8 @@ export default function ContasReceberPage() {
                 const d = daysUntil(r.dueDate);
                 return d >= 0 && d <= alertDays;
             }).length,
+            aguardando: periodReceivables.filter(r => r._status === ("pendente" as const) || r._status === ("agendado" as const)).reduce((s, r) => s + r.amount, 0),
+            totalAguardando: periodReceivables.filter(r => r._status === ("pendente" as const) || r._status === ("agendado" as const)).length,
             totalNotReceived: notReceived.length,
             totalOverdue: periodReceivables.filter(r => r._status === ("atrasado" as const)).length,
             totalReceived: periodReceivables.filter(r => r._status === ("recebido" as const)).length,
@@ -2171,7 +2173,7 @@ export default function ContasReceberPage() {
                         { label: t("kpi.toReceive"), val: toBRL(kpis.aReceber, locale), color: "var(--pos)", bg: "var(--pos-weak)", sub: t("kpi.billCount", { count: kpis.totalNotReceived }) },
                         { label: t("kpi.overdue"), val: toBRL(kpis.atrasado, locale), color: "var(--neg)", bg: "var(--neg-weak)", sub: t("kpi.billCount", { count: kpis.totalOverdue }) },
                         { label: t("kpi.received"), val: toBRL(kpis.recebido, locale), color: "var(--pos)", bg: "var(--pos-weak)", sub: t("kpi.billCount", { count: kpis.totalReceived }) },
-                        { label: t("kpi.alert", { days: alertDays }), val: String(kpis.alert), color: "var(--warn)", bg: "var(--warn-weak)", sub: t("kpi.dueSoon") },
+                        { label: t("kpi.awaiting"), val: toBRL(kpis.aguardando, locale), color: "var(--warn)", bg: "var(--warn-weak)", sub: t("kpi.billCount", { count: kpis.totalAguardando }) },
                     ].map(({ label, val, color, bg, sub }, i) => (
                         <div key={label} className="cf-kpi kin p-3 sm:p-4 flex flex-col gap-1.5"
                             style={{ animationDelay: `${i * 60}ms` }}>
