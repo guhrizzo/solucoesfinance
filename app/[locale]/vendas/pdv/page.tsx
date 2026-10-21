@@ -128,6 +128,16 @@ export default function PdvPage() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Caixa aberto = tela cheia: tira o recuo da sidebar (data-has-nav=0) e
+  // restaura ao fechar o caixa ou sair da tela.
+  const emTelaCheia = !!caixaAberto;
+  useEffect(() => {
+    if (!emTelaCheia) return;
+    const html = document.documentElement;
+    html.setAttribute("data-has-nav", "0");
+    return () => html.setAttribute("data-has-nav", "1");
+  }, [emTelaCheia]);
+
   async function handleLogout() {
     const { getFirebase } = await import("@/lib/firebase");
     const { signOut } = await import("firebase/auth");
@@ -146,7 +156,7 @@ export default function PdvPage() {
 
   return (
     <div className="flex min-h-screen flex-col" style={{ background: "var(--bg)" }}>
-      <Navbar activePath="/vendas" user={user} onLogout={handleLogout} />
+      {!caixaAberto && <Navbar activePath="/vendas" user={user} onLogout={handleLogout} />}
 
       {toast && (
         <div
@@ -159,7 +169,7 @@ export default function PdvPage() {
         </div>
       )}
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 pb-24 sm:px-6">
+      <main className={caixaAberto ? "w-full px-4 py-6 sm:px-8" : "mx-auto w-full max-w-7xl px-4 py-6 pb-24 sm:px-6"}>
         {caixaAberto ? (
           <PdvTerminal
             caixa={caixaAberto}

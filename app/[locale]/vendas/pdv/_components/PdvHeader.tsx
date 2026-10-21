@@ -30,10 +30,10 @@ export function PdvHeader({ operador, acoes }: { operador?: string; acoes?: Reac
     <header className="mb-4 space-y-3 pb-4" style={{ borderBottom: "1px solid var(--border)" }}>
       <Link
         href="/vendas"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold no-underline"
-        style={{ color: "var(--text-muted)" }}
+        className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold no-underline"
+        style={{ background: "var(--brand)", color: "var(--brand-on)" }}
       >
-        <ArrowLeft size={13} /> {t("back")}
+        <ArrowLeft size={16} /> {t("back")}
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-3">
