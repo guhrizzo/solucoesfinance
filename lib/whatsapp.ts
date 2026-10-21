@@ -92,6 +92,30 @@ export async function sendWhatsAppAlert(opts: {
   );
 }
 
+/**
+ * Aviso pro FORNECEDOR (portal de compras: convite e mudança de status do
+ * pedido). Template próprio em WHATSAPP_TEMPLATE_SUPPLIER (3 variáveis, mesmo
+ * corpo do aviso: nome, empresa, texto); sem ele, usa o template de aviso.
+ */
+export async function sendWhatsAppSupplierNotice(opts: {
+  phone: string | undefined | null;
+  name: string;
+  companyName: string;
+  text: string;
+}): Promise<WhatsAppResult> {
+  return sendTemplate(
+    opts.phone,
+    process.env.WHATSAPP_TEMPLATE_SUPPLIER || process.env.WHATSAPP_TEMPLATE_ALERT || "aviso_nexusfi",
+    [opts.name || "tudo bem", opts.companyName || "sua empresa", opts.text.slice(0, 900)],
+  );
+}
+
+/** Link wa.me com a mensagem pré-preenchida — fallback quando a API não está configurada. */
+export function waMeLink(phone: string | undefined | null, text: string): string | null {
+  const to = toWhatsAppNumber(phone);
+  return to ? `https://wa.me/${to}?text=${encodeURIComponent(text)}` : null;
+}
+
 /** Texto livre — só vale dentro da janela de 24h aberta por uma mensagem do cliente. */
 export async function sendWhatsAppText(phone: string | undefined | null, text: string): Promise<WhatsAppResult> {
   if (!isWhatsAppConfigured()) return { ok: false, reason: "not_configured" };

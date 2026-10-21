@@ -30,6 +30,10 @@ export const PERMISSION_CATEGORIES = [
   { key: "centroCustos", label: "Centro de Custos", path: "/costCenter" },
   { key: "estoque", label: "Estoque", path: "/estoque" },
   { key: "vendas", label: "Painel de Vendas", path: "/vendas" },
+  // Papel extra do módulo de Compras: aprovar/recusar/cancelar pedidos e gerar
+  // o lançamento no Contas a Pagar (ver lib/compras/status.ts). Ver e ajustar
+  // pedidos/fornecedores continua pela permissão "contasPagar".
+  { key: "comprasAprovacao", label: "Compras — aprovar pedidos", path: "/contasPagar/compras" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATEGORIES)[number]["key"];

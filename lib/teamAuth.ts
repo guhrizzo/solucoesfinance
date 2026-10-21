@@ -32,6 +32,10 @@ export async function requireOwner(req: NextRequest): Promise<RequireOwnerResult
   } catch {
     return { error: "Sessão inválida ou expirada. Entre novamente.", status: 401 };
   }
+  // Login exclusivo do portal do fornecedor (lib/compras) não gerencia equipe.
+  if (decoded.portalOnly === true) {
+    return { error: "Este acesso é exclusivo do portal do fornecedor.", status: 403 };
+  }
 
   const db = await getAdminDb();
   const accessSnap = await db.doc(`users/${decoded.uid}/profile/access`).get();

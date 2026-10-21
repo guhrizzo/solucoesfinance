@@ -10,6 +10,7 @@
     "centroCustos": "Cost centers",
     "estoque": "Inventory",
     "vendas": "Sales dashboard",
+    "comprasAprovacao": "Purchasing — approve orders",
     "usuarios": "Users"
   },
   "search": "Search transactions...",

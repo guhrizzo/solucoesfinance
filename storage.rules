@@ -34,5 +34,13 @@ service firebase.storage {
     match /taxes/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
+
+    // Anexos dos pedidos de compra (propostas/orçamentos do portal do
+    // fornecedor e anexos internos): compras/{ownerUid}/{orderId}/{arquivo}.
+    // NENHUM acesso pelo client — upload e download passam pelas rotas
+    // /api/compras/** (Admin SDK), que conferem conta, fornecedor e status.
+    match /compras/{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }

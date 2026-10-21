@@ -17,8 +17,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Login exclusivo do portal do fornecedor (claim `portalOnly`, criada em
+    // app/api/compras/portal/accept): NÃO é conta do app — não lê nem escreve
+    // nada pelo client, nem o próprio ninho. O portal só fala com as rotas
+    // /api/compras/portal/** (Admin SDK), que filtram o que o fornecedor vê.
     function signedIn() {
-      return request.auth != null;
+      return request.auth != null
+        && request.auth.token.get('portalOnly', false) != true;
     }
 
     // uid do dono que ESTE login enxerga: o próprio uid, ou o ownerId gravado
@@ -89,12 +94,44 @@ service cloud.firestore {
         allow read, write: if signedIn() && request.auth.uid == userId;
       }
 
+      // ── Compras (Contas a Pagar) — lib/compras ─────────────────────────
+      // A conta LÊ (telas internas em tempo real) mas NUNCA escreve pelo
+      // client: toda mudança passa pelas rotas /api/compras/** (Admin SDK),
+      // que calculam totais, numeram, validam papel/status e auditam.
+      // Membros com qualquer permissão da conta leem (a checagem por
+      // categoria — contasPagar / comprasAprovacao — fica no app e nas rotas,
+      // como nas demais coleções).
+      match /suppliers/{supplierId} {
+        allow read: if inAccount(userId);
+        allow write: if false;
+      }
+      match /purchaseOrders/{orderId} {
+        allow read: if inAccount(userId);
+        allow write: if false;
+        match /history/{eventId} {
+          allow read: if inAccount(userId);
+          allow write: if false;
+        }
+      }
+      match /comprasNotifications/{logId} {
+        allow read: if inAccount(userId);
+        allow write: if false;
+      }
+      // supplierCnpjIndex (trava de CNPJ duplicado) e counters (nº do pedido)
+      // são só do servidor: caem no "allow ... if false" implícito, já que o
+      // bloco genérico abaixo os exclui.
+
       // Demais dados do ninho (cashflow, bills, taxes, receivables, ...).
       match /{collection}/{document=**} {
         allow read, write: if collection != 'profile'
           && collection != 'team'
           && collection != 'billingEvents'
           && collection != 'contracts'
+          && collection != 'suppliers'
+          && collection != 'supplierCnpjIndex'
+          && collection != 'purchaseOrders'
+          && collection != 'comprasNotifications'
+          && collection != 'counters'
           && inAccount(userId);
       }
     }
@@ -138,6 +175,11 @@ service cloud.firestore {
     // conta) são lidas/escritas SOMENTE pelo Admin SDK (app/api/track e
     // app/api/analytics). Não precisam de regra própria: já caem no
     // fallback de negação abaixo, igual a `feedback` acima.
+
+    // supplierInvites/{hash} (convites do portal — só o SHA-256 do token) e
+    // supplierPortalUsers/{uid}/links/* (vínculo login ↔ fornecedor) são lidos
+    // e escritos SOMENTE pelo Admin SDK (app/api/compras/**). Caem no
+    // fallback de negação abaixo — nem o próprio fornecedor lê direto.
 
     // Fallback: nega o que não foi liberado acima.
     match /{document=**} {

@@ -13,8 +13,8 @@ import { authedFetch } from "@/lib/authedFetch";
 import { formatDateTime } from "@/lib/format";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
-type Kind = "caixa" | "estoque" | "contas" | "receber" | "saldo" | "categorizar" | "orcamento" | "resumo";
-const KINDS: Kind[] = ["caixa", "estoque", "contas", "receber", "saldo", "categorizar", "orcamento", "resumo"];
+type Kind = "caixa" | "estoque" | "contas" | "receber" | "saldo" | "categorizar" | "orcamento" | "resumo" | "compras";
+const KINDS: Kind[] = ["caixa", "estoque", "contas", "receber", "saldo", "categorizar", "orcamento", "resumo", "compras"];
 const ALL_ON = Object.fromEntries(KINDS.map((k) => [k, true])) as Record<Kind, boolean>;
 
 interface Status {

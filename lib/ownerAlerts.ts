@@ -23,7 +23,8 @@ import { isCompedEmail } from "@/lib/compAccounts";
 import { isProAccess, resolveSubscriptionState, type BillingDoc } from "@/lib/billing";
 import { isWhatsAppConfigured, sendWhatsAppAlert, type WhatsAppResult } from "@/lib/whatsapp";
 
-export const ALERT_KINDS = ["caixa", "estoque", "contas", "receber", "saldo", "categorizar", "orcamento", "resumo"] as const;
+// compras → fornecedor enviou um pedido de compra pelo portal (app/api/compras/portal)
+export const ALERT_KINDS = ["caixa", "estoque", "contas", "receber", "saldo", "categorizar", "orcamento", "resumo", "compras"] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
 
 export interface OwnerAlertsConfig {

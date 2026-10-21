@@ -10,6 +10,7 @@
     "centroCustos": "Centros de costo",
     "estoque": "Inventario",
     "vendas": "Panel de ventas",
+    "comprasAprovacao": "Compras — aprobar pedidos",
     "usuarios": "Usuarios"
   },
   "search": "Buscar transacciones...",

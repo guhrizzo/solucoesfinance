@@ -248,6 +248,10 @@
       "resumo": {
         "title": "Financial summary",
         "desc": "Revenue, expenses, result and the 3 biggest expenses of the period."
+      },
+      "compras": {
+        "title": "Purchase order received",
+        "desc": "When a supplier submits an order for review through the portal."
       }
     },
     "consent": "By saving, you authorize NexusFi to send these alerts to this number. Turn them off here at any time.",

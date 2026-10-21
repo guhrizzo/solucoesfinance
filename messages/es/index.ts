@@ -23,6 +23,7 @@ import billing from './billing.json';
 import categories from './categories.json';
 import assinatura from './assinatura.json';
 import users from './users.json';
+import compras from './compras.json';
 
 const messages = {
   common,
@@ -47,6 +48,7 @@ const messages = {
   categories,
   assinatura,
   users,
+  compras,
 };
 
 export default messages;
