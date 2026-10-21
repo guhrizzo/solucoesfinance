@@ -17,9 +17,12 @@ const RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 3 }; // 3 pedidos / 15 min p
 
 export async function POST(req: NextRequest) {
   let email: string | undefined;
+  // "portal" → depois de redefinir, volta pro login do portal do fornecedor.
+  let target: "app" | "portal" = "app";
   try {
     const body = await req.json();
     email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : undefined;
+    if (body?.target === "portal") target = "portal";
   } catch {
     return NextResponse.json({ error: "Corpo da requisição inválido." }, { status: 400 });
   }
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
     const adminAuth = await getAdminAuth();
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const continueUrl = `${appUrl}/login`;
+    const continueUrl = target === "portal" ? `${appUrl}/fornecedor/entrar` : `${appUrl}/login`;
     const resetLink = await adminAuth.generatePasswordResetLink(email, { url: continueUrl });
 
     const { Resend } = await import("resend");

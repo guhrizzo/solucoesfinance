@@ -62,6 +62,11 @@ export async function requireScope(
   let email: string | null;
   try {
     const decoded = await auth.verifyIdToken(token);
+    // Login criado pelo convite do portal do fornecedor (claim portalOnly):
+    // não é conta do app — nunca ganha escopo de dono, nem do próprio ninho.
+    if (decoded.portalOnly === true) {
+      return { error: "Este acesso é exclusivo do portal do fornecedor.", status: 403 };
+    }
     uid = decoded.uid;
     email = decoded.email ?? null;
   } catch {

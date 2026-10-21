@@ -248,6 +248,10 @@
       "resumo": {
         "title": "Resumen financiero",
         "desc": "Ingresos, gastos, resultado y los 3 mayores gastos del período."
+      },
+      "compras": {
+        "title": "Pedido de compra recibido",
+        "desc": "Cuando un proveedor envía un pedido para análisis por el portal."
       }
     },
     "consent": "Al guardar, autorizas a NexusFi a enviar estos avisos a este número. Desactívalos aquí cuando quieras.",

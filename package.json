@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "i18n:check": "node scripts/i18n-check.mjs"
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "test": "node --experimental-strip-types --no-warnings --import ./tests/support/register.mjs --test tests/**/*.test.mjs"
   },
   "dependencies": {
     "apexcharts": "^7.6.1",

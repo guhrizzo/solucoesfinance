@@ -33,6 +33,13 @@ export function useAuth() {
           router.replace(plano ? `/login?plano=${encodeURIComponent(plano)}` : "/login");
         }
         if (u && (pathname === "/login" || pathname === "/register")) router.replace("/dashboard");
+        // Login exclusivo do portal do fornecedor (claim portalOnly) não usa o
+        // app interno — firestore.rules nega tudo pra ele; manda pro portal.
+        if (u && !pathname.startsWith("/fornecedor")) {
+          u.getIdTokenResult()
+            .then((r) => { if (r.claims.portalOnly === true) router.replace("/fornecedor"); })
+            .catch(() => undefined);
+        }
       });
     })();
 

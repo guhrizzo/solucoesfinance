@@ -100,7 +100,14 @@ export default function LoginPage() {
   // ?plano=basico-mensal|… (veio da landing) → depois do login vai pro aceite
   // do contrato + pagamento; a página redireciona sozinha se já houver
   // assinatura ativa.
-  const goAfterLogin = () => {
+  const goAfterLogin = async () => {
+    // Login do portal do fornecedor (claim portalOnly) vai direto pro portal.
+    try {
+      const { getFirebase } = await import("@/lib/firebase");
+      const { auth } = await getFirebase();
+      const claims = (await auth.currentUser?.getIdTokenResult())?.claims;
+      if (claims?.portalOnly === true) { router.push("/fornecedor"); return; }
+    } catch { /* segue o fluxo normal */ }
     const plano =
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("plano")

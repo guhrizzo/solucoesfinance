@@ -248,6 +248,10 @@
       "resumo": {
         "title": "Resumo financeiro",
         "desc": "Receita, despesa, resultado e os 3 maiores gastos do período."
+      },
+      "compras": {
+        "title": "Pedido de compra recebido",
+        "desc": "Quando um fornecedor envia um pedido pelo portal para análise."
       }
     },
     "consent": "Ao salvar, você autoriza a NexusFi a enviar esses avisos para este número. Desligue a qualquer momento aqui.",

@@ -10,8 +10,9 @@ import {
     CheckCircle2, CircleDollarSign, Repeat, Settings2,
     ArrowDownRight, Tag, Building2, Zap, Receipt,
     Bell, Image as ImageIcon, Trash, ChevronLeft, ChevronRight, type LucideIcon,
-    ShieldCheck,
+    ShieldCheck, ShoppingBag,
 } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader } from "@/app/components/ui";
@@ -1257,6 +1258,7 @@ export default function ContasPagarPage() {
     const tCats = useTranslations("categories");
     const tPin = useTranslations("common.pin");
     const tNav = useTranslations("nav");
+    const tCompras = useTranslations("compras");
     const locale = useLocale();
     const [uid, setUid] = useState<string | null>(null);
     // uid do login atual — usado para o PIN (pessoal) e para o selo de autoria,
@@ -1860,6 +1862,12 @@ export default function ContasPagarPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Submódulo Compras (fornecedores, pedidos, aprovação) */}
+                        <Link href="/contasPagar/compras"
+                            className="flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl"
+                            style={{ background: "var(--cf-input)", color: "var(--cf-text)", border: "1px solid var(--cf-border)" }}>
+                            <ShoppingBag size={14} /> {tCompras("openCompras")}
+                        </Link>
                         <button onClick={() => setSettingsOpen(true)}
                             className="relative p-2 rounded-xl cursor-pointer"
                             style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
