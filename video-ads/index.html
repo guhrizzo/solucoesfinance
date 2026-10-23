@@ -1,0 +1,94 @@
+<!doctype html><meta charset=utf-8><style>@font-face{font-family:Sora;src:url(sora.woff2);font-weight:100 900}
+@font-face{font-family:Hanken;src:url(hanken-grotesk.woff2);font-weight:100 900}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#070b14;font-family:Hanken,sans-serif;color:#fff}
+body{background:radial-gradient(1200px 900px at 50% -10%,#14305f 0%,#070b14 65%)}
+.sc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;padding:90px;text-align:center;opacity:0}
+.glow{position:absolute;width:900px;height:900px;border-radius:50%;background:radial-gradient(#1f6feb66,transparent 65%);top:50%;left:50%;transform:translate(-50%,-50%);z-index:-1;animation:breathe 4s ease-in-out infinite}
+.glow.warn{background:radial-gradient(#e5484d55,transparent 65%)}
+.glow.big{width:1400px;height:1400px}
+.h1{font:800 150px/1.02 Sora;letter-spacing:-4px}
+.h1.sm{font-size:120px}
+.h2{font:700 84px/1.12 Sora;letter-spacing:-2px}
+.h2.sm{font-size:78px}
+.h2 b,.h1 b{color:#5aa2ff}
+.red{color:#ff6b6b}
+.sub{font:600 54px Hanken;color:#9db6dc}
+.kicker{font:700 48px Hanken;letter-spacing:6px;text-transform:uppercase;color:#7fb0ff}
+.badge{width:260px;height:260px;border-radius:70px;background:linear-gradient(145deg,#2f80ff,#1451b8);display:grid;place-items:center;box-shadow:0 30px 90px #1f6feb88}
+.chart{width:900px;height:360px;margin-top:20px}
+.logo{width:820px}
+.logo.s{width:620px}
+.check{width:170px;height:170px;border-radius:50%;background:#16a34a;display:grid;place-items:center;box-shadow:0 20px 70px #16a34a88}
+.docs{position:relative;width:900px;height:600px}
+.doc{position:absolute;width:260px;height:330px;background:#f4f6fa;border-radius:18px;padding:34px 28px;transform:rotate(var(--r));box-shadow:0 20px 50px #0008;display:flex;flex-direction:column;gap:22px}
+.doc i{display:block;height:16px;border-radius:8px;background:#c3cbd9}
+.kpis{display:flex;gap:26px;width:100%}
+.kpi{flex:1;background:#101a2e;border:2px solid #22345a;border-radius:30px;padding:34px 24px;display:flex;flex-direction:column;gap:10px;text-align:left}
+.kpi span{font:600 34px Hanken;color:#8aa0c4}
+.kpi b{white-space:nowrap;font:800 38px Sora;letter-spacing:-1px}
+.g{color:#4ade80}
+.b{color:#5aa2ff}
+.r{color:#ff7b7b}
+.card{width:100%;height:420px;background:#101a2e;border:2px solid #22345a;border-radius:34px;padding:40px;display:flex;align-items:flex-end}
+.bars{display:flex;align-items:flex-end;gap:22px;width:100%;height:100%}
+.bars i{flex:1;background:linear-gradient(#5aa2ff,#1f6feb);border-radius:14px 14px 4px 4px;transform-origin:bottom}
+.chips{display:flex;flex-wrap:wrap;gap:20px;justify-content:center}
+.chip{background:#fff;border-radius:20px;padding:16px 28px;display:grid;place-items:center}
+.note{font:500 30px Hanken;color:#6c7f9f}
+.chat{width:100%;display:flex;flex-direction:column;gap:26px;text-align:left}
+.msg{max-width:84%;padding:34px 40px;border-radius:36px;font:500 46px/1.3 Hanken;color:#10202c}
+.msg.in{background:#fff;border-bottom-left-radius:8px}
+.msg.pix{font-family:monospace;font-size:40px;background:#e8f1ff}
+.msg.out{background:#25d366;align-self:flex-end;border-bottom-right-radius:8px;font-weight:700}
+.paid{font:800 100px Sora;color:#4ade80}
+.cta{background:linear-gradient(135deg,#2f80ff,#1451b8);padding:46px 60px;white-space:nowrap;border-radius:999px;font:800 58px Sora;box-shadow:0 25px 80px #1f6feb99}
+.url{font:600 54px Hanken;color:#9db6dc;letter-spacing:2px}
+@keyframes scin{from{opacity:0}to{opacity:1}}
+@keyframes scout{to{opacity:0}}
+@keyframes up{from{opacity:0;transform:translateY(60px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.6)}60%{transform:scale(1.06)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes drop{from{opacity:0;transform:translateY(-200px) rotate(var(--r))}to{opacity:1;transform:rotate(var(--r))}}
+@keyframes draw{from{stroke-dasharray:1400;stroke-dashoffset:1400}to{stroke-dasharray:1400;stroke-dashoffset:0}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes breathe{50%{transform:translate(-50%,-50%) scale(1.12)}}
+</style><body><section class="sc" style="animation:scin .4s 0.00s both, scout .35s 2.42s forwards">
+<div class="glow"></div>
+<div class="badge" style="animation:pop .7s cubic-bezier(.2,.9,.3,1) 0.10s both;"><svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8 7.5L20 18M8 16.5L20 6"/></svg></div>
+<div class="h1" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 0.35s both;">Ateliê da Ni</div>
+<div class="sub" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 0.90s both;">Uma empresa de sucesso</div>
+<svg class="chart" viewBox="0 0 900 360" style="animation:fade .7s cubic-bezier(.2,.9,.3,1) 1.10s both;"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b8bff" stop-opacity=".55"/><stop offset="1" stop-color="#3b8bff" stop-opacity="0"/></linearGradient></defs>
+<path d="M0 320 C150 300 220 260 330 240 S520 170 620 120 S800 40 900 20 L900 360 L0 360Z" fill="url(#g)"/>
+<path style="animation:draw 1.3s ease-out 1.00s both" d="M0 320 C150 300 220 260 330 240 S520 170 620 120 S800 40 900 20" fill="none" stroke="#5aa2ff" stroke-width="10" stroke-linecap="round"/></svg></section><section class="sc" style="animation:scin .4s 2.77s both, scout .35s 8.15s forwards">
+<div class="glow warn"></div>
+<div class="kicker" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 2.87s both;">Ela é inteligente</div>
+<div class="docs"><div class="doc" style="left:80px;top:40px;--r:-9deg;animation:drop .7s cubic-bezier(.2,.9,.3,1) 2.92s both;"><i></i><i></i><i style="width:55%"></i></div><div class="doc" style="left:380px;top:0px;--r:6deg;animation:drop .7s cubic-bezier(.2,.9,.3,1) 3.04s both;"><i></i><i></i><i style="width:55%"></i></div><div class="doc" style="left:620px;top:70px;--r:-4deg;animation:drop .7s cubic-bezier(.2,.9,.3,1) 3.16s both;"><i></i><i></i><i style="width:55%"></i></div><div class="doc" style="left:200px;top:230px;--r:5deg;animation:drop .7s cubic-bezier(.2,.9,.3,1) 3.28s both;"><i></i><i></i><i style="width:55%"></i></div><div class="doc" style="left:520px;top:240px;--r:-8deg;animation:drop .7s cubic-bezier(.2,.9,.3,1) 3.40s both;"><i></i><i></i><i style="width:55%"></i></div></div>
+<div class="h2" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 3.97s both;">Crescer <b>sem organizar</b><br>as finanças é um <span class='red'>risco</span>.</div></section><section class="sc" style="animation:scin .4s 8.50s both, scout .35s 10.87s forwards">
+<div class="glow"></div>
+<div class="kicker" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 8.60s both;">Por isso, a Ni escolheu</div>
+<img class="logo" src="nexus_fi_logo_branco.png" style="animation:pop .7s cubic-bezier(.2,.9,.3,1) 8.85s both;">
+<div class="check" style="animation:pop .7s cubic-bezier(.2,.9,.3,1) 9.40s both;"><svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></section><section class="sc" style="animation:scin .4s 11.22s both, scout .35s 18.61s forwards">
+<div class="glow"></div>
+<div class="h2 sm" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 11.32s both;">Tudo em <b>um só lugar</b></div>
+<div class="kpis">
+ <div class="kpi" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 11.92s both;"><span>Caixa</span><b class="g">R$ 48.230</b></div>
+ <div class="kpi" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 12.32s both;"><span>A receber</span><b class="b">R$ 21.900</b></div>
+ <div class="kpi" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 12.72s both;"><span>A pagar</span><b class="r">R$ 12.480</b></div>
+</div>
+<div class="card" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 13.12s both;"><div class="bars"><i style="height:35%;animation:grow .8s ease-out 13.22s both"></i><i style="height:50%;animation:grow .8s ease-out 13.29s both"></i><i style="height:42%;animation:grow .8s ease-out 13.36s both"></i><i style="height:64%;animation:grow .8s ease-out 13.43s both"></i><i style="height:58%;animation:grow .8s ease-out 13.50s both"></i><i style="height:76%;animation:grow .8s ease-out 13.57s both"></i><i style="height:70%;animation:grow .8s ease-out 13.64s both"></i><i style="height:92%;animation:grow .8s ease-out 13.71s both"></i></div></div>
+<div class="chips"><div class="chip" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 13.82s both;"><img src="Logotipo_MercadoLivre.png" style="height:44px"></div><div class="chip" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 14.00s both;"><img src="TikTokShop.svg" style="height:58px"></div><div class="chip" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 14.18s both;"><img src="Shopee.svg" style="height:58px"></div><div class="chip" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 14.36s both;"><img src="Shein.svg" style="height:58px"></div></div>
+<div class="note" style="animation:fade .7s cubic-bezier(.2,.9,.3,1) 13.62s both;">Imagens ilustrativas</div></section><section class="sc" style="animation:scin .4s 18.96s both, scout .35s 22.41s forwards">
+<div class="glow"></div>
+<div class="h2 sm" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 19.06s both;">Cobrança por <b>Pix</b> e <b>WhatsApp</b></div>
+<div class="chat">
+ <div class="msg in" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 19.56s both;">Olá! Sua fatura vence hoje.<br>Pague pelo Pix copia e cola:</div>
+ <div class="msg in pix" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 20.06s both;">00020126…nexusfi</div>
+ <div class="msg out" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 20.86s both;">Pago ✅</div>
+</div>
+<div class="paid" style="animation:pop .7s cubic-bezier(.2,.9,.3,1) 21.16s both;">Recebido!</div></section><section class="sc" style="animation:scin .4s 22.76s both, scout .35s 27.35s forwards">
+<div class="glow big"></div>
+<img class="logo s" src="nexus_fi_logo_branco.png" style="animation:pop .7s cubic-bezier(.2,.9,.3,1) 22.86s both;">
+<div class="h1 sm" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 23.26s both;">Seja inteligente<br>como a Ni.</div>
+<div class="cta" style="animation:pop .7s cubic-bezier(.2,.9,.3,1) 24.16s both;">Teste grátis por 7 dias</div>
+<div class="url" style="animation:up .7s cubic-bezier(.2,.9,.3,1) 24.76s both;">nexusfi.com.br</div></section>

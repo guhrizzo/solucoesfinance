@@ -18,16 +18,18 @@ const MAX_CHUNKS = 30;
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 const MODEL = "claude-haiku-4-5-20251001";
 
-const SYSTEM_PROMPT = `Você é um leitor de relatórios de vendas brasileiros (marketplaces, PDV, ERP, planilhas).
+const buildPrompt = (today: string) => `Você é um leitor de relatórios de vendas brasileiros (marketplaces, PDV, ERP, planilhas).
 Extraia TODAS as linhas de venda do documento. Leia só o que está escrito: NUNCA invente valores.
 Responda SOMENTE com JSON válido, sem markdown, sem texto adicional.
 Formato:
 {"sales":[{"date":"YYYY-MM-DD","sku":"","name":"","qty":1,"amount":0,"unitCost":null,"fees":null,"returnedQty":null,"returnedValue":null,"channel":"","orderId":"","status":""}]}
+Hoje é ${today}. Se a data da linha vier sem ano (ex.: "14/10"), use o ano do período do relatório ou, na falta dele, o ano de hoje.
 Regras:
+- Aceite qualquer tipo de lançamento de venda ou serviço prestado (produtos, serviços, vendas de balcão, Pix recebido de venda); só ignore totais/subtotais e despesas.
 - Uma linha por item vendido (produto) — não crie linhas de total, subtotal ou resumo.
 - date: data da venda em YYYY-MM-DD. Se o documento só tiver um período (ex.: "Outubro/2026") e a linha não tiver data, use null.
 - sku: código/SKU do produto se existir, senão "". name: nome do produto.
-- qty: quantidade vendida (número). amount: valor TOTAL cobrado pela linha (quantidade × preço, já com desconto aplicado), positivo, sem símbolo. Se só houver preço unitário, multiplique por qty. Não subtraia descontos de novo se o valor já for o líquido.
+- qty: quantidade vendida (número). Se a quantidade estiver no nome (ex.: "Munição 38 - 5 Und"), use 5 e mantenha o nome; se não houver, 1. amount: valor TOTAL cobrado pela linha (quantidade × preço, já com desconto aplicado), positivo, sem símbolo. Se só houver preço unitário, multiplique por qty. Não subtraia descontos de novo se o valor já for o líquido.
 - unitCost: custo UNITÁRIO somente se o relatório trouxer coluna de custo/CMV/preço de compra (se vier o custo total da linha, divida por qty). Se não houver, null. NUNCA use o preço de venda como custo.
 - fees: taxas/comissões/tarifas da linha (marketplace) se existirem, senão null.
 - returnedQty / returnedValue: devolução parcial da linha se o relatório trouxer, senão null.
@@ -35,7 +37,7 @@ Regras:
 - status: se a linha for cancelada, devolvida ou estornada escreva "cancelado", "devolvido" ou "estornado"; senão "".
 - Valores monetários como número JSON (ponto decimal), nunca texto.`;
 
-async function callAnthropic(userContent: unknown, maxTokens: number): Promise<RawSale[]> {
+async function callAnthropic(userContent: unknown, maxTokens: number, system: string): Promise<RawSale[]> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -46,7 +48,7 @@ async function callAnthropic(userContent: unknown, maxTokens: number): Promise<R
     body: JSON.stringify({
       model: MODEL,
       max_tokens: maxTokens,
-      system: SYSTEM_PROMPT,
+      system,
       messages: [{ role: "user", content: userContent }],
     }),
   });
@@ -64,16 +66,17 @@ async function callAnthropic(userContent: unknown, maxTokens: number): Promise<R
   return Array.isArray(parsed?.sales) ? parsed.sales : [];
 }
 
-const analyzeChunk = (chunk: string) =>
-  callAnthropic(`Relatório de vendas:\n\n${chunk}`, 8192);
+const analyzeChunk = (chunk: string, system: string) =>
+  callAnthropic(`Relatório de vendas:\n\n${chunk}`, 8192, system);
 
-const analyzePdf = (base64: string) =>
+const analyzePdf = (base64: string, system: string) =>
   callAnthropic(
     [
       { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
       { type: "text", text: "Extraia TODAS as linhas de venda deste relatório." },
     ],
     16000,
+    system,
   );
 
 function splitIntoChunks(text: string, maxChars = 8000): string[] {
@@ -107,6 +110,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const today = new Date().toISOString().slice(0, 10);
+  const system = buildPrompt(today);
   const { text, storagePath } = await req.json().catch(() => ({}));
   let file: StorageFile | null = null;
   try {
@@ -127,7 +132,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "PDF muito grande (limite de 5 MB). Envie um período menor ou cole o texto." }, { status: 413 });
       }
       const [buffer] = await file.download();
-      all.push(...(await analyzePdf(buffer.toString("base64"))));
+      all.push(...(await analyzePdf(buffer.toString("base64"), system)));
     } else {
       if (typeof text !== "string" || !text.trim()) {
         return NextResponse.json({ error: "Texto vazio" }, { status: 400 });
@@ -137,12 +142,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Relatório muito grande (${chunks.length} blocos). Envie em partes menores.` }, { status: 413 });
       }
       for (let i = 0; i < chunks.length; i += 3) {
-        const results = await Promise.all(chunks.slice(i, i + 3).map(analyzeChunk));
+        const results = await Promise.all(chunks.slice(i, i + 3).map((c) => analyzeChunk(c, system)));
         results.forEach((r) => all.push(...r));
       }
     }
 
-    const { rows, skipped } = sanitizeSales(all);
+    const { rows, skipped } = sanitizeSales(all, { year: Number(today.slice(0, 4)) });
+    if (rows.length === 0 && all.length > 0) {
+      return NextResponse.json(
+        { error: `A IA leu ${all.length} linha(s), mas nenhuma tinha data e valor válidos. Confira se o relatório traz a data de cada venda.` },
+        { status: 422 },
+      );
+    }
     if (rows.length > MAX_IMPORT_ROWS) {
       return NextResponse.json(
         { error: `O relatório tem ${rows.length} linhas; o limite por importação é ${MAX_IMPORT_ROWS}. Divida em períodos menores.` },

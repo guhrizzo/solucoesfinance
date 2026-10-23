@@ -57,8 +57,11 @@ export function parseMoneyLike(v: unknown): number | null {
   return neg ? -n : n;
 }
 
-/** YYYY-MM-DD, DD/MM/YYYY, DD/MM/YY, DD-MM-YYYY → ISO; inválida → null. */
-export function parseDateLike(v: unknown): string | null {
+/**
+ * YYYY-MM-DD, DD/MM/YYYY, DD/MM/YY, DD-MM-YYYY → ISO; inválida → null.
+ * "DD/MM" (sem ano, comum em relatórios) usa `defaultYear` quando informado.
+ */
+export function parseDateLike(v: unknown, defaultYear?: number): string | null {
   if (typeof v !== "string") return null;
   const s = v.trim();
   let y: number, m: number, d: number;
@@ -67,6 +70,8 @@ export function parseDateLike(v: unknown): string | null {
   else if ((mt = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/))) {
     d = +mt[1]; m = +mt[2]; y = +mt[3];
     if (mt[3].length === 2) y += 2000;
+  } else if (defaultYear && (mt = s.match(/^(\d{1,2})[/.-](\d{1,2})$/))) {
+    d = +mt[1]; m = +mt[2]; y = defaultYear;
   } else return null;
   if (m < 1 || m > 12 || d < 1 || d > 31 || y < 2000 || y > 2100) return null;
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -97,13 +102,13 @@ const nonNeg = (v: unknown): number | null => {
  * não têm data válida ou valor positivo. Custo, taxas e devoluções só entram
  * quando o relatório os trouxe (null = não informado, nunca 0).
  */
-export function sanitizeSales(raw: unknown): { rows: CleanSale[]; skipped: number } {
+export function sanitizeSales(raw: unknown, opts: { year?: number } = {}): { rows: CleanSale[]; skipped: number } {
   const list = Array.isArray(raw) ? (raw as RawSale[]) : [];
   const rows: CleanSale[] = [];
   let skipped = 0;
   for (const r of list) {
     if (!r || typeof r !== "object") { skipped++; continue; }
-    const date = parseDateLike(r.date);
+    const date = parseDateLike(r.date, opts.year);
     const amount = parseMoneyLike(r.amount);
     const sku = text(r.sku, 60);
     const name = text(r.name, 120) || sku;

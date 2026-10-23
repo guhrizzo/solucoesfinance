@@ -144,6 +144,28 @@ test("ponta a ponta: relatório lido pela IA → linhas → métricas coerentes"
   assert.deepEqual(m.semCusto.skus, ["B"]);
 });
 
+test("datas sem ano (DD/MM) usam o ano informado; sem ano padrão continuam inválidas", () => {
+  assert.equal(parseDateLike("14/10", 2026), "2026-10-14");
+  assert.equal(parseDateLike("14/10"), null);
+  assert.equal(parseDateLike("31/02", 2026), null);
+});
+
+test("relatório com datas '14/10' e quantidade no nome (caso real) é lido por inteiro", () => {
+  const { rows, skipped } = sanitizeSales(
+    [
+      { date: "14/10", name: "Alvo - Sócio", qty: 1, amount: 30 },
+      { date: "14/10", name: "Munição 5.56 - 1 Und", qty: 1, amount: 144 },
+      { date: "14/10", name: "Munição 38 - 5 Und", qty: 5, amount: 45 },
+      { date: "14/10", name: "Treino", qty: 1, amount: 140 },
+    ],
+    { year: 2026 },
+  );
+  assert.equal(skipped, 0);
+  assert.equal(rows.length, 4);
+  assert.equal(rows[0].date, "2026-10-14");
+  assert.equal(rows.reduce((a, r) => a + r.amount, 0), 359);
+});
+
 test("reimportação: mesmo nome, linhas e total geram a mesma marca", () => {
   const rows = [{ amount: 100.1 }, { amount: 50 }];
   assert.equal(importFingerprint("Relatorio.pdf ", rows), importFingerprint("relatorio.pdf", [{ amount: 50 }, { amount: 100.1 }]));

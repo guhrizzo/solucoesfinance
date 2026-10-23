@@ -1,0 +1,35 @@
+<!doctype html><meta charset=utf-8><style>
+*{margin:0}html,body{width:1080px;height:1920px;background:#000;overflow:hidden}
+.burst{position:absolute;inset:0;opacity:0;filter:blur(60px)}
+.blob{position:absolute;width:760px;height:2300px;top:-190px;left:50%;margin-left:-380px;border-radius:50%;mix-blend-mode:screen}
+.blob.o{background:radial-gradient(closest-side,#ff8a1e,#ff8a1e00)}
+.blob.p{background:radial-gradient(closest-side,#ff3d7f,#ff3d7f00);width:560px;margin-left:-280px}
+.blob.y{background:radial-gradient(closest-side,#ffe27a,#ffe27a00);width:420px;margin-left:-210px}
+@keyframes lk{0%{opacity:0}45%{opacity:1}100%{opacity:0}}
+@keyframes sweep{from{transform:translateX(calc(var(--d)*-900px)) rotate(14deg)}to{transform:translateX(calc(var(--d)*900px)) rotate(14deg)}}
+</style><body>
+<div class="burst" style="animation:lk 1.0s ease-in-out 2.27s both">
+  <div class="blob o" style="animation:sweep 1.0s linear 2.27s both;--d:1"></div>
+  <div class="blob p" style="animation:sweep 1.0s linear 2.32s both;--d:1"></div>
+  <div class="blob y" style="animation:sweep 1.0s linear 2.23s both;--d:1"></div>
+</div>
+<div class="burst" style="animation:lk 1.0s ease-in-out 8.00s both">
+  <div class="blob o" style="animation:sweep 1.0s linear 8.00s both;--d:-1"></div>
+  <div class="blob p" style="animation:sweep 1.0s linear 8.05s both;--d:-1"></div>
+  <div class="blob y" style="animation:sweep 1.0s linear 7.96s both;--d:-1"></div>
+</div>
+<div class="burst" style="animation:lk 1.0s ease-in-out 10.72s both">
+  <div class="blob o" style="animation:sweep 1.0s linear 10.72s both;--d:1"></div>
+  <div class="blob p" style="animation:sweep 1.0s linear 10.77s both;--d:1"></div>
+  <div class="blob y" style="animation:sweep 1.0s linear 10.68s both;--d:1"></div>
+</div>
+<div class="burst" style="animation:lk 1.0s ease-in-out 18.46s both">
+  <div class="blob o" style="animation:sweep 1.0s linear 18.46s both;--d:-1"></div>
+  <div class="blob p" style="animation:sweep 1.0s linear 18.51s both;--d:-1"></div>
+  <div class="blob y" style="animation:sweep 1.0s linear 18.42s both;--d:-1"></div>
+</div>
+<div class="burst" style="animation:lk 1.0s ease-in-out 22.26s both">
+  <div class="blob o" style="animation:sweep 1.0s linear 22.26s both;--d:1"></div>
+  <div class="blob p" style="animation:sweep 1.0s linear 22.31s both;--d:1"></div>
+  <div class="blob y" style="animation:sweep 1.0s linear 22.22s both;--d:1"></div>
+</div>

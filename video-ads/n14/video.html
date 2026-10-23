@@ -1,0 +1,139 @@
+<!doctype html><meta charset=utf-8><style>@font-face{font-family:Sora;src:url(../sora.woff2);font-weight:100 900}
+@font-face{font-family:Hanken;src:url(../hanken-grotesk.woff2);font-weight:100 900}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:radial-gradient(900px 700px at 50% 38%,#12306e 0%,transparent 70%),linear-gradient(#0a1a42 0%,#071230 55%,#050c20 100%);font-family:Hanken,sans-serif;color:#fff}
+.bgglow{position:absolute;left:50%;top:-330px;width:900px;height:560px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,#3b7bff 0%,#2457c2aa 45%,transparent 75%);filter:blur(20px);animation:breathe 5s ease-in-out infinite}
+.grid{position:absolute;left:-60%;right:-60%;bottom:0;height:900px;transform:perspective(520px) rotateX(62deg);transform-origin:bottom;background:linear-gradient(#5b92ffaa 2px,transparent 2px) 0 0/90px 90px,linear-gradient(90deg,#5b92ffaa 2px,transparent 2px) 0 0/90px 90px;-webkit-mask-image:linear-gradient(to top,#000 10%,transparent 95%);mask-image:linear-gradient(to top,#000 10%,transparent 95%)}
+.dots i{position:absolute;width:6px;height:6px;border-radius:50%;background:#4d8fff;opacity:.5}
+.sc{position:absolute;inset:0;opacity:0}
+.txt1{position:absolute;left:0;right:0;text-align:center}
+.ln{font:700 104px/1.12 Hanken;letter-spacing:-2px}
+.w{display:inline-block;margin:0 .13em}
+.hl{background:linear-gradient(90deg,#5ba0ff,#2f6df5);-webkit-background-clip:text;color:transparent;font-weight:800}
+.lchart{position:absolute;left:90px;top:1130px;width:900px;height:380px}
+.bars1{position:absolute;left:150px;right:150px;top:1050px;height:480px;display:flex;align-items:flex-end;gap:34px}
+.bars1 i{flex:1;background:linear-gradient(#5ba0ff,#1d4fd0);border-radius:10px 10px 3px 3px;transform-origin:bottom;box-shadow:0 0 30px #2f6df544}
+.dot1{position:absolute;left:866px;top:1018px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 0 30px #5ba0ff}
+.photo{position:absolute;left:110px;top:130px;width:860px;height:1010px;border-radius:26px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 5%,#000 80%,transparent 100%),linear-gradient(to right,transparent 0,#000 6%,#000 94%,transparent 100%);-webkit-mask-composite:source-in;mask-composite:intersect}
+.photo img{width:100%;height:100%;object-fit:cover;object-position:50% 25%}
+.l3{position:absolute;left:130px;top:1190px}
+.dash{width:56px;height:5px;border-radius:3px;background:#3b82f6;margin-bottom:22px}
+.name{font:800 120px/1 Hanken;letter-spacing:-3px}
+.role{font:600 46px Hanken;color:#6aa7ff;margin-top:12px}
+.alogo{position:absolute;right:120px;top:1195px;width:150px;height:150px;border-radius:50%;overflow:hidden;border:4px solid #3b82f6;box-shadow:0 0 50px #2f6df577}
+.alogo img{width:100%;height:100%;object-fit:cover}
+.mk{position:absolute;left:130px;top:1480px;display:flex;gap:18px}
+.mk span{background:#fff;border-radius:18px;height:78px;padding:0 22px;display:grid;place-items:center}
+.pils{position:absolute;left:120px;right:120px;top:360px;display:flex;flex-direction:column;gap:28px}
+.pil{display:flex;align-items:center;gap:34px;background:#0b1630;border:2px solid #1c3263;border-radius:30px;padding:30px 38px}
+.pil i{width:92px;height:92px;border-radius:50%;background:linear-gradient(145deg,#3b82f6,#1d4fd0);display:grid;place-items:center;box-shadow:0 0 30px #2f6df577;flex:none}
+.pil b{display:block;font:700 62px Hanken}
+.pil small{display:block;font:500 38px Hanken;color:#8aa0c4;margin-top:2px}
+.juntos{position:absolute;left:0;right:0;top:1090px;text-align:center;font:700 78px/1.15 Hanken;color:#c9d6ee}
+.juntos .hl{font-size:120px}
+.h4{position:absolute;left:0;right:0;top:230px;text-align:center;font:800 78px Hanken;letter-spacing:-2px}
+.h4 b{color:#5ba0ff}
+.shot{position:absolute;left:70px;right:70px;top:400px;background:#0a1226;border:2px solid #1c3263;border-radius:34px;padding:34px;box-shadow:0 30px 90px #000a,0 0 60px #2f6df522}
+.kp{display:flex;gap:20px}
+.kp div{flex:1;background:#101a2e;border:2px solid #22345a;border-radius:22px;padding:22px 20px;text-align:left}
+.kp span{display:block;font:600 28px Hanken;color:#8aa0c4}
+.kp b{display:block;font:800 36px Sora;margin-top:6px;white-space:nowrap}
+.g{color:#4ade80}.b{color:#5aa2ff}.r{color:#ff7b7b}
+.card2{margin-top:24px;background:#101a2e;border:2px solid #22345a;border-radius:26px;padding:28px}
+.card2 .top{display:flex;justify-content:space-between;text-align:left}
+.card2 .lbl{font:600 26px Hanken;color:#8aa0c4}
+.card2 .big{font:800 44px Sora;margin-top:4px}
+.pill{background:#12392a;color:#4ade80;font:700 26px Hanken;padding:8px 20px;border-radius:999px;height:fit-content}
+.bars2{display:flex;align-items:flex-end;gap:16px;height:320px;margin-top:40px}
+.bars2 .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;position:relative}
+.bars2 .c i{display:block;background:linear-gradient(#3f78d6,#1d4aa8);border-radius:10px 10px 3px 3px;transform-origin:bottom}
+.bars2 .c.hi i{background:linear-gradient(#8ec0ff,#1f6feb);box-shadow:0 0 36px #3b8bff99}
+.tip{position:absolute;top:-50px;left:50%;transform:translateX(-50%);background:#fff;color:#10202c;font:700 24px Hanken;padding:5px 14px;border-radius:12px;white-space:nowrap}
+.mos{display:flex;gap:16px;margin-top:12px}
+.mos span{flex:1;font:500 22px Hanken;color:#6c7f9f;text-align:center}.mos span.on{color:#fff;font-weight:700}
+.chips{position:absolute;left:70px;right:70px;top:1330px;display:flex;gap:16px;justify-content:center}
+.chip2{border-radius:18px;padding:12px 22px;display:grid;place-items:center;min-height:84px;flex:1}
+.chip2.on{background:#fff}
+.chip2.soon{border:2px dashed #34507f;color:#fff;font:700 26px Hanken;text-align:center;line-height:1.1}
+.chip2.soon small{display:block;font:700 16px Hanken;color:#5aa2ff;letter-spacing:2px;margin-top:6px}
+.note{position:absolute;left:0;right:0;top:1440px;text-align:center;font:500 28px Hanken;color:#6c7f9f}
+.chat{position:absolute;left:90px;right:90px;top:420px;display:flex;flex-direction:column;gap:24px}
+.msg{max-width:88%;padding:30px 38px;border-radius:34px;font:500 44px/1.3 Hanken;color:#10202c}
+.msg.in{background:#fff;border-bottom-left-radius:8px}
+.msg.pix{font-family:monospace;font-size:38px;background:#e8f1ff}
+.msg.out{background:#25d366;align-self:flex-end;border-bottom-right-radius:8px;font-weight:700}
+.paid{position:absolute;left:0;right:0;top:1130px;text-align:center;font:800 110px Sora;color:#4ade80;text-shadow:0 0 50px #4ade8066}
+.cta{position:absolute;left:0;right:0;top:300px;display:flex;flex-direction:column;align-items:center}
+.smart{font:700 62px Hanken;color:#c9d6ee;margin-bottom:60px}.smart b{color:#5ba0ff}
+.usea{font:600 82px Hanken}
+.clogo{width:860px;margin-top:6px}
+.btn{margin-top:44px;background:linear-gradient(135deg,#3b82f6,#1d4fd0);padding:34px 86px;border-radius:999px;font:700 56px Hanken;box-shadow:0 20px 70px #2f6df599}
+.trial{margin-top:30px;font:600 40px Hanken;color:#7cb3ff;letter-spacing:1px}
+.url{margin-top:26px;font:500 44px Hanken;color:#8aa0c4;letter-spacing:3px}
+.ring{position:absolute;left:50%;top:560px;width:900px;height:900px;margin-left:-450px;border-radius:50%;border:2px solid #2f6df533;animation:pulse 3s ease-in-out infinite}
+@keyframes wup{from{opacity:0;transform:translateY(40px);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+@keyframes up{from{opacity:0;transform:translateY(50px)}to{opacity:1;transform:none}}
+@keyframes l3in{from{opacity:0;transform:translateX(-50px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.6)}60%{transform:scale(1.06)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeout{to{opacity:0}}
+@keyframes draw{from{stroke-dasharray:1400;stroke-dashoffset:1400}to{stroke-dasharray:1400;stroke-dashoffset:0}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes breathe{50%{transform:translateX(-50%) scale(1.12)}}
+@keyframes pulse{50%{transform:scale(1.08);opacity:.6}}
+@keyframes tw{50%{opacity:.1}}
+@keyframes sc0{0%{opacity:1}92.526%{opacity:1;filter:none;transform:none}100%{opacity:0;filter:blur(14px);transform:scale(.97)}}@keyframes sc1{0%{opacity:0;filter:blur(14px);transform:scale(1.04)}6.547%{opacity:1;filter:none;transform:none}93.453%{opacity:1;filter:none;transform:none}100%{opacity:0;filter:blur(14px);transform:scale(.97)}}@keyframes sc2{0%{opacity:0;filter:blur(14px);transform:scale(1.04)}7.689%{opacity:1;filter:none;transform:none}92.311%{opacity:1;filter:none;transform:none}100%{opacity:0;filter:blur(14px);transform:scale(.97)}}@keyframes sc3{0%{opacity:0;filter:blur(14px);transform:scale(1.04)}6.184%{opacity:1;filter:none;transform:none}93.816%{opacity:1;filter:none;transform:none}100%{opacity:0;filter:blur(14px);transform:scale(.97)}}@keyframes sc4{0%{opacity:0;filter:blur(14px);transform:scale(1.04)}9.116%{opacity:1;filter:none;transform:none}90.884%{opacity:1;filter:none;transform:none}100%{opacity:0;filter:blur(14px);transform:scale(.97)}}@keyframes sc5{0%{opacity:0;filter:blur(14px);transform:scale(1.04)}7.988%{opacity:1;filter:none;transform:none}100%{opacity:1}}</style><body><div class="bgglow"></div><div class="grid"></div><div class="dots"><i style="left:40px;top:1180px;animation:tw 2.2s ease-in-out 0.00s infinite"></i><i style="left:177px;top:1269px;animation:tw 2.2s ease-in-out 0.37s infinite"></i><i style="left:314px;top:1358px;animation:tw 2.2s ease-in-out 0.74s infinite"></i><i style="left:451px;top:1447px;animation:tw 2.2s ease-in-out 1.11s infinite"></i><i style="left:588px;top:1536px;animation:tw 2.2s ease-in-out 1.48s infinite"></i><i style="left:725px;top:1625px;animation:tw 2.2s ease-in-out 1.85s infinite"></i><i style="left:862px;top:1714px;animation:tw 2.2s ease-in-out 2.22s infinite"></i><i style="left:999px;top:1183px;animation:tw 2.2s ease-in-out 2.59s infinite"></i><i style="left:136px;top:1272px;animation:tw 2.2s ease-in-out 2.96s infinite"></i><i style="left:273px;top:1361px;animation:tw 2.2s ease-in-out 3.33s infinite"></i><i style="left:410px;top:1450px;animation:tw 2.2s ease-in-out 3.70s infinite"></i><i style="left:547px;top:1539px;animation:tw 2.2s ease-in-out 4.07s infinite"></i><i style="left:684px;top:1628px;animation:tw 2.2s ease-in-out 4.44s infinite"></i><i style="left:821px;top:1717px;animation:tw 2.2s ease-in-out 4.81s infinite"></i><i style="left:958px;top:1186px;animation:tw 2.2s ease-in-out 5.18s infinite"></i><i style="left:95px;top:1275px;animation:tw 2.2s ease-in-out 5.55s infinite"></i><i style="left:232px;top:1364px;animation:tw 2.2s ease-in-out 5.92s infinite"></i><i style="left:369px;top:1453px;animation:tw 2.2s ease-in-out 6.29s infinite"></i><i style="left:506px;top:1542px;animation:tw 2.2s ease-in-out 6.66s infinite"></i><i style="left:643px;top:1631px;animation:tw 2.2s ease-in-out 7.03s infinite"></i><i style="left:780px;top:1720px;animation:tw 2.2s ease-in-out 7.40s infinite"></i><i style="left:917px;top:1189px;animation:tw 2.2s ease-in-out 7.77s infinite"></i><i style="left:54px;top:1278px;animation:tw 2.2s ease-in-out 8.14s infinite"></i><i style="left:191px;top:1367px;animation:tw 2.2s ease-in-out 8.51s infinite"></i><i style="left:328px;top:1456px;animation:tw 2.2s ease-in-out 8.88s infinite"></i><i style="left:465px;top:1545px;animation:tw 2.2s ease-in-out 9.25s infinite"></i></div><section class="sc" style="animation:sc0 6.021s linear 0.000s both">
+<div style="animation:fadeout .45s ease 2.90s both">
+<div class="txt1" style="top:330px">
+ <div class="ln"><span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 0.40s both;">O</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 0.48s both;">Ateliê</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 0.56s both;">da</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 0.64s both;">Ni</span></div>
+ <div class="ln"><span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 0.80s both;">está</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 0.88s both;">em</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 0.96s both;">constante</span></div>
+ <div class="ln"><span class="w hl" style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 1.25s both;">evolução</span></div>
+</div>
+<svg class="lchart" viewBox="0 0 900 380" style="animation:fade 0.7s cubic-bezier(.2,.9,.3,1) 0.70s both;"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity=".5"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>
+<path d="M0 320 C150 305 230 270 340 250 S530 190 640 140 S800 60 880 40 L880 380 L0 380Z" fill="url(#g1)" style="animation:fade 1s cubic-bezier(.2,.9,.3,1) 1.20s both;"/>
+<path style="animation:draw 1.6s ease-out 0.90s both" d="M0 320 C150 305 230 270 340 250 S530 190 640 140 S800 60 880 40" fill="none" stroke="#5ba0ff" stroke-width="8" stroke-linecap="round"/>
+<circle cx="880" cy="40" r="13" fill="#fff" style="transform-box:fill-box;transform-origin:center;animation:pop 0.4s cubic-bezier(.2,.9,.3,1) 2.45s both;"/></svg>
+</div>
+<div class="txt1" style="top:330px">
+ <div class="ln"><span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 3.30s both;">mas</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 3.40s both;">esse</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 3.50s both;">avanço</span></div>
+ <div class="ln"><span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 3.75s both;">não</span> <span class="w " style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 3.85s both;">acontece</span></div>
+ <div class="ln"><span class="w hl" style="animation:wup 0.55s cubic-bezier(.2,.9,.3,1) 4.25s both;">por acaso.</span></div></div>
+<div class="bars1" style="animation:fade 0.4s cubic-bezier(.2,.9,.3,1) 3.30s both;"><i style="height:60px;animation:grow .7s cubic-bezier(.2,.9,.3,1) 3.60s both"></i><i style="height:120px;animation:grow .7s cubic-bezier(.2,.9,.3,1) 3.82s both"></i><i style="height:190px;animation:grow .7s cubic-bezier(.2,.9,.3,1) 4.04s both"></i><i style="height:270px;animation:grow .7s cubic-bezier(.2,.9,.3,1) 4.26s both"></i><i style="height:360px;animation:grow .7s cubic-bezier(.2,.9,.3,1) 4.48s both"></i><i style="height:470px;animation:grow .7s cubic-bezier(.2,.9,.3,1) 4.70s both"></i></div>
+<div class="dot1" style="animation:pop 0.4s cubic-bezier(.2,.9,.3,1) 5.45s both;"></div></section><section class="sc" style="animation:sc1 6.874s linear 5.571s both">
+<div class="photo" style="animation:fade 0.7s cubic-bezier(.2,.9,.3,1) 5.72s both;"><img id="clipimg" src="clipa_0000.jpg"></div>
+<div class="l3" style="animation:l3in 0.6s cubic-bezier(.2,.9,.3,1) 6.27s both;">
+ <div class="dash"></div>
+ <div class="name">Ni</div>
+ <div class="role">Fundadora do Ateliê da Ni</div>
+</div>
+<div class="alogo" style="animation:pop 0.5s cubic-bezier(.2,.9,.3,1) 6.47s both;"><img src="atelie_logo_sq.png"></div>
+<div class="mk">
+ <span style="animation:pop 0.45s cubic-bezier(.2,.9,.3,1) 7.47s both;"><img src="../Logotipo_MercadoLivre.png" style="height:40px"></span>
+ <span style="animation:pop 0.45s cubic-bezier(.2,.9,.3,1) 7.72s both;"><img src="../Shein.svg" style="height:44px"></span>
+ <span style="animation:pop 0.45s cubic-bezier(.2,.9,.3,1) 7.97s both;"><img src="../TikTokShop.svg" style="height:44px"></span>
+ <span style="animation:pop 0.45s cubic-bezier(.2,.9,.3,1) 8.22s both;"><img src="../Shopee.svg" style="height:46px"></span>
+</div></section><section class="sc" style="animation:sc2 5.852s linear 11.995s both"><div class="pils"><div class="pil" style="animation:up 0.6s cubic-bezier(.2,.9,.3,1) 12.85s both;"><i><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg></i><div><b>Estratégia</b><small>para onde ir</small></div></div><div class="pil" style="animation:up 0.6s cubic-bezier(.2,.9,.3,1) 13.70s both;"><i><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></i><div><b>Gestão</b><small>como chegar lá</small></div></div><div class="pil" style="animation:up 0.6s cubic-bezier(.2,.9,.3,1) 14.55s both;"><i><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6 4 4 6-7"/><path d="M15 8h5v5"/></svg></i><div><b>Finanças</b><small>o que sustenta tudo</small></div></div></div>
+<div class="juntos"><div style="animation:wup 0.6s cubic-bezier(.2,.9,.3,1) 15.35s both;">devem caminhar</div><div class="hl" style="animation:wup 0.6s cubic-bezier(.2,.9,.3,1) 15.70s both;">juntos.</div></div></section><section class="sc" style="animation:sc3 7.277s linear 17.397s both">
+<div class="h4" style="animation:up 0.6s cubic-bezier(.2,.9,.3,1) 17.50s both;">Tudo em <b>um só lugar</b></div>
+<div class="shot" style="animation:up 0.7s cubic-bezier(.2,.9,.3,1) 18.25s both;">
+ <div class="kp"><div style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 18.55s both;"><span>Caixa</span><b class="g">R$ 48.230</b></div><div style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 18.95s both;"><span>A receber</span><b class="b">R$ 21.900</b></div><div style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 19.35s both;"><span>A pagar</span><b class="r">R$ 12.480</b></div></div>
+ <div class="card2"><div class="top"><div><div class="lbl">Faturamento mensal</div><div class="big">R$ 18,4 mil</div></div><div class="pill">↗ +38%</div></div>
+ <div class="bars2"><div class="c"><i style="height:34%;animation:grow .8s ease-out 19.75s both"></i></div><div class="c"><i style="height:48%;animation:grow .8s ease-out 19.82s both"></i></div><div class="c"><i style="height:40%;animation:grow .8s ease-out 19.89s both"></i></div><div class="c"><i style="height:62%;animation:grow .8s ease-out 19.96s both"></i></div><div class="c"><i style="height:56%;animation:grow .8s ease-out 20.03s both"></i></div><div class="c"><i style="height:74%;animation:grow .8s ease-out 20.10s both"></i></div><div class="c"><i style="height:68%;animation:grow .8s ease-out 20.17s both"></i></div><div class="c hi"><i style="height:96%;animation:grow .8s ease-out 20.24s both"></i><div class="tip" style="animation:pop 0.4s cubic-bezier(.2,.9,.3,1) 20.65s both;">R$ 18,4k</div></div></div><div class="mos"><span class="">Mar</span><span class="">Abr</span><span class="">Mai</span><span class="">Jun</span><span class="">Jul</span><span class="">Ago</span><span class="">Set</span><span class="on">Out</span></div></div>
+</div>
+<div class="chips"><div class="chip2 on" style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 21.15s both;"><img src="../Logotipo_MercadoLivre.png" style="height:40px"></div><div class="chip2 on" style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 21.35s both;"><img src="../Shein.svg" style="height:50px"></div><div class="chip2 soon" style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 21.55s both;">TikTok Shop<small>EM BREVE</small></div><div class="chip2 soon" style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 21.75s both;">Shopee<small>EM BREVE</small></div></div>
+<div class="note" style="animation:fade 0.5s cubic-bezier(.2,.9,.3,1) 21.95s both;">Imagens ilustrativas</div></section><section class="sc" style="animation:sc4 4.937s linear 24.224s both">
+<div class="h4" style="animation:up 0.6s cubic-bezier(.2,.9,.3,1) 24.32s both;">Cobrança por <b>Pix</b> e <b>WhatsApp</b></div>
+<div class="chat">
+ <div class="msg in" style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 24.97s both;">Olá! Sua fatura vence hoje.<br>Pague pelo Pix copia e cola:</div>
+ <div class="msg in pix" style="animation:up 0.5s cubic-bezier(.2,.9,.3,1) 25.47s both;">00020126…nexusfi</div>
+ <div class="msg out" style="animation:pop 0.5s cubic-bezier(.2,.9,.3,1) 26.27s both;">Pago ✅</div>
+</div>
+<div class="paid" style="animation:pop 0.6s cubic-bezier(.2,.9,.3,1) 26.67s both;">Recebido!</div></section><section class="sc" style="animation:sc5 5.633s linear 28.711s both">
+<div class="ring" style="animation:fade 1s cubic-bezier(.2,.9,.3,1) 29.01s both;"></div>
+<div class="cta">
+ <div class="smart" style="animation:up 0.6s cubic-bezier(.2,.9,.3,1) 28.81s both;">Seja inteligente como a <b>Ni</b>.</div>
+ <div class="usea" style="animation:up 0.6s cubic-bezier(.2,.9,.3,1) 30.56s both;">Use a</div>
+ <img class="clogo" src="../nexus_fi_logo_branco.png" style="animation:pop 0.7s cubic-bezier(.2,.9,.3,1) 30.86s both;">
+ <div class="btn" style="animation:pop 0.6s cubic-bezier(.2,.9,.3,1) 31.46s both;">Acesse agora &rarr;</div>
+ <div class="url" style="animation:fade 0.6s cubic-bezier(.2,.9,.3,1) 32.06s both;">nexusfi.com.br</div>
+</div></section>
