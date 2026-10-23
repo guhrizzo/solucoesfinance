@@ -5,7 +5,7 @@ import { useLocale, useTranslations, useMessages } from "next-intl";
 import {
   TrendingUp, DollarSign, Landmark,
   FileText, Search, RefreshCw, ShieldCheck, Download,
-  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity, ChevronDown, TrendingDown
+  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity, ChevronDown, TrendingDown, ShoppingCart
 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
@@ -15,6 +15,7 @@ import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, 
 import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
 import { DreSummary } from "./DreSummary";
+import { VendasReport } from "./VendasReport";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -186,7 +187,7 @@ export default function RelatoriosPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hideValues, setHideValues] = useState(false);
 
-  type TabType = "fluxo" | "faturamento" | "gastos" | "dre";
+  type TabType = "fluxo" | "faturamento" | "gastos" | "dre" | "vendas";
   const [activeTab, setActiveTab] = useState<TabType>("fluxo");
 
   const [closingBusy, setClosingBusy] = useState<string | null>(null);
@@ -621,7 +622,7 @@ export default function RelatoriosPage() {
 
   // Exporta a aba ativa em PDF.
   const handleExportPdf = async () => {
-    if (exporting) return;
+    if (exporting || activeTab === "vendas") return; // a aba Vendas exporta CSV pelo próprio relatório
     setExporting(true);
     try {
       const { exportReportPdf } = await import("@/lib/reportPdf");
@@ -737,6 +738,7 @@ export default function RelatoriosPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {activeTab !== "vendas" && (
             <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
               {[{ id: "mes", label: t("period.monthly") }, { id: "ano", label: t("period.annual") }].map(p => (
                 <button
@@ -751,6 +753,7 @@ export default function RelatoriosPage() {
                 </button>
               ))}
             </div>
+            )}
 
             <button
               onClick={() => setHideValues(!hideValues)}
@@ -761,6 +764,7 @@ export default function RelatoriosPage() {
               {hideValues ? <Eye size={15} /> : <EyeOff size={15} />}
             </button>
 
+            {activeTab !== "vendas" && (
             <button
               onClick={handleExportPdf}
               disabled={exporting}
@@ -771,6 +775,7 @@ export default function RelatoriosPage() {
               {exporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
               {t("exportPdf")}
             </button>
+            )}
           </div>
         </div>
 
@@ -781,6 +786,7 @@ export default function RelatoriosPage() {
             { id: "faturamento", label: t("tabs.faturamento"), icon: BarChart3 },
             { id: "gastos", label: t("tabs.gastos"), icon: TrendingDown },
             { id: "dre", label: t("tabs.dre"), icon: FileText },
+            { id: "vendas", label: t("tabs.vendas"), icon: ShoppingCart },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -796,6 +802,11 @@ export default function RelatoriosPage() {
             </button>
           ))}
         </div>
+
+        {/* Aba: Relatório de Vendas (analítico, somente leitura) */}
+        {activeTab === "vendas" && uid && (
+          <VendasReport ownerUid={uid} hideValues={hideValues} />
+        )}
 
         {/* Aba: Fluxo de Caixa */}
         {activeTab === "fluxo" && (
