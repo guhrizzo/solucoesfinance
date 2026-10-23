@@ -112,12 +112,16 @@ export function renderContractText(p: ContractParties): RenderedContract {
           `vigora pelo período correspondente ao Plano contratado: ${dias} (${
             dias === 365 ? "trezentos e sessenta e cinco" : "trinta"
           }) dias corridos.`,
-        `2.2. O modelo de contratação é pré-pago, SEM renovação automática e SEM ` +
-          `prazo de fidelidade. Cada novo pagamento estende o período de acesso ` +
-          `pelo prazo do respectivo Plano, contado a partir do maior valor entre ` +
-          `a data do pagamento e o término do período vigente.`,
-        `2.3. Não havendo novo pagamento, o acesso é encerrado automaticamente ao ` +
-          `fim do período vigente, sem incidência de multa.`,
+        `2.2. O modelo de contratação é de assinatura COM renovação automática e ` +
+          `SEM prazo de fidelidade: ao fim de cada período, a contratação é ` +
+          `renovada por igual período e o valor do Plano é cobrado novamente, no ` +
+          `cartão de crédito informado ou por novo boleto, até que a CONTRATANTE ` +
+          `cancele a renovação. Cada pagamento confirmado estende o período de ` +
+          `acesso pelo prazo do respectivo Plano, contado a partir do maior valor ` +
+          `entre a data do pagamento e o término do período vigente.`,
+        `2.3. Cancelada a renovação, ou não havendo pagamento de uma cobrança, o ` +
+          `acesso é encerrado automaticamente ao fim do período vigente, sem ` +
+          `incidência de multa.`,
       ],
     },
     {
@@ -125,10 +129,10 @@ export function renderContractText(p: ContractParties): RenderedContract {
       body: [
         `3.1. Pela licença objeto deste Contrato, a CONTRATANTE pagará à ` +
           `CONTRATADA o valor de ${valor} por período do Plano ${p.planLabel}.`,
-        `3.2. O pagamento é pré-pago e processado pela InfinitePay, por meio de ` +
-          `Pix ou cartão de crédito, podendo o cartão ser parcelado conforme as ` +
-          `condições oferecidas pelo processador, hipótese em que eventuais ` +
-          `encargos de parcelamento são de responsabilidade da CONTRATANTE.`,
+        `3.2. O pagamento é processado pelo Asaas, por meio de boleto bancário ` +
+          `ou cartão de crédito, e recorrente a cada período do Plano. Ao optar ` +
+          `pelo cartão, a CONTRATANTE autoriza a cobrança recorrente do valor do ` +
+          `Plano no cartão informado, até o cancelamento da renovação.`,
         `3.3. O acesso à Plataforma é liberado após a confirmação do pagamento ` +
           `pelo processador.`,
         `3.4. Os valores poderão ser reajustados pela CONTRATADA para contratações ` +
@@ -143,7 +147,8 @@ export function renderContractText(p: ContractParties): RenderedContract {
           `termos do art. 49 do Código de Defesa do Consumidor, com direito à ` +
           `restituição integral do valor pago.`,
         `4.2. Após o prazo previsto na cláusula 4.1, a CONTRATANTE poderá cancelar ` +
-          `a contratação a qualquer tempo, o que impedirá novas cobranças. Nesse ` +
+          `a renovação automática a qualquer tempo, pela Plataforma, o que impedirá ` +
+          `novas cobranças. Nesse ` +
           `caso, não há reembolso do período em curso, e o acesso é mantido até o ` +
           `término do período já pago.`,
         `4.3. As solicitações de arrependimento ou cancelamento são feitas pelos ` +
