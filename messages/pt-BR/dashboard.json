@@ -51,7 +51,14 @@
     "negative": "(negativo)",
     "overduePayIncluded": "{count, plural, one {# conta a pagar vencida entra} other {# contas a pagar vencidas entram}} na projeção:",
     "overdueRecExcluded": "{count, plural, one {# recebível vencido fica} other {# recebíveis vencidos ficam}} fora da projeção:",
-    "rule": "Só o saldo em aberto entra (o que já foi baixado já está no caixa, sem contar duas vezes). A receber vencido não é presumido como recebido."
+    "rule": "Só o saldo em aberto entra (o que já foi baixado já está no caixa, sem contar duas vezes). A receber vencido não é presumido como recebido.",
+    "currentBalance": "Saldo atual",
+    "currentBalanceNote": "consolidado até hoje",
+    "expectedIn": "Entradas previstas",
+    "expectedInNote": "a receber nos próximos {days} dias",
+    "scheduledOut": "Saídas agendadas",
+    "scheduledOutNote": "compromissos nos próximos {days} dias",
+    "projectedFinal": "Saldo projetado em {days} dias"
   },
   "controls": {
     "showValues": "Mostrar valores",

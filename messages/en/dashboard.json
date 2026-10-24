@@ -51,7 +51,14 @@
     "negative": "(negative)",
     "overduePayIncluded": "{count, plural, one {# overdue payable is} other {# overdue payables are}} included in the projection:",
     "overdueRecExcluded": "{count, plural, one {# overdue receivable is} other {# overdue receivables are}} left out of the projection:",
-    "rule": "Only the open balance counts (what was already settled is in cash, so nothing is counted twice). Overdue receivables are not assumed to be collected."
+    "rule": "Only the open balance counts (what was already settled is in cash, so nothing is counted twice). Overdue receivables are not assumed to be collected.",
+    "currentBalance": "Current balance",
+    "currentBalanceNote": "consolidated up to today",
+    "expectedIn": "Expected inflows",
+    "expectedInNote": "receivable in the next {days} days",
+    "scheduledOut": "Scheduled outflows",
+    "scheduledOutNote": "commitments in the next {days} days",
+    "projectedFinal": "Projected balance in {days} days"
   },
   "controls": {
     "showValues": "Show values",

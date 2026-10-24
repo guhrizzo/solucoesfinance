@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { AreaLineChart, Pill } from "@/app/components/ui";
@@ -32,6 +33,8 @@ export function BudgetForecast({ budget, projection, today, hide, periodLabel, b
   const tp = useTranslations("dashboard.projection");
   const locale = useLocale();
   const pct = usePct();
+  const [horizon, setHorizon] = useState<number>(30);
+  const sel = projection.horizontes.find((h) => h.days === horizon) ?? projection.horizontes[projection.horizontes.length - 1];
   const fmt = useCallback((n: number) => formatMoney(n, locale), [locale]);
 
   const cats = useMemo(() => {
@@ -108,6 +111,41 @@ export function BudgetForecast({ budget, projection, today, hide, periodLabel, b
       <SectionCard id="projecao" title={tp("title")} subtitle={tp("subtitle")} className={budgetState === null ? "xl:col-span-2" : ""}>
         {projectionState !== "ok" ? <SectionStatus state={projectionState} what={tp("what")} /> : (
           <div className="space-y-3">
+            <div className="flex gap-1 no-print" role="group" aria-label={tp("horizon")}>
+              {projection.horizontes.map((h) => (
+                <button key={h.days} type="button" onClick={() => setHorizon(h.days)} aria-pressed={sel?.days === h.days}
+                  className="px-3 py-1 rounded-md text-xs font-semibold cursor-pointer"
+                  style={sel?.days === h.days ? { background: "var(--brand)", color: "var(--brand-on)" } : { background: "var(--sunken)", color: "var(--text-muted)" }}>
+                  {tp("days", { days: h.days })}
+                </button>
+              ))}
+            </div>
+            {sel && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {([
+                  { label: tp("currentBalance"), value: projection.saldoAtual, Icon: Wallet, bg: "var(--brand-weak)", fg: "var(--brand)", note: tp("currentBalanceNote") },
+                  { label: tp("expectedIn"), value: sel.receber + Math.max(sel.lancamentosFuturos, 0), Icon: TrendingUp, bg: "var(--pos-weak)", fg: "var(--pos)", note: tp("expectedInNote", { days: sel.days }), sign: "+ " },
+                  { label: tp("scheduledOut"), value: sel.pagar + Math.max(-sel.lancamentosFuturos, 0), Icon: TrendingDown, bg: "var(--neg-weak)", fg: "var(--neg)", note: tp("scheduledOutNote", { days: sel.days }), sign: "- " },
+                ]).map((c) => (
+                  <div key={c.label} className="flex items-center gap-3 p-3 rounded-xl min-w-0" style={{ background: c.bg }}>
+                    <c.Icon size={18} style={{ color: c.fg }} aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium" style={{ color: c.fg }}>{c.label}</p>
+                      <p className="mono font-extrabold text-base truncate" style={{ color: c.fg }}>{c.sign}<Money value={c.value} hide={hide} /></p>
+                      <p className="text-[11px] truncate" style={{ color: c.fg }}>{c.note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {sel && (
+              <div className="flex justify-between text-xs" style={{ color: "var(--text-muted)" }}>
+                <span>{tp("projectedFinal", { days: sel.days })}</span>
+                <span className="mono font-semibold" style={{ color: sel.saldo < 0 ? "var(--neg)" : "var(--pos)" }}>
+                  <Money value={sel.saldo} hide={hide} />{sel.saldo < 0 && <span className="sr-only"> {tp("negative")}</span>}
+                </span>
+              </div>
+            )}
             <AreaLineChart
               height={190}
               allowNegative

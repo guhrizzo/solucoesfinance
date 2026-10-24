@@ -51,7 +51,14 @@
     "negative": "(negativo)",
     "overduePayIncluded": "{count, plural, one {# cuenta por pagar vencida entra} other {# cuentas por pagar vencidas entran}} en la proyección:",
     "overdueRecExcluded": "{count, plural, one {# cuenta por cobrar vencida queda} other {# cuentas por cobrar vencidas quedan}} fuera de la proyección:",
-    "rule": "Solo entra el saldo abierto (lo ya liquidado ya está en caja, sin contar dos veces). Lo vencido por cobrar no se presume cobrado."
+    "rule": "Solo entra el saldo abierto (lo ya liquidado ya está en caja, sin contar dos veces). Lo vencido por cobrar no se presume cobrado.",
+    "currentBalance": "Saldo actual",
+    "currentBalanceNote": "consolidado hasta hoy",
+    "expectedIn": "Entradas previstas",
+    "expectedInNote": "por cobrar en los próximos {days} días",
+    "scheduledOut": "Salidas programadas",
+    "scheduledOutNote": "compromisos en los próximos {days} días",
+    "projectedFinal": "Saldo proyectado en {days} días"
   },
   "controls": {
     "showValues": "Mostrar valores",
