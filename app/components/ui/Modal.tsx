@@ -33,6 +33,14 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
+  // onClose costuma chegar como arrow inline (muda a cada render). Se entrasse
+  // nas deps do efeito abaixo, cada tecla digitada re-rodaria o autofoco e
+  // jogaria o cursor pro 1º campo. Por isso vai por ref.
+  const onCloseRef = useRef(onClose);
+  const closeDisabledRef = useRef(closeDisabled);
+  onCloseRef.current = onClose;
+  closeDisabledRef.current = closeDisabled;
+
   useEffect(() => {
     if (!open) return;
 
@@ -51,7 +59,7 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (!closeDisabled) onClose();
+        if (!closeDisabledRef.current) onCloseRef.current();
         return;
       }
       if (e.key !== "Tab") return;
@@ -83,7 +91,7 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
       document.removeEventListener("keydown", onKeyDown);
       previouslyFocused.current?.focus?.();
     };
-  }, [open, onClose, closeDisabled]);
+  }, [open]);
 
   if (!open || typeof document === "undefined") return null;
 
