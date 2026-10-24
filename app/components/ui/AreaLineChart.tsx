@@ -27,6 +27,8 @@ interface AreaLineChartProps {
   /** Esconde valores (tooltip e eixo) — mesmo toggle do <Sensitive>. */
   hideValues?: boolean;
   ariaLabel?: string;
+  /** Permite valores negativos (resultado, saldo projetado) — por padrão o eixo Y começa em 0. */
+  allowNegative?: boolean;
 }
 
 /** var(--x) → cor computada no elemento (Apex não entende var() e precisa da cor real pra gerar o degradê). */
@@ -50,7 +52,7 @@ function isDarkColor(c: string): boolean {
  * brilho sob a linha (dropShadow) e faixa que esmaece pra baixo. Tokens do tema
  * resolvidos em runtime e relidos quando o tema claro/escuro muda.
  */
-export function AreaLineChart({ categories, series, height = 260, formatValue, formatAxis, hideValues = false, ariaLabel }: AreaLineChartProps) {
+export function AreaLineChart({ categories, series, height = 260, formatValue, formatAxis, hideValues = false, ariaLabel, allowNegative = false }: AreaLineChartProps) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<{ colors: string[]; text: string; muted: string; grid: string; dark: boolean } | null>(null);
 
@@ -116,7 +118,7 @@ export function AreaLineChart({ categories, series, height = 260, formatValue, f
         labels: { style: { colors: theme.muted, fontSize: "11px" } },
       },
       yaxis: {
-        min: 0,
+        min: allowNegative ? undefined : 0,
         forceNiceScale: true,
         labels: {
           style: { colors: theme.muted, fontSize: "11px" },
@@ -130,7 +132,7 @@ export function AreaLineChart({ categories, series, height = 260, formatValue, f
         y: { formatter: (v: number) => (hideValues ? formatValue(v).replace(/[\d.,]+/g, "").trim() + " ••••" : formatValue(v)) },
       },
     };
-  }, [theme, series, categories, hideValues, formatValue, formatAxis]);
+  }, [theme, series, categories, hideValues, formatValue, formatAxis, allowNegative]);
 
   return (
     <div ref={boxRef} role="img" aria-label={ariaLabel} style={{ minHeight: height }}>

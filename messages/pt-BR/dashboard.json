@@ -14,18 +14,6 @@
   "periodLabel": {
     "year": "Ano de {year}"
   },
-  "kpi": {
-    "grossRevenue": "Receita bruta",
-    "totalExpenses": "Despesas totais",
-    "netProfit": "Lucro líquido",
-    "defaultRate": "Inadimplência",
-    "vsPrevMonth": "vs. mês anterior",
-    "vsPrevYear": "vs. ano anterior",
-    "overdue": "Atrasadas",
-    "onTime": "Em dia",
-    "pending": "{value} pendente",
-    "seeBreakdown": "Ver detalhamento"
-  },
   "defaultModal": {
     "title": "Inadimplência",
     "subtitle": "Contas a pagar, impostos e centro de custos ainda não pagos",
@@ -44,67 +32,260 @@
       "bill": "Contas a Pagar",
       "tax": "Impostos",
       "expense": "Centro de Custos"
-    }
-  },
-  "chart": {
-    "title": "Receita vs. Despesas",
-    "subtitle": "Ano de {year} — mensal",
-    "typeBar": "Barra",
-    "typeLine": "Linha",
-    "typePie": "Pizza",
-    "revenue": "Receita",
-    "expense": "Despesa",
-    "budget": "Orçamento",
-    "showValues": "Mostrar Valores",
-    "hideValues": "Ocultar Valores",
-    "noData": "Sem dados no período.",
-    "ariaPie": "Gráfico de pizza: receita {revPct}% e despesa {expPct}% do total do ano — detalhamento mês a mês na tabela abaixo",
-    "ariaBarLine": "Gráfico de {type}: receita e despesa mensal de {year} — detalhamento mês a mês na tabela abaixo",
-    "srCaption": "Receita e despesa mensal de {year}",
-    "srMonth": "Mês",
-    "totalRevenueYear": "Total receitas (ano)",
-    "totalExpenseYear": "Total despesas (ano)",
-    "accumulatedBalance": "Saldo acumulado"
-  },
-  "upcomingBills": {
-    "title": "Vencimentos próximos",
-    "urgentCount": "{count} urgente",
-    "empty": "Nenhuma conta pendente vencendo em breve!",
-    "dueOn": "vence {date}",
-    "seeAll": "Ver todas"
-  },
-  "transactions": {
-    "title": "Últimas transações",
-    "subtitle": "Movimentações de {period}",
-    "seeAll": "Ver todas",
-    "emptyShort": "Nenhum lançamento registrado.",
-    "empty": "Nenhuma transação registrada.",
-    "colDescription": "Descrição",
-    "colType": "Tipo",
-    "colAmount": "Valor",
-    "colDate": "Data",
-    "colStatus": "Status",
-    "inflow": "Entrada",
-    "outflow": "Saída",
-    "reconciled": "Conciliado",
-    "pending": "Pendente"
-  },
-  "costCenter": {
-    "title": "Centro de custos",
-    "seeAllAria": "Ver todos os centros de custo",
-    "ariaDonut": "Gráfico de rosca: despesas por centro de custo — detalhamento na lista abaixo",
-    "totalExpenses": "total despesas",
-    "empty": "Nenhuma despesa no período."
+    },
+    "rate": "{pct}% do pendente do período está vencido",
+    "close": "Fechar"
   },
   "projection": {
-    "title": "Projeção de fluxo de caixa (Próximos 30 dias)",
-    "subtitle": "Baseado em saldo atual e recebimentos/contas agendadas para os próximos 30 dias",
-    "currentBalance": "Saldo atual",
-    "currentBalanceNote": "consolidado histórico",
-    "expectedIn": "Entradas previstas",
-    "expectedInNote": "recebíveis próximos 30 dias",
-    "scheduledOut": "Saídas agendadas",
-    "scheduledOutNote": "compromissos próximos 30 dias",
-    "projectedFinal": "Saldo projetado final"
+    "title": "Saldo projetado",
+    "subtitle": "Saldo de hoje mais o previsto em contas a receber e a pagar em aberto",
+    "what": "a projeção",
+    "aria": "Gráfico de linha do saldo projetado para os próximos 30 dias",
+    "projectedBalance": "Saldo projetado",
+    "tableCaption": "Saldo projetado em 7, 15 e 30 dias",
+    "horizon": "Horizonte",
+    "in": "Entradas previstas",
+    "out": "Saídas previstas",
+    "balance": "Saldo projetado",
+    "days": "{days} dias",
+    "negative": "(negativo)",
+    "overduePayIncluded": "{count, plural, one {# conta a pagar vencida entra} other {# contas a pagar vencidas entram}} na projeção:",
+    "overdueRecExcluded": "{count, plural, one {# recebível vencido fica} other {# recebíveis vencidos ficam}} fora da projeção:",
+    "rule": "Só o saldo em aberto entra (o que já foi baixado já está no caixa, sem contar duas vezes). A receber vencido não é presumido como recebido."
+  },
+  "controls": {
+    "showValues": "Mostrar valores",
+    "hideValues": "Ocultar valores"
+  },
+  "states": {
+    "loading": "Carregando…",
+    "error": "Não foi possível carregar estes dados.",
+    "errorWhat": "Não foi possível carregar {what}. Os valores não são exibidos para não induzir a erro.",
+    "unavailable": "Indisponível",
+    "cashflow": "o fluxo de caixa",
+    "retry": "Tentar de novo"
+  },
+  "common": {
+    "noBaseline": "Sem base de comparação",
+    "increase": "(aumento)",
+    "decrease": "(redução)"
+  },
+  "cards": {
+    "balance": "Saldo atual em caixa",
+    "balanceNote": "Entradas menos saídas já realizadas, até hoje.",
+    "balanceNegative": "Saldo negativo",
+    "balanceAtEnd": "Saldo ao fim de {period}",
+    "surplus": "Superávit",
+    "deficit": "Déficit",
+    "surplusShort": "Superávit",
+    "deficitShort": "Déficit",
+    "breakEven": "Equilíbrio",
+    "ofYear": "do ano",
+    "accumulatedYear": "acumulado no ano",
+    "resultOfPeriod": "Resultado de {period}",
+    "vsEquivalent": "vs. mesmo intervalo do mês anterior",
+    "vsEquivalentYear": "vs. mesmo intervalo do ano anterior",
+    "revenue": "Receitas",
+    "expenses": "Despesas",
+    "notBalance": "Resultado não é o saldo bancário: considera só receitas e despesas realizadas.",
+    "outsideResult": "Aplicações, resgates, empréstimos e transferências entre contas ficam de fora.",
+    "alerts": "Central de alertas",
+    "alertsLink": "Ir para a central de alertas",
+    "noAlerts": "Nenhum alerta",
+    "noAlertsNote": "Nenhuma condição de atenção nos dados atuais.",
+    "critical": "{count, plural, one {# crítico} other {# críticos}}",
+    "warning": "{count, plural, one {# atenção} other {# atenção}}",
+    "info": "{count, plural, one {# informativo} other {# informativos}}",
+    "inflows": "Entradas",
+    "outflows": "Saídas",
+    "receivable": "A receber (em aberto)",
+    "payable": "A pagar (em aberto)",
+    "overdueN": "{count, plural, one {# vencida} other {# vencidas}}",
+    "noneOverdue": "Nenhuma vencida",
+    "seeDefault": "Ver inadimplência",
+    "budget": "Orçamento consumido",
+    "budgetOver": "Excedido em",
+    "budgetLeft": "Saldo",
+    "noBudget": "Sem orçamento no período",
+    "annualResult": "Resultado do ano"
+  },
+  "evolution": {
+    "resultTitle": "Evolução do resultado",
+    "resultSubtitleMonth": "Resultado acumulado dia a dia em {period}",
+    "resultSubtitleYear": "Resultado acumulado mês a mês em {period}",
+    "resultNote": "Resultado = receitas − despesas realizadas. Não inclui aplicações, empréstimos nem transferências.",
+    "resultAria": "Gráfico de linha do resultado acumulado em {period}",
+    "accumulatedResult": "Resultado acumulado",
+    "flowTitle": "Entradas × saídas",
+    "flowSubtitleMonth": "Por semana do mês em {period}",
+    "flowSubtitleYear": "Por mês em {period}",
+    "flowAria": "Gráfico de colunas de entradas e saídas em {period}",
+    "inflows": "Entradas",
+    "outflows": "Saídas",
+    "empty": "Nenhuma movimentação realizada neste período.",
+    "weekShort": "Sem {n}",
+    "month": "Mês",
+    "day": "Dia",
+    "week": "Semana"
+  },
+  "budgetSection": {
+    "title": "Orçamento: orçado × realizado",
+    "subtitle": "Centros de custo, contas a pagar e impostos de {period}",
+    "open": "Centros de custo",
+    "what": "o orçamento",
+    "empty": "Nenhum orçamento ou conta com vencimento neste período.",
+    "consumed": "consumido",
+    "exceeded": "Excedido",
+    "withinBudget": "Dentro do orçado",
+    "budgeted": "Orçado",
+    "realized": "Realizado",
+    "over": "Excedente",
+    "balance": "Saldo",
+    "group": {
+      "centers": "Centros de custo",
+      "bills": "Contas a pagar",
+      "taxes": "Impostos"
+    },
+    "topDeviations": "Maiores desvios por centro",
+    "overBy": "excedeu",
+    "leftOf": "resta",
+    "rule": "Orçado = orçamento dos centros + contas e impostos que vencem no período. Realizado = despesas pagas dos centros + parte efetivamente paga de contas e impostos."
+  },
+  "dueSection": {
+    "payTitle": "Contas a pagar: vencimentos",
+    "paySubtitle": "Vencidas, de hoje e dos próximos {days} dias",
+    "payWhat": "as contas a pagar",
+    "recTitle": "Contas a receber: vencimentos",
+    "recSubtitle": "Em atraso, de hoje e dos próximos {days} dias",
+    "recWhat": "as contas a receber",
+    "seeAll": "Ver todas",
+    "overdue": "Vencidas",
+    "dueToday": "Vencem hoje",
+    "nextDays": "Próximos {days} dias",
+    "lateReceivables": "Em atraso",
+    "count": "{count, plural, =0 {nenhum} one {# item} other {# itens}}",
+    "noTitle": "Sem descrição",
+    "overdueDays": "{days, plural, one {# dia de atraso} other {# dias de atraso}}",
+    "today": "Vence hoje",
+    "inDays": "{days, plural, one {em # dia} other {em # dias}} ({date})",
+    "kind": {
+      "bill": "Conta a pagar",
+      "tax": "Imposto",
+      "expense": "Centro de custo",
+      "receivable": "A receber"
+    },
+    "payEmpty": "Nenhuma conta a pagar vencida ou vencendo em breve.",
+    "recEmpty": "Nenhum recebimento em atraso ou previsto em breve."
+  },
+  "centersSection": {
+    "title": "Centros de custo: destaques",
+    "subtitle": "Maiores despesas pagas em {period}",
+    "open": "Abrir módulo",
+    "what": "os centros de custo",
+    "empty": "Nenhuma despesa paga em centros de custo neste período.",
+    "totalSpent": "Total gasto nos centros",
+    "vsEquivalent": "vs. período anterior equivalente",
+    "overCount": "{count, plural, one {# centro estourado} other {# centros estourados}}",
+    "usage": "{pct} do orçamento usado",
+    "budgeted": "orçado",
+    "exceeded": "estourado",
+    "noBudget": "Sem orçamento definido no período"
+  },
+  "alertsSection": {
+    "title": "Central de alertas",
+    "subtitle": "Gerados a partir de condições reais dos seus dados, sem repetição",
+    "none": "Nenhum alerta para este período. Tudo dentro dos critérios.",
+    "indicator": "Indicador",
+    "period": "Período",
+    "scope": {
+      "today": "Hoje",
+      "next": "Próximos {days} dias"
+    },
+    "severity": {
+      "critical": "Crítico",
+      "warning": "Atenção",
+      "info": "Informativo"
+    },
+    "criteria": "Critérios: orçamento a partir de {budget}% consumido; receita em queda a partir de {drop}% e despesa em alta a partir de {rise}% sobre o período anterior equivalente; conciliação em atenção a partir de {recon}% de pendentes. Conta vencida é sempre crítica.",
+    "noMarginTarget": "Não há meta de margem configurada, então não há alerta de margem.",
+    "marginTarget": "Meta de margem: {pct}%.",
+    "noDivergence": "Divergências com extrato bancário ainda não são verificadas.",
+    "items": {
+      "negativeBalance": {
+        "title": "Saldo em caixa negativo",
+        "reason": "O caixa realizado está negativo hoje: as saídas já pagas superam as entradas recebidas.",
+        "action": "Revisar o fluxo de caixa"
+      },
+      "projectedNegative": {
+        "title": "Saldo projetado negativo em até {days} dias",
+        "reason": "Considerando as contas em aberto (a pagar vencidas e a vencer, menos o a receber previsto), o saldo deve ficar negativo em até {days} dias.",
+        "action": "Planejar no fluxo de caixa"
+      },
+      "overduePayables": {
+        "title": "Contas a pagar vencidas",
+        "reason": "{count, plural, one {# conta em aberto passou do vencimento} other {# contas em aberto passaram do vencimento}}, somando {total}. Vencida não significa paga.",
+        "action": "Regularizar contas a pagar"
+      },
+      "dueTodayPayables": {
+        "title": "Pagamentos que vencem hoje",
+        "reason": "{count, plural, one {# pagamento vence hoje} other {# pagamentos vencem hoje}}, somando {total}.",
+        "action": "Programar o pagamento"
+      },
+      "dueSoonPayables": {
+        "title": "Vencimentos nos próximos dias",
+        "reason": "{count, plural, one {# pagamento vence} other {# pagamentos vencem}} nos próximos {days} dias, somando {total}.",
+        "action": "Ver vencimentos"
+      },
+      "overdueReceivables": {
+        "title": "Recebimentos em atraso",
+        "reason": "{count, plural, one {# cobrança está} other {# cobranças estão}} em atraso, somando {total}. Ficam fora da projeção de saldo.",
+        "action": "Cobrar os clientes"
+      },
+      "budgetExceeded": {
+        "title": "Orçamento excedido",
+        "reason": "O realizado já consumiu {pct}% do orçado no período, {over} acima do planejado.",
+        "action": "Revisar o orçamento"
+      },
+      "budgetNearLimit": {
+        "title": "Orçamento próximo do limite",
+        "reason": "O realizado já consumiu {pct}% do orçado no período (alerta a partir de {limit}%).",
+        "action": "Acompanhar os gastos"
+      },
+      "centersOver": {
+        "title": "Centros de custo estourados",
+        "reason": "{count, plural, one {# centro passou} other {# centros passaram}} do orçamento do período.",
+        "action": "Ver centros de custo"
+      },
+      "reconPending": {
+        "title": "Lançamentos sem conciliação",
+        "reason": "{count, plural, one {# lançamento do período ainda não foi conciliado} other {# lançamentos do período ainda não foram conciliados}} ({pct}% do período), somando {total}. Vira atenção a partir de {limit}%.",
+        "action": "Conciliar lançamentos"
+      },
+      "duplicateSuspects": {
+        "title": "Possíveis lançamentos duplicados",
+        "reason": "{count, plural, one {# lançamento repete} other {# lançamentos repetem}} tipo, data, valor e descrição de outro, somando {total}. Confira antes de excluir.",
+        "action": "Revisar o fluxo de caixa"
+      },
+      "negativeResult": {
+        "title": "Resultado do período negativo",
+        "reason": "As despesas superaram as receitas realizadas (resultado acumulado no ano: {acc}). Não inclui aplicações, empréstimos nem transferências.",
+        "action": "Analisar o DRE"
+      },
+      "revenueDrop": {
+        "title": "Queda de receita",
+        "reason": "A receita caiu {pct}% frente ao mesmo intervalo do período anterior (alerta a partir de {limit}%).",
+        "action": "Analisar o DRE"
+      },
+      "expenseRise": {
+        "title": "Aumento de despesas",
+        "reason": "As despesas subiram {pct}% frente ao mesmo intervalo do período anterior (alerta a partir de {limit}%).",
+        "action": "Analisar o DRE"
+      },
+      "marginBelowTarget": {
+        "title": "Margem abaixo da meta",
+        "reason": "A margem do período é {pct}%, abaixo da meta de {target}%.",
+        "action": "Analisar o DRE"
+      }
+    }
   }
 }

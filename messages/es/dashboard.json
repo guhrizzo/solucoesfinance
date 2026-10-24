@@ -14,18 +14,6 @@
   "periodLabel": {
     "year": "Año {year}"
   },
-  "kpi": {
-    "grossRevenue": "Ingreso bruto",
-    "totalExpenses": "Gastos totales",
-    "netProfit": "Utilidad neta",
-    "defaultRate": "Morosidad",
-    "vsPrevMonth": "vs. mes anterior",
-    "vsPrevYear": "vs. año anterior",
-    "overdue": "Vencidas",
-    "onTime": "Al día",
-    "pending": "{value} pendiente",
-    "seeBreakdown": "Ver detalle"
-  },
   "defaultModal": {
     "title": "Morosidad",
     "subtitle": "Cuentas por pagar, impuestos y centros de costos sin pagar",
@@ -44,67 +32,260 @@
       "bill": "Cuentas por Pagar",
       "tax": "Impuestos",
       "expense": "Centros de Costos"
-    }
-  },
-  "chart": {
-    "title": "Ingresos vs. Gastos",
-    "subtitle": "Año {year} — mensual",
-    "typeBar": "Barra",
-    "typeLine": "Línea",
-    "typePie": "Circular",
-    "revenue": "Ingreso",
-    "expense": "Gasto",
-    "budget": "Presupuesto",
-    "showValues": "Mostrar valores",
-    "hideValues": "Ocultar valores",
-    "noData": "Sin datos en el período.",
-    "ariaPie": "Gráfico circular: ingresos {revPct}% y gastos {expPct}% del total del año — desglose mes a mes en la tabla de abajo",
-    "ariaBarLine": "Gráfico de {type}: ingresos y gastos mensuales de {year} — desglose mes a mes en la tabla de abajo",
-    "srCaption": "Ingresos y gastos mensuales de {year}",
-    "srMonth": "Mes",
-    "totalRevenueYear": "Total ingresos (año)",
-    "totalExpenseYear": "Total gastos (año)",
-    "accumulatedBalance": "Saldo acumulado"
-  },
-  "upcomingBills": {
-    "title": "Próximos vencimientos",
-    "urgentCount": "{count} urgente",
-    "empty": "¡No hay cuentas pendientes por vencer pronto!",
-    "dueOn": "vence {date}",
-    "seeAll": "Ver todas"
-  },
-  "transactions": {
-    "title": "Últimas transacciones",
-    "subtitle": "Movimientos de {period}",
-    "seeAll": "Ver todas",
-    "emptyShort": "No hay registros.",
-    "empty": "No hay transacciones registradas.",
-    "colDescription": "Descripción",
-    "colType": "Tipo",
-    "colAmount": "Importe",
-    "colDate": "Fecha",
-    "colStatus": "Estado",
-    "inflow": "Ingreso",
-    "outflow": "Egreso",
-    "reconciled": "Conciliado",
-    "pending": "Pendiente"
-  },
-  "costCenter": {
-    "title": "Centros de costo",
-    "seeAllAria": "Ver todos los centros de costo",
-    "ariaDonut": "Gráfico de anillo: gastos por centro de costo — desglose en la lista de abajo",
-    "totalExpenses": "total gastos",
-    "empty": "Sin gastos en el período."
+    },
+    "rate": "{pct}% de lo pendiente del período está vencido",
+    "close": "Cerrar"
   },
   "projection": {
-    "title": "Proyección de flujo de caja (Próximos 30 días)",
-    "subtitle": "Basado en el saldo actual y los cobros/cuentas programados para los próximos 30 días",
-    "currentBalance": "Saldo actual",
-    "currentBalanceNote": "consolidado histórico",
-    "expectedIn": "Ingresos previstos",
-    "expectedInNote": "cobros en los próximos 30 días",
-    "scheduledOut": "Egresos programados",
-    "scheduledOutNote": "compromisos en los próximos 30 días",
-    "projectedFinal": "Saldo proyectado final"
+    "title": "Saldo proyectado",
+    "subtitle": "Saldo de hoy más lo previsto en cuentas por cobrar y por pagar abiertas",
+    "what": "la proyección",
+    "aria": "Gráfico de línea del saldo proyectado para los próximos 30 días",
+    "projectedBalance": "Saldo proyectado",
+    "tableCaption": "Saldo proyectado a 7, 15 y 30 días",
+    "horizon": "Horizonte",
+    "in": "Entradas previstas",
+    "out": "Salidas previstas",
+    "balance": "Saldo proyectado",
+    "days": "{days} días",
+    "negative": "(negativo)",
+    "overduePayIncluded": "{count, plural, one {# cuenta por pagar vencida entra} other {# cuentas por pagar vencidas entran}} en la proyección:",
+    "overdueRecExcluded": "{count, plural, one {# cuenta por cobrar vencida queda} other {# cuentas por cobrar vencidas quedan}} fuera de la proyección:",
+    "rule": "Solo entra el saldo abierto (lo ya liquidado ya está en caja, sin contar dos veces). Lo vencido por cobrar no se presume cobrado."
+  },
+  "controls": {
+    "showValues": "Mostrar valores",
+    "hideValues": "Ocultar valores"
+  },
+  "states": {
+    "loading": "Cargando…",
+    "error": "No se pudieron cargar estos datos.",
+    "errorWhat": "No se pudo cargar {what}. Los valores se ocultan para no inducir a error.",
+    "unavailable": "No disponible",
+    "cashflow": "el flujo de caja",
+    "retry": "Reintentar"
+  },
+  "common": {
+    "noBaseline": "Sin base de comparación",
+    "increase": "(aumento)",
+    "decrease": "(reducción)"
+  },
+  "cards": {
+    "balance": "Saldo actual en caja",
+    "balanceNote": "Entradas menos salidas ya realizadas, hasta hoy.",
+    "balanceNegative": "Saldo negativo",
+    "balanceAtEnd": "Saldo al cierre de {period}",
+    "surplus": "Superávit",
+    "deficit": "Déficit",
+    "surplusShort": "Superávit",
+    "deficitShort": "Déficit",
+    "breakEven": "Equilibrio",
+    "ofYear": "del año",
+    "accumulatedYear": "acumulado del año",
+    "resultOfPeriod": "Resultado de {period}",
+    "vsEquivalent": "vs. mismo tramo del mes anterior",
+    "vsEquivalentYear": "vs. mismo tramo del año anterior",
+    "revenue": "Ingresos",
+    "expenses": "Gastos",
+    "notBalance": "El resultado no es el saldo bancario: solo cuenta ingresos y gastos realizados.",
+    "outsideResult": "Inversiones, rescates, préstamos y transferencias entre cuentas quedan fuera.",
+    "alerts": "Central de alertas",
+    "alertsLink": "Ir a la central de alertas",
+    "noAlerts": "Sin alertas",
+    "noAlertsNote": "Ninguna condición de atención en los datos actuales.",
+    "critical": "{count, plural, one {# crítica} other {# críticas}}",
+    "warning": "{count, plural, one {# atención} other {# atención}}",
+    "info": "{count, plural, one {# informativa} other {# informativas}}",
+    "inflows": "Entradas",
+    "outflows": "Salidas",
+    "receivable": "Por cobrar (abierto)",
+    "payable": "Por pagar (abierto)",
+    "overdueN": "{count, plural, one {# vencida} other {# vencidas}}",
+    "noneOverdue": "Ninguna vencida",
+    "seeDefault": "Ver morosidad",
+    "budget": "Presupuesto consumido",
+    "budgetOver": "Excedido en",
+    "budgetLeft": "Saldo",
+    "noBudget": "Sin presupuesto en el período",
+    "annualResult": "Resultado del año"
+  },
+  "evolution": {
+    "resultTitle": "Evolución del resultado",
+    "resultSubtitleMonth": "Resultado acumulado día a día en {period}",
+    "resultSubtitleYear": "Resultado acumulado mes a mes en {period}",
+    "resultNote": "Resultado = ingresos − gastos realizados. No incluye inversiones, préstamos ni transferencias.",
+    "resultAria": "Gráfico de línea del resultado acumulado en {period}",
+    "accumulatedResult": "Resultado acumulado",
+    "flowTitle": "Entradas × salidas",
+    "flowSubtitleMonth": "Por semana del mes en {period}",
+    "flowSubtitleYear": "Por mes en {period}",
+    "flowAria": "Gráfico de columnas de entradas y salidas en {period}",
+    "inflows": "Entradas",
+    "outflows": "Salidas",
+    "empty": "Ningún movimiento realizado en este período.",
+    "weekShort": "Sem {n}",
+    "month": "Mes",
+    "day": "Día",
+    "week": "Semana"
+  },
+  "budgetSection": {
+    "title": "Presupuesto: presupuestado × real",
+    "subtitle": "Centros de costo, cuentas por pagar e impuestos de {period}",
+    "open": "Centros de costo",
+    "what": "el presupuesto",
+    "empty": "Ningún presupuesto o cuenta con vencimiento en este período.",
+    "consumed": "consumido",
+    "exceeded": "Excedido",
+    "withinBudget": "Dentro del presupuesto",
+    "budgeted": "Presupuestado",
+    "realized": "Real",
+    "over": "Exceso",
+    "balance": "Saldo",
+    "group": {
+      "centers": "Centros de costo",
+      "bills": "Cuentas por pagar",
+      "taxes": "Impuestos"
+    },
+    "topDeviations": "Mayores desvíos por centro",
+    "overBy": "excedió",
+    "leftOf": "queda",
+    "rule": "Presupuestado = presupuesto de los centros + cuentas e impuestos que vencen en el período. Real = gastos pagados de los centros + parte efectivamente pagada de cuentas e impuestos."
+  },
+  "dueSection": {
+    "payTitle": "Cuentas por pagar: vencimientos",
+    "paySubtitle": "Vencidas, de hoy y de los próximos {days} días",
+    "payWhat": "las cuentas por pagar",
+    "recTitle": "Cuentas por cobrar: vencimientos",
+    "recSubtitle": "Atrasadas, de hoy y de los próximos {days} días",
+    "recWhat": "las cuentas por cobrar",
+    "seeAll": "Ver todas",
+    "overdue": "Vencidas",
+    "dueToday": "Vencen hoy",
+    "nextDays": "Próximos {days} días",
+    "lateReceivables": "Atrasadas",
+    "count": "{count, plural, =0 {ninguno} one {# ítem} other {# ítems}}",
+    "noTitle": "Sin descripción",
+    "overdueDays": "{days, plural, one {# día de atraso} other {# días de atraso}}",
+    "today": "Vence hoy",
+    "inDays": "{days, plural, one {en # día} other {en # días}} ({date})",
+    "kind": {
+      "bill": "Cuenta por pagar",
+      "tax": "Impuesto",
+      "expense": "Centro de costo",
+      "receivable": "Por cobrar"
+    },
+    "payEmpty": "Ninguna cuenta por pagar vencida o por vencer pronto.",
+    "recEmpty": "Ningún cobro atrasado o previsto pronto."
+  },
+  "centersSection": {
+    "title": "Centros de costo: destacados",
+    "subtitle": "Mayores gastos pagados en {period}",
+    "open": "Abrir módulo",
+    "what": "los centros de costo",
+    "empty": "Ningún gasto pagado en centros de costo en este período.",
+    "totalSpent": "Total gastado en los centros",
+    "vsEquivalent": "vs. período anterior equivalente",
+    "overCount": "{count, plural, one {# centro excedido} other {# centros excedidos}}",
+    "usage": "{pct} del presupuesto usado",
+    "budgeted": "presupuestado",
+    "exceeded": "excedido",
+    "noBudget": "Sin presupuesto definido en el período"
+  },
+  "alertsSection": {
+    "title": "Central de alertas",
+    "subtitle": "Generados a partir de condiciones reales de tus datos, sin repetición",
+    "none": "Ninguna alerta para este período. Todo dentro de los criterios.",
+    "indicator": "Indicador",
+    "period": "Período",
+    "scope": {
+      "today": "Hoy",
+      "next": "Próximos {days} días"
+    },
+    "severity": {
+      "critical": "Crítico",
+      "warning": "Atención",
+      "info": "Informativo"
+    },
+    "criteria": "Criterios: presupuesto desde {budget}% consumido; ingresos en caída desde {drop}% y gastos en alza desde {rise}% frente al período anterior equivalente; conciliación en atención desde {recon}% pendiente. Una cuenta vencida siempre es crítica.",
+    "noMarginTarget": "No hay meta de margen configurada, por lo que no hay alerta de margen.",
+    "marginTarget": "Meta de margen: {pct}%.",
+    "noDivergence": "Las divergencias con el extracto bancario aún no se verifican.",
+    "items": {
+      "negativeBalance": {
+        "title": "Saldo en caja negativo",
+        "reason": "La caja realizada está negativa hoy: las salidas ya pagadas superan las entradas recibidas.",
+        "action": "Revisar el flujo de caja"
+      },
+      "projectedNegative": {
+        "title": "Saldo proyectado negativo en hasta {days} días",
+        "reason": "Considerando las cuentas abiertas (por pagar vencidas y por vencer, menos lo previsto por cobrar), el saldo debería quedar negativo en hasta {days} días.",
+        "action": "Planificar en el flujo de caja"
+      },
+      "overduePayables": {
+        "title": "Cuentas por pagar vencidas",
+        "reason": "{count, plural, one {# cuenta abierta superó el vencimiento} other {# cuentas abiertas superaron el vencimiento}}, por {total}. Vencida no significa pagada.",
+        "action": "Regularizar cuentas por pagar"
+      },
+      "dueTodayPayables": {
+        "title": "Pagos que vencen hoy",
+        "reason": "{count, plural, one {# pago vence hoy} other {# pagos vencen hoy}}, por {total}.",
+        "action": "Programar el pago"
+      },
+      "dueSoonPayables": {
+        "title": "Vencimientos en los próximos días",
+        "reason": "{count, plural, one {# pago vence} other {# pagos vencen}} en los próximos {days} días, por {total}.",
+        "action": "Ver vencimientos"
+      },
+      "overdueReceivables": {
+        "title": "Cobros atrasados",
+        "reason": "{count, plural, one {# cobro está atrasado} other {# cobros están atrasados}}, por {total}. Quedan fuera de la proyección de saldo.",
+        "action": "Cobrar a los clientes"
+      },
+      "budgetExceeded": {
+        "title": "Presupuesto excedido",
+        "reason": "Lo real ya consumió {pct}% de lo presupuestado en el período, {over} por encima de lo planificado.",
+        "action": "Revisar el presupuesto"
+      },
+      "budgetNearLimit": {
+        "title": "Presupuesto cerca del límite",
+        "reason": "Lo real ya consumió {pct}% de lo presupuestado en el período (alerta desde {limit}%).",
+        "action": "Seguir los gastos"
+      },
+      "centersOver": {
+        "title": "Centros de costo excedidos",
+        "reason": "{count, plural, one {# centro superó} other {# centros superaron}} el presupuesto del período.",
+        "action": "Ver centros de costo"
+      },
+      "reconPending": {
+        "title": "Movimientos sin conciliar",
+        "reason": "{count, plural, one {# movimiento del período aún no está conciliado} other {# movimientos del período aún no están conciliados}} ({pct}% del período), por {total}. Pasa a atención desde {limit}%.",
+        "action": "Conciliar movimientos"
+      },
+      "duplicateSuspects": {
+        "title": "Posibles movimientos duplicados",
+        "reason": "{count, plural, one {# movimiento repite} other {# movimientos repiten}} tipo, fecha, valor y descripción de otro, por {total}. Verifica antes de eliminar.",
+        "action": "Revisar el flujo de caja"
+      },
+      "negativeResult": {
+        "title": "Resultado del período negativo",
+        "reason": "Los gastos superaron los ingresos realizados (resultado acumulado del año: {acc}). No incluye inversiones, préstamos ni transferencias.",
+        "action": "Analizar el estado de resultados"
+      },
+      "revenueDrop": {
+        "title": "Caída de ingresos",
+        "reason": "Los ingresos cayeron {pct}% frente al mismo tramo del período anterior (alerta desde {limit}%).",
+        "action": "Analizar el estado de resultados"
+      },
+      "expenseRise": {
+        "title": "Aumento de gastos",
+        "reason": "Los gastos subieron {pct}% frente al mismo tramo del período anterior (alerta desde {limit}%).",
+        "action": "Analizar el estado de resultados"
+      },
+      "marginBelowTarget": {
+        "title": "Margen por debajo de la meta",
+        "reason": "El margen del período es {pct}%, por debajo de la meta de {target}%.",
+        "action": "Analizar el estado de resultados"
+      }
+    }
   }
 }

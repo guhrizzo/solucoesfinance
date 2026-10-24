@@ -14,18 +14,6 @@
   "periodLabel": {
     "year": "Year {year}"
   },
-  "kpi": {
-    "grossRevenue": "Gross revenue",
-    "totalExpenses": "Total expenses",
-    "netProfit": "Net profit",
-    "defaultRate": "Default rate",
-    "vsPrevMonth": "vs. previous month",
-    "vsPrevYear": "vs. previous year",
-    "overdue": "Overdue",
-    "onTime": "On time",
-    "pending": "{value} pending",
-    "seeBreakdown": "See breakdown"
-  },
   "defaultModal": {
     "title": "Default rate",
     "subtitle": "Unpaid bills, taxes and cost center expenses",
@@ -44,67 +32,260 @@
       "bill": "Bills",
       "tax": "Taxes",
       "expense": "Cost centers"
-    }
-  },
-  "chart": {
-    "title": "Revenue vs. Expenses",
-    "subtitle": "{year} — monthly",
-    "typeBar": "Bar",
-    "typeLine": "Line",
-    "typePie": "Pie",
-    "revenue": "Revenue",
-    "expense": "Expense",
-    "budget": "Budget",
-    "showValues": "Show values",
-    "hideValues": "Hide values",
-    "noData": "No data for this period.",
-    "ariaPie": "Pie chart: revenue {revPct}% and expenses {expPct}% of the year's total — month-by-month breakdown in the table below",
-    "ariaBarLine": "{type} chart: monthly revenue and expenses for {year} — month-by-month breakdown in the table below",
-    "srCaption": "Monthly revenue and expenses for {year}",
-    "srMonth": "Month",
-    "totalRevenueYear": "Total revenue (year)",
-    "totalExpenseYear": "Total expenses (year)",
-    "accumulatedBalance": "Accumulated balance"
-  },
-  "upcomingBills": {
-    "title": "Upcoming due dates",
-    "urgentCount": "{count} urgent",
-    "empty": "No pending bills due soon!",
-    "dueOn": "due {date}",
-    "seeAll": "See all"
-  },
-  "transactions": {
-    "title": "Recent transactions",
-    "subtitle": "{period} activity",
-    "seeAll": "See all",
-    "emptyShort": "No entries recorded.",
-    "empty": "No transactions recorded.",
-    "colDescription": "Description",
-    "colType": "Type",
-    "colAmount": "Amount",
-    "colDate": "Date",
-    "colStatus": "Status",
-    "inflow": "Inflow",
-    "outflow": "Outflow",
-    "reconciled": "Reconciled",
-    "pending": "Pending"
-  },
-  "costCenter": {
-    "title": "Cost centers",
-    "seeAllAria": "See all cost centers",
-    "ariaDonut": "Donut chart: expenses by cost center — breakdown in the list below",
-    "totalExpenses": "total expenses",
-    "empty": "No expenses for this period."
+    },
+    "rate": "{pct}% of the period's pending amount is overdue",
+    "close": "Close"
   },
   "projection": {
-    "title": "Cash-flow projection (Next 30 days)",
-    "subtitle": "Based on current balance and receivables/bills scheduled for the next 30 days",
-    "currentBalance": "Current balance",
-    "currentBalanceNote": "historical consolidated",
-    "expectedIn": "Expected inflows",
-    "expectedInNote": "receivables in the next 30 days",
-    "scheduledOut": "Scheduled outflows",
-    "scheduledOutNote": "commitments in the next 30 days",
-    "projectedFinal": "Projected final balance"
+    "title": "Projected balance",
+    "subtitle": "Today's balance plus what is expected from open receivables and payables",
+    "what": "the projection",
+    "aria": "Line chart of the projected balance for the next 30 days",
+    "projectedBalance": "Projected balance",
+    "tableCaption": "Projected balance at 7, 15 and 30 days",
+    "horizon": "Horizon",
+    "in": "Expected inflows",
+    "out": "Expected outflows",
+    "balance": "Projected balance",
+    "days": "{days} days",
+    "negative": "(negative)",
+    "overduePayIncluded": "{count, plural, one {# overdue payable is} other {# overdue payables are}} included in the projection:",
+    "overdueRecExcluded": "{count, plural, one {# overdue receivable is} other {# overdue receivables are}} left out of the projection:",
+    "rule": "Only the open balance counts (what was already settled is in cash, so nothing is counted twice). Overdue receivables are not assumed to be collected."
+  },
+  "controls": {
+    "showValues": "Show values",
+    "hideValues": "Hide values"
+  },
+  "states": {
+    "loading": "Loading…",
+    "error": "Could not load this data.",
+    "errorWhat": "Could not load {what}. Values are hidden so they don't mislead you.",
+    "unavailable": "Unavailable",
+    "cashflow": "the cash flow",
+    "retry": "Try again"
+  },
+  "common": {
+    "noBaseline": "No baseline to compare",
+    "increase": "(increase)",
+    "decrease": "(decrease)"
+  },
+  "cards": {
+    "balance": "Current cash balance",
+    "balanceNote": "Inflows minus outflows already realized, up to today.",
+    "balanceNegative": "Negative balance",
+    "balanceAtEnd": "Balance at end of {period}",
+    "surplus": "Surplus",
+    "deficit": "Deficit",
+    "surplusShort": "Surplus",
+    "deficitShort": "Deficit",
+    "breakEven": "Break-even",
+    "ofYear": "for the year",
+    "accumulatedYear": "year to date",
+    "resultOfPeriod": "Result for {period}",
+    "vsEquivalent": "vs. same span of the previous month",
+    "vsEquivalentYear": "vs. same span of the previous year",
+    "revenue": "Revenue",
+    "expenses": "Expenses",
+    "notBalance": "Result is not the bank balance: it only counts realized revenue and expenses.",
+    "outsideResult": "Investments, redemptions, loans and transfers between accounts are left out.",
+    "alerts": "Alert center",
+    "alertsLink": "Go to the alert center",
+    "noAlerts": "No alerts",
+    "noAlertsNote": "No warning conditions in the current data.",
+    "critical": "{count, plural, one {# critical} other {# critical}}",
+    "warning": "{count, plural, one {# warning} other {# warnings}}",
+    "info": "{count, plural, one {# informational} other {# informational}}",
+    "inflows": "Inflows",
+    "outflows": "Outflows",
+    "receivable": "Receivable (open)",
+    "payable": "Payable (open)",
+    "overdueN": "{count, plural, one {# overdue} other {# overdue}}",
+    "noneOverdue": "None overdue",
+    "seeDefault": "See defaults",
+    "budget": "Budget used",
+    "budgetOver": "Over by",
+    "budgetLeft": "Left",
+    "noBudget": "No budget in the period",
+    "annualResult": "Result for the year"
+  },
+  "evolution": {
+    "resultTitle": "Result over time",
+    "resultSubtitleMonth": "Cumulative result day by day in {period}",
+    "resultSubtitleYear": "Cumulative result month by month in {period}",
+    "resultNote": "Result = realized revenue − expenses. Excludes investments, loans and transfers.",
+    "resultAria": "Line chart of the cumulative result in {period}",
+    "accumulatedResult": "Cumulative result",
+    "flowTitle": "Inflows × outflows",
+    "flowSubtitleMonth": "By week of the month in {period}",
+    "flowSubtitleYear": "By month in {period}",
+    "flowAria": "Column chart of inflows and outflows in {period}",
+    "inflows": "Inflows",
+    "outflows": "Outflows",
+    "empty": "No realized movements in this period.",
+    "weekShort": "Wk {n}",
+    "month": "Month",
+    "day": "Day",
+    "week": "Week"
+  },
+  "budgetSection": {
+    "title": "Budget: planned × actual",
+    "subtitle": "Cost centers, bills and taxes for {period}",
+    "open": "Cost centers",
+    "what": "the budget",
+    "empty": "No budget or bills due in this period.",
+    "consumed": "used",
+    "exceeded": "Exceeded",
+    "withinBudget": "Within budget",
+    "budgeted": "Budgeted",
+    "realized": "Actual",
+    "over": "Overrun",
+    "balance": "Balance",
+    "group": {
+      "centers": "Cost centers",
+      "bills": "Bills payable",
+      "taxes": "Taxes"
+    },
+    "topDeviations": "Largest deviations by center",
+    "overBy": "over by",
+    "leftOf": "left",
+    "rule": "Budgeted = cost-center budgets + bills and taxes due in the period. Actual = paid cost-center expenses + the portion of bills and taxes actually paid."
+  },
+  "dueSection": {
+    "payTitle": "Payables: due dates",
+    "paySubtitle": "Overdue, due today and due in the next {days} days",
+    "payWhat": "the payables",
+    "recTitle": "Receivables: due dates",
+    "recSubtitle": "Late, due today and due in the next {days} days",
+    "recWhat": "the receivables",
+    "seeAll": "See all",
+    "overdue": "Overdue",
+    "dueToday": "Due today",
+    "nextDays": "Next {days} days",
+    "lateReceivables": "Late",
+    "count": "{count, plural, =0 {none} one {# item} other {# items}}",
+    "noTitle": "No description",
+    "overdueDays": "{days, plural, one {# day overdue} other {# days overdue}}",
+    "today": "Due today",
+    "inDays": "{days, plural, one {in # day} other {in # days}} ({date})",
+    "kind": {
+      "bill": "Bill",
+      "tax": "Tax",
+      "expense": "Cost center",
+      "receivable": "Receivable"
+    },
+    "payEmpty": "No payables overdue or due soon.",
+    "recEmpty": "No receivables late or expected soon."
+  },
+  "centersSection": {
+    "title": "Cost centers: highlights",
+    "subtitle": "Largest paid expenses in {period}",
+    "open": "Open module",
+    "what": "the cost centers",
+    "empty": "No paid cost-center expenses in this period.",
+    "totalSpent": "Total spent in centers",
+    "vsEquivalent": "vs. equivalent previous period",
+    "overCount": "{count, plural, one {# center over budget} other {# centers over budget}}",
+    "usage": "{pct} of budget used",
+    "budgeted": "budgeted",
+    "exceeded": "exceeded",
+    "noBudget": "No budget set for the period"
+  },
+  "alertsSection": {
+    "title": "Alert center",
+    "subtitle": "Generated from real conditions in your data, without repetition",
+    "none": "No alerts for this period. Everything is within the criteria.",
+    "indicator": "Indicator",
+    "period": "Period",
+    "scope": {
+      "today": "Today",
+      "next": "Next {days} days"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Informational"
+    },
+    "criteria": "Criteria: budget from {budget}% used; revenue drop from {drop}% and expense rise from {rise}% against the equivalent previous period; reconciliation becomes a warning from {recon}% pending. Overdue bills are always critical.",
+    "noMarginTarget": "No margin target is configured, so there is no margin alert.",
+    "marginTarget": "Margin target: {pct}%.",
+    "noDivergence": "Bank statement divergences are not checked yet.",
+    "items": {
+      "negativeBalance": {
+        "title": "Negative cash balance",
+        "reason": "Realized cash is negative today: payments already made exceed the money received.",
+        "action": "Review the cash flow"
+      },
+      "projectedNegative": {
+        "title": "Balance projected negative within {days} days",
+        "reason": "Considering open items (overdue and upcoming payables, minus expected receivables), the balance should turn negative within {days} days.",
+        "action": "Plan in the cash flow"
+      },
+      "overduePayables": {
+        "title": "Overdue payables",
+        "reason": "{count, plural, one {# open bill is past due} other {# open bills are past due}}, totaling {total}. Overdue does not mean paid.",
+        "action": "Settle payables"
+      },
+      "dueTodayPayables": {
+        "title": "Payments due today",
+        "reason": "{count, plural, one {# payment is due today} other {# payments are due today}}, totaling {total}.",
+        "action": "Schedule the payment"
+      },
+      "dueSoonPayables": {
+        "title": "Upcoming due dates",
+        "reason": "{count, plural, one {# payment is due} other {# payments are due}} in the next {days} days, totaling {total}.",
+        "action": "See due dates"
+      },
+      "overdueReceivables": {
+        "title": "Late receivables",
+        "reason": "{count, plural, one {# charge is} other {# charges are}} late, totaling {total}. They are left out of the balance projection.",
+        "action": "Chase the customers"
+      },
+      "budgetExceeded": {
+        "title": "Budget exceeded",
+        "reason": "Actual spending has used {pct}% of the budget in the period, {over} above plan.",
+        "action": "Review the budget"
+      },
+      "budgetNearLimit": {
+        "title": "Budget near its limit",
+        "reason": "Actual spending has used {pct}% of the budget in the period (alert from {limit}%).",
+        "action": "Watch spending"
+      },
+      "centersOver": {
+        "title": "Cost centers over budget",
+        "reason": "{count, plural, one {# center went} other {# centers went}} over the period budget.",
+        "action": "See cost centers"
+      },
+      "reconPending": {
+        "title": "Unreconciled entries",
+        "reason": "{count, plural, one {# entry in the period is not reconciled yet} other {# entries in the period are not reconciled yet}} ({pct}% of the period), totaling {total}. Becomes a warning from {limit}%.",
+        "action": "Reconcile entries"
+      },
+      "duplicateSuspects": {
+        "title": "Possible duplicate entries",
+        "reason": "{count, plural, one {# entry repeats} other {# entries repeat}} the type, date, amount and description of another, totaling {total}. Check before deleting.",
+        "action": "Review the cash flow"
+      },
+      "negativeResult": {
+        "title": "Negative result for the period",
+        "reason": "Expenses exceeded realized revenue (year-to-date result: {acc}). Excludes investments, loans and transfers.",
+        "action": "Analyze the P&L"
+      },
+      "revenueDrop": {
+        "title": "Revenue drop",
+        "reason": "Revenue fell {pct}% against the same span of the previous period (alert from {limit}%).",
+        "action": "Analyze the P&L"
+      },
+      "expenseRise": {
+        "title": "Expenses rising",
+        "reason": "Expenses rose {pct}% against the same span of the previous period (alert from {limit}%).",
+        "action": "Analyze the P&L"
+      },
+      "marginBelowTarget": {
+        "title": "Margin below target",
+        "reason": "The period margin is {pct}%, below the {target}% target.",
+        "action": "Analyze the P&L"
+      }
+    }
   }
 }

@@ -14,3 +14,4 @@ export { PageLoader } from "./PageLoader";
 export { Sensitive } from "./Sensitive";
 export { SmoothLine, smoothPath, type Pt } from "./SmoothLine";
 export { AreaLineChart, type AreaSeries } from "./AreaLineChart";
+export { ColumnChart, type ColumnSeries } from "./ColumnChart";

@@ -4,104 +4,49 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  TrendingUp, TrendingDown, DollarSign, CreditCard,
-  AlertCircle, Clock, Wallet, ChevronRight, ChevronLeft, ArrowUpRight,
-  ArrowDownRight, MoreHorizontal, Filter, Download, Printer,
-  RefreshCw, CheckCircle2, BarChart3, LineChart, PieChart, X, ExternalLink
+  AlertCircle, ChevronRight, ChevronLeft, Eye, EyeOff, Printer, X, ExternalLink, RefreshCw,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import OnboardingModal, { type OnboardingAnswers } from "@/app/components/OnboardingModal";
 import CreatePasswordGate from "@/app/components/CreatePasswordGate";
 import Navbar from "@/app/components/Navbar";
-import { Badge, PageLoader, Sensitive, Modal, SmoothLine, AreaLineChart } from "@/app/components/ui";
+import { PageLoader, Sensitive, Modal } from "@/app/components/ui";
 import AccessDenied from "@/app/components/AccessDenied";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { formatMoney, formatDateTime } from "@/lib/format";
 import { categoryLabel } from "@/lib/cashflowCategories";
-import { budgetForCenterMonth } from "@/lib/costCenterSync";
+import {
+  buildAlerts, buildBudget, buildCenterHighlights, buildDefaultRate, buildDueSummary, buildPayables,
+  buildProjection, buildReceivables, buildResultOverview, buildTimeline, checkReconciliation,
+  DEFAULT_ALERT_THRESHOLDS, daysBetween, inRange, periodRange, todayISO,
+  type DashBill, type DashCostCenter, type DashExpense, type DashPeriod, type DashReceivable, type DashTax, type DashTx,
+} from "@/lib/dashboardInsights";
+import { SummaryCards } from "./_components/SummaryCards";
+import { EvolutionCharts } from "./_components/EvolutionCharts";
+import { BudgetForecast } from "./_components/BudgetForecast";
+import { DueSection } from "./_components/DueSection";
+import { CostCenterSection } from "./_components/CostCenterSection";
+import { AlertCenter } from "./_components/AlertCenter";
+import { SectionStatus, type SourceState } from "./_components/shared";
 import "./dashboard.css";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-type TxType = "entrada" | "saida";
-
-interface Tx {
-  id: string;
-  type: TxType;
-  description: string;
-  category: string;
-  amount: number;
-  date: string;
-  note: string;
-  createdAt: number;
-  reconciled?: boolean;
-}
-
-interface Bill {
-  id: string;
-  title: string;
-  dueDate: string;
-  amount: number;
-  status: string;
-}
-
-interface Receivable {
-  id: string;
-  clientName?: string;
-  description?: string;
-  /** Título da cobrança (campo real gravado em contasReceber). */
-  title?: string;
-  category?: string;
-  dueDate: string;
-  amount: number;
-  status: string;
-}
-
-// Impostos (app/[locale]/impostos) e despesas de Centro de Custos
-// (app/[locale]/costCenter) entram no mesmo balaio de "pendências" que
-// Contas a Pagar e Contas a Receber — ver defaultDetalhe/kpiData abaixo.
-interface Tax {
-  id: string;
-  name: string;
-  dueDate: string;
-  amount: number;
-  status: string;
-}
-
-interface Expense {
-  id: string;
-  description?: string;
-  category: string;
-  center: string;
-  /** Data do lançamento — equivalente ao dueDate dos outros tipos. */
-  date: string;
-  amount: number;
-  status: string;
-}
-
-/** Só o suficiente pro cálculo do Orçamento mensal (budgetForCenterMonth, lib/costCenterSync) — mesmo formato usado em CashFlow.tsx e costCenter/page.tsx. */
-interface CostCenter {
-  id: string;
-  budget?: number;
-  budgetsByMonth?: Record<string, number>;
-}
-
-// Cor semântica por KPI — resolvida via tokens do design system (nunca hex).
-const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
-  blue:    { bg: "var(--brand-weak)", text: "var(--brand)", icon: "var(--brand-weak)" },
-  rose:    { bg: "var(--neg-weak)",   text: "var(--neg)",   icon: "var(--neg-weak)"   },
-  emerald: { bg: "var(--pos-weak)",   text: "var(--pos)",   icon: "var(--pos-weak)"   },
-  amber:   { bg: "var(--warn-weak)",  text: "var(--warn)",  icon: "var(--warn-weak)"  },
+// Fontes de dados do Firestore que alimentam o dashboard. "off" = o usuário
+// (membro de equipe) não tem permissão no módulo de origem: nem assinamos a
+// coleção, e a seção correspondente some.
+type Src = "cashflow" | "bills" | "receivables" | "taxes" | "expenses" | "costCenters";
+type SrcState = SourceState | "off";
+const INITIAL_SRC: Record<Src, SrcState> = {
+  cashflow: "loading", bills: "loading", receivables: "loading", taxes: "loading", expenses: "loading", costCenters: "loading",
 };
 
 // ─── Detalhamento da Inadimplência ─────────────────────────────────────────────
-// O modal que abre ao clicar no KPI "Inadimplência" abre as obrigações do
-// negócio ainda não pagas linha a linha — Contas a Pagar, Impostos e
-// despesas de Centro de Custos — agrupadas por origem dentro de duas seções
-// (Vencidas / A vencer). Contas a Receber fica de fora de propósito: é
-// dinheiro que o cliente deve pra você, não uma obrigação vencida do seu
-// negócio (ver "Vencimentos próximos"/projeção pra isso). Mesmo padrão do
-// modal do KPI "Orçamento" do Fluxo de Caixa (ver app/components/CashFlow.tsx,
-// "Detalhamento do Orçamento").
+// O modal que abre pelo card "A pagar" abre as obrigações do negócio ainda não
+// pagas linha a linha — Contas a Pagar, Impostos e despesas de Centro de
+// Custos — agrupadas por origem dentro de duas seções (Vencidas / A vencer).
+// Contas a Receber fica de fora de propósito: é dinheiro que o cliente deve pra
+// você, não uma obrigação vencida do seu negócio. Mesmo padrão do modal do KPI
+// "Orçamento" do Fluxo de Caixa (ver app/components/CashFlow.tsx, "Detalhamento
+// do Orçamento").
 
 type DefaultOrigin = "bill" | "tax" | "expense";
 const DEFAULT_ORIGIN_HREF: Record<DefaultOrigin, string> = {
@@ -222,10 +167,6 @@ export default function Dashboard() {
   const tNav = useTranslations("nav");
   const tCat = useTranslations("categories");
   const toBRL = useCallback((n: number) => formatMoney(n, locale), [locale]);
-  const months = useMemo(() => {
-    const f = new Intl.DateTimeFormat(locale, { month: "short" });
-    return Array.from({ length: 12 }, (_, i) => f.format(new Date(2000, i, 1)));
-  }, [locale]);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Gate bloqueante pra contas que entraram só pelo Google e nunca definiram senha.
@@ -236,36 +177,22 @@ export default function Dashboard() {
   // liberado — ver lib/accountScope.ts.
   const [blocked, setBlocked] = useState(false);
   const [hideValues, setHideValues] = useState(false);
-  // Estilo do gráfico "Receita vs. Despesas" escolhido pelo usuário — persistido no localStorage.
-  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
-  // Recorte Mensal/Anual dos KPIs, transações e centro de custos — mesmo
-  // padrão do toggle da tela de Relatórios (mês ou ano do refDate global).
+  // Recorte Mensal/Anual — mesmo padrão do toggle da tela de Relatórios (mês
+  // ou ano do refDate global).
   const [filterPeriod, setFilterPeriod] = useState<"mes" | "ano">("mes");
-  // Mês sob o cursor no gráfico Receita vs. Despesas (índice 0-11) — controla o tooltip.
-  const [hoverMonth, setHoverMonth] = useState<number | null>(null);
-  // Modal de detalhamento do KPI "Inadimplência" — mesmo padrão do modal do
-  // KPI "Orçamento" no Fluxo de Caixa.
+  // Modal de detalhamento da Inadimplência — mesmo padrão do modal do KPI
+  // "Orçamento" no Fluxo de Caixa.
   const [defaultModalOpen, setDefaultModalOpen] = useState(false);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("dashboard_chart_type");
-      if (saved === "bar" || saved === "line" || saved === "pie") setChartType(saved);
-    } catch { /* ignora ambientes sem localStorage */ }
-  }, []);
-
-  const changeChartType = (next: "bar" | "line" | "pie") => {
-    setChartType(next);
-    try { localStorage.setItem("dashboard_chart_type", next); } catch { /* noop */ }
-  };
-
   // Firestore Data States
-  const [txs, setTxs] = useState<Tx[]>([]);
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [receivables, setReceivables] = useState<Receivable[]>([]);
-  const [taxes, setTaxes] = useState<Tax[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  const [txs, setTxs] = useState<DashTx[]>([]);
+  const [bills, setBills] = useState<DashBill[]>([]);
+  const [receivables, setReceivables] = useState<DashReceivable[]>([]);
+  const [taxes, setTaxes] = useState<DashTax[]>([]);
+  const [expenses, setExpenses] = useState<DashExpense[]>([]);
+  const [costCenters, setCostCenters] = useState<DashCostCenter[]>([]);
+  const [srcState, setSrcState] = useState<Record<Src, SrcState>>(INITIAL_SRC);
+  const markSrc = useCallback((s: Src, v: SrcState) => setSrcState((prev) => (prev[s] === v ? prev : { ...prev, [s]: v })), []);
 
   const activePath = "/dashboard";
 
@@ -278,8 +205,8 @@ export default function Dashboard() {
     window.location.href = "/login";
   }
 
-  // Mês de referência — agora é o mês global compartilhado (usePeriod), o
-  // mesmo que a Navbar e as demais telas usam. Ver app/hooks/usePeriod.tsx.
+  // Mês de referência — é o mês global compartilhado (usePeriod), o mesmo que
+  // a Navbar e as demais telas usam. Ver app/hooks/usePeriod.tsx.
   const { refDate, label: monthLabel, isCurrentMonth, goPrevMonth, goNextMonth, setMonth } = usePeriod();
   const isAnnual = filterPeriod === "ano";
   // Rótulo do período mostrado nos títulos: mês formatado (usePeriod) ou
@@ -312,12 +239,7 @@ export default function Dashboard() {
   // Inicialização e Listeners em tempo real do Firestore
   useEffect(() => {
     let unsubAuth: (() => void) | undefined;
-    let unsubTxs: (() => void) | undefined;
-    let unsubBills: (() => void) | undefined;
-    let unsubReceivables: (() => void) | undefined;
-    let unsubTaxes: (() => void) | undefined;
-    let unsubExpenses: (() => void) | undefined;
-    let unsubCostCenters: (() => void) | undefined;
+    const unsubs: Array<() => void> = [];
 
     (async () => {
       try {
@@ -362,344 +284,139 @@ export default function Dashboard() {
             })
             .catch((err) => console.error("Erro ao carregar onboarding:", err));
 
-          // Listener de Lançamentos de Fluxo de Caixa
-          const txsRef = collection(db, "users", ownerUid, "cashflow");
-          const qTxs = query(txsRef, orderBy("date", "desc"));
-          unsubTxs = onSnapshot(qTxs, (snap) => {
-            setTxs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tx)));
+          // Cada módulo de origem só é lido se o usuário tiver permissão nele
+          // — a seção do dashboard que depende dele some quando não tem.
+          const allow = {
+            bills: hasPermission(scope, "contasPagar"),
+            taxes: hasPermission(scope, "impostos"),
+            receivables: hasPermission(scope, "contasReceber"),
+            centers: hasPermission(scope, "centroCustos"),
+          };
+          setSrcState((prev) => ({
+            ...prev,
+            bills: allow.bills ? "loading" : "off",
+            taxes: allow.taxes ? "loading" : "off",
+            receivables: allow.receivables ? "loading" : "off",
+            expenses: allow.centers ? "loading" : "off",
+            costCenters: allow.centers ? "loading" : "off",
+          }));
+
+          const listen = <T,>(src: Src, q: Parameters<typeof onSnapshot>[0], set: (rows: T[]) => void) => {
+            unsubs.push(onSnapshot(q as never, (snap: { docs: Array<{ id: string; data: () => object }> }) => {
+              set(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as T));
+              markSrc(src, "ok");
+            }, (err: unknown) => {
+              console.error(`Erro ao ler ${src}:`, err);
+              markSrc(src, "error");
+            }) as () => void);
+          };
+
+          // Lançamentos de Fluxo de Caixa — base de saldo e resultado.
+          unsubs.push(onSnapshot(query(collection(db, "users", ownerUid, "cashflow"), orderBy("date", "desc")), (snap) => {
+            setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as DashTx));
+            markSrc("cashflow", "ok");
             setLoading(false);
-          }, (err) => console.error("Erro Txs:", err));
+          }, (err) => {
+            console.error("Erro Txs:", err);
+            markSrc("cashflow", "error");
+            setLoading(false);
+          }));
 
-          // Listener de Contas a Pagar
-          const billsRef = collection(db, "users", ownerUid, "bills");
-          unsubBills = onSnapshot(billsRef, (snap) => {
-            setBills(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bill)));
-          }, (err) => console.error("Erro Contas a Pagar:", err));
-
-          // Listener de Contas a Receber
-          const receivablesRef = collection(db, "users", ownerUid, "receivables");
-          unsubReceivables = onSnapshot(receivablesRef, (snap) => {
-            setReceivables(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Receivable)));
-          }, (err) => console.error("Erro Receivables:", err));
-
-          // Listener de Impostos — entram no detalhamento de Inadimplência
-          // junto com Contas a Pagar/Receber (ver kpiData/defaultDetalhe).
-          const taxesRef = collection(db, "users", ownerUid, "taxes");
-          unsubTaxes = onSnapshot(taxesRef, (snap) => {
-            setTaxes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tax)));
-          }, (err) => console.error("Erro Taxes:", err));
-
-          // Listener de Despesas de Centro de Custos — coleção raiz
-          // "expenses" filtrada por dono, igual app/[locale]/costCenter.
-          const expensesRef = query(collection(db, "expenses"), where("userId", "==", ownerUid));
-          unsubExpenses = onSnapshot(expensesRef, (snap) => {
-            setExpenses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)));
-          }, (err) => console.error("Erro Expenses:", err));
-
-          // Listener de Centros de Custo — só o orçamento por mês
-          // (budgetsByMonth), pra linha pontilhada de Orçamento no gráfico
-          // Receita vs. Despesas (mesma fonte do KPI "Orçamento" do Fluxo de
-          // Caixa, ver CashFlow.tsx → previsao).
-          const costCentersRef = query(collection(db, "costCenters"), where("userId", "==", ownerUid));
-          unsubCostCenters = onSnapshot(costCentersRef, (snap) => {
-            setCostCenters(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostCenter)));
-          }, (err) => console.error("Erro CostCenters:", err));
-
+          if (allow.bills) listen<DashBill>("bills", collection(db, "users", ownerUid, "bills"), setBills);
+          if (allow.receivables) listen<DashReceivable>("receivables", collection(db, "users", ownerUid, "receivables"), setReceivables);
+          if (allow.taxes) listen<DashTax>("taxes", collection(db, "users", ownerUid, "taxes"), setTaxes);
+          if (allow.centers) {
+            // Coleções raiz filtradas por dono, igual app/[locale]/costCenter.
+            listen<DashExpense>("expenses", query(collection(db, "expenses"), where("userId", "==", ownerUid)), setExpenses);
+            listen<DashCostCenter>("costCenters", query(collection(db, "costCenters"), where("userId", "==", ownerUid)), setCostCenters);
+          }
         });
       } catch (err) {
         console.error("Erro ao inicializar listeners:", err);
+        markSrc("cashflow", "error");
         setLoading(false);
       }
     })();
 
     return () => {
       unsubAuth?.();
-      unsubTxs?.();
-      unsubBills?.();
-      unsubReceivables?.();
-      unsubTaxes?.();
-      unsubExpenses?.();
-      unsubCostCenters?.();
+      unsubs.forEach((u) => u());
     };
-  }, []);
+  }, [markSrc]);
 
-  // 1. Cálculos de KPI com base nos dados reais do período selecionado
-  // (mês do refDate, ou o ano inteiro quando o toggle está em "Anual").
-  const kpiData = useMemo(() => {
-    const currentYear = refDate.getFullYear();
-    const currentMonth = refDate.getMonth(); // 0 a 11
+  // Estado agregado de um conjunto de fontes: null = nenhuma liberada pro usuário.
+  const stateOf = useCallback((srcs: Src[]): SourceState | null => {
+    const active = srcs.filter((s) => srcState[s] !== "off");
+    if (active.length === 0) return null;
+    if (active.some((s) => srcState[s] === "error")) return "error";
+    if (active.some((s) => srcState[s] === "loading")) return "loading";
+    return "ok";
+  }, [srcState]);
 
-    const isInPeriod = (txDate: Date) =>
-      isAnnual
-        ? txDate.getFullYear() === currentYear
-        : txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth;
+  const payablesState = stateOf(["bills", "taxes", "expenses"]);
+  const receivablesState = stateOf(["receivables"]);
+  const budgetState = stateOf(["costCenters", "expenses", "bills", "taxes"]);
+  const centersState = stateOf(["costCenters", "expenses"]);
+  const projectionState = stateOf(["bills", "taxes", "expenses", "receivables"]) ?? "ok";
 
-    // Transações do período atual
-    const currentPeriodTxs = txs.filter(tx => isInPeriod(new Date(tx.date + "T12:00:00")));
+  // ── Cálculos (todos em lib/dashboardInsights.ts) ───────────────────────────
+  const today = todayISO();
+  const year = refDate.getFullYear();
+  const month = refDate.getMonth();
+  const period = useMemo<DashPeriod>(() => ({ mode: isAnnual ? "ano" : "mes", year, month }), [isAnnual, year, month]);
 
-    let receitaMes = 0;
-    let despesaMes = 0;
+  const overview = useMemo(() => buildResultOverview(txs, period, today), [txs, period, today]);
+  const columns = useMemo(() => buildTimeline(txs, period, today, isAnnual ? "month" : "week"), [txs, period, today, isAnnual]);
+  const evolution = useMemo(() => buildTimeline(txs, period, today, isAnnual ? "month" : "day"), [txs, period, today, isAnnual]);
 
-    currentPeriodTxs.forEach(tx => {
-      if (tx.type === "entrada") receitaMes += tx.amount;
-      else despesaMes += tx.amount;
-    });
+  const payables = useMemo(() => buildPayables(bills, taxes, expenses), [bills, taxes, expenses]);
+  const receivableItems = useMemo(() => buildReceivables(receivables), [receivables]);
+  const due = useMemo(() => buildDueSummary(payables, receivableItems, today), [payables, receivableItems, today]);
+  const projection = useMemo(() => buildProjection(txs, payables, receivableItems, today), [txs, payables, receivableItems, today]);
+  const budget = useMemo(() => buildBudget(period, today, { costCenters, expenses, bills, taxes }), [period, today, costCenters, expenses, bills, taxes]);
+  const centers = useMemo(() => buildCenterHighlights(period, today, { costCenters, expenses }), [period, today, costCenters, expenses]);
+  const recon = useMemo(() => checkReconciliation(txs, period, today), [txs, period, today]);
 
-    // Transações do período anterior (mês ou ano anterior, pra comparar variação)
-    const prevYear = isAnnual ? currentYear - 1 : new Date(currentYear, currentMonth - 1, 1).getFullYear();
-    const prevMonth = new Date(currentYear, currentMonth - 1, 1).getMonth();
-    const isInPrevPeriod = (txDate: Date) =>
-      isAnnual
-        ? txDate.getFullYear() === prevYear
-        : txDate.getFullYear() === prevYear && txDate.getMonth() === prevMonth;
-    const prevMonthTxs = txs.filter(tx => isInPrevPeriod(new Date(tx.date + "T12:00:00")));
+  const alerts = useMemo(() => buildAlerts({
+    overview, due,
+    // Dado parcial/carregando não gera alerta: sem fonte confiável, sem alerta.
+    projection: projectionState === "ok" ? projection : { ...projection, horizontes: [] },
+    budget, recon,
+    access: { payables: payablesState === "ok", receivables: receivablesState === "ok", budget: budgetState === "ok", cashflow: true },
+  }), [overview, due, projection, projectionState, budget, recon, payablesState, receivablesState, budgetState]);
 
-    let receitaPrev = 0;
-    let despesaPrev = 0;
+  const periodEnded = periodRange(period).end < today;
+  const defaultRate = useMemo(() => buildDefaultRate(payables, period, today), [payables, period, today]);
 
-    prevMonthTxs.forEach(tx => {
-      if (tx.type === "entrada") receitaPrev += tx.amount;
-      else despesaPrev += tx.amount;
-    });
-
-    const calcVar = (curr: number, prev: number) => {
-      if (prev === 0) return curr > 0 ? "+100%" : "0%";
-      const diff = ((curr - prev) / prev) * 100;
-      return `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}%`;
-    };
-
-    const varReceita = calcVar(receitaMes, receitaPrev);
-    const varDespesa = calcVar(despesaMes, despesaPrev);
-
-    const lucroMes = receitaMes - despesaMes;
-    const lucroPrev = receitaPrev - despesaPrev;
-    const varLucro = calcVar(lucroMes, lucroPrev);
-
-    const vsLabel = isAnnual ? t("kpi.vsPrevYear") : t("kpi.vsPrevMonth");
-
-    // Inadimplência: pendências financeiras do negócio com vencimento no
-    // período selecionado (mês ou ano do refDate, igual às demais KPIs
-    // acima) — Contas a Pagar, Impostos e despesas de Centro de Custos ainda
-    // não pagas, vencidas vs total pendente do período. Contas a Receber NÃO
-    // entra aqui: é dinheiro que falta entrar, não uma obrigação vencida do
-    // negócio (fica só no card "Vencimentos próximos"/projeção).
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const isOverdue = (dueStr: string) => {
-      const due = new Date(dueStr + "T00:00:00");
-      due.setHours(0, 0, 0, 0);
-      return due < today;
-    };
-    const isDueInPeriod = (dueStr: string) => isInPeriod(new Date(dueStr + "T12:00:00"));
-
-    const pendingBills = bills.filter(b => b.status !== "pago" && isDueInPeriod(b.dueDate));
-    const pendingTaxes = taxes.filter(x => x.status !== "pago" && isDueInPeriod(x.dueDate));
-    const pendingExpenses = expenses.filter(e => e.status !== "pago" && isDueInPeriod(e.date));
-
-    const totalPendingVal =
-      pendingBills.reduce((sum, b) => sum + b.amount, 0) +
-      pendingTaxes.reduce((sum, x) => sum + x.amount, 0) +
-      pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-    const overdueVal =
-      pendingBills.filter(b => isOverdue(b.dueDate)).reduce((sum, b) => sum + b.amount, 0) +
-      pendingTaxes.filter(x => isOverdue(x.dueDate)).reduce((sum, x) => sum + x.amount, 0) +
-      pendingExpenses.filter(e => isOverdue(e.date)).reduce((sum, e) => sum + e.amount, 0);
-
-    const taxaInadimplencia = totalPendingVal > 0 ? (overdueVal / totalPendingVal) * 100 : 0;
-
-    return [
-      { id: "revenue",  label: t("kpi.grossRevenue"), value: <Sensitive hidden={hideValues}>{toBRL(receitaMes)}</Sensitive>, change: varReceita, up: parseFloat(varReceita) >= 0, sub: vsLabel, icon: TrendingUp,  color: "blue"    },
-      { id: "expenses", label: t("kpi.totalExpenses"), value: <Sensitive hidden={hideValues}>{toBRL(despesaMes)}</Sensitive>, change: varDespesa, up: parseFloat(varDespesa) <= 0, sub: vsLabel, icon: CreditCard,  color: "rose"    },
-      { id: "profit",   label: t("kpi.netProfit"),   value: <Sensitive hidden={hideValues}>{toBRL(lucroMes)}</Sensitive>,   change: varLucro,   up: lucroMes >= 0,           sub: vsLabel, icon: Wallet,      color: "emerald" },
-      { id: "default",  label: t("kpi.defaultRate"),   value: `${taxaInadimplencia.toFixed(1)}%`,        change: overdueVal > 0 ? t("kpi.overdue") : t("kpi.onTime"),  up: taxaInadimplencia === 0,  sub: t("kpi.pending", { value: toBRL(overdueVal) }), icon: AlertCircle, color: "amber"   },
-    ];
-  }, [txs, bills, taxes, expenses, hideValues, refDate, isAnnual, t, toBRL]);
-
-  // 2. Gráfico Receita vs. Despesas agrupado por mês do ano selecionado
-  const chartData = useMemo(() => {
-    const currentYear = refDate.getFullYear();
-
-    const revenues = new Array(12).fill(0);
-    const expenses = new Array(12).fill(0);
-
-    txs.forEach(tx => {
-      const txDate = new Date(tx.date + "T12:00:00");
-      if (txDate.getFullYear() === currentYear) {
-        const monthIdx = txDate.getMonth();
-        if (tx.type === "entrada") {
-          revenues[monthIdx] += tx.amount;
-        } else {
-          expenses[monthIdx] += tx.amount;
-        }
-      }
-    });
-
-    // Orçamento mês a mês do ano selecionado — mesma fórmula do KPI
-    // "Orçamento" do Fluxo de Caixa (CashFlow.tsx → previsao): orçamento dos
-    // centros de custo naquele mês + contas a pagar que vencem naquele mês +
-    // impostos que vencem naquele mês.
-    const currentMonthKey = new Date().toISOString().slice(0, 7);
-    const budget = Array.from({ length: 12 }, (_, i) => {
-      const mKey = `${currentYear}-${String(i + 1).padStart(2, "0")}`;
-      const centers = costCenters.reduce((s, c) => s + budgetForCenterMonth(c, mKey, currentMonthKey), 0);
-      const billsM = bills.filter(b => (b.dueDate ?? "").slice(0, 7) === mKey).reduce((s, b) => s + b.amount, 0);
-      const taxesM = taxes.filter(t => (t.dueDate ?? "").slice(0, 7) === mKey).reduce((s, t) => s + t.amount, 0);
-      return centers + billsM + taxesM;
-    });
-
-    const maxVal = Math.max(...revenues, ...expenses, ...budget) || 1000;
-
-    return { revenues, expenses, budget, maxVal };
-  }, [txs, bills, taxes, costCenters, refDate]);
-
-  // 3. Vencimentos próximos (Contas a Pagar pendentes)
-  const upcomingBillsData = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return bills
-      .filter(b => b.status !== "pago")
-      .map(b => {
-        const due = new Date(b.dueDate + "T00:00:00");
-        due.setHours(0, 0, 0, 0);
-        const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
-        return {
-          ...b,
-          urgent: diffDays <= 3,
-          dueFormatted: due.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })
-        };
-      })
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-      .slice(0, 4);
-  }, [bills, locale]);
-
-  // 4. Últimas transações do período selecionado (máximo 6 reais)
-  const recentTransactions = useMemo(() => {
-    const y = refDate.getFullYear();
-    const m = refDate.getMonth();
-    return txs
-      .filter((tx) => {
-        const d = new Date(tx.date + "T12:00:00");
-        return isAnnual ? d.getFullYear() === y : (d.getFullYear() === y && d.getMonth() === m);
-      })
-      .slice(0, 6);
-  }, [txs, refDate, isAnnual]);
-
-  // 5. Centro de Custos do período selecionado (Despesas por categoria — Donut)
-  const costCenterData = useMemo(() => {
-    const categoryTotals: Record<string, number> = {};
-    let totalExpenses = 0;
-    const y = refDate.getFullYear();
-    const m = refDate.getMonth();
-
-    txs.forEach(tx => {
-      const d = new Date(tx.date + "T12:00:00");
-      const inPeriod = isAnnual ? d.getFullYear() === y : (d.getFullYear() === y && d.getMonth() === m);
-      if (tx.type === "saida" && inPeriod) {
-        categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
-        totalExpenses += tx.amount;
-      }
-    });
-
-    // Rampa derivada da marca — clareia em direção à superfície.
-    const colors = [
-      "var(--brand)",
-      "color-mix(in srgb, var(--brand) 78%, var(--surface))",
-      "color-mix(in srgb, var(--brand) 56%, var(--surface))",
-      "color-mix(in srgb, var(--brand) 38%, var(--surface))",
-      "color-mix(in srgb, var(--brand) 22%, var(--surface))",
-      "var(--border-strong)",
-    ];
-
-    const sortedCenters = Object.entries(categoryTotals)
-      .map(([name, amount], idx) => ({
-        name,
-        amount,
-        pct: totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
-        color: colors[idx % colors.length]
-      }))
-      .sort((a, b) => b.amount - a.amount);
-
-    return {
-      centers: sortedCenters.slice(0, 5),
-      totalExpenses
-    };
-  }, [txs, refDate, isAnnual]);
-
-  // 5b. Detalhamento da Inadimplência — alimenta o modal que abre ao clicar
-  // no KPI "Inadimplência": as obrigações do negócio ainda não pagas com
-  // vencimento no período selecionado (mês ou ano do refDate — mesmo
-  // recorte do KPI acima) — Contas a Pagar, Impostos e despesas de Centro de
-  // Custos —, separadas em Vencidas / A vencer e agrupadas por origem
-  // dentro de cada seção. Contas a Receber fica de fora (ver comentário de
-  // DEFAULT_ORIGIN_HREF acima).
+  // Detalhamento da Inadimplência — alimenta o modal do card "A pagar": as
+  // obrigações em aberto (saldo, descontadas as baixas parciais) com vencimento
+  // no período selecionado — Contas a Pagar, Impostos e despesas de Centro de
+  // Custos —, separadas em Vencidas / A vencer e agrupadas por origem.
   const defaultDetalhe = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const currentYear = refDate.getFullYear();
-    const currentMonth = refDate.getMonth();
-    const isDueInPeriod = (dueStr: string) => {
-      const d = new Date(dueStr + "T12:00:00");
-      return isAnnual
-        ? d.getFullYear() === currentYear
-        : d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-    };
-
-    // Monta os campos comuns (sub, overdue) a partir de uma data de
-    // vencimento "YYYY-MM-DD" — igual pras 3 origens.
-    const dueMeta = (dueStr: string) => {
-      const due = new Date(dueStr + "T00:00:00");
-      due.setHours(0, 0, 0, 0);
-      const overdue = due < today;
-      const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
-      const sub = overdue
-        ? t("defaultModal.overdueBy", { days: Math.abs(diffDays) })
-        : t("defaultModal.dueIn", { date: due.toLocaleDateString(locale, { day: "2-digit", month: "short" }).replace(/\./g, "") });
-      return { overdue, sub };
-    };
-
-    const lines: DefaultLine[] = [
-      ...bills.filter(b => b.status !== "pago" && isDueInPeriod(b.dueDate)).map((b): DefaultLine => {
-        const { overdue, sub } = dueMeta(b.dueDate);
+    const range = periodRange(period);
+    const lines: DefaultLine[] = payables
+      .filter((i) => i.open > 0.005 && inRange(i.dueDate, range))
+      .map((i): DefaultLine => {
+        const diff = daysBetween(today, i.dueDate);
+        const overdue = diff < 0;
+        const sub = overdue
+          ? t("defaultModal.overdueBy", { days: Math.abs(diff) })
+          : t("defaultModal.dueIn", { date: new Date(i.dueDate + "T12:00:00").toLocaleDateString(locale, { day: "2-digit", month: "short" }).replace(/\./g, "") });
+        const origin = i.kind as DefaultOrigin;
+        const fallbackLabel = origin === "expense" ? (categoryLabel(i.category ?? "", tCat) || "") : "";
         return {
-          key: `bill-${b.id}`,
-          label: b.title || t("defaultModal.fallbackLabel"),
-          sub, amount: b.amount, overdue,
-          href: DEFAULT_ORIGIN_HREF.bill,
-          origin: "bill",
-          originLabel: t("defaultModal.origin.bill"),
+          key: i.key,
+          label: i.label || fallbackLabel || t("defaultModal.fallbackLabel"),
+          sub, amount: i.open, overdue,
+          href: DEFAULT_ORIGIN_HREF[origin],
+          origin,
+          originLabel: t(`defaultModal.origin.${origin}`),
         };
-      }),
-      ...taxes.filter(x => x.status !== "pago" && isDueInPeriod(x.dueDate)).map((x): DefaultLine => {
-        const { overdue, sub } = dueMeta(x.dueDate);
-        return {
-          key: `tax-${x.id}`,
-          label: x.name || t("defaultModal.fallbackLabel"),
-          sub, amount: x.amount, overdue,
-          href: DEFAULT_ORIGIN_HREF.tax,
-          origin: "tax",
-          originLabel: t("defaultModal.origin.tax"),
-        };
-      }),
-      ...expenses.filter(e => e.status !== "pago" && isDueInPeriod(e.date)).map((e): DefaultLine => {
-        const { overdue, sub } = dueMeta(e.date);
-        return {
-          key: `expense-${e.id}`,
-          label: e.description || categoryLabel(e.category, tCat) || e.center || t("defaultModal.fallbackLabel"),
-          sub, amount: e.amount, overdue,
-          href: DEFAULT_ORIGIN_HREF.expense,
-          origin: "expense",
-          originLabel: t("defaultModal.origin.expense"),
-        };
-      }),
-    ];
-
-    const vencidas = lines.filter(l => l.overdue);
-    const aVencer = lines.filter(l => !l.overdue);
+      });
+    const vencidas = lines.filter((l) => l.overdue);
+    const aVencer = lines.filter((l) => !l.overdue);
     const vencidasTotal = vencidas.reduce((s, l) => s + l.amount, 0);
     const aVencerTotal = aVencer.reduce((s, l) => s + l.amount, 0);
-
     return {
       vencidasGroups: groupDefaultLines(vencidas),
       aVencerGroups: groupDefaultLines(aVencer),
@@ -707,52 +424,13 @@ export default function Dashboard() {
       aVencerTotal,
       total: vencidasTotal + aVencerTotal,
     };
-  }, [bills, taxes, expenses, refDate, isAnnual, locale, t, tCat]);
-
-  // 6. Projeção de fluxo de caixa a 30 dias (Saldo em conta + Recebíveis 30d - Contas a Pagar 30d)
-  const projection = useMemo(() => {
-    // Saldo atual consolidado histórico
-    let saldoAtual = 0;
-    txs.forEach(t => {
-      if (t.type === "entrada") saldoAtual += t.amount;
-      else saldoAtual -= t.amount;
-    });
-
-    // 30 dias a partir de hoje
-    const today = new Date();
-    const futureLimit = new Date();
-    futureLimit.setDate(futureLimit.getDate() + 30);
-
-    const filter30Days = (dueDateStr: string) => {
-      const d = new Date(dueDateStr + "T00:00:00");
-      return d >= today && d <= futureLimit;
-    };
-
-    // Entradas previstas nos próximos 30 dias (Recebíveis pendentes)
-    const entradasPrevistas = receivables
-      .filter(r => r.status !== "recebido" && filter30Days(r.dueDate))
-      .reduce((sum, r) => sum + r.amount, 0);
-
-    // Saídas previstas nos próximos 30 dias (Contas a pagar pendentes)
-    const saidasAgendadas = bills
-      .filter(b => b.status !== "pago" && filter30Days(b.dueDate))
-      .reduce((sum, b) => sum + b.amount, 0);
-
-    const saldoProjetado = saldoAtual + entradasPrevistas - saidasAgendadas;
-    const variacaoPct = saldoAtual !== 0 ? ((saldoProjetado - saldoAtual) / Math.abs(saldoAtual)) * 100 : 0;
-
-    return {
-      saldoAtual,
-      entradasPrevistas,
-      saidasAgendadas,
-      saldoProjetado,
-      variacaoPct
-    };
-  }, [txs, bills, receivables]);
+  }, [payables, period, today, locale, t, tCat]);
 
   if (blocked) return <AccessDenied category={tNav("items.dashboard")} />;
 
   if (loading) return <PageLoader />;
+
+  const cashflowFailed = srcState.cashflow === "error";
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: "var(--db-bg)" }}>
@@ -806,10 +484,12 @@ export default function Dashboard() {
               </div>
               <div className="min-w-0">
                 <p className="font-heading text-base font-bold truncate" style={{ color: "var(--db-text)" }}>{t("defaultModal.title")}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("defaultModal.subtitle")}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>
+                  {t("defaultModal.subtitle")} · {t("defaultModal.rate", { pct: defaultRate.rate.toFixed(1) })}
+                </p>
               </div>
             </div>
-            <button onClick={() => setDefaultModalOpen(false)} className="p-1.5 rounded-lg cursor-pointer shrink-0"
+            <button onClick={() => setDefaultModalOpen(false)} aria-label={t("defaultModal.close")} className="p-1.5 rounded-lg cursor-pointer shrink-0"
               style={{ background: "var(--db-bg-alt)", color: "var(--db-text-2)" }}>
               <X size={16} />
             </button>
@@ -869,7 +549,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Seletor de mês — cada mês mostra o seu próprio resultado ── */}
+        {/* ── Cabeçalho e filtros — cada período mostra o seu próprio resultado ── */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-base md:text-lg font-extrabold leading-tight" style={{ color: "var(--db-text)" }}>
@@ -879,12 +559,13 @@ export default function Dashboard() {
               {t("resultSubtitle")}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0 no-print">
+          <div className="flex items-center gap-2 shrink-0 no-print flex-wrap">
             <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
               {([{ id: "mes" as const, label: t("period.monthly") }, { id: "ano" as const, label: t("period.annual") }]).map(p => (
                 <button
                   key={p.id}
                   onClick={() => setFilterPeriod(p.id)}
+                  aria-pressed={filterPeriod === p.id}
                   className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer"
                   style={filterPeriod === p.id
                     ? { background: "var(--db-card)", color: "var(--primary)", boxShadow: "var(--db-shadow-sm)" }
@@ -915,6 +596,15 @@ export default function Dashboard() {
               </button>
             </div>
             <button
+              onClick={() => setHideValues((v) => !v)}
+              aria-pressed={hideValues}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors hover:bg-[var(--sunken)] cursor-pointer"
+              style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "var(--db-card)" }}
+            >
+              {hideValues ? <EyeOff size={14} /> : <Eye size={14} />}
+              <span className="hidden sm:inline">{hideValues ? t("controls.showValues") : t("controls.hideValues")}</span>
+            </button>
+            <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors hover:bg-[var(--sunken)] cursor-pointer"
               style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "var(--db-card)" }}
@@ -926,495 +616,52 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
-          {kpiData.map((kpi, i) => {
-            const c = colorMap[kpi.color];
-            const clickable = kpi.id === "default";
-            return (
-              <div
-                key={kpi.label}
-                className={`kpi-card rounded-2xl p-4 md:p-5 flex flex-col gap-3 md:gap-4 ${clickable ? "clickable" : ""}`}
-                style={{ animationDelay: `${i * 80}ms` }}
-                onClick={clickable ? () => setDefaultModalOpen(true) : undefined}
-                role={clickable ? "button" : undefined}
-                tabIndex={clickable ? 0 : undefined}
-                onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDefaultModalOpen(true); } } : undefined}
-              >
-                <div className="flex items-start justify-between">
-                  <p className="text-xs font-medium" style={{ color: "var(--db-text-2)" }}>{kpi.label}</p>
-                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
-                    <kpi.icon size={16} style={{ color: c.text }} />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xl md:text-2xl font-extrabold leading-tight mb-1" style={{ color: "var(--db-text)" }}>{kpi.value}</p>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: c.bg, color: c.text }}>
-                      {kpi.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                      {kpi.change}
-                    </span>
-                    <span className="text-xs" style={{ color: clickable ? "var(--brand)" : "var(--db-text-2)" }}>
-                      {clickable ? t("kpi.seeBreakdown") : kpi.sub}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Chart + Bills ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-
-          <div className="chart-card xl:col-span-2 p-4 md:p-6">
-            <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 gap-2">
-              <div>
-                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("chart.title")}</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("chart.subtitle", { year: refDate.getFullYear() })}</p>
-              </div>
-              <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                <div className="flex items-center rounded-lg border overflow-hidden no-print" style={{ borderColor: "var(--db-border)" }}>
-                  {([
-                    { t: "bar" as const,  icon: BarChart3, label: t("chart.typeBar") },
-                    { t: "line" as const, icon: LineChart, label: t("chart.typeLine") },
-                    { t: "pie" as const,  icon: PieChart,  label: t("chart.typePie") },
-                  ]).map((opt) => (
-                    <button
-                      key={opt.t}
-                      onClick={() => changeChartType(opt.t)}
-                      title={opt.label}
-                      aria-pressed={chartType === opt.t}
-                      className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer"
-                      style={{
-                        background: chartType === opt.t ? "var(--db-hover)" : "transparent",
-                        color: chartType === opt.t ? "var(--brand)" : "var(--db-text-2)",
-                      }}
-                    >
-                      <opt.icon size={13} />
-                      <span className="hidden lg:inline">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-full inline-block border-2" style={{ borderColor: "var(--warn)", background: "transparent" }} /> {t("chart.budget")}
-                </div>
-                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: chartType === "line" ? "var(--pos)" : "var(--brand-500)" }} /> {t("chart.revenue")}
-                </div>
-                <div className="hidden sm:flex items-center gap-1.5 text-xs" style={{ color: "var(--db-text-2)" }}>
-                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: chartType === "line" ? "var(--neg)" : "var(--brand-400)" }} /> {t("chart.expense")}
-                </div>
-                <button
-                  onClick={() => setHideValues(!hideValues)}
-                  className="flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer no-print" style={{ color: "var(--brand)" }}
-                >
-                  <Download size={12} /><span className="hidden sm:inline">{hideValues ? t("chart.showValues") : t("chart.hideValues")}</span>
-                </button>
-              </div>
-            </div>
-            {chartType === "pie" ? (
-              <div className="flex justify-center items-center" style={{ height: 160 }}>
-                {(() => {
-                  const totRev = chartData.revenues.reduce((a, b) => a + b, 0);
-                  const totExp = chartData.expenses.reduce((a, b) => a + b, 0);
-                  const total = totRev + totExp;
-                  if (total === 0) {
-                    return <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("chart.noData")}</p>;
-                  }
-                  const cx = 90, cy = 90, r = 78;
-                  const revFrac = totRev / total;
-                  const slice = (from: number, to: number, color: string, key: string) => {
-                    const a0 = from * 2 * Math.PI - Math.PI / 2;
-                    const a1 = to * 2 * Math.PI - Math.PI / 2;
-                    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
-                    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
-                    const large = to - from > 0.5 ? 1 : 0;
-                    const mid = (a0 + a1) / 2;
-                    const lx = cx + r * 0.6 * Math.cos(mid), ly = cy + r * 0.6 * Math.sin(mid);
-                    const pct = Math.round((to - from) * 100);
-                    return (
-                      <g key={key}>
-                        <path d={`M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`} fill={color} />
-                        {pct >= 6 && (
-                          <text x={lx} y={ly + 3} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--brand-on)" fontFamily="Sora, sans-serif">{pct}%</text>
-                        )}
-                      </g>
-                    );
-                  };
-                  return (
-                    <svg
-                      width="180" height="180" viewBox="0 0 180 180"
-                      role="img"
-                      aria-label={t("chart.ariaPie", { revPct: Math.round(revFrac * 100), expPct: 100 - Math.round(revFrac * 100) })}
-                    >
-                      {slice(0, revFrac, "var(--brand-500)", "rev")}
-                      {slice(revFrac, 1, "var(--brand-400)", "exp")}
-                    </svg>
-                  );
-                })()}
-              </div>
-            ) : chartType === "line" ? (
-              <AreaLineChart
-                height={260}
-                categories={months}
-                hideValues={hideValues}
-                formatValue={toBRL}
-                formatAxis={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(Math.round(v)))}
-                ariaLabel={t("chart.ariaBarLine", { type: t("chart.typeLine"), year: refDate.getFullYear() })}
-                series={[
-                  { name: t("chart.revenue"), data: chartData.revenues, color: "var(--pos)" },
-                  { name: t("chart.expense"), data: chartData.expenses, color: "var(--neg)" },
-                  { name: t("chart.budget"), data: chartData.budget, color: "var(--warn)", dashed: true },
-                ]}
-              />
-            ) : (
-              <div className="relative">
-              <svg
-                viewBox="0 0 600 200" className="w-full" style={{ height: 160 }}
-                role="img"
-                aria-label={t("chart.ariaBarLine", { type: t("chart.typeBar"), year: refDate.getFullYear() })}
-              >
-                {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => (
-                  <g key={i}>
-                    <line x1="40" y1={10 + (1 - frac) * 160} x2="590" y2={10 + (1 - frac) * 160} stroke="var(--db-border)" strokeWidth="1" />
-                    <text x="32" y={10 + (1 - frac) * 160 + 4} fontSize="9" fill="var(--db-text-3)" textAnchor="end" fontFamily="JetBrains Mono, monospace">
-                      {Math.round(frac * chartData.maxVal / 100) * 100 === 0 ? "0" : `${Math.round(frac * chartData.maxVal / 1000)}k`}
-                    </text>
-                  </g>
-                ))}
-                {hoverMonth !== null && (
-                  <rect x={49 + hoverMonth * 44} y={10} width={44} height={160} rx={4} fill="var(--brand-500)" opacity={0.07} />
-                )}
-                {(
-                  <>
-                    {months.map((m, i) => {
-                      const rev = chartData.revenues[i];
-                      const exp = chartData.expenses[i];
-                      const bw = 22, gap = 44, x = 48 + i * gap;
-                      const dim = hoverMonth === null || hoverMonth === i ? 1 : 0.3;
-                      return (
-                        <g key={m}>
-                          <rect className="bar-rev bar-rev-anim" x={x} y={170 - (rev / chartData.maxVal) * 160} width={bw} height={(rev / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60}ms` }} />
-                          <rect className="bar-exp bar-exp-anim" x={x + bw + 2} y={170 - (exp / chartData.maxVal) * 160} width={bw} height={(exp / chartData.maxVal) * 160} rx="3" opacity={dim} style={{ animationDelay: `${i * 60 + 30}ms` }} />
-                          <text x={x + bw} y={190} fontSize="9" fill={hoverMonth === i ? "var(--db-text)" : "var(--db-text-3)"} textAnchor="middle" fontFamily="Sora, sans-serif">{m}</text>
-                        </g>
-                      );
-                    })}
-                    <SmoothLine
-                      color="var(--warn)" strokeWidth={1.75} dashed
-                      points={chartData.budget.map((v, i) => [48 + i * 44 + 23, 170 - (v / chartData.maxVal) * 160] as const)}
-                    />
-                  </>
-                )}
-                {months.map((_, i) => (
-                  <rect
-                    key={`hit${i}`}
-                    x={49 + i * 44}
-                    y={10}
-                    width={44}
-                    height={160}
-                    fill="transparent"
-                    onMouseEnter={() => setHoverMonth(i)}
-                    onMouseLeave={() => setHoverMonth(null)}
-                    onClick={() => setHoverMonth((m) => (m === i ? null : i))}
-                  />
-                ))}
-              </svg>
-              {hoverMonth !== null && (
-                <div
-                  className="pointer-events-none absolute z-20 rounded-lg shadow-lg px-2.5 py-2"
-                  style={{
-                    top: 0,
-                    left: `${((71 + hoverMonth * 44) / 600) * 100}%`,
-                    transform: `translateX(${hoverMonth <= 1 ? "-12%" : hoverMonth >= 10 ? "-88%" : "-50%"})`,
-                    background: "var(--db-card)",
-                    border: "1px solid var(--db-border)",
-                    minWidth: 168,
-                  }}
-                >
-                  <p className="text-xs font-bold mb-1" style={{ color: "var(--db-text)" }}>
-                    {months[hoverMonth]} / {refDate.getFullYear()}
-                  </p>
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <span className="w-2 h-2 rounded-full shrink-0 border-2" style={{ borderColor: "var(--warn)", background: "transparent" }} />
-                    <span style={{ color: "var(--db-text-2)" }}>{t("chart.budget")}</span>
-                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
-                      <Sensitive hidden={hideValues}>{toBRL(chartData.budget[hoverMonth])}</Sensitive>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs mt-1">
-                    <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-500)" }} />
-                    <span style={{ color: "var(--db-text-2)" }}>{t("chart.revenue")}</span>
-                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
-                      <Sensitive hidden={hideValues}>{toBRL(chartData.revenues[hoverMonth])}</Sensitive>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs mt-1">
-                    <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "var(--brand-400)" }} />
-                    <span style={{ color: "var(--db-text-2)" }}>{t("chart.expense")}</span>
-                    <span className="ml-auto font-mono font-semibold" style={{ color: "var(--db-text)" }}>
-                      <Sensitive hidden={hideValues}>{toBRL(chartData.expenses[hoverMonth])}</Sensitive>
-                    </span>
-                  </div>
-                </div>
-              )}
-              </div>
-            )}
-            {/* Alternativa em texto do gráfico acima, pra quem usa leitor de
-                tela — mesmos dados de chartData, mês a mês. Só visível pra
-                tecnologia assistiva (sr-only). */}
-            <table className="sr-only">
-              <caption>{t("chart.srCaption", { year: refDate.getFullYear() })}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t("chart.srMonth")}</th>
-                  <th scope="col">{t("chart.budget")}</th>
-                  <th scope="col">{t("chart.revenue")}</th>
-                  <th scope="col">{t("chart.expense")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {months.map((m, i) => (
-                  <tr key={m}>
-                    <th scope="row">{m}</th>
-                    <td>{toBRL(chartData.budget[i])}</td>
-                    <td>{toBRL(chartData.revenues[i])}</td>
-                    <td>{toBRL(chartData.expenses[i])}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="grid grid-cols-3 gap-2 md:gap-4 mt-3 md:mt-4 pt-3 md:pt-4 border-t db-divider">
-              {[
-                { label:t("chart.totalRevenueYear"), val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-500)" },
-                { label:t("chart.totalExpenseYear"), val: <Sensitive hidden={hideValues}>{toBRL(chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color:"var(--brand-400)" },
-                { label:t("chart.accumulatedBalance"), val: <Sensitive hidden={hideValues}>{toBRL(chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0))}</Sensitive>, color: (chartData.revenues.reduce((a,b)=>a+b,0) - chartData.expenses.reduce((a,b)=>a+b,0)) >= 0 ? "var(--success)" : "var(--danger)" },
-              ].map((s) => (
-                <div key={s.label}>
-                  <p className="text-xs mb-0.5 leading-tight" style={{ color: "var(--db-text-2)" }}>{s.label}</p>
-                  <p className="font-bold text-xs md:text-sm mono" style={{ color: s.color }}>{s.val}</p>
-                </div>
-              ))}
-            </div>
+        {cashflowFailed ? (
+          <div className="dash-card p-6 space-y-3">
+            <SectionStatus state="error" what={t("states.cashflow")} />
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border cursor-pointer"
+              style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "var(--db-card)" }}
+            >
+              <RefreshCw size={13} /> {t("states.retry")}
+            </button>
           </div>
+        ) : (
+          <>
+            <SummaryCards
+              overview={overview}
+              due={due}
+              budget={budget}
+              alerts={alerts}
+              hide={hideValues}
+              isAnnual={isAnnual}
+              periodLabel={periodLabel}
+              periodEnded={periodEnded}
+              state={{ receivables: receivablesState, payables: payablesState, budget: budgetState }}
+              onOpenDefault={() => setDefaultModalOpen(true)}
+            />
 
-          {/* Vencimentos Próximos */}
-          <div className="side-card p-4 md:p-6 flex flex-col">
-            <div className="flex items-center justify-between mb-4 md:mb-5">
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("upcomingBills.title")}</h2>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "var(--neg-weak)", color: "var(--neg)" }}>
-                {t("upcomingBills.urgentCount", { count: upcomingBillsData.filter(b => b.urgent).length })}
-              </span>
-            </div>
-            <div className="space-y-1 md:space-y-2 flex-1 overflow-y-auto">
-              {upcomingBillsData.length === 0 ? (
-                <div className="text-center py-8 text-xs" style={{ color: "var(--db-text-3)" }}>
-                  {t("upcomingBills.empty")}
-                </div>
-              ) : (
-                upcomingBillsData.map((bill) => (
-                  <div key={bill.id} className="bill-row flex items-center justify-between p-2.5 md:p-3">
-                    <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: bill.urgent ? "var(--neg-weak)" : "var(--brand-weak)" }}>
-                        {bill.urgent
-                          ? <AlertCircle size={14} style={{ color: "var(--neg)" }} />
-                          : <Clock       size={14} style={{ color: "var(--brand)" }} />
-                        }
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold leading-tight truncate" style={{ color: "var(--db-text)" }}>{bill.title}</p>
-                        <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>{t("upcomingBills.dueOn", { date: bill.dueFormatted })}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs font-bold mono shrink-0 ml-2" style={{ color: bill.urgent ? "var(--neg)" : "var(--db-text)" }}>
-                      <Sensitive hidden={hideValues}>{toBRL(bill.amount)}</Sensitive>
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-            <a href="/contasPagar" className="mt-3 md:mt-4 w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 transition-colors hover:bg-[var(--sunken)] text-center no-print"
-              style={{ borderColor: "var(--db-border)", color: "var(--brand)", background: "transparent" }}>
-              {t("upcomingBills.seeAll")} <ChevronRight size={13} />
-            </a>
-          </div>
-        </div>
+            <EvolutionCharts columns={columns} evolution={evolution} isAnnual={isAnnual} periodLabel={periodLabel} hide={hideValues} />
 
-        {/* ── Transactions + Cost Centers ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+            <BudgetForecast
+              budget={budget}
+              projection={projection}
+              today={today}
+              hide={hideValues}
+              periodLabel={periodLabel}
+              budgetState={budgetState}
+              projectionState={projectionState}
+              canSeeCenters={srcState.costCenters !== "off"}
+            />
 
-          <div className="chart-card xl:col-span-2 p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4 md:mb-5">
-              <div>
-                <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("transactions.title")}</h2>
-                <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("transactions.subtitle", { period: periodLabel })}</p>
-              </div>
-              <div className="flex items-center gap-2 no-print">
-                <a href="/fluxo-caixa" className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors" style={{ background: "var(--brand)", color: "var(--brand-on)" }}>
-                  {t("transactions.seeAll")}
-                </a>
-              </div>
-            </div>
+            <DueSection due={due} hide={hideValues} payablesState={payablesState} receivablesState={receivablesState} />
 
-            <div className="md:hidden space-y-2">
-              {recentTransactions.length === 0 ? (
-                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>{t("transactions.emptyShort")}</div>
-              ) : (
-                recentTransactions.map((tx) => (
-                  <div key={tx.id} className="tx-row flex items-center justify-between p-3 rounded-xl" style={{ border: `1px solid var(--db-border)` }}>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold truncate" style={{ color: "var(--db-text)" }}>{tx.description}</p>
-                      <p className="text-xs mono" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 ml-3 shrink-0">
-                      <span className={`mono text-xs font-bold ${""}`} style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>
-                        <Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive>
-                      </span>
-                      <Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2 py-0.5">
-                        {tx.reconciled ? t("transactions.reconciled") : t("transactions.pending")}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            <CostCenterSection data={centers} hide={hideValues} periodLabel={periodLabel} state={centersState} />
 
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b db-divider">
-                    {[t("transactions.colDescription"), t("transactions.colType"), t("transactions.colAmount"), t("transactions.colDate"), t("transactions.colStatus")].map((h) => (
-                      <th key={h} className="text-left text-xs font-semibold pb-3 pr-4 whitespace-nowrap" style={{ color: "var(--db-text)" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTransactions.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-xs" style={{ color: "var(--db-text-3)" }}>{t("transactions.empty")}</td>
-                    </tr>
-                  ) : (
-                    recentTransactions.map((tx) => (
-                      <tr key={tx.id} className="tx-row">
-                        <td className="py-3 pr-4"><p className="text-xs font-semibold" style={{ color: "var(--db-text)" }}>{tx.description}</p></td>
-                        <td className="py-3 pr-4"><span className="text-xs font-medium" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}>{tx.type === "entrada" ? t("transactions.inflow") : t("transactions.outflow")}</span></td>
-                        <td className="py-3 pr-4"><span className="mono text-xs font-bold" style={{ color: tx.type === "entrada" ? "var(--pos)" : "var(--neg)" }}><Sensitive hidden={hideValues}>{(tx.type === "entrada" ? "+" : "-") + toBRL(tx.amount)}</Sensitive></span></td>
-                        <td className="py-3 pr-4"><span className="text-xs whitespace-nowrap" style={{ color: "var(--db-text-2)" }}>{tx.date.split("-")[2]}/{tx.date.split("-")[1]}</span></td>
-                        <td className="py-3"><Badge status={tx.reconciled ? "success" : "warning"} className="text-[10px] px-2.5 py-0.5">{tx.reconciled ? t("transactions.reconciled") : t("transactions.pending")}</Badge></td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Centros de Custo (Donut Chart) */}
-          <div className="side-card p-4 md:p-6 flex flex-col">
-            <div className="flex items-center justify-between mb-4 md:mb-5">
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("costCenter.title")}</h2>
-              <a href="/costCenter" aria-label={t("costCenter.seeAllAria")} style={{ color: "var(--db-text-2)" }} className="transition-colors no-print"><MoreHorizontal size={16} /></a>
-            </div>
-            <div className="flex justify-center mb-4 md:mb-5">
-              <svg
-                width="130" height="130" viewBox="0 0 140 140"
-                role="img"
-                aria-label={t("costCenter.ariaDonut")}
-              >
-                {(() => {
-                  const circ = 2 * Math.PI * 52;
-                  let offset = 0;
-                  return costCenterData.centers.map((cc) => {
-                    const dash = (cc.pct / 100) * circ;
-                    const el = (
-                      <circle key={cc.name} cx={70} cy={70} r={52} fill="none" stroke={cc.color}
-                        strokeWidth={22} strokeDasharray={`${dash} ${circ - dash}`}
-                        strokeDashoffset={-offset} transform="rotate(-90 70 70)" className="donut-ring" />
-                    );
-                    offset += dash; 
-                    return el;
-                  });
-                })()}
-                <text x="70" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--db-text)" fontFamily="Sora">
-                  <Sensitive hidden={hideValues} svg>{toBRL(costCenterData.totalExpenses)}</Sensitive>
-                </text>
-                <text x="70" y="80" textAnchor="middle" fontSize="8" fill="var(--db-text-3)" fontFamily="Sora">{t("costCenter.totalExpenses")}</text>
-              </svg>
-            </div>
-            <div className="space-y-2.5 flex-1 overflow-y-auto">
-              {costCenterData.centers.length === 0 ? (
-                <div className="text-center py-6 text-xs" style={{ color: "var(--db-text-3)" }}>{t("costCenter.empty")}</div>
-              ) : (
-                costCenterData.centers.map((cc) => (
-                  <div key={cc.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cc.color }} />
-                      <span className="text-xs truncate max-w-[80px]" style={{ color: "var(--db-text-2)" }} title={categoryLabel(cc.name, tCat)}>{categoryLabel(cc.name, tCat)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 md:gap-3">
-                      <div className="w-16 md:w-20 h-1.5 rounded-full overflow-hidden db-progress-bg">
-                        <div className="h-full rounded-full" style={{ width: `${cc.pct}%`, background: cc.color }} />
-                      </div>
-                      <span className="mono text-xs font-semibold w-7 text-right" style={{ color: "var(--db-text)" }}>{cc.pct}%</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Projeção fluxo de caixa ── */}
-        <div className="chart-card p-4 md:p-6">
-          <div className="flex items-start md:items-center justify-between mb-4 gap-2">
-            <div>
-              <h2 className="font-bold text-sm md:text-base" style={{ color: "var(--db-text)" }}>{t("projection.title")}</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--db-text-2)" }}>{t("projection.subtitle")}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
-            {[
-              { label:t("projection.currentBalance"), val: <Sensitive hidden={hideValues}>{toBRL(projection.saldoAtual)}</Sensitive>, icon:Wallet,       color:"blue",    note:t("projection.currentBalanceNote") },
-              { label:t("projection.expectedIn"),     val: <Sensitive hidden={hideValues}>{`+ ${toBRL(projection.entradasPrevistas)}`}</Sensitive>, icon:TrendingUp,   color:"emerald", note:t("projection.expectedInNote")  },
-              { label:t("projection.scheduledOut"),   val: <Sensitive hidden={hideValues}>{`- ${toBRL(projection.saidasAgendadas)}`}</Sensitive>, icon:TrendingDown, color:"rose",    note:t("projection.scheduledOutNote")  },
-            ].map((item) => {
-              const cMap: Record<string, { bg: string; text: string; icon: string }> = {
-                blue:    { bg:"var(--brand-weak)", text:"var(--brand)", icon:"var(--brand-weak)" },
-                emerald: { bg:"var(--pos-weak)",   text:"var(--pos)",   icon:"var(--pos-weak)" },
-                rose:    { bg:"var(--neg-weak)",    text:"var(--neg)",   icon:"var(--neg-weak)" },
-              };
-              const c = cMap[item.color];
-              return (
-                <div key={item.label} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl" style={{ background: c.bg }}>
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: c.icon }}>
-                    <item.icon size={18} style={{ color: c.text }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium mb-0.5" style={{ color: c.text }}>{item.label}</p>
-                    <p className="font-extrabold text-base md:text-lg mono truncate" style={{ color: c.text }}>{item.val}</p>
-                    <p className="text-xs opacity-60 truncate" style={{ color: c.text }} title={item.note}>{item.note}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-4 md:mt-5">
-            <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--db-text-2)" }}>
-              <span>{t("projection.projectedFinal")}</span>
-              <span className="mono font-semibold" style={{ color: "var(--pos)" }}>
-                <Sensitive hidden={hideValues}>{toBRL(projection.saldoProjetado)}</Sensitive>{" "}
-                <span className="font-normal text-xs ml-1" style={{ color: "var(--db-text-2)" }}>
-                  ({projection.variacaoPct >= 0 ? "+" : ""}{projection.variacaoPct.toFixed(1)}%)
-                </span>
-              </span>
-            </div>
-            <div className="h-2 rounded-full overflow-hidden db-progress-bg">
-              <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max((projection.saldoProjetado / (projection.saldoAtual || 1)) * 50, 10), 100)}%`, background: "var(--brand)" }} />
-            </div>
-          </div>
-        </div>
+            <AlertCenter alerts={alerts} hide={hideValues} periodLabel={periodLabel} marginTargetPct={DEFAULT_ALERT_THRESHOLDS.marginTargetPct} />
+          </>
+        )}
 
       </main>
     </div>
