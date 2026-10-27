@@ -14,6 +14,7 @@ import { useNavbarLayout } from "@/app/hooks/useNavbarLayout";
 import { useReducedMotion } from "@/app/hooks/useReducedMotion";
 import { useAccessibilityWidget } from "@/app/hooks/useAccessibilityWidget";
 import { useLocalePreference } from "@/app/hooks/useLocalePreference";
+import { OPEN_EVENT } from "@/app/components/tour/TourRuntime";
 import type { AppLocale } from "@/i18n/routing";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
@@ -91,6 +92,7 @@ const Divider = () => <div style={{ height: 1, background: "var(--cf-border)" }}
 
 export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
   const t = useTranslations("configuracoes.aparencia");
+  const tTour = useTranslations("tour");
   const { dark, setTheme } = useTheme();
   const { layout, toggle: toggleLayout } = useNavbarLayout();
   const { reduced, setReducedMotion } = useReducedMotion();
@@ -229,6 +231,19 @@ export default function AparenciaTab({ showToast }: { showToast: ShowToast }) {
             { value: "pie", label: t("chart.pie"), icon: PieChart },
           ]}
         />
+      </Row>
+
+      <Divider />
+
+      <Row title={tTour("settings.title")} desc={tTour("settings.desc")}>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}
+          className="px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer"
+          style={{ background: "var(--brand)", color: "var(--brand-on)" }}
+        >
+          {tTour("settings.open")}
+        </button>
       </Row>
     </Card>
   );

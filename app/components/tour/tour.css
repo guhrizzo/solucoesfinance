@@ -125,24 +125,13 @@
 .nxt-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .nxt-confetti i { position: absolute; top: -10px; width: 8px; height: 12px; border-radius: 2px; animation: nxt-fall 2.4s ease-in forwards; }
 
-/* Botão de ajuda + menu */
-.nxt-help {
-  position: fixed; z-index: 1400; left: 16px; bottom: 16px; height: 44px; padding: 0 14px 0 12px; border-radius: 999px; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--brand-on); background: var(--brand);
-  border: 0; box-shadow: var(--shadow-pop); transition: transform .15s, background .15s;
-}
-.nxt-help:hover { background: var(--brand-hover); transform: translateY(-1px); }
-html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-help { left: 276px; }
-@media (max-width: 1023px) { html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-help { left: 16px; } }
-@media (max-width: 767px) { .nxt-help { bottom: 76px; padding: 0; width: 44px; justify-content: center; } .nxt-help span { display: none; } }
+/* Menu do guia (aberto por Configurações) */
 .nxt-menu {
-  position: fixed; z-index: 1450; left: 16px; bottom: 68px; width: min(340px, calc(100vw - 32px)); max-height: min(70dvh, 520px); overflow-y: auto;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 8px;
-  animation: nxt-in 0.25s cubic-bezier(.2,.8,.2,1) both;
+  position: fixed; z-index: 1450; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(360px, calc(100vw - 32px)); max-height: min(78dvh, 560px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-pop), 0 24px 80px -20px rgba(0,0,0,.45); padding: 8px;
+  animation: nxt-fade 0.25s ease both;
 }
-html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-menu { left: 276px; }
-@media (max-width: 1023px) { html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-menu { left: 16px; } }
-@media (max-width: 767px) { .nxt-menu { bottom: 128px; } }
 .nxt-menu h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-subtle); margin: 6px 10px 4px; }
 .nxt-menu button.nxt-item {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 10px; border: 0; background: transparent; border-radius: 10px;
@@ -165,7 +154,6 @@ html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-menu { left: 276px; }
 @keyframes nxt-fall { to { transform: translateY(420px) rotate(540deg); opacity: 0; } }
 
 html[data-reduced-motion="1"] .nxt-layer *,
-html[data-reduced-motion="1"] .nxt-menu,
-html[data-reduced-motion="1"] .nxt-help {
+html[data-reduced-motion="1"] .nxt-menu {
   animation: none !important; transition: none !important;
 }

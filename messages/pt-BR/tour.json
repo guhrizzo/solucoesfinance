@@ -17,7 +17,6 @@
     "otherCategories": "Ver outras categorias",
     "restartFull": "Refazer o tour completo",
     "resume_tour": "Continuar de onde parei",
-    "helpButton": "Conheça a NexusFi",
     "helpMenuTitle": "Guia da NexusFi",
     "helpThisPage": "Entenda esta página",
     "helpChoose": "Escolher uma categoria",
@@ -143,5 +142,10 @@
       "example": "Você preenche os dados da empresa para que as cobranças por e-mail saiam com o seu nome e documento.",
       "benefit": "Uma conta organizada e comunicações mais profissionais."
     }
+  },
+  "settings": {
+    "title": "Guia da NexusFi",
+    "desc": "Reveja o tour pelos módulos ou entenda uma categoria específica, com exemplos práticos.",
+    "open": "Abrir guia"
   }
 }

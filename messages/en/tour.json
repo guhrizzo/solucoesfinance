@@ -17,7 +17,6 @@
     "otherCategories": "See other categories",
     "restartFull": "Restart the full tour",
     "resume_tour": "Continue where I left off",
-    "helpButton": "Get to know NexusFi",
     "helpMenuTitle": "NexusFi guide",
     "helpThisPage": "Understand this page",
     "helpChoose": "Choose a category",
@@ -143,5 +142,10 @@
       "example": "You fill in the company data so email charges go out with your name and document.",
       "benefit": "An organized account and more professional communication."
     }
+  },
+  "settings": {
+    "title": "NexusFi guide",
+    "desc": "Replay the tour of the modules or understand a specific category, with practical examples.",
+    "open": "Open guide"
   }
 }

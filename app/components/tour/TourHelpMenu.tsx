@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { HelpCircle, PlayCircle, RotateCcw, BookOpen } from "lucide-react";
+import { PlayCircle, RotateCcw, BookOpen } from "lucide-react";
 import type { TourStepDef } from "@/lib/tour/catalog";
 import { StepIcon } from "./TourIllustration";
 import "./tour.css";
@@ -14,7 +14,6 @@ interface Props {
   currentStep?: TourStepDef;
   /** Há um tour em andamento com etapa salva. */
   canResume: boolean;
-  onToggle: () => void;
   onClose: () => void;
   onPick: (id: string) => void;
   onRestart: () => void;
@@ -23,15 +22,16 @@ interface Props {
 
 export function TourHelpMenu(p: Props) {
   const t = useTranslations("tour");
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const prevFocus = useRef<HTMLElement | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
 
   useEffect(() => {
     if (p.open) {
+      prevFocus.current = document.activeElement as HTMLElement | null;
       menuRef.current?.querySelector<HTMLElement>("button")?.focus();
     } else if (wasOpen.current) {
-      btnRef.current?.focus();
+      prevFocus.current?.focus?.();
     }
     wasOpen.current = p.open;
   }, [p.open]);
@@ -41,7 +41,7 @@ export function TourHelpMenu(p: Props) {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") p.onClose(); };
     const onDown = (e: MouseEvent) => {
       const n = e.target as Node;
-      if (!menuRef.current?.contains(n) && !btnRef.current?.contains(n)) p.onClose();
+      if (!menuRef.current?.contains(n)) p.onClose();
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onDown);
@@ -50,12 +50,6 @@ export function TourHelpMenu(p: Props) {
 
   return (
     <>
-      <button
-        ref={btnRef} type="button" className="nxt-help" onClick={p.onToggle}
-        aria-haspopup="dialog" aria-expanded={p.open} aria-label={t("ui.helpButton")} title={t("ui.helpButton")}
-      >
-        <HelpCircle size={20} aria-hidden="true" /><span>{t("ui.helpButton")}</span>
-      </button>
       {p.open && (
         <div ref={menuRef} className="nxt-menu" role="dialog" aria-label={t("ui.helpMenuTitle")}>
           <h2>{t("ui.helpMenuTitle")}</h2>

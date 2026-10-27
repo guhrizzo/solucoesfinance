@@ -15,6 +15,8 @@ import { CompletionDialog, StepDialog, WelcomeDialog } from "./TourModal";
 import { TourHelpMenu } from "./TourHelpMenu";
 
 type View = "closed" | "welcome" | "step" | "completion";
+/** Disparado por Configurações pra abrir o menu do guia. */
+export const OPEN_EVENT = "nexusfi:open-tour";
 const SESSION_FLAG = "nexusfi-tour-offered";
 
 export function TourRuntime() {
@@ -101,6 +103,13 @@ export function TourRuntime() {
     setView("welcome");
   }, [state, setupDone, ready, sub.loading, sub.signedOut, sub.isActive, view]);
 
+  /* ── Abertura manual: botão "Conheça a NexusFi" em Configurações > Aparência ── */
+  useEffect(() => {
+    const open = () => setMenuOpen(true);
+    window.addEventListener(OPEN_EVENT, open);
+    return () => window.removeEventListener(OPEN_EVENT, open);
+  }, []);
+
   /* ── Navegação ── */
   const goToRoute = useCallback((id: string) => {
     const route = getStep(id)?.route;
@@ -172,7 +181,6 @@ export function TourRuntime() {
           steps={steps}
           currentStep={currentStep}
           canResume={!!resumeId}
-          onToggle={() => setMenuOpen((o) => !o)}
           onClose={() => setMenuOpen(false)}
           onPick={(id) => showStep(id, "single")}
           onRestart={() => startTour()}
