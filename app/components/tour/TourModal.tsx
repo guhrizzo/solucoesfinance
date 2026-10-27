@@ -36,7 +36,6 @@ function Frame({ label, rect, align, small, onEscape, children }: FrameProps) {
     const prev = document.activeElement as HTMLElement | null;
     const root = document.getElementById("conteudo-principal");
     root?.setAttribute("inert", "");
-    document.body.classList.add("modal-open");
     ref.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
@@ -58,7 +57,6 @@ function Frame({ label, rect, align, small, onEscape, children }: FrameProps) {
     return () => {
       document.removeEventListener("keydown", onKey, true);
       root?.removeAttribute("inert");
-      document.body.classList.remove("modal-open");
       prev?.focus?.();
     };
   }, []);
