@@ -109,7 +109,7 @@ export async function buildContractPdf(c: ContractDoc): Promise<Buffer> {
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text(
-      `NexusFi — CNPJ 68.919.873/0001-36 · Documento ${c.hash.slice(0, 16)}… · Página ${i}/${pages}`,
+      `NexusFi — CNPJ 69.649.232/0001-71 · Documento ${c.hash.slice(0, 16)}… · Página ${i}/${pages}`,
       marginX,
       pageH - 32
     );

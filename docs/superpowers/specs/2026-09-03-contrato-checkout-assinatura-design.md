@@ -9,7 +9,7 @@ Nacional, Lucro Presumido ou Lucro Real), além do **prazo de contratação e da
 condições de pagamento**. Depois do aceite + pagamento confirmado, enviar uma
 **cópia do contrato por e-mail**.
 
-CNPJ da NexusFi para o contrato: **68.919.873/0001-36**.
+CNPJ da NexusFi para o contrato: **69.649.232/0001-71**.
 
 Decisões tomadas no brainstorming:
 
@@ -448,7 +448,7 @@ pode ficar de fora do MVP se complicar.
   (usado "NexusFi ME").
 - E-mail / telefone oficial de contato da NexusFi (omitido no v1).
 
-Dados já confirmados: CNPJ 68.919.873/0001-36 · R. Sebastião Miguel da Silva,
+Dados já confirmados: CNPJ 69.649.232/0001-71 · R. Sebastião Miguel da Silva,
 107 · São Paulo/SP · CEP 08280-350 · representante legal Felipe Augusto de Jesus
 Paiva, CPF 392.149.348-00.
 

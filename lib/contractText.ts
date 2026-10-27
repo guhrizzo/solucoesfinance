@@ -19,7 +19,7 @@ import { REGIME_LABEL, type ContractContratante, type ContractSignatario } from 
 //   • e-mail/telefone oficial de contato (omitidos nesta versão)
 export const NEXUSFI_PARTY = {
   razaoSocial: "NexusFi ME", // TODO: confirmar razão social exata (Junta Comercial)
-  cnpj: "68.919.873/0001-36",
+  cnpj: "69.649.232/0001-71",
   logradouro: "Rua Sebastião Miguel da Silva, nº 107",
   bairro: "[BAIRRO]", // TODO: confirmar bairro da sede
   cidadeUf: "São Paulo/SP",

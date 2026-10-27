@@ -362,7 +362,7 @@ export function contractCopyEmail(opts: {
             <tr>
               <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
                 <p style="margin:0;color:#94a3b8;font-size:11px;">
-                  NexusFi — CNPJ 68.919.873/0001-36. Este é um e-mail automático; guarde o PDF em anexo para seus registros.
+                  NexusFi — CNPJ 69.649.232/0001-71. Este é um e-mail automático; guarde o PDF em anexo para seus registros.
                 </p>
               </td>
             </tr>
