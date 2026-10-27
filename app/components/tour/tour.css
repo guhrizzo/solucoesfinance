@@ -1,0 +1,194 @@
+/* Tour guiado (app/components/tour). Usa só os tokens semânticos de globals.css,
+   então claro/escuro funcionam sem regra extra. Movimento: respeita o
+   "Reduzir animações" do app (html[data-reduced-motion="1"]) — o projeto
+   ignora prefers-reduced-motion de propósito (ver ForceMotion.tsx). */
+
+.nxt-layer { position: fixed; inset: 0; z-index: 3000; }
+
+/* Camada que bloqueia cliques no app por trás (inclusive no destaque). */
+.nxt-blocker { position: absolute; inset: 0; background: transparent; }
+
+/* Escurecimento + desfoque; o "furo" do spotlight vem do clip-path inline. */
+.nxt-dim {
+  position: absolute; inset: 0; pointer-events: none;
+  background: rgba(8, 14, 24, 0.62);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  animation: nxt-fade 0.35s ease both;
+}
+
+.nxt-ring {
+  position: absolute; pointer-events: none; border-radius: 12px;
+  border: 2px solid var(--brand);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 28%, transparent), 0 0 28px 6px color-mix(in srgb, var(--brand) 45%, transparent);
+  transition: top 0.35s cubic-bezier(.4,0,.2,1), left 0.35s cubic-bezier(.4,0,.2,1), width 0.35s cubic-bezier(.4,0,.2,1), height 0.35s cubic-bezier(.4,0,.2,1);
+  animation: nxt-pulse 2.2s ease-in-out infinite;
+}
+
+.nxt-wrap {
+  position: absolute; inset: 0; display: flex; justify-content: center; padding: 16px;
+  pointer-events: none;
+}
+.nxt-wrap[data-align="center"] { align-items: center; }
+.nxt-wrap[data-align="top"] { align-items: flex-start; }
+
+.nxt-card {
+  pointer-events: auto; position: relative; width: 100%; max-width: 560px;
+  max-height: calc(100dvh - 32px); display: flex; flex-direction: column;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-pop), 0 24px 80px -20px rgba(0,0,0,.45);
+  overflow: hidden; outline: none;
+  animation: nxt-in 0.38s cubic-bezier(.2,.8,.2,1) both;
+}
+.nxt-card[data-leaving="1"] { animation: nxt-out 0.2s ease both; }
+.nxt-card--sm { max-width: 460px; }
+
+.nxt-head { padding: 14px 18px 0; flex: none; }
+.nxt-headrow { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.nxt-chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+  color: var(--brand); background: var(--brand-weak); border-radius: 999px; padding: 4px 10px;
+}
+.nxt-step { font-size: 12px; color: var(--text-muted); }
+.nxt-iconbtn {
+  width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-muted); background: transparent; border: 0; cursor: pointer; flex: none;
+  transition: background .15s, color .15s, transform .15s;
+}
+.nxt-iconbtn:hover { background: var(--sunken); color: var(--text); }
+.nxt-iconbtn:active { transform: scale(.92); }
+.nxt-iconbtn[aria-pressed="true"], .nxt-iconbtn[data-on="1"] { color: var(--brand); background: var(--brand-weak); }
+.nxt-card button:focus-visible, .nxt-menu button:focus-visible, .nxt-help:focus-visible, .nxt-card input:focus-visible {
+  outline: 2px solid var(--brand); outline-offset: 2px;
+}
+
+.nxt-progress { height: 4px; border-radius: 999px; background: var(--sunken); overflow: hidden; margin-top: 12px; }
+.nxt-progress > span {
+  display: block; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 60%, #7c5cff));
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+
+.nxt-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; min-height: 0; overscroll-behavior: contain; }
+.nxt-content { animation: nxt-slide 0.35s cubic-bezier(.2,.8,.2,1) both; }
+.nxt-title { font-family: var(--font-display, inherit); font-size: 20px; line-height: 1.25; font-weight: 700; margin: 12px 0 6px; }
+.nxt-text { font-size: 14px; line-height: 1.55; color: var(--text-muted); margin: 0; }
+.nxt-sec { margin-top: 12px; }
+.nxt-sec h3 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-subtle); font-weight: 700; margin: 0 0 3px; }
+.nxt-sec p { font-size: 14px; line-height: 1.5; margin: 0; color: var(--text); }
+.nxt-example { border-left: 3px solid var(--brand); background: var(--brand-weak); padding: 8px 12px; border-radius: 0 10px 10px 0; }
+.nxt-benefit { border-left: 3px solid var(--pos); background: var(--pos-weak); padding: 8px 12px; border-radius: 0 10px 10px 0; }
+
+/* Ilustração animada */
+.nxt-stage {
+  position: relative; height: 112px; border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 120% at 20% 0%, color-mix(in srgb, var(--brand) 22%, var(--surface)) 0%, var(--brand-weak) 60%, var(--sunken) 100%);
+}
+.nxt-stage-icon {
+  position: relative; z-index: 2; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  background: var(--brand); color: var(--brand-on); box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--brand) 70%, transparent);
+  animation: nxt-float 3.2s ease-in-out infinite;
+}
+.nxt-bars { position: absolute; bottom: 0; left: 0; right: 0; height: 100%; display: flex; align-items: flex-end; justify-content: space-evenly; padding: 0 10%; }
+.nxt-bars i { width: 12%; border-radius: 6px 6px 0 0; background: color-mix(in srgb, var(--brand) 30%, transparent); transform-origin: bottom; animation: nxt-bar 2.6s ease-in-out infinite; }
+.nxt-bars i:nth-child(1) { height: 38%; animation-delay: 0s; } .nxt-bars i:nth-child(2) { height: 62%; animation-delay: .2s; }
+.nxt-bars i:nth-child(3) { height: 48%; animation-delay: .4s; } .nxt-bars i:nth-child(4) { height: 78%; animation-delay: .6s; }
+.nxt-orbit { position: absolute; inset: 0; }
+.nxt-orbit i { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); opacity: .55; animation: nxt-orbit 4.2s ease-in-out infinite; }
+.nxt-orbit i:nth-child(1) { left: 22%; top: 26%; } .nxt-orbit i:nth-child(2) { right: 24%; top: 60%; animation-delay: .8s; background: var(--pos); }
+.nxt-orbit i:nth-child(3) { left: 30%; bottom: 18%; animation-delay: 1.6s; background: var(--warn); }
+.nxt-flow { position: absolute; inset: 0; }
+.nxt-flow i { position: absolute; left: 0; width: 9px; height: 9px; border-radius: 50%; animation: nxt-flowin 3s linear infinite; }
+.nxt-flow i:nth-child(1) { top: 32%; background: var(--pos); } .nxt-flow i:nth-child(2) { top: 32%; background: var(--pos); animation-delay: 1.5s; }
+.nxt-flow i:nth-child(3) { top: 66%; background: var(--neg); animation-name: nxt-flowout; animation-delay: .7s; }
+.nxt-flow i:nth-child(4) { top: 66%; background: var(--neg); animation-name: nxt-flowout; animation-delay: 2.2s; }
+
+/* Áudio */
+.nxt-audio { margin-top: 14px; padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--sunken); }
+.nxt-audio-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nxt-listen {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--brand); color: var(--brand-on); font-size: 13px; font-weight: 600; transition: background .15s, transform .15s;
+}
+.nxt-listen:hover { background: var(--brand-hover); } .nxt-listen:active { transform: scale(.97); }
+.nxt-listen:disabled { opacity: .75; cursor: progress; }
+.nxt-wave { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+.nxt-wave i { width: 3px; background: currentColor; border-radius: 2px; height: 30%; animation: nxt-wave 0.9s ease-in-out infinite; }
+.nxt-wave i:nth-child(2) { animation-delay: .15s; } .nxt-wave i:nth-child(3) { animation-delay: .3s; } .nxt-wave i:nth-child(4) { animation-delay: .45s; }
+.nxt-spin { animation: nxt-spin 0.9s linear infinite; }
+.nxt-vol { width: 84px; accent-color: var(--brand); }
+.nxt-status { font-size: 12px; color: var(--text-muted); margin: 8px 2px 0; min-height: 1em; }
+.nxt-status[data-kind="error"] { color: var(--neg); }
+.nxt-credit { font-size: 11px; color: var(--text-subtle); margin-left: auto; }
+.nxt-details { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.nxt-details summary { cursor: pointer; }
+.nxt-details p { margin: 6px 0 0; line-height: 1.5; }
+
+.nxt-foot {
+  flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 18px 14px; border-top: 1px solid var(--border); background: var(--surface);
+}
+.nxt-btn {
+  height: 38px; padding: 0 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); transition: background .15s, transform .15s, border-color .15s;
+}
+.nxt-btn:hover { background: var(--sunken); } .nxt-btn:active { transform: scale(.97); }
+.nxt-btn:disabled { opacity: .45; cursor: not-allowed; }
+.nxt-btn--primary { background: var(--brand); border-color: var(--brand); color: var(--brand-on); }
+.nxt-btn--primary:hover { background: var(--brand-hover); }
+.nxt-link { background: none; border: 0; padding: 4px 6px; font-size: 13px; color: var(--text-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.nxt-link:hover { color: var(--text); }
+.nxt-spacer { flex: 1; }
+
+.nxt-center { text-align: center; padding: 26px 22px 8px; }
+.nxt-big { width: 72px; height: 72px; border-radius: 22px; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #7c5cff)); color: #fff; animation: nxt-float 3.2s ease-in-out infinite; }
+.nxt-stack { display: flex; flex-direction: column; gap: 8px; padding: 14px 22px 22px; }
+.nxt-stack .nxt-btn { justify-content: center; height: 44px; }
+.nxt-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.nxt-confetti i { position: absolute; top: -10px; width: 8px; height: 12px; border-radius: 2px; animation: nxt-fall 2.4s ease-in forwards; }
+
+/* Botão de ajuda + menu */
+.nxt-help {
+  position: fixed; z-index: 1400; left: 16px; bottom: 16px; height: 44px; padding: 0 14px 0 12px; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--brand-on); background: var(--brand);
+  border: 0; box-shadow: var(--shadow-pop); transition: transform .15s, background .15s;
+}
+.nxt-help:hover { background: var(--brand-hover); transform: translateY(-1px); }
+html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-help { left: 276px; }
+@media (max-width: 1023px) { html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-help { left: 16px; } }
+@media (max-width: 767px) { .nxt-help { bottom: 76px; padding: 0; width: 44px; justify-content: center; } .nxt-help span { display: none; } }
+.nxt-menu {
+  position: fixed; z-index: 1450; left: 16px; bottom: 68px; width: min(340px, calc(100vw - 32px)); max-height: min(70dvh, 520px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 8px;
+  animation: nxt-in 0.25s cubic-bezier(.2,.8,.2,1) both;
+}
+html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-menu { left: 276px; }
+@media (max-width: 1023px) { html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-menu { left: 16px; } }
+@media (max-width: 767px) { .nxt-menu { bottom: 128px; } }
+.nxt-menu h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-subtle); margin: 6px 10px 4px; }
+.nxt-menu button.nxt-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 10px; border: 0; background: transparent; border-radius: 10px;
+  font-size: 14px; color: var(--text); cursor: pointer;
+}
+.nxt-menu button.nxt-item:hover { background: var(--sunken); }
+.nxt-menu .nxt-item--hl { background: var(--brand-weak); color: var(--brand); font-weight: 600; }
+.nxt-menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+
+@keyframes nxt-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nxt-in { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes nxt-out { to { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes nxt-slide { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes nxt-pulse { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--brand) 16%, transparent), 0 0 34px 10px color-mix(in srgb, var(--brand) 38%, transparent); } }
+@keyframes nxt-float { 50% { transform: translateY(-5px); } }
+@keyframes nxt-bar { 50% { transform: scaleY(.72); } }
+@keyframes nxt-orbit { 50% { transform: translate(10px, -8px); opacity: .9; } }
+@keyframes nxt-flowin { from { left: 0; opacity: 0; } 15%, 80% { opacity: 1; } to { left: 46%; opacity: 0; } }
+@keyframes nxt-flowout { from { left: 54%; opacity: 0; } 15%, 80% { opacity: 1; } to { left: 100%; opacity: 0; } }
+@keyframes nxt-wave { 50% { height: 100%; } }
+@keyframes nxt-spin { to { transform: rotate(360deg); } }
+@keyframes nxt-fall { to { transform: translateY(420px) rotate(540deg); opacity: 0; } }
+
+html[data-reduced-motion="1"] .nxt-layer *,
+html[data-reduced-motion="1"] .nxt-menu,
+html[data-reduced-motion="1"] .nxt-help {
+  animation: none !important; transition: none !important;
+}

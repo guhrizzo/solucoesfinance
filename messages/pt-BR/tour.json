@@ -1,0 +1,174 @@
+{
+  "ui": {
+    "dialogLabel": "Guia da NexusFi",
+    "stepOf": "Etapa {current} de {total}",
+    "progress": "Progresso do guia",
+    "what": "O que é",
+    "purpose": "Para que serve",
+    "example": "Exemplo prático",
+    "benefit": "Benefício para o negócio",
+    "back": "Voltar",
+    "next": "Próximo",
+    "finish": "Concluir",
+    "skip": "Pular tour",
+    "endTour": "Encerrar guia",
+    "close": "Fechar",
+    "listen": "Ouvir explicação",
+    "pause": "Pausar narração",
+    "resume": "Retomar narração",
+    "replay": "Repetir narração",
+    "loadingAudio": "Preparando a narração…",
+    "audioError": "Não foi possível reproduzir a narração agora. O texto continua disponível abaixo.",
+    "audioUnavailable": "A narração por voz não está disponível no momento. Você pode ler a explicação normalmente.",
+    "audioOffline": "Sem conexão com a internet: a narração não pôde ser carregada.",
+    "audioBlocked": "O navegador bloqueou a reprodução automática. Toque em “Ouvir explicação”.",
+    "autoplayOn": "Narração automática: ligada",
+    "autoplayOff": "Narração automática: desligada",
+    "volume": "Volume da narração",
+    "narrationBy": "Narração gerada por IA (ElevenLabs)",
+    "transcript": "Texto da narração",
+    "openPage": "Abrir esta página",
+    "otherCategories": "Ver outras categorias",
+    "restartFull": "Refazer o tour completo",
+    "resume_tour": "Continuar de onde parei",
+    "helpButton": "Conheça a NexusFi",
+    "helpMenuTitle": "Guia da NexusFi",
+    "helpThisPage": "Entenda esta página",
+    "helpChoose": "Escolher uma categoria",
+    "helpClose": "Fechar menu de ajuda",
+    "singleTitle": "Como funciona: {title}",
+    "backToList": "Voltar à lista"
+  },
+  "welcome": {
+    "title": "Bem-vindo à NexusFi!",
+    "body": "Conheça cada módulo com exemplos práticos e narração por voz. Leva poucos minutos e você pode pausar quando quiser.",
+    "start": "Começar tour guiado",
+    "explore": "Explorar plataforma",
+    "hint": "Você pode abrir o guia a qualquer momento pelo botão de ajuda."
+  },
+  "completion": {
+    "title": "Tour concluído!",
+    "body": "Agora você já sabe para que serve cada área. Se tiver dúvida sobre algum módulo, o botão de ajuda está sempre por perto.",
+    "done": "Voltar à plataforma",
+    "restart": "Rever o tour"
+  },
+  "steps": {
+    "dashboard": {
+      "category": "Dashboard",
+      "title": "Entenda o seu dashboard",
+      "description": "O dashboard reúne os principais indicadores do seu negócio em um só lugar: resultado do período, comparação com o período anterior, projeção de caixa para os próximos dias, vencimentos e alertas.",
+      "purpose": "Ajuda a entender rapidamente como a empresa está e o que pede atenção, sem precisar abrir cada módulo. Use o seletor de mês na barra superior para mudar o período.",
+      "example": "Ao abrir o painel você vê que há contas vencendo esta semana e que o saldo projetado para 15 dias ficará apertado, então decide antecipar uma cobrança.",
+      "benefit": "Você enxerga a situação geral em segundos e age antes de o problema acontecer.",
+      "audio": "Vamos conhecer o dashboard. Ele reúne os principais indicadores da sua empresa em um só lugar: o resultado do período, a projeção do caixa e os vencimentos. Use o painel para entender rapidamente como o negócio está e o que precisa de atenção."
+    },
+    "fluxoCaixa": {
+      "category": "Fluxo de caixa",
+      "title": "Entenda seu fluxo de caixa",
+      "description": "O fluxo de caixa mostra as entradas e saídas de dinheiro da empresa ao longo do tempo, com saldo e movimentações organizadas por categoria.",
+      "purpose": "Ajuda a acompanhar a disponibilidade financeira e a planejar os pagamentos. Ele não é o faturamento nem o lucro: mostra o dinheiro que realmente entrou e saiu.",
+      "example": "Sua empresa recebe R$ 5.000 de clientes e paga R$ 2.000 em despesas no período. Considerando só essas movimentações, a diferença é uma entrada líquida de R$ 3.000.",
+      "benefit": "Você visualiza como cada movimentação afeta o caixa e planeja melhor os compromissos.",
+      "audio": "Vamos conhecer o fluxo de caixa. Aqui você acompanha o dinheiro que entra e sai da sua empresa. Isso ajuda a entender a disponibilidade financeira e a se preparar para os próximos compromissos. Lembre-se: fluxo de caixa não é o mesmo que faturamento ou lucro."
+    },
+    "contasPagar": {
+      "category": "Contas a pagar",
+      "title": "Como funcionam as contas a pagar",
+      "description": "Aqui você registra os compromissos financeiros da empresa, com data de vencimento, e acompanha o que está pendente e o que já foi pago. O módulo também reúne pedidos de compra e fornecedores.",
+      "purpose": "Organiza as obrigações para evitar atrasos, multas e juros. Quando uma saída no fluxo de caixa corresponde a uma conta, a baixa pode ser feita automaticamente.",
+      "example": "O aluguel de R$ 3.000 vence dia 10. Você cadastra a conta, vê o alerta de vencimento e, ao lançar o pagamento no fluxo de caixa, a conta é baixada.",
+      "benefit": "Menos atrasos, menos multas e uma visão clara do que precisa ser pago.",
+      "audio": "Vamos conhecer as contas a pagar. Aqui você registra o que a empresa precisa pagar e quando vence. Assim fica fácil acompanhar o que está pendente e o que já foi pago, evitando atrasos e multas."
+    },
+    "contasReceber": {
+      "category": "Contas a receber",
+      "title": "Como funcionam as contas a receber",
+      "description": "Controla o dinheiro que seus clientes ainda vão pagar: valores, vencimentos, o que já foi recebido e o que está em aberto ou atrasado.",
+      "purpose": "Ajuda a acompanhar a inadimplência e a organizar as cobranças. Na versão Pro é possível enviar cobrança por e-mail com Pix copia e cola e lembretes automáticos.",
+      "example": "Um cliente deve R$ 1.800 com vencimento amanhã. Você envia a cobrança e, quando o valor cai, o recebimento é registrado e a conta é baixada.",
+      "benefit": "Você sabe quem deve, quanto e desde quando, e recebe mais rápido.",
+      "audio": "Vamos conhecer as contas a receber. Aqui você acompanha o dinheiro que seus clientes ainda vão pagar, os prazos e o que já foi recebido. Isso ajuda a identificar atrasos e a organizar as cobranças."
+    },
+    "faturamento": {
+      "category": "Faturamento",
+      "title": "Entenda o faturamento",
+      "description": "Faturamento é o total vendido em um período, tenha o cliente pago ou não. Você o encontra no relatório de Faturamento, na área de Relatórios.",
+      "purpose": "Mostra o tamanho das suas vendas. Ele é diferente de recebimento (dinheiro que entrou), de lucro (o que sobra depois dos custos) e de saldo de caixa (dinheiro disponível agora).",
+      "example": "Você vendeu R$ 10.000 no mês, mas só recebeu R$ 6.000 até agora. O faturamento é R$ 10.000; o caixa recebeu R$ 6.000; o lucro ainda depende dos custos.",
+      "benefit": "Evita confundir venda com dinheiro em caixa e ajuda a medir o crescimento do negócio.",
+      "audio": "Vamos entender o faturamento. Ele mostra o total que você vendeu no período, mesmo que parte ainda não tenha sido recebida. Por isso, uma venda registrada não significa dinheiro disponível na conta. Faturamento, recebimento, lucro e saldo de caixa são coisas diferentes."
+    },
+    "vendas": {
+      "category": "Vendas e PDV",
+      "title": "Como funciona o painel de vendas",
+      "description": "O painel de vendas reúne as vendas dos canais conectados e as vendas manuais, com indicadores de desempenho. Na versão Pro há também o PDV, a frente de caixa, com abertura e fechamento de caixa por turno.",
+      "purpose": "Ajuda a acompanhar o desempenho comercial e a ligar cada venda ao estoque e ao caixa. Vendas realizadas, canceladas e recebidas são situações diferentes.",
+      "example": "Uma venda de R$ 200 no balcão é registrada no PDV; o estoque do produto diminui e o valor entra no caixa do turno.",
+      "benefit": "Você entende o que vende, por qual canal e com que resultado.",
+      "audio": "Vamos conhecer o painel de vendas. Aqui você acompanha o desempenho comercial e a relação das vendas com o estoque e o caixa. Na versão Pro, o PDV permite registrar vendas no balcão e controlar o caixa por turno."
+    },
+    "estoque": {
+      "category": "Estoque",
+      "title": "Como funciona o estoque",
+      "description": "Cadastre produtos e acompanhe as quantidades disponíveis, com entradas e saídas.",
+      "purpose": "Evita falta de produto e excesso de mercadoria parada. Valor do estoque, receita de vendas e custo das mercadorias vendidas são coisas diferentes.",
+      "example": "Você tem 20 camisetas e vende 5: o estoque cai para 15. Quando chegar perto do mínimo, é hora de repor.",
+      "benefit": "Você repõe na hora certa e sabe quanto dinheiro está parado em mercadoria.",
+      "audio": "Vamos conhecer o estoque. Aqui você cadastra seus produtos e acompanha as quantidades disponíveis. Assim fica mais fácil repor mercadorias na hora certa e evitar a falta de produtos."
+    },
+    "integracoes": {
+      "category": "Integrações com marketplaces",
+      "title": "Integrações com marketplaces",
+      "description": "Uma integração conecta a NexusFi a um marketplace, como Mercado Livre, TikTok Shop ou Shein, para trazer produtos e pedidos automaticamente. A conexão é autorizada por você, na aba Estoque.",
+      "purpose": "Mantém os dados sincronizados sem digitar tudo duas vezes. O estado da conexão aparece na própria tela de cada integração; confira lá se está conectada.",
+      "example": "Você autoriza a conexão com o marketplace; os pedidos passam a aparecer no painel de vendas e o estoque é atualizado.",
+      "benefit": "Menos trabalho manual e menos erros entre o que você vende e o que tem em estoque.",
+      "audio": "Vamos falar das integrações com marketplaces. Uma integração conecta a NexusFi a plataformas de venda para trazer produtos e pedidos automaticamente. Você autoriza a conexão na aba de estoque e confere ali mesmo se ela está ativa."
+    },
+    "relatorios": {
+      "category": "Relatórios",
+      "title": "Como usar os relatórios",
+      "description": "Os relatórios transformam seus lançamentos em análises: Fluxo de Caixa, Faturamento, Gastos, DRE e Vendas. O relatório de Vendas mostra custo, lucro, margem e retorno sobre o custo, e não deve ser confundido com faturamento ou fluxo de caixa.",
+      "purpose": "Ajudam a analisar resultados e a decidir. O DRE mostra se a empresa teve lucro ou prejuízo; o de Gastos mostra para onde o dinheiro está indo.",
+      "example": "No relatório de Gastos você vê que as despesas com frete cresceram. Com isso, renegocia o contrato com a transportadora.",
+      "benefit": "Decisões baseadas em números, não em palpite.",
+      "audio": "Vamos conhecer os relatórios. Eles transformam seus lançamentos em análises, como o fluxo de caixa, o faturamento, os gastos, o DRE e as vendas. Use cada relatório para entender os resultados e tomar decisões com mais segurança."
+    },
+    "impostos": {
+      "category": "Impostos",
+      "title": "Como funcionam os impostos",
+      "description": "Registre e acompanhe os impostos da empresa e seus vencimentos. Na versão Pro, o leitor de notas fiscais usa inteligência artificial para identificar retenções e criar os lançamentos.",
+      "purpose": "Mantém as obrigações fiscais visíveis para você não esquecer prazos. Confirme sempre os valores com seu contador.",
+      "example": "Você cadastra o imposto do mês com vencimento no dia 20 e recebe o aviso antes da data.",
+      "benefit": "Menos risco de multa por esquecimento e mais previsibilidade no caixa.",
+      "audio": "Vamos conhecer os impostos. Aqui você registra e acompanha os impostos da empresa e seus vencimentos. Na versão Pro, o leitor de notas fiscais ajuda a identificar retenções. Confirme sempre os valores com o seu contador."
+    },
+    "centroCustos": {
+      "category": "Centro de custos",
+      "title": "Como funciona o centro de custos",
+      "description": "Os centros de custo organizam as despesas por área, projeto ou finalidade da empresa.",
+      "purpose": "Mostra onde o dinheiro está sendo gasto e quanto cada área consome.",
+      "example": "Você separa as despesas de Marketing e de Operação e descobre qual área está acima do esperado.",
+      "benefit": "Mais controle sobre os gastos e melhores decisões de corte ou investimento.",
+      "audio": "Vamos conhecer o centro de custos. Ele organiza as despesas por área ou projeto, para você enxergar onde o dinheiro está sendo gasto e decidir com mais clareza."
+    },
+    "equipe": {
+      "category": "Equipe e usuários",
+      "title": "Equipe e permissões",
+      "description": "Convide pessoas para trabalhar na mesma conta e escolha quais categorias cada uma pode acessar. Ações sensíveis podem ser protegidas por PIN.",
+      "purpose": "Permite dividir o trabalho sem entregar acesso total. Cada pessoa vê só o que foi liberado para ela.",
+      "example": "Você libera apenas Contas a pagar para a pessoa do financeiro, e ela não vê o restante.",
+      "benefit": "Mais segurança e mais autonomia para o time.",
+      "audio": "Vamos falar da equipe. Aqui você convida pessoas para a sua conta e escolhe quais áreas cada uma pode acessar. Assim o time trabalha com autonomia e você mantém o controle."
+    },
+    "configuracoes": {
+      "category": "Configurações",
+      "title": "Configurações da conta",
+      "description": "Em Configurações você ajusta o perfil e os dados da empresa, a aparência, os avisos por WhatsApp e envia sugestões ou relatos de problemas. A assinatura e o período de teste também são gerenciados na sua conta.",
+      "purpose": "Deixa a plataforma com a sua cara e com os dados corretos, que aparecem, por exemplo, nas cobranças enviadas aos clientes.",
+      "example": "Você preenche os dados da empresa para que as cobranças por e-mail saiam com o seu nome e documento.",
+      "benefit": "Uma conta organizada e comunicações mais profissionais.",
+      "audio": "Por fim, as configurações. Aqui você ajusta o perfil, os dados da empresa e a aparência, além de enviar sugestões ou relatar problemas. Mantenha esses dados em dia para que tudo funcione melhor."
+    }
+  }
+}

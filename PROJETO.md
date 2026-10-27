@@ -82,6 +82,14 @@ Crie um `.env.local` com as variáveis abaixo (valores nunca vão para o reposit
 - **App:** `NEXT_PUBLIC_APP_URL`
 - **Billing:** `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `INFINITEPAY_HANDLE`
 - **E-mail / IA / WhatsApp:** `RESEND_API_KEY`, `ANTHROPIC_API_KEY`, `API_WHATSAPP`
+- **Narração do tour guiado (ElevenLabs, só servidor):** `ELEVENLABS_API_KEY` (sem ela o tour funciona só com texto), `ELEVENLABS_VOICE_ID` (opcional; escolha uma voz com bom pt-BR), `ELEVENLABS_MODEL_ID` (opcional; padrão `eleven_multilingual_v2`, `eleven_flash_v2_5` = menor latência/custo)
+
+## Tour guiado (onboarding interativo)
+
+- Catálogo: `lib/tour/catalog.ts` (estrutura) + `messages/<locale>/tour.json` (textos e narração). Nova funcionalidade = 1 item no catálogo + bloco `steps.<id>` nos 3 idiomas.
+- UI: `app/components/tour/` (montado no `AppShell` só nas rotas internas); alvos de destaque via `data-tour-target` (hoje os links do menu, em `Navbar.tsx`).
+- Estado por login em `users/{uid}/profile/tour` (`never` / `in_progress` / `completed` / `dismissed`); regras em `lib/tour/state.ts`.
+- Áudio: `POST /api/tour/audio` (login obrigatório, texto vem do catálogo, 40 req/10 min por usuário, cache em memória + Storage `tour-audio/`).
 - **Marketplaces:** `MERCADOLIVRE_*`, `SHOPEE_*`, `TIKTOKSHOP_*`, `SHEIN_*` (client id/secret, redirect URI, secret do webhook)
 
 ## Integrações com marketplaces

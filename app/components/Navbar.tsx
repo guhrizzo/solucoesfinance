@@ -417,6 +417,7 @@ export default function Navbar({
             <a
               key={item.key}
               href={item.href}
+              data-tour-target={`nav-${item.key}`}
               className={`nxfi-vertical-link ${activePath === item.href ? "active" : ""}`}
             >
               <item.icon size={16} />
@@ -477,6 +478,7 @@ export default function Navbar({
             <a
               key={item.key}
               href={item.href}
+              data-tour-target={`nav-${item.key}`}
               className={`nxfi-sidebar-link ${activePath === item.href ? "active" : ""}`}
               onClick={() => setMobileOpen(false)}
             >
@@ -517,7 +519,7 @@ export default function Navbar({
   const mobileBottomNavJSX = (
     <nav className="nxfi-mobile-nav">
       {navItemsWithBadges.map((item) => (
-        <a key={item.key} href={item.href} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
+        <a key={item.key} href={item.href} data-tour-target={`nav-${item.key}`} className={`nxfi-mobile-link ${activePath === item.href ? "active" : ""}`}>
           <div style={{ position: "relative" }}>
             <item.icon size={20} strokeWidth={activePath === item.href ? 2.5 : 1.8} />
             {item.badge !== undefined && item.badge > 0 && (
@@ -592,7 +594,7 @@ export default function Navbar({
         )}
         <div className="nxfi-nav-links" ref={navScroll.ref}>
           {navItemsWithBadges.map((item) => (
-            <a key={item.key} href={item.href} className={`nxfi-nav-link ${activePath === item.href ? "active" : ""}`}>
+            <a key={item.key} href={item.href} data-tour-target={`nav-${item.key}`} className={`nxfi-nav-link ${activePath === item.href ? "active" : ""}`}>
               <item.icon size={14} />
               {t(`items.${item.key}`)}
               {item.badge !== undefined && item.badge > 0 && (

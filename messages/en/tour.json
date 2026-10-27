@@ -1,0 +1,174 @@
+{
+  "ui": {
+    "dialogLabel": "NexusFi guide",
+    "stepOf": "Step {current} of {total}",
+    "progress": "Guide progress",
+    "what": "What it is",
+    "purpose": "What it's for",
+    "example": "Practical example",
+    "benefit": "Business benefit",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "skip": "Skip tour",
+    "endTour": "End guide",
+    "close": "Close",
+    "listen": "Listen to explanation",
+    "pause": "Pause narration",
+    "resume": "Resume narration",
+    "replay": "Replay narration",
+    "loadingAudio": "Preparing narration…",
+    "audioError": "The narration could not be played right now. The text is still available below.",
+    "audioUnavailable": "Voice narration is not available at the moment. You can read the explanation as usual.",
+    "audioOffline": "No internet connection: the narration could not be loaded.",
+    "audioBlocked": "The browser blocked autoplay. Tap “Listen to explanation”.",
+    "autoplayOn": "Auto narration: on",
+    "autoplayOff": "Auto narration: off",
+    "volume": "Narration volume",
+    "narrationBy": "AI-generated narration (ElevenLabs)",
+    "transcript": "Narration text",
+    "openPage": "Open this page",
+    "otherCategories": "See other categories",
+    "restartFull": "Restart the full tour",
+    "resume_tour": "Continue where I left off",
+    "helpButton": "Get to know NexusFi",
+    "helpMenuTitle": "NexusFi guide",
+    "helpThisPage": "Understand this page",
+    "helpChoose": "Choose a category",
+    "helpClose": "Close help menu",
+    "singleTitle": "How it works: {title}",
+    "backToList": "Back to list"
+  },
+  "welcome": {
+    "title": "Welcome to NexusFi!",
+    "body": "Get to know each module with practical examples and voice narration. It takes a few minutes and you can pause any time.",
+    "start": "Start guided tour",
+    "explore": "Explore the platform",
+    "hint": "You can open the guide at any time with the help button."
+  },
+  "completion": {
+    "title": "Tour complete!",
+    "body": "You now know what each area is for. If you have questions about a module, the help button is always nearby.",
+    "done": "Back to the platform",
+    "restart": "Watch the tour again"
+  },
+  "steps": {
+    "dashboard": {
+      "category": "Dashboard",
+      "title": "Understand your dashboard",
+      "description": "The dashboard gathers your key business indicators in one place: period result, comparison with the previous period, cash projection for the coming days, due dates and alerts.",
+      "purpose": "It helps you quickly see how the company is doing and what needs attention, without opening each module. Use the month selector in the top bar to change the period.",
+      "example": "On opening the panel you see bills due this week and a tight projected balance in 15 days, so you decide to collect a payment early.",
+      "benefit": "You see the overall situation in seconds and act before problems happen.",
+      "audio": "Let's get to know the dashboard. It gathers your company's key indicators in one place: the period result, the cash projection and due dates. Use it to quickly understand how the business is doing and what needs attention."
+    },
+    "fluxoCaixa": {
+      "category": "Cash flow",
+      "title": "Understand your cash flow",
+      "description": "Cash flow shows the money coming in and going out of the company over time, with balance and transactions organized by category.",
+      "purpose": "It helps you track available funds and plan payments. It is not revenue or profit: it shows the money that actually came in and went out.",
+      "example": "Your company receives R$ 5,000 from customers and pays R$ 2,000 in expenses in the period. Considering only these movements, the difference is a net inflow of R$ 3,000.",
+      "benefit": "You see how each movement affects cash and plan your commitments better.",
+      "audio": "Let's get to know cash flow. Here you follow the money coming in and going out of your company. This helps you understand available funds and prepare for upcoming commitments. Remember: cash flow is not the same as revenue or profit."
+    },
+    "contasPagar": {
+      "category": "Accounts payable",
+      "title": "How accounts payable work",
+      "description": "Here you record the company's financial commitments with due dates and track what is pending and what has been paid. The module also covers purchase orders and suppliers.",
+      "purpose": "It organizes obligations to avoid delays, fines and interest. When a cash flow outflow matches a bill, it can be settled automatically.",
+      "example": "Rent of R$ 3,000 is due on the 10th. You add the bill, see the due alert, and when you record the payment in cash flow the bill is settled.",
+      "benefit": "Fewer late payments and fines, and a clear view of what must be paid.",
+      "audio": "Let's get to know accounts payable. Here you record what the company has to pay and when it is due. This makes it easy to track what is pending and what has been paid, avoiding delays and fines."
+    },
+    "contasReceber": {
+      "category": "Accounts receivable",
+      "title": "How accounts receivable work",
+      "description": "It tracks the money your customers still have to pay: amounts, due dates, what has been received and what is open or overdue.",
+      "purpose": "It helps you track delinquency and organize collections. On Pro you can send email charges with Pix copy-and-paste and automatic reminders.",
+      "example": "A customer owes R$ 1,800 due tomorrow. You send the charge and, when the money arrives, the receipt is recorded and the bill is settled.",
+      "benefit": "You know who owes what and since when, and get paid faster.",
+      "audio": "Let's get to know accounts receivable. Here you follow the money your customers still have to pay, the deadlines and what has already been received. This helps you spot delays and organize collections."
+    },
+    "faturamento": {
+      "category": "Revenue",
+      "title": "Understand revenue",
+      "description": "Revenue is the total sold in a period, whether or not the customer has paid. You can find it in the Revenue report, under Reports.",
+      "purpose": "It shows the size of your sales. It differs from receipts (money that came in), profit (what is left after costs) and cash balance (money available now).",
+      "example": "You sold R$ 10,000 this month but have only received R$ 6,000. Revenue is R$ 10,000; cash received is R$ 6,000; profit still depends on costs.",
+      "benefit": "It avoids confusing a sale with money in the bank and helps measure growth.",
+      "audio": "Let's understand revenue. It shows the total you sold in the period, even if part has not been received yet. So a recorded sale does not mean money available in the account. Revenue, receipts, profit and cash balance are different things."
+    },
+    "vendas": {
+      "category": "Sales and POS",
+      "title": "How the sales panel works",
+      "description": "The sales panel gathers sales from connected channels and manual sales, with performance indicators. On Pro there is also the POS, with opening and closing of the cash register per shift.",
+      "purpose": "It helps you track commercial performance and link each sale to stock and cash. Completed, cancelled and received sales are different situations.",
+      "example": "A R$ 200 counter sale is recorded in the POS; the product stock decreases and the amount goes into the shift's cash.",
+      "benefit": "You understand what you sell, through which channel and with what result.",
+      "audio": "Let's get to know the sales panel. Here you track commercial performance and how sales relate to stock and cash. On Pro, the POS lets you record counter sales and control the register by shift."
+    },
+    "estoque": {
+      "category": "Inventory",
+      "title": "How inventory works",
+      "description": "Register products and track available quantities, with inflows and outflows.",
+      "purpose": "It prevents stockouts and excess idle goods. Inventory value, sales revenue and cost of goods sold are different things.",
+      "example": "You have 20 T-shirts and sell 5: stock drops to 15. When it gets close to the minimum, it's time to restock.",
+      "benefit": "You restock at the right time and know how much money is tied up in goods.",
+      "audio": "Let's get to know inventory. Here you register your products and track available quantities. This makes it easier to restock at the right time and avoid running out of products."
+    },
+    "integracoes": {
+      "category": "Marketplace integrations",
+      "title": "Marketplace integrations",
+      "description": "An integration connects NexusFi to a marketplace, such as Mercado Livre, TikTok Shop or Shein, to bring in products and orders automatically. You authorize the connection in the Inventory tab.",
+      "purpose": "It keeps data in sync without typing everything twice. The connection status appears on each integration's own screen; check it there to see whether it is connected.",
+      "example": "You authorize the connection with the marketplace; orders start appearing in the sales panel and stock is updated.",
+      "benefit": "Less manual work and fewer errors between what you sell and what you have in stock.",
+      "audio": "Let's talk about marketplace integrations. An integration connects NexusFi to selling platforms to bring in products and orders automatically. You authorize the connection in the inventory tab and check there whether it is active."
+    },
+    "relatorios": {
+      "category": "Reports",
+      "title": "How to use reports",
+      "description": "Reports turn your entries into analysis: Cash Flow, Revenue, Expenses, Income Statement and Sales. The Sales report shows cost, profit, margin and return on cost, and should not be confused with revenue or cash flow.",
+      "purpose": "They help you analyze results and decide. The income statement shows whether the company made a profit or a loss; Expenses shows where the money is going.",
+      "example": "In the Expenses report you see that freight costs grew, so you renegotiate with the carrier.",
+      "benefit": "Decisions based on numbers, not guesses.",
+      "audio": "Let's get to know reports. They turn your entries into analysis, such as cash flow, revenue, expenses, the income statement and sales. Use each report to understand results and decide with more confidence."
+    },
+    "impostos": {
+      "category": "Taxes",
+      "title": "How taxes work",
+      "description": "Record and track the company's taxes and their due dates. On Pro, the invoice reader uses artificial intelligence to identify withholdings and create the entries.",
+      "purpose": "It keeps tax obligations visible so you don't miss deadlines. Always confirm amounts with your accountant.",
+      "example": "You add this month's tax due on the 20th and get a reminder before the date.",
+      "benefit": "Lower risk of fines for forgetting and more predictable cash.",
+      "audio": "Let's get to know taxes. Here you record and track the company's taxes and due dates. On Pro, the invoice reader helps identify withholdings. Always confirm amounts with your accountant."
+    },
+    "centroCustos": {
+      "category": "Cost centers",
+      "title": "How cost centers work",
+      "description": "Cost centers organize expenses by area, project or purpose in the company.",
+      "purpose": "They show where money is being spent and how much each area consumes.",
+      "example": "You separate Marketing and Operations expenses and find out which area is above expectations.",
+      "benefit": "More control over spending and better cut or investment decisions.",
+      "audio": "Let's get to know cost centers. They organize expenses by area or project, so you can see where money is being spent and decide more clearly."
+    },
+    "equipe": {
+      "category": "Team and users",
+      "title": "Team and permissions",
+      "description": "Invite people to work in the same account and choose which categories each can access. Sensitive actions can be protected by a PIN.",
+      "purpose": "It lets you share work without giving full access. Each person sees only what was granted to them.",
+      "example": "You grant only Accounts payable to the finance person, and they don't see the rest.",
+      "benefit": "More security and more autonomy for the team.",
+      "audio": "Let's talk about the team. Here you invite people to your account and choose which areas each can access. This way the team works with autonomy and you stay in control."
+    },
+    "configuracoes": {
+      "category": "Settings",
+      "title": "Account settings",
+      "description": "In Settings you adjust your profile and company data, appearance, WhatsApp alerts, and send suggestions or problem reports. Your subscription and trial are also managed in your account.",
+      "purpose": "It sets the platform up your way with the right data, which appears, for example, in the charges sent to customers.",
+      "example": "You fill in the company data so email charges go out with your name and document.",
+      "benefit": "An organized account and more professional communication.",
+      "audio": "Finally, settings. Here you adjust your profile, company data and appearance, and send suggestions or report problems. Keep this data up to date so everything works better."
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { usePathname } from "@/i18n/navigation";
 import { useEffect } from "react";
 import { PeriodProvider } from "../hooks/usePeriod";
 import { SubscriptionGate } from "./SubscriptionGate";
+import { TourRuntime } from "./tour/TourRuntime";
 
 // Keep in sync with the internalPrefixes list in the inline script in
 // layout.tsx (that copy provides the pre-hydration value for the first paint;
@@ -39,6 +40,7 @@ const INTERNAL_PREFIXES = [
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isInternal = INTERNAL_PREFIXES.some((p) => pathname.startsWith(p));
 
   useEffect(() => {
     const hasNav = INTERNAL_PREFIXES.some((p) => pathname.startsWith(p));
@@ -54,6 +56,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div id="conteudo-principal" tabIndex={-1} className="app-shell">
         <SubscriptionGate>{children}</SubscriptionGate>
       </div>
+      {/* Tour guiado + botão de ajuda permanente (só nas telas do app). */}
+      {isInternal && <TourRuntime />}
     </PeriodProvider>
   );
 }

@@ -24,6 +24,7 @@ import categories from './categories.json';
 import assinatura from './assinatura.json';
 import users from './users.json';
 import compras from './compras.json';
+import tour from './tour.json';
 
 const messages = {
   common,
@@ -49,6 +50,7 @@ const messages = {
   assinatura,
   users,
   compras,
+  tour,
 };
 
 export default messages;
