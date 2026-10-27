@@ -66,18 +66,29 @@ export function useSpotRect(target: string | null, active: boolean): SpotRect | 
   return rect;
 }
 
-/** Camadas do spotlight: bloqueador de cliques, fundo escurecido com "furo" e anel luminoso. */
+/** Camadas do spotlight: bloqueador de cliques, fundo escurecido com "furo" e anel luminoso.
+ *  O furo é feito com 4 painéis ao redor do alvo (em vez de clip-path), pra o item
+ *  destacado ficar nítido e sem escurecimento em qualquer navegador. */
 export function TourSpotlight({ rect }: { rect: SpotRect | null }) {
-  let clip: string | undefined;
+  let panes: React.CSSProperties[] | null = null;
   if (rect && typeof window !== "undefined") {
     const x1 = Math.max(0, rect.left), y1 = Math.max(0, rect.top);
     const x2 = Math.min(window.innerWidth, rect.left + rect.width), y2 = Math.min(window.innerHeight, rect.top + rect.height);
-    clip = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
+    panes = [
+      { top: 0, left: 0, right: 0, height: y1 },
+      { top: y2, left: 0, right: 0, bottom: 0 },
+      { top: y1, left: 0, width: x1, height: y2 - y1 },
+      { top: y1, left: x2, right: 0, height: y2 - y1 },
+    ];
   }
   return (
     <>
       <div className="nxt-blocker" aria-hidden="true" />
-      <div className="nxt-dim" aria-hidden="true" style={clip ? { clipPath: clip } : undefined} />
+      {panes ? (
+        panes.map((style, i) => <div key={i} className="nxt-dim" aria-hidden="true" style={style} />)
+      ) : (
+        <div className="nxt-dim" aria-hidden="true" />
+      )}
       {rect && <div className="nxt-ring" aria-hidden="true" style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }} />}
     </>
   );
