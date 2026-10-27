@@ -102,27 +102,6 @@
 .nxt-flow i:nth-child(3) { top: 66%; background: var(--neg); animation-name: nxt-flowout; animation-delay: .7s; }
 .nxt-flow i:nth-child(4) { top: 66%; background: var(--neg); animation-name: nxt-flowout; animation-delay: 2.2s; }
 
-/* Áudio */
-.nxt-audio { margin-top: 14px; padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--sunken); }
-.nxt-audio-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.nxt-listen {
-  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer;
-  background: var(--brand); color: var(--brand-on); font-size: 13px; font-weight: 600; transition: background .15s, transform .15s;
-}
-.nxt-listen:hover { background: var(--brand-hover); } .nxt-listen:active { transform: scale(.97); }
-.nxt-listen:disabled { opacity: .75; cursor: progress; }
-.nxt-wave { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
-.nxt-wave i { width: 3px; background: currentColor; border-radius: 2px; height: 30%; animation: nxt-wave 0.9s ease-in-out infinite; }
-.nxt-wave i:nth-child(2) { animation-delay: .15s; } .nxt-wave i:nth-child(3) { animation-delay: .3s; } .nxt-wave i:nth-child(4) { animation-delay: .45s; }
-.nxt-spin { animation: nxt-spin 0.9s linear infinite; }
-.nxt-vol { width: 84px; accent-color: var(--brand); }
-.nxt-status { font-size: 12px; color: var(--text-muted); margin: 8px 2px 0; min-height: 1em; }
-.nxt-status[data-kind="error"] { color: var(--neg); }
-.nxt-credit { font-size: 11px; color: var(--text-subtle); margin-left: auto; }
-.nxt-details { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
-.nxt-details summary { cursor: pointer; }
-.nxt-details p { margin: 6px 0 0; line-height: 1.5; }
-
 .nxt-foot {
   flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 18px 14px; border-top: 1px solid var(--border); background: var(--surface);
 }
@@ -183,8 +162,6 @@ html[data-nav-layout="vertical"][data-has-nav="1"] .nxt-menu { left: 276px; }
 @keyframes nxt-orbit { 50% { transform: translate(10px, -8px); opacity: .9; } }
 @keyframes nxt-flowin { from { left: 0; opacity: 0; } 15%, 80% { opacity: 1; } to { left: 46%; opacity: 0; } }
 @keyframes nxt-flowout { from { left: 54%; opacity: 0; } 15%, 80% { opacity: 1; } to { left: 100%; opacity: 0; } }
-@keyframes nxt-wave { 50% { height: 100%; } }
-@keyframes nxt-spin { to { transform: rotate(360deg); } }
 @keyframes nxt-fall { to { transform: translateY(420px) rotate(540deg); opacity: 0; } }
 
 html[data-reduced-motion="1"] .nxt-layer *,

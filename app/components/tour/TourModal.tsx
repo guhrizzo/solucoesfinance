@@ -4,19 +4,16 @@ import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
-  X, ChevronLeft, ChevronRight, Volume2, Play, RotateCcw, Loader2, Sparkles, PartyPopper,
-  ExternalLink, ListChecks, Check, AudioLines,
+  X, ChevronLeft, ChevronRight, Sparkles, PartyPopper,
+  ExternalLink, ListChecks, Check,
 } from "lucide-react";
 import type { TourStepDef } from "@/lib/tour/catalog";
-import type { useTourAudio } from "./useTourAudio";
 import { TourIllustration, StepIcon } from "./TourIllustration";
 import { TourSpotlight, type SpotRect } from "./TourSpotlight";
 import "./tour.css";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
-
-type Audio = ReturnType<typeof useTourAudio>;
 
 interface FrameProps {
   label: string;
@@ -130,9 +127,6 @@ interface StepDialogProps {
   index: number;
   total: number;
   rect: SpotRect | null;
-  audio: Audio;
-  autoplay: boolean;
-  onToggleAutoplay: () => void;
   onNext: () => void;
   onBack: () => void;
   onSkip: () => void;
@@ -141,26 +135,12 @@ interface StepDialogProps {
   onOpenPage?: () => void;
 }
 
-const STATUS_KEY: Partial<Record<Audio["status"], string>> = {
-  loading: "ui.loadingAudio",
-  error: "ui.audioError",
-  unavailable: "ui.audioUnavailable",
-  offline: "ui.audioOffline",
-  blocked: "ui.audioBlocked",
-};
-
 export function StepDialog(p: StepDialogProps) {
   const t = useTranslations("tour");
-  const { step, audio } = p;
+  const { step } = p;
   const base = `steps.${step.id}`;
   const last = p.index === p.total - 1;
-  const st = audio.status;
-  const playing = st === "playing";
-  const paused = st === "paused";
-  const busy = st === "loading";
-  const noAudio = st === "unavailable";
   const pct = Math.round(((p.index + 1) / p.total) * 100);
-  const statusKey = STATUS_KEY[st];
   const align = p.rect && p.rect.top > window.innerHeight / 2 ? "top" : "center";
 
   return (
@@ -189,46 +169,6 @@ export function StepDialog(p: StepDialogProps) {
           <div className="nxt-sec"><h3>{t("ui.purpose")}</h3><p>{t(`${base}.purpose`)}</p></div>
           <div className="nxt-sec"><h3>{t("ui.example")}</h3><p className="nxt-example">{t(`${base}.example`)}</p></div>
           <div className="nxt-sec"><h3>{t("ui.benefit")}</h3><p className="nxt-benefit">{t(`${base}.benefit`)}</p></div>
-        </div>
-
-        <div className="nxt-audio">
-          <div className="nxt-audio-row">
-            {!playing && !paused ? (
-              <button type="button" className="nxt-listen" onClick={() => audio.play(step.id)} disabled={busy || noAudio}>
-                {busy ? <Loader2 size={16} className="nxt-spin" aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
-                {busy ? t("ui.loadingAudio") : t("ui.listen")}
-              </button>
-            ) : (
-              <button type="button" className="nxt-listen" onClick={paused ? audio.resume : audio.pause}>
-                {paused ? <Play size={16} aria-hidden="true" /> : <span className="nxt-wave" aria-hidden="true"><i /><i /><i /><i /></span>}
-                {paused ? t("ui.resume") : t("ui.pause")}
-              </button>
-            )}
-            {(playing || paused || st === "ended") && (
-              <button type="button" className="nxt-iconbtn" onClick={audio.replay} aria-label={t("ui.replay")} title={t("ui.replay")}>
-                <RotateCcw size={16} aria-hidden="true" />
-              </button>
-            )}
-            <button
-              type="button" className="nxt-iconbtn" role="switch" aria-checked={p.autoplay} data-on={p.autoplay ? "1" : "0"}
-              onClick={p.onToggleAutoplay} aria-label={p.autoplay ? t("ui.autoplayOn") : t("ui.autoplayOff")}
-              title={p.autoplay ? t("ui.autoplayOn") : t("ui.autoplayOff")}
-            >
-              <AudioLines size={16} aria-hidden="true" />
-            </button>
-            <input
-              type="range" className="nxt-vol" min={0} max={1} step={0.05} value={audio.volume}
-              onChange={(e) => audio.setVolume(Number(e.target.value))} aria-label={t("ui.volume")}
-            />
-            <span className="nxt-credit">{t("ui.narrationBy")}</span>
-          </div>
-          <p className="nxt-status" role="status" aria-live="polite" data-kind={st === "error" || st === "offline" ? "error" : undefined}>
-            {statusKey ? t(statusKey) : ""}
-          </p>
-          <details className="nxt-details">
-            <summary>{t("ui.transcript")}</summary>
-            <p>{t(`${base}.audio`)}</p>
-          </details>
         </div>
       </div>
 

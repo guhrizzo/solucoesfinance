@@ -13,20 +13,6 @@
     "skip": "Omitir tour",
     "endTour": "Cerrar guía",
     "close": "Cerrar",
-    "listen": "Escuchar explicación",
-    "pause": "Pausar narración",
-    "resume": "Reanudar narración",
-    "replay": "Repetir narración",
-    "loadingAudio": "Preparando la narración…",
-    "audioError": "No se pudo reproducir la narración ahora. El texto sigue disponible abajo.",
-    "audioUnavailable": "La narración por voz no está disponible en este momento. Puedes leer la explicación normalmente.",
-    "audioOffline": "Sin conexión a internet: no se pudo cargar la narración.",
-    "audioBlocked": "El navegador bloqueó la reproducción automática. Toca “Escuchar explicación”.",
-    "autoplayOn": "Narración automática: activada",
-    "autoplayOff": "Narración automática: desactivada",
-    "volume": "Volumen de la narración",
-    "narrationBy": "Narración generada por IA (ElevenLabs)",
-    "transcript": "Texto de la narración",
     "openPage": "Abrir esta página",
     "otherCategories": "Ver otras categorías",
     "restartFull": "Rehacer el tour completo",
@@ -59,8 +45,7 @@
       "description": "El dashboard reúne los principales indicadores de tu negocio en un solo lugar: resultado del período, comparación con el período anterior, proyección de caja para los próximos días, vencimientos y alertas.",
       "purpose": "Te ayuda a ver rápidamente cómo está la empresa y qué requiere atención, sin abrir cada módulo. Usa el selector de mes en la barra superior para cambiar el período.",
       "example": "Al abrir el panel ves cuentas que vencen esta semana y un saldo proyectado ajustado a 15 días, y decides adelantar un cobro.",
-      "benefit": "Ves la situación general en segundos y actúas antes de que ocurra el problema.",
-      "audio": "Vamos a conocer el dashboard. Reúne los principales indicadores de tu empresa en un solo lugar: el resultado del período, la proyección de caja y los vencimientos. Úsalo para entender rápidamente cómo está el negocio y qué necesita atención."
+      "benefit": "Ves la situación general en segundos y actúas antes de que ocurra el problema."
     },
     "fluxoCaixa": {
       "category": "Flujo de caja",
@@ -68,8 +53,7 @@
       "description": "El flujo de caja muestra las entradas y salidas de dinero de la empresa a lo largo del tiempo, con saldo y movimientos organizados por categoría.",
       "purpose": "Ayuda a seguir la disponibilidad financiera y a planificar los pagos. No es la facturación ni la ganancia: muestra el dinero que realmente entró y salió.",
       "example": "Tu empresa recibe R$ 5.000 de clientes y paga R$ 2.000 en gastos en el período. Considerando solo esos movimientos, la diferencia es una entrada neta de R$ 3.000.",
-      "benefit": "Visualizas cómo cada movimiento afecta la caja y planificas mejor tus compromisos.",
-      "audio": "Vamos a conocer el flujo de caja. Aquí sigues el dinero que entra y sale de tu empresa. Esto ayuda a entender la disponibilidad financiera y a prepararte para los próximos compromisos. Recuerda: flujo de caja no es lo mismo que facturación o ganancia."
+      "benefit": "Visualizas cómo cada movimiento afecta la caja y planificas mejor tus compromisos."
     },
     "contasPagar": {
       "category": "Cuentas por pagar",
@@ -77,8 +61,7 @@
       "description": "Aquí registras los compromisos financieros de la empresa con su fecha de vencimiento y sigues lo pendiente y lo ya pagado. El módulo también reúne pedidos de compra y proveedores.",
       "purpose": "Organiza las obligaciones para evitar atrasos, multas e intereses. Cuando una salida en el flujo de caja corresponde a una cuenta, se puede dar de baja automáticamente.",
       "example": "El alquiler de R$ 3.000 vence el día 10. Registras la cuenta, ves la alerta de vencimiento y, al registrar el pago en el flujo de caja, la cuenta se da de baja.",
-      "benefit": "Menos atrasos y multas, y una visión clara de lo que hay que pagar.",
-      "audio": "Vamos a conocer las cuentas por pagar. Aquí registras lo que la empresa debe pagar y cuándo vence. Así es fácil seguir lo pendiente y lo pagado, evitando atrasos y multas."
+      "benefit": "Menos atrasos y multas, y una visión clara de lo que hay que pagar."
     },
     "contasReceber": {
       "category": "Cuentas por cobrar",
@@ -86,8 +69,7 @@
       "description": "Controla el dinero que tus clientes aún deben pagar: montos, vencimientos, lo ya recibido y lo que está abierto o atrasado.",
       "purpose": "Ayuda a seguir la morosidad y a organizar los cobros. En la versión Pro puedes enviar cobros por correo con Pix copia y pega y recordatorios automáticos.",
       "example": "Un cliente debe R$ 1.800 con vencimiento mañana. Envías el cobro y, cuando llega el dinero, se registra el cobro y se da de baja la cuenta.",
-      "benefit": "Sabes quién debe, cuánto y desde cuándo, y cobras más rápido.",
-      "audio": "Vamos a conocer las cuentas por cobrar. Aquí sigues el dinero que tus clientes aún deben pagar, los plazos y lo ya recibido. Esto ayuda a identificar atrasos y a organizar los cobros."
+      "benefit": "Sabes quién debe, cuánto y desde cuándo, y cobras más rápido."
     },
     "faturamento": {
       "category": "Facturación",
@@ -95,8 +77,7 @@
       "description": "La facturación es el total vendido en un período, haya pagado o no el cliente. La encuentras en el informe de Facturación, dentro de Informes.",
       "purpose": "Muestra el tamaño de tus ventas. Es distinta del cobro (dinero que entró), de la ganancia (lo que sobra tras los costos) y del saldo de caja (dinero disponible ahora).",
       "example": "Vendiste R$ 10.000 en el mes, pero solo cobraste R$ 6.000. La facturación es R$ 10.000; la caja recibió R$ 6.000; la ganancia aún depende de los costos.",
-      "benefit": "Evita confundir venta con dinero en caja y ayuda a medir el crecimiento.",
-      "audio": "Vamos a entender la facturación. Muestra el total que vendiste en el período, aunque parte aún no se haya cobrado. Por eso, una venta registrada no significa dinero disponible en la cuenta. Facturación, cobro, ganancia y saldo de caja son cosas distintas."
+      "benefit": "Evita confundir venta con dinero en caja y ayuda a medir el crecimiento."
     },
     "vendas": {
       "category": "Ventas y PDV",
@@ -104,8 +85,7 @@
       "description": "El panel de ventas reúne las ventas de los canales conectados y las ventas manuales, con indicadores de desempeño. En la versión Pro también está el PDV, con apertura y cierre de caja por turno.",
       "purpose": "Ayuda a seguir el desempeño comercial y a vincular cada venta con el inventario y la caja. Ventas realizadas, canceladas y cobradas son situaciones distintas.",
       "example": "Una venta de R$ 200 en mostrador se registra en el PDV; el inventario baja y el valor entra en la caja del turno.",
-      "benefit": "Entiendes qué vendes, por qué canal y con qué resultado.",
-      "audio": "Vamos a conocer el panel de ventas. Aquí sigues el desempeño comercial y la relación de las ventas con el inventario y la caja. En la versión Pro, el PDV permite registrar ventas en mostrador y controlar la caja por turno."
+      "benefit": "Entiendes qué vendes, por qué canal y con qué resultado."
     },
     "estoque": {
       "category": "Inventario",
@@ -113,8 +93,7 @@
       "description": "Registra productos y sigue las cantidades disponibles, con entradas y salidas.",
       "purpose": "Evita la falta de producto y el exceso de mercadería parada. Valor del inventario, ingresos por ventas y costo de la mercadería vendida son cosas distintas.",
       "example": "Tienes 20 camisetas y vendes 5: el inventario baja a 15. Cuando se acerque al mínimo, toca reponer.",
-      "benefit": "Repones en el momento justo y sabes cuánto dinero está parado en mercadería.",
-      "audio": "Vamos a conocer el inventario. Aquí registras tus productos y sigues las cantidades disponibles. Así es más fácil reponer en el momento justo y evitar quedarte sin productos."
+      "benefit": "Repones en el momento justo y sabes cuánto dinero está parado en mercadería."
     },
     "integracoes": {
       "category": "Integraciones con marketplaces",
@@ -122,8 +101,7 @@
       "description": "Una integración conecta NexusFi con un marketplace, como Mercado Libre, TikTok Shop o Shein, para traer productos y pedidos automáticamente. Tú autorizas la conexión en la pestaña Inventario.",
       "purpose": "Mantiene los datos sincronizados sin escribir todo dos veces. El estado de la conexión aparece en la pantalla de cada integración; confirma allí si está conectada.",
       "example": "Autorizas la conexión con el marketplace; los pedidos empiezan a aparecer en el panel de ventas y el inventario se actualiza.",
-      "benefit": "Menos trabajo manual y menos errores entre lo que vendes y lo que tienes en inventario.",
-      "audio": "Hablemos de las integraciones con marketplaces. Una integración conecta NexusFi con plataformas de venta para traer productos y pedidos automáticamente. Autorizas la conexión en la pestaña de inventario y confirmas allí si está activa."
+      "benefit": "Menos trabajo manual y menos errores entre lo que vendes y lo que tienes en inventario."
     },
     "relatorios": {
       "category": "Informes",
@@ -131,8 +109,7 @@
       "description": "Los informes convierten tus registros en análisis: Flujo de Caja, Facturación, Gastos, Estado de Resultados y Ventas. El informe de Ventas muestra costo, ganancia, margen y retorno sobre el costo, y no debe confundirse con la facturación ni con el flujo de caja.",
       "purpose": "Ayudan a analizar resultados y a decidir. El estado de resultados muestra si hubo ganancia o pérdida; el de Gastos muestra adónde va el dinero.",
       "example": "En el informe de Gastos ves que subió el costo de flete y renegocias con el transportista.",
-      "benefit": "Decisiones basadas en números, no en intuición.",
-      "audio": "Vamos a conocer los informes. Convierten tus registros en análisis, como flujo de caja, facturación, gastos, estado de resultados y ventas. Usa cada informe para entender los resultados y decidir con más seguridad."
+      "benefit": "Decisiones basadas en números, no en intuición."
     },
     "impostos": {
       "category": "Impuestos",
@@ -140,8 +117,7 @@
       "description": "Registra y sigue los impuestos de la empresa y sus vencimientos. En la versión Pro, el lector de facturas usa inteligencia artificial para identificar retenciones y crear los registros.",
       "purpose": "Mantiene visibles las obligaciones fiscales para que no olvides plazos. Confirma siempre los valores con tu contador.",
       "example": "Registras el impuesto del mes con vencimiento el día 20 y recibes el aviso antes de la fecha.",
-      "benefit": "Menos riesgo de multas por olvido y más previsibilidad en la caja.",
-      "audio": "Vamos a conocer los impuestos. Aquí registras y sigues los impuestos de la empresa y sus vencimientos. En la versión Pro, el lector de facturas ayuda a identificar retenciones. Confirma siempre los valores con tu contador."
+      "benefit": "Menos riesgo de multas por olvido y más previsibilidad en la caja."
     },
     "centroCustos": {
       "category": "Centro de costos",
@@ -149,8 +125,7 @@
       "description": "Los centros de costo organizan los gastos por área, proyecto o finalidad de la empresa.",
       "purpose": "Muestra dónde se está gastando el dinero y cuánto consume cada área.",
       "example": "Separas los gastos de Marketing y de Operación y descubres qué área está por encima de lo esperado.",
-      "benefit": "Más control sobre los gastos y mejores decisiones de recorte o inversión.",
-      "audio": "Vamos a conocer el centro de costos. Organiza los gastos por área o proyecto, para que veas dónde se gasta el dinero y decidas con más claridad."
+      "benefit": "Más control sobre los gastos y mejores decisiones de recorte o inversión."
     },
     "equipe": {
       "category": "Equipo y usuarios",
@@ -158,8 +133,7 @@
       "description": "Invita personas a trabajar en la misma cuenta y elige a qué categorías puede acceder cada una. Las acciones sensibles pueden protegerse con un PIN.",
       "purpose": "Permite repartir el trabajo sin dar acceso total. Cada persona ve solo lo que se le habilitó.",
       "example": "Habilitas solo Cuentas por pagar a la persona de finanzas, y no ve el resto.",
-      "benefit": "Más seguridad y más autonomía para el equipo.",
-      "audio": "Hablemos del equipo. Aquí invitas personas a tu cuenta y eliges qué áreas puede acceder cada una. Así el equipo trabaja con autonomía y tú mantienes el control."
+      "benefit": "Más seguridad y más autonomía para el equipo."
     },
     "configuracoes": {
       "category": "Configuración",
@@ -167,8 +141,7 @@
       "description": "En Configuración ajustas el perfil y los datos de la empresa, la apariencia, los avisos por WhatsApp y envías sugerencias o reportes de problemas. La suscripción y el período de prueba también se gestionan en tu cuenta.",
       "purpose": "Deja la plataforma a tu manera y con los datos correctos, que aparecen, por ejemplo, en los cobros enviados a los clientes.",
       "example": "Completas los datos de la empresa para que los cobros por correo salgan con tu nombre y documento.",
-      "benefit": "Una cuenta ordenada y comunicaciones más profesionales.",
-      "audio": "Por último, la configuración. Aquí ajustas el perfil, los datos de la empresa y la apariencia, además de enviar sugerencias o reportar problemas. Mantén estos datos al día para que todo funcione mejor."
+      "benefit": "Una cuenta ordenada y comunicaciones más profesionales."
     }
   }
 }

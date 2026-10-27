@@ -5,13 +5,11 @@
 // Renderizado só nas rotas internas (ver AppShell).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useAccountScope } from "@/app/hooks/useAccountScope";
 import { useSubscription } from "@/app/hooks/useSubscription";
 import { getStep, stepForPath, visibleSteps, TOUR_STEP_IDS, type TourAccess } from "@/lib/tour/catalog";
 import { DEFAULT_TOUR_STATE, neighbor, normalizeTourState, shouldAutoOffer, type TourState } from "@/lib/tour/state";
-import { useTourAudio } from "./useTourAudio";
 import { useSpotRect } from "./TourSpotlight";
 import { CompletionDialog, StepDialog, WelcomeDialog } from "./TourModal";
 import { TourHelpMenu } from "./TourHelpMenu";
@@ -20,12 +18,10 @@ type View = "closed" | "welcome" | "step" | "completion";
 const SESSION_FLAG = "nexusfi-tour-offered";
 
 export function TourRuntime() {
-  const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
   const scope = useAccountScope();
   const sub = useSubscription();
-  const audio = useTourAudio(locale);
 
   const [state, setState] = useState<TourState | null>(null);
   const [setupDone, setSetupDone] = useState(false);
@@ -129,16 +125,14 @@ export function TourRuntime() {
   }, [ids, showStep]);
 
   const closeAll = useCallback(() => {
-    audio.stop();
     setView("closed");
     setMenuOpen(false);
-  }, [audio]);
+  }, []);
 
   const finish = useCallback(() => {
-    audio.stop();
     void persist({ status: "completed", lastStepId: null });
     setView("completion");
-  }, [audio, persist]);
+  }, [persist]);
 
   const dismiss = useCallback(() => {
     closeAll();
@@ -154,17 +148,6 @@ export function TourRuntime() {
     const n = stepId ? neighbor(ids, stepId, -1) : null;
     if (n) showStep(n, "tour");
   }, [ids, showStep, stepId]);
-
-  /* ── Áudio acompanha a etapa exibida ── */
-  const autoplay = state?.autoplay ?? false;
-  const { play: playAudio, stop: stopAudio } = audio;
-  useEffect(() => {
-    if (view !== "step" || !stepId) { stopAudio(); return; }
-    stopAudio();
-    if (autoplay) void playAudio(stepId);
-    // só reage a mudança de etapa/visão — não a cada render do player
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, stepId, autoplay]);
 
   /* ── Destaque do elemento real ── */
   const rect = useSpotRect(step?.target ?? null, view === "step");
@@ -211,9 +194,6 @@ export function TourRuntime() {
           index={Math.max(0, ids.indexOf(step.id))}
           total={ids.length}
           rect={rect}
-          audio={audio}
-          autoplay={autoplay}
-          onToggleAutoplay={() => void persist({ autoplay: !autoplay })}
           onNext={onNext}
           onBack={onBack}
           onSkip={dismiss}

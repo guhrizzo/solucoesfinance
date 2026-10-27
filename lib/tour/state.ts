@@ -12,7 +12,6 @@ export type TourStatus = "never" | "in_progress" | "completed" | "dismissed";
 export interface TourState {
   status: TourStatus;
   lastStepId: string | null;
-  autoplay: boolean;
   dismissCount: number;
   updatedAt: number;
 }
@@ -20,7 +19,6 @@ export interface TourState {
 export const DEFAULT_TOUR_STATE: TourState = {
   status: "never",
   lastStepId: null,
-  autoplay: false,
   dismissCount: 0,
   updatedAt: 0,
 };
@@ -38,7 +36,6 @@ export function normalizeTourState(raw: unknown, validStepIds: readonly string[]
   return {
     status,
     lastStepId: last,
-    autoplay: r.autoplay === true,
     dismissCount: typeof r.dismissCount === "number" && r.dismissCount >= 0 ? Math.floor(r.dismissCount) : 0,
     updatedAt: typeof r.updatedAt === "number" ? r.updatedAt : 0,
   };
