@@ -68,3 +68,6 @@ export function neighbor(ids: readonly string[], current: string, dir: 1 | -1): 
   if (i === -1) return null;
   return ids[i + dir] ?? null;
 }
+
+/** Evento de janela que abre o menu do guia (Configurações, menu da conta). */
+export const OPEN_EVENT = "nexusfi:open-tour";

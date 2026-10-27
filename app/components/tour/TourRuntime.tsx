@@ -9,14 +9,12 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { useAccountScope } from "@/app/hooks/useAccountScope";
 import { useSubscription } from "@/app/hooks/useSubscription";
 import { getStep, stepForPath, visibleSteps, TOUR_STEP_IDS, type TourAccess } from "@/lib/tour/catalog";
-import { DEFAULT_TOUR_STATE, neighbor, normalizeTourState, shouldAutoOffer, type TourState } from "@/lib/tour/state";
+import { DEFAULT_TOUR_STATE, OPEN_EVENT, neighbor, normalizeTourState, shouldAutoOffer, type TourState } from "@/lib/tour/state";
 import { useSpotRect } from "./TourSpotlight";
 import { CompletionDialog, StepDialog, WelcomeDialog } from "./TourModal";
 import { TourHelpMenu } from "./TourHelpMenu";
 
 type View = "closed" | "welcome" | "step" | "completion";
-/** Disparado por Configurações pra abrir o menu do guia. */
-export const OPEN_EVENT = "nexusfi:open-tour";
 const SESSION_FLAG = "nexusfi-tour-offered";
 
 export function TourRuntime() {

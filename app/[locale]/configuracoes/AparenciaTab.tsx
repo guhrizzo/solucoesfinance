@@ -14,7 +14,7 @@ import { useNavbarLayout } from "@/app/hooks/useNavbarLayout";
 import { useReducedMotion } from "@/app/hooks/useReducedMotion";
 import { useAccessibilityWidget } from "@/app/hooks/useAccessibilityWidget";
 import { useLocalePreference } from "@/app/hooks/useLocalePreference";
-import { OPEN_EVENT } from "@/app/components/tour/TourRuntime";
+import { OPEN_EVENT } from "@/lib/tour/state";
 import type { AppLocale } from "@/i18n/routing";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;

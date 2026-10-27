@@ -25,6 +25,7 @@ import { useNotifications, type NotifItem } from "../hooks/useNotifications";
 import { MonthPickerModal } from "./MonthPickerModal";
 import type { PermissionKey } from "@/lib/accountScope";
 import { formatMoney } from "@/lib/format";
+import { OPEN_EVENT as TOUR_OPEN_EVENT } from "@/lib/tour/state";
 import "./Navbar.css";
 
 interface NavItem { key: string; icon: React.ElementType; href: string; badge?: number; permKey?: PermissionKey; }
@@ -376,8 +377,8 @@ export default function Navbar({
           <div style={{ padding: "6px 0" }}>
             {[
               { key: "profile", icon: UserCircle, action: () => router.push("/users") },
-              { key: "billing", icon: Zap, action: () => showToast(t("userMenu.billingOpening"), "info") },
-              { key: "help", icon: HelpCircle, action: () => showToast(t("userMenu.helpOpening"), "info") },
+              { key: "billing", icon: Zap, action: () => router.push("/assinatura") },
+              { key: "help", icon: HelpCircle, action: () => { setUserOpen(false); window.dispatchEvent(new Event(TOUR_OPEN_EVENT)); } },
               { key: "settings", icon: Settings, action: () => router.push("/configuracoes") },
             ].map((item) => (
               <button key={item.key} className="nxfi-drop-item" onClick={item.action}>
