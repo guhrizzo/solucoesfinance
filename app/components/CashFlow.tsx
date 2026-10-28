@@ -975,14 +975,14 @@ function ImportModal({ open, authUid, onClose, onImport }: {
           )}
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {(step === "input" || step === "preview") && errMsg && (
+            <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
+              style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)", color: "var(--status-danger-text)" }}>
+              <span className="shrink-0">⚠</span> {errMsg}
+            </div>
+          )}
           {step === "input" && (
             <>
-              {errMsg && (
-                <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2"
-                  style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)", color: "var(--status-danger-text)" }}>
-                  <span className="shrink-0">⚠</span> {errMsg}
-                </div>
-              )}
               <button onClick={() => fileRef.current?.click()}
                 className="w-full border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 transition-all hover:border-opacity-100 cursor-pointer"
                 style={{ borderColor: pdf ? "var(--brand)" : "var(--cf-border)" }}>
