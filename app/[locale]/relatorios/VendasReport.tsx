@@ -260,15 +260,22 @@ export function VendasReport({ ownerUid, hideValues }: { ownerUid: string; hideV
     try {
       let next = costs;
       const t0 = todayIso();
+      // Venda mais antiga de cada SKU: custo sem data só vira "a partir de hoje"
+      // se o histórico já cobre essas vendas; senão vale desde o início (do
+      // contrário as vendas já importadas continuam "sem custo").
+      const firstSale: Record<string, string> = {};
+      allLines.forEach((l) => { if (l.sku && (!firstSale[l.sku] || l.date < firstSale[l.sku])) firstSale[l.sku] = l.date; });
+      const defaultFrom = (k: string) => {
+        const covered = (next[k] || []).some((e) => e.from === "" || e.from <= (firstSale[k] ?? t0));
+        return covered ? t0 : "";
+      };
       for (const [k, d] of Object.entries(drafts)) {
         const c = parseMoneyLike(d.cost);
         if (c === null || c < 0) continue;
-        const had = (next[k] || []).length > 0;
-        next = upsertCost(next, k, { from: d.from || (had ? t0 : ""), unitCost: c });
+        next = upsertCost(next, k, { from: d.from || defaultFrom(k), unitCost: c });
       }
       for (const e of parsedImport.entries) {
-        const had = (next[e.sku] || []).length > 0;
-        next = upsertCost(next, e.sku, { from: e.from || (had ? t0 : ""), unitCost: e.unitCost });
+        next = upsertCost(next, e.sku, { from: e.from || defaultFrom(e.sku), unitCost: e.unitCost });
       }
       const payload: Record<string, { from: string; unitCost: number }[]> = {};
       for (const [k, v] of Object.entries(next)) payload[`s_${k}`] = v;
@@ -834,7 +841,7 @@ export function VendasReport({ ownerUid, hideValues }: { ownerUid: string; hideV
 
       {/* Custos dos produtos */}
       <Modal open={costsOpen} onClose={() => !saving && setCostsOpen(false)} title={t("costsTitle")} size="lg" closeDisabled={saving}>
-        <div className="space-y-4 text-xs" style={{ color: "var(--text)" }}>
+        <div className="space-y-5 text-xs px-6 py-5" style={{ color: "var(--text)" }}>
           <p style={{ color: "var(--text-muted)" }}>{t("costsIntro")}</p>
           <div className="max-h-72 overflow-y-auto border rounded-lg" style={{ borderColor: "var(--border)" }}>
             <table className="w-full">
