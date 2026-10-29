@@ -121,9 +121,17 @@ service cloud.firestore {
       // são só do servidor: caem no "allow ... if false" implícito, já que o
       // bloco genérico abaixo os exclui.
 
+      // ── RH (rhColaboradores, rhVigencias, rhCompetencias, rhCustos,
+      // rhVariaveis, rhLog, ...) — salários, CPF e dados bancários (LGPD).
+      // NENHUM acesso pelo client, nem leitura: tudo passa pelas rotas
+      // /api/rh/** (Admin SDK), que conferem a permissão "rh", cifram o
+      // sensível e gravam o log de acesso. O bloco genérico abaixo exclui
+      // qualquer coleção "rh<Maiúscula>...".
+
       // Demais dados do ninho (cashflow, bills, taxes, receivables, ...).
       match /{collection}/{document=**} {
-        allow read, write: if collection != 'profile'
+        allow read, write: if !collection.matches('^rh[A-Z].*')
+          && collection != 'profile'
           && collection != 'team'
           && collection != 'billingEvents'
           && collection != 'contracts'

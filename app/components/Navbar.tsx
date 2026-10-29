@@ -8,7 +8,7 @@ import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, ChevronLeft, ChevronRight,
   Calendar, Settings, LogOut, Menu, X, HelpCircle, UserCircle, Moon, Sun,
-  Zap, PanelLeft, Landmark, Boxes, ShoppingCart,
+  Zap, PanelLeft, Landmark, Boxes, ShoppingCart, Briefcase,
 } from "lucide-react";
 import { Avatar } from "./ui";
 import { useTheme } from "../hooks/useTheme";
@@ -28,7 +28,7 @@ import { formatMoney } from "@/lib/format";
 import { OPEN_EVENT as TOUR_OPEN_EVENT } from "@/lib/tour/state";
 import "./Navbar.css";
 
-interface NavItem { key: string; icon: React.ElementType; href: string; badge?: number; permKey?: PermissionKey; }
+interface NavItem { key: string; icon: React.ElementType; href: string; badge?: number; permKey?: PermissionKey; /** Qualquer uma destas libera o item (em vez de permKey). */ permAny?: PermissionKey[]; }
 interface NavbarProps {
   user?: { displayName: string | null; email: string | null; uid?: string | null } | null;
   activePath?: string;
@@ -55,6 +55,7 @@ const navItems: NavItem[] = [
   { key: "centroCustos", icon: BarChart2, href: "/costCenter", permKey: "centroCustos" },
   { key: "estoque", icon: Boxes, href: "/estoque", permKey: "estoque" },
   { key: "vendas", icon: ShoppingCart, href: "/vendas", permKey: "vendas" },
+  { key: "rh", icon: Briefcase, href: "/rh", permAny: ["rh", "rh_proprio"] },
   { key: "usuarios", icon: Users, href: "/users" },
 ];
 
@@ -289,6 +290,7 @@ export default function Navbar({
   const filteredNavItems = navItems.filter(item => {
     if ((item.key === "estoque" || item.key === "vendas") && isServico) return false;
     if (item.permKey && !scope.loading && !hasPermission(scope, item.permKey)) return false;
+    if (item.permAny && !scope.loading && !item.permAny.some(k => hasPermission(scope, k))) return false;
     return true;
   });
 

@@ -19,6 +19,7 @@ const INTERNAL_PREFIXES = [
   "/estoque",
   "/vendas",
   "/impostos",
+  "/rh",
   "/relatorios",
   "/configuracoes",
 ];

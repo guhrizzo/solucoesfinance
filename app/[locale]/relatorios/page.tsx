@@ -5,17 +5,19 @@ import { useLocale, useTranslations, useMessages } from "next-intl";
 import {
   TrendingUp, DollarSign, Landmark,
   FileText, Search, RefreshCw, ShieldCheck, Download,
-  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity, ChevronDown, TrendingDown, ShoppingCart
+  Lock, Unlock, ArrowUpRight, ArrowDownRight, Eye, EyeOff, BarChart3, Activity, ChevronDown, TrendingDown, ShoppingCart, Trophy
 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, Badge, Sensitive } from "@/app/components/ui";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement, isFinancingMovement } from "@/lib/cashflowCategories";
+import { CASHFLOW_CATEGORIES, CATEGORIAS_PESSOAL_RH, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement, isFinancingMovement } from "@/lib/cashflowCategories";
+import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
 import { DreSummary } from "./DreSummary";
 import { VendasReport } from "./VendasReport";
+import { RetornoPorPessoa } from "../rh/_components/RetornoPorPessoa";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type TxType = "entrada" | "saida";
@@ -187,7 +189,7 @@ export default function RelatoriosPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hideValues, setHideValues] = useState(false);
 
-  type TabType = "fluxo" | "faturamento" | "gastos" | "dre" | "vendas";
+  type TabType = "fluxo" | "faturamento" | "gastos" | "dre" | "vendas" | "retorno";
   const [activeTab, setActiveTab] = useState<TabType>("fluxo");
 
   const [closingBusy, setClosingBusy] = useState<string | null>(null);
@@ -299,6 +301,29 @@ export default function RelatoriosPage() {
     return () => { cancelled = true; };
   }, [uid]);
 
+  // Custo de pessoas do RH por competência (só totais agregados). Mesma janela
+  // do filtro: o mês de refDate, ou os 12 meses do ano.
+  const [rhResumo, setRhResumo] = useState<Record<string, { pessoal: number; naoAlocado: number }>>({});
+  useEffect(() => {
+    if (!uid) return;
+    let cancelled = false;
+    const ano = refDate.getFullYear();
+    const mes = String(refDate.getMonth() + 1).padStart(2, "0");
+    const from = filterPeriod === "mes" ? `${ano}-${mes}` : `${ano}-01`;
+    const to = filterPeriod === "mes" ? `${ano}-${mes}` : `${ano}-12`;
+    (async () => {
+      try {
+        const res = await authedFetch(`/api/rh/dre-resumo?from=${from}&to=${to}`);
+        if (!res.ok) { if (!cancelled) setRhResumo({}); return; }
+        const json = await res.json();
+        if (!cancelled) setRhResumo(json.meses ?? {});
+      } catch {
+        if (!cancelled) setRhResumo({});
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [uid, refDate, filterPeriod]);
+
   // Filtragem das transações por período
   const filteredTxs = useMemo(() => {
     const refYear = refDate.getFullYear();
@@ -349,6 +374,9 @@ export default function RelatoriosPage() {
       if (isFinancingMovement(tx.category, tx.description)) return;
       const catLower = tx.category.toLowerCase();
       const name = tx.category || noCategory;
+      // Mês com custo de pessoas apurado pelo RH: a folha paga no caixa já está
+      // na linha "Pessoal (RH)" (por competência) — não conta de novo aqui.
+      if (tx.type === "saida" && rhResumo[tx.date.slice(0, 7)] && CATEGORIAS_PESSOAL_RH.includes(tx.category)) return;
       if (tx.type === "entrada") {
         add(bucket.receita, name, tx.amount);
       } else if (catLower.includes("imposto") || catLower.includes("taxa") || catLower.includes("tributo")) {
@@ -358,6 +386,14 @@ export default function RelatoriosPage() {
       } else {
         add(bucket.despesas, name, tx.amount);
       }
+    });
+
+    // Custo de pessoas por competência (RH): entra nas despesas operacionais,
+    // com o que não tem centro de custo em linha própria.
+    Object.values(rhResumo).forEach(r => {
+      const alocado = r.pessoal - r.naoAlocado;
+      if (alocado > 0.004) add(bucket.despesas, t("dre.personnel"), alocado);
+      if (r.naoAlocado > 0.004) add(bucket.despesas, t("dre.personnelUnallocated"), r.naoAlocado);
     });
 
     const toRows = (m: Map<string, number>) => [...m.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
@@ -381,7 +417,7 @@ export default function RelatoriosPage() {
       cmvCats: toRows(bucket.cmv),
       despesasCats: toRows(bucket.despesas),
     };
-  }, [filteredTxs, noCategory]);
+  }, [filteredTxs, noCategory, rhResumo, t]);
 
   // Relatório de Gastos (aba Gastos)
   const gastosReport = useMemo(() => {
@@ -622,7 +658,7 @@ export default function RelatoriosPage() {
 
   // Exporta a aba ativa em PDF.
   const handleExportPdf = async () => {
-    if (exporting || activeTab === "vendas") return; // a aba Vendas exporta CSV pelo próprio relatório
+    if (exporting || activeTab === "vendas" || activeTab === "retorno") return; // Vendas exporta CSV pelo próprio relatório; Retorno por pessoa não exporta
     setExporting(true);
     try {
       const { exportReportPdf } = await import("@/lib/reportPdf");
@@ -738,7 +774,7 @@ export default function RelatoriosPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {activeTab !== "vendas" && (
+            {activeTab !== "vendas" && activeTab !== "retorno" && (
             <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
               {[{ id: "mes", label: t("period.monthly") }, { id: "ano", label: t("period.annual") }].map(p => (
                 <button
@@ -764,7 +800,7 @@ export default function RelatoriosPage() {
               {hideValues ? <Eye size={15} /> : <EyeOff size={15} />}
             </button>
 
-            {activeTab !== "vendas" && (
+            {activeTab !== "vendas" && activeTab !== "retorno" && (
             <button
               onClick={handleExportPdf}
               disabled={exporting}
@@ -787,6 +823,7 @@ export default function RelatoriosPage() {
             { id: "gastos", label: t("tabs.gastos"), icon: TrendingDown },
             { id: "dre", label: t("tabs.dre"), icon: FileText },
             { id: "vendas", label: t("tabs.vendas"), icon: ShoppingCart },
+            { id: "retorno", label: t("tabs.retorno"), icon: Trophy },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -806,6 +843,11 @@ export default function RelatoriosPage() {
         {/* Aba: Relatório de Vendas (analítico, somente leitura) */}
         {activeTab === "vendas" && uid && (
           <VendasReport ownerUid={uid} hideValues={hideValues} />
+        )}
+
+        {/* Aba: Retorno por pessoa (RH) — os dados e a permissão são conferidos pela API */}
+        {activeTab === "retorno" && uid && (
+          <RetornoPorPessoa hideValues={hideValues} />
         )}
 
         {/* Aba: Fluxo de Caixa */}

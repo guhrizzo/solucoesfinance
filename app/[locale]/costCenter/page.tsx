@@ -20,6 +20,7 @@ import {
   Loader,
   Search,
   ChevronDown,
+  Power,
 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import { useTheme } from "@/app/hooks/useTheme";
@@ -49,6 +50,10 @@ interface CostCenter {
   userId: string;
   createdAt: any;
   categories?: Array<{ id: string; name: string; color: string }>;
+  /** Inativo = não aparece em novas despesas; ausente/true = ativo. */
+  ativo?: boolean;
+  /** Quantos colaboradores do RH estão alocados (mantido pelo servidor — lib/rh/server.ts). */
+  rhAlocados?: number;
 }
 
 /**
@@ -71,6 +76,8 @@ interface Expense {
   userId: string;
   createdAt: any;
   paidAt?: string;
+  /** "rh" = custo de pessoal lançado pelo módulo RH (agregado por centro, somente leitura aqui). */
+  origem?: string;
 }
 
 // ─── Período (mês/ano) ────────────────────────────────────────────────────────
@@ -652,7 +659,7 @@ function ExpenseModal({ open, editing, centers, categories, uid, onClose, onSave
                 className="w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
                 style={{ borderColor: "var(--db-border)", background: "var(--db-sub)", color: "var(--db-text)" }}>
                 <option value="">{t("selectCenter")}</option>
-                {centers.map(cc => <option key={cc.id} value={cc.name}>{cc.name}</option>)}
+                {centers.filter(cc => cc.ativo !== false || cc.name === editing?.center).map(cc => <option key={cc.id} value={cc.name}>{cc.name}</option>)}
               </select>
             )}
           </div>
@@ -939,7 +946,28 @@ export default function CostCenterPage() {
 
   // ── Delete center ──────────────────────────────────────────────────────────
   const handleDeleteCenter = (id: string) => {
+    const alvo = costCenters.find(c => c.id === id);
+    if (alvo && (alvo.rhAlocados ?? 0) > 0) {
+      showToast(t("centers.rhBlocked", { count: alvo.rhAlocados ?? 0 }), "err");
+      return;
+    }
     setConfirmModal({ open: true, type: "delete-center", id, loading: false });
+  };
+
+  // Inativar em vez de excluir: o centro sai da lista de novas despesas, mas o
+  // histórico e as alocações do RH continuam valendo.
+  const handleToggleAtivo = async (center: CostCenter) => {
+    const inativando = center.ativo !== false;
+    try {
+      const { getFirebase } = await import("@/lib/firebase");
+      const { db } = await getFirebase();
+      const { updateDoc, doc } = await import("firebase/firestore");
+      await updateDoc(doc(db, "costCenters", center.id), { ativo: !inativando });
+      const n = center.rhAlocados ?? 0;
+      showToast(inativando ? (n > 0 ? t("centers.inactivateWarn", { count: n }) : t("centers.inactivated")) : t("centers.reactivated"));
+    } catch (err) {
+      showToast(err instanceof Error && err.message ? err.message : t("centerModal.genericError"), "err");
+    }
   };
 
   const confirmDeleteCenter = async () => {
@@ -1194,7 +1222,7 @@ export default function CostCenterPage() {
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ background: center.color }} />
                           <div className="text-left min-w-0 flex-1">
-                            <p className="text-xs font-bold" style={{ color: "var(--db-text)" }}>{center.name}</p>
+                            <p className="text-xs font-bold" style={{ color: "var(--db-text)" }}>{center.name}{center.ativo === false && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "var(--db-sub)", color: "var(--db-text-2)" }}>{t("centers.inactive")}</span>}</p>
                             <p className="text-xs mt-1" style={{ color: "var(--db-text-3)" }}>{t("centers.createdOn", { date: formatFullDate(center.createdAt, locale) })} • {t("centers.categoriesCount", { count: (center.categories || []).length })}</p>
                           </div>
                         </div>
@@ -1291,6 +1319,12 @@ export default function CostCenterPage() {
                           className="p-1.5 rounded hover:opacity-70 cursor-pointer transition-colors">
                           <Edit2 size={12} style={{ color: "var(--primary)" }} />
                         </button>
+                        <button onClick={() => handleToggleAtivo(center)}
+                          title={center.ativo === false ? t("centers.reactivate") : t("centers.inactivate")}
+                          aria-label={center.ativo === false ? t("centers.reactivateAria", { name: center.name }) : t("centers.inactivateAria", { name: center.name })}
+                          className="p-1.5 rounded hover:opacity-70 cursor-pointer transition-colors">
+                          <Power size={12} style={{ color: center.ativo === false ? "var(--success)" : "var(--db-text-2)" }} />
+                        </button>
                         <button onClick={() => handleDeleteCenter(center.id)}
                           aria-label={t("centers.deleteAria", { name: center.name })}
                           className="p-1.5 rounded hover:opacity-70 cursor-pointer transition-colors">
@@ -1364,10 +1398,10 @@ export default function CostCenterPage() {
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
                           {tStatus(exp.status)}
                         </span>
-                        {exp.status === "pago" && <span className="cf-badge">FC✓</span>}
+                        {exp.origem === "rh" ? <span className="cf-badge" title={t("expenses.rhBadgeTitle")}>{t("expenses.rhBadge")}</span> : exp.status === "pago" && <span className="cf-badge">FC✓</span>}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1 shrink-0">
+                    <div className={exp.origem === "rh" ? "hidden" : "flex flex-col gap-1 shrink-0"}>
                       {exp.status !== "pago" && exp.status !== "competencia" && (
                         <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
                           title={t("expenses.markPaidTitle")} aria-label={t("expenses.markPaidAria", { name: exp.description || t("expenses.expenseFallback") })}
@@ -1418,11 +1452,11 @@ export default function CostCenterPage() {
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full badge-${exp.status}`}>
                               {tStatus(exp.status)}
                             </span>
-                            {exp.status === "pago" && <span className="cf-badge" title={t("expenses.fcBadgeTitle")}>{t("expenses.fcBadge")}</span>}
+                            {exp.origem === "rh" ? <span className="cf-badge" title={t("expenses.rhBadgeTitle")}>{t("expenses.rhBadge")}</span> : exp.status === "pago" && <span className="cf-badge" title={t("expenses.fcBadgeTitle")}>{t("expenses.fcBadge")}</span>}
                           </div>
                         </td>
                         <td className="py-3">
-                          <div className="flex items-center gap-1.5">
+                          <div className={exp.origem === "rh" ? "hidden" : "flex items-center gap-1.5"}>
                             {exp.status !== "pago" && exp.status !== "competencia" && (
                               <button onClick={() => handleMarkExpensePaid(exp)} disabled={payingExpenseId === exp.id}
                                 title={t("expenses.markPaidTitle")} aria-label={t("expenses.markPaidAria", { name: exp.description || t("expenses.expenseFallback") })}

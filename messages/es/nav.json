@@ -10,8 +10,10 @@
     "centroCustos": "Centros de costo",
     "estoque": "Inventario",
     "vendas": "Panel de ventas",
+    "rh": "RR. HH.",
     "comprasAprovacao": "Compras — aprobar pedidos",
-    "usuarios": "Usuarios"
+    "usuarios": "Usuarios",
+    "rh_proprio": "RR. HH. — mis indicadores"
   },
   "search": "Buscar transacciones...",
   "toggleLayout": "Cambiar diseño",
@@ -77,6 +79,19 @@
     "prevYear": "Año anterior",
     "nextYear": "Año siguiente",
     "currentMonth": "Mes actual",
-    "months": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    "months": [
+      "Ene",
+      "Feb",
+      "Mar",
+      "Abr",
+      "May",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dic"
+    ]
   }
 }

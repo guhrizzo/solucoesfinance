@@ -61,7 +61,16 @@
     "noCategories": "Nenhuma categoria com lançamentos",
     "entriesCount": "{count, plural, one {# lançamento} other {# lançamentos}}",
     "editAria": "Editar {name}",
-    "deleteAria": "Excluir {name}"
+    "deleteAria": "Excluir {name}",
+    "inactive": "Inativo",
+    "inactivate": "Inativar",
+    "reactivate": "Reativar",
+    "inactivateAria": "Inativar {name}",
+    "reactivateAria": "Reativar {name}",
+    "rhBlocked": "Este centro tem {count, plural, one {# colaborador alocado} other {# colaboradores alocados}} no RH e não pode ser excluído. Inative-o ou remova as alocações no RH.",
+    "inactivateWarn": "Centro inativado. Ele tem {count, plural, one {# colaborador alocado} other {# colaboradores alocados}} no RH: as alocações continuam valendo, mas o centro não aparece em novas despesas.",
+    "inactivated": "Centro inativado.",
+    "reactivated": "Centro reativado."
   },
   "expenses": {
     "title": "Despesas de {period}",
@@ -84,7 +93,9 @@
     "deleteAria": "Excluir {name}",
     "fcBadge": "FC ✓",
     "fcBadgeTitle": "Lançado no fluxo de caixa",
-    "expenseFallback": "despesa"
+    "expenseFallback": "despesa",
+    "rhBadge": "RH",
+    "rhBadgeTitle": "Custo de pessoal lançado automaticamente pelo RH (agregado por centro). Não pode ser editado aqui."
   },
   "status": {
     "todos": "Todos",

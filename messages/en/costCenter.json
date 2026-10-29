@@ -61,7 +61,16 @@
     "noCategories": "No category with entries",
     "entriesCount": "{count, plural, one {# entry} other {# entries}}",
     "editAria": "Edit {name}",
-    "deleteAria": "Delete {name}"
+    "deleteAria": "Delete {name}",
+    "inactive": "Inactive",
+    "inactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "inactivateAria": "Deactivate {name}",
+    "reactivateAria": "Reactivate {name}",
+    "rhBlocked": "This center has {count, plural, one {# employee allocated} other {# employees allocated}} in HR and cannot be deleted. Deactivate it or remove the allocations in HR.",
+    "inactivateWarn": "Center deactivated. It has {count, plural, one {# employee allocated} other {# employees allocated}} in HR: allocations stay valid, but the center won't appear for new expenses.",
+    "inactivated": "Center deactivated.",
+    "reactivated": "Center reactivated."
   },
   "expenses": {
     "title": "Expenses for {period}",
@@ -84,7 +93,9 @@
     "deleteAria": "Delete {name}",
     "fcBadge": "CF ✓",
     "fcBadgeTitle": "Posted to cash flow",
-    "expenseFallback": "expense"
+    "expenseFallback": "expense",
+    "rhBadge": "HR",
+    "rhBadgeTitle": "People cost posted automatically by HR (aggregated per center). It can't be edited here."
   },
   "status": {
     "todos": "All",

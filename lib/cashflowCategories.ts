@@ -95,6 +95,18 @@ const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().to
 
 /** Compara sem diferenciar maiúsculas/acentos, pra pegar variações digitadas
  *  à mão (categoria livre) além do valor fixo da lista. */
+/**
+ * Saídas de caixa que o módulo RH já cobre POR COMPETÊNCIA (custo de pessoas).
+ * Nos meses em que o RH tem custo apurado, o DRE usa a linha "Pessoal (RH)" e
+ * ignora estas categorias do caixa pra não contar a mesma folha duas vezes.
+ */
+export const CATEGORIAS_PESSOAL_RH: readonly string[] = [
+  "Folha de pagamento",
+  "Encargos sociais (FGTS / INSS)",
+  "Benefícios (VT / VR / Saúde)",
+  "Férias / 13º salário",
+];
+
 export function isSameOwnerTransfer(category: string): boolean {
   return norm(category) === norm(SAME_OWNER_TRANSFER_CATEGORY);
 }
