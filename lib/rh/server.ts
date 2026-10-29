@@ -5,7 +5,7 @@
 // SOMENTE servidor.
 
 import { NextResponse } from "next/server";
-import type { Firestore } from "firebase-admin/firestore";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError, type ApiScope } from "@/lib/apiScope";
 import type { PermissionKey } from "@/lib/accountScope";
@@ -256,15 +256,15 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
 }
 
 /**
- * Lança o custo de pessoas da competência no REALIZADO de cada centro de custo
- * (coleção `expenses`, status "pago", origem "rh") e guarda os totais em
- * rhCompetencias/{comp} pro DRE. Idempotente: id determinístico por
- * competência+centro.
+ * Lança o custo de pessoas da competência como ORÇAMENTO de cada centro de custo
+ * (coleção `expenses`, status "pendente" = previsto, origem "rh"). Não é baixa:
+ * a baixa vem do extrato, no Fluxo de Caixa. Nada disso vai pra DRE.
+ * Idempotente: id determinístico por competência+centro.
  *
  * Privacidade: o lançamento é AGREGADO por centro — quem só tem a permissão
  * "centroCustos" não consegue ver o custo individual de ninguém.
  * Sem espelho no Fluxo de Caixa: o dinheiro só sai quando a folha é paga.
- * O custo sem alocação NÃO vira despesa de centro; vai ao DRE como "Não alocado".
+ * O custo sem alocação NÃO vira despesa de centro (fica só como pendência no RH).
  * Competência fechada usa o retrato congelado (rhCustos).
  */
 export async function sincronizarCentros(ctx: RhBase, comp: string): Promise<{ total: number; naoAlocado: number }> {
@@ -311,8 +311,10 @@ export async function sincronizarCentros(ctx: RhBase, comp: string): Promise<{ t
       center: nome,
       amount: r2(valor),
       date: data,
-      status: "pago",
-      paidAt: data,
+      // Só o ORÇAMENTO (previsto): a baixa acontece quando o pagamento aparecer
+      // no extrato do Fluxo de Caixa — nada vira "realizado" nem entra no caixa daqui.
+      status: "pendente",
+      paidAt: FieldValue.delete(),
       userId: ctx.ownerUid,
       origem: "rh",
       rhComp: comp,

@@ -161,9 +161,7 @@
       "biggest": "Biggest weight: {line}, at {pct}% of revenue — driven mainly by {cat} ({catPct}% of that line).",
       "biggestNoCat": "Biggest weight: {line}, at {pct}% of revenue.",
       "noRevenue": "No revenue in this period — each line's weight is calculated over revenue, so it shows up once there are inflows."
-    },
-    "personnel": "People (HR)",
-    "personnelUnallocated": "People — unallocated"
+    }
   },
   "countLabels": {
     "monthsElapsedCurrent": "{count, plural, one {# month elapsed} other {# months elapsed}}",

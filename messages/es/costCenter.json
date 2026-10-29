@@ -95,7 +95,7 @@
     "fcBadgeTitle": "Registrado en el flujo de caja",
     "expenseFallback": "gasto",
     "rhBadge": "RR. HH.",
-    "rhBadgeTitle": "Costo de personal registrado automáticamente por RR. HH. (agregado por centro). No se puede editar aquí."
+    "rhBadgeTitle": "Costo de personal previsto por RR. HH. (presupuesto, agregado por centro). La baja llega del extracto en Flujo de caja; no se puede editar aquí."
   },
   "status": {
     "todos": "Todos",

@@ -11,8 +11,7 @@ import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { PageLoader, Badge, Sensitive } from "@/app/components/ui";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { CASHFLOW_CATEGORIES, CATEGORIAS_PESSOAL_RH, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement, isFinancingMovement } from "@/lib/cashflowCategories";
-import { authedFetch } from "@/lib/authedFetch";
+import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel, isSameOwnerTransfer, isInvestmentMovement, isFinancingMovement } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import type { ReportData } from "@/lib/reportPdf";
 import { DreSummary } from "./DreSummary";
@@ -301,29 +300,6 @@ export default function RelatoriosPage() {
     return () => { cancelled = true; };
   }, [uid]);
 
-  // Custo de pessoas do RH por competência (só totais agregados). Mesma janela
-  // do filtro: o mês de refDate, ou os 12 meses do ano.
-  const [rhResumo, setRhResumo] = useState<Record<string, { pessoal: number; naoAlocado: number }>>({});
-  useEffect(() => {
-    if (!uid) return;
-    let cancelled = false;
-    const ano = refDate.getFullYear();
-    const mes = String(refDate.getMonth() + 1).padStart(2, "0");
-    const from = filterPeriod === "mes" ? `${ano}-${mes}` : `${ano}-01`;
-    const to = filterPeriod === "mes" ? `${ano}-${mes}` : `${ano}-12`;
-    (async () => {
-      try {
-        const res = await authedFetch(`/api/rh/dre-resumo?from=${from}&to=${to}`);
-        if (!res.ok) { if (!cancelled) setRhResumo({}); return; }
-        const json = await res.json();
-        if (!cancelled) setRhResumo(json.meses ?? {});
-      } catch {
-        if (!cancelled) setRhResumo({});
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [uid, refDate, filterPeriod]);
-
   // Filtragem das transações por período
   const filteredTxs = useMemo(() => {
     const refYear = refDate.getFullYear();
@@ -374,9 +350,6 @@ export default function RelatoriosPage() {
       if (isFinancingMovement(tx.category, tx.description)) return;
       const catLower = tx.category.toLowerCase();
       const name = tx.category || noCategory;
-      // Mês com custo de pessoas apurado pelo RH: a folha paga no caixa já está
-      // na linha "Pessoal (RH)" (por competência) — não conta de novo aqui.
-      if (tx.type === "saida" && rhResumo[tx.date.slice(0, 7)] && CATEGORIAS_PESSOAL_RH.includes(tx.category)) return;
       if (tx.type === "entrada") {
         add(bucket.receita, name, tx.amount);
       } else if (catLower.includes("imposto") || catLower.includes("taxa") || catLower.includes("tributo")) {
@@ -386,14 +359,6 @@ export default function RelatoriosPage() {
       } else {
         add(bucket.despesas, name, tx.amount);
       }
-    });
-
-    // Custo de pessoas por competência (RH): entra nas despesas operacionais,
-    // com o que não tem centro de custo em linha própria.
-    Object.values(rhResumo).forEach(r => {
-      const alocado = r.pessoal - r.naoAlocado;
-      if (alocado > 0.004) add(bucket.despesas, t("dre.personnel"), alocado);
-      if (r.naoAlocado > 0.004) add(bucket.despesas, t("dre.personnelUnallocated"), r.naoAlocado);
     });
 
     const toRows = (m: Map<string, number>) => [...m.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
@@ -417,7 +382,7 @@ export default function RelatoriosPage() {
       cmvCats: toRows(bucket.cmv),
       despesasCats: toRows(bucket.despesas),
     };
-  }, [filteredTxs, noCategory, rhResumo, t]);
+  }, [filteredTxs, noCategory]);
 
   // Relatório de Gastos (aba Gastos)
   const gastosReport = useMemo(() => {

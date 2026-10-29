@@ -45,7 +45,7 @@
     "comissionado": "Comissionado",
     "alocar": "Alocação",
     "semAlocacao": "Sem alocação",
-    "pendencias": "{count, plural, one {# colaborador está sem alocação} other {# colaboradores estão sem alocação}}: {nomes}. O custo entra no DRE como \"Não alocado\" até resolver."
+    "pendencias": "{count, plural, one {# colaborador está sem alocação} other {# colaboradores estão sem alocação}}: {nomes}. O custo dele não entra em nenhum centro até resolver."
   },
   "form": {
     "tituloNovo": "Novo colaborador",
@@ -152,7 +152,7 @@
     "premissas": "Encargos e provisões (13º e férias + 1/3) valem só para vínculo CLT. Salário e benefícios são proporcionais aos dias ativos no mês. A base dos encargos é salário + provisões + comissão + bônus; benefícios ficam de fora.",
     "bonusSalvo": "Bônus salvo.",
     "rateioTitulo": "Rateio por centro de custo",
-    "rateioNota": "Lançado automaticamente no realizado de cada centro, na competência. O que não tem alocação aparece como \"Não alocado\" no DRE.",
+    "rateioNota": "Lançado nos centros de custo só como orçamento (previsto), sem baixa — a baixa vem do extrato no Fluxo de Caixa. Nada vai para a DRE. O que não tem alocação aparece como \"Não alocado\".",
     "naoAlocado": "Não alocado",
     "daFolha": "da folha"
   },

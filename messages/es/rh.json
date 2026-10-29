@@ -45,7 +45,7 @@
     "comissionado": "Comisionista",
     "alocar": "Asignación",
     "semAlocacao": "Sin asignación",
-    "pendencias": "{count, plural, one {# colaborador está sin asignación} other {# colaboradores están sin asignación}}: {nomes}. Su costo entra en el DRE como \"No asignado\" hasta resolverlo."
+    "pendencias": "{count, plural, one {# colaborador está sin asignación} other {# colaboradores están sin asignación}}: {nomes}. Su costo no entra en ningún centro hasta resolverlo."
   },
   "form": {
     "tituloNovo": "Nuevo colaborador",
@@ -152,7 +152,7 @@
     "premissas": "Las cargas y provisiones (13º y vacaciones + 1/3) valen solo para vínculo CLT. Salario y beneficios son proporcionales a los días activos del mes. La base de las cargas es salario + provisiones + comisión + bono; los beneficios quedan fuera.",
     "bonusSalvo": "Bono guardado.",
     "rateioTitulo": "Reparto por centro de costo",
-    "rateioNota": "Se registra automáticamente en el realizado de cada centro, en el período. Lo que no tiene asignación aparece como \"No asignado\" en el DRE.",
+    "rateioNota": "Registrado en los centros de costo solo como presupuesto (previsto), sin baja — la baja llega del extracto en Flujo de caja. Nada va al DRE. Lo que no tiene asignación aparece como \"No asignado\".",
     "naoAlocado": "No asignado",
     "daFolha": "de la nómina"
   },

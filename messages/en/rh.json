@@ -45,7 +45,7 @@
     "comissionado": "Commissioned",
     "alocar": "Allocation",
     "semAlocacao": "Unallocated",
-    "pendencias": "{count, plural, one {# employee has no allocation} other {# employees have no allocation}}: {nomes}. Their cost appears in the P&L as \"Unallocated\" until resolved."
+    "pendencias": "{count, plural, one {# employee has no allocation} other {# employees have no allocation}}: {nomes}. Their cost isn't assigned to any center until resolved."
   },
   "form": {
     "tituloNovo": "New employee",
@@ -152,7 +152,7 @@
     "premissas": "Charges and accruals (13th salary and vacation + 1/3) apply only to CLT contracts. Salary and benefits are prorated by active days in the month. The charges base is salary + accruals + commission + bonus; benefits are excluded.",
     "bonusSalvo": "Bonus saved.",
     "rateioTitulo": "Split by cost center",
-    "rateioNota": "Posted automatically to each center's actuals, in the period. Anything without an allocation shows as \"Unallocated\" in the P&L.",
+    "rateioNota": "Posted to cost centers only as budget (forecast), with no settlement — settlement comes from the bank statement in Cash flow. Nothing goes to the P&L. Anything without an allocation shows as \"Unallocated\".",
     "naoAlocado": "Unallocated",
     "daFolha": "from payroll"
   },
