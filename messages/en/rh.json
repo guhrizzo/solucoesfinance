@@ -78,7 +78,17 @@
     "usuario": "System user",
     "usuarioHint": "Optional. Gives this person the \"my indicators\" view (needs the \"HR — my indicators\" permission).",
     "usuarioNenhum": "None",
-    "usuarioDono": "You (account owner)"
+    "usuarioDono": "You (account owner)",
+    "ph": {
+      "nome": "E.g. Mary Smith",
+      "cpf": "000.000.000-00",
+      "cargo": "E.g. Financial analyst",
+      "banco": "E.g. Bank of Brazil",
+      "agencia": "0000",
+      "conta": "00000-0",
+      "pix": "Tax ID, e-mail, phone or random key",
+      "tipoConta": "Select..."
+    }
   },
   "rem": {
     "titulo": "Pay for {nome}",
@@ -636,5 +646,9 @@
       "simplificadoHint": "0 = don't use. If set, the more favourable calculation applies.",
       "obs": "Note (optional)"
     }
+  },
+  "pin": {
+    "titulo": "Confirm with your PIN",
+    "subtitulo": "Every HR action requires your 4-digit PIN."
   }
 }

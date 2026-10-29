@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, Field, Input, Modal, Pill } from "@/app/components/ui";
+import { Button, Field, Input, Pill } from "@/app/components/ui";
 import { CentroRapidoModal } from "./CentroRapidoModal";
-import { fmtData, hojeISO, rhApi, selectClass, selectStyle, type Centro, type Colaborador, type Vigencia } from "./shared";
+import { fmtData, hojeISO, rhApi, selectClass, selectStyle, type Centro, type Colaborador, type Vigencia, RhModal as Modal } from "./shared";
 
 interface Props {
   colaborador: Colaborador | null;
@@ -32,7 +32,7 @@ export function AlocacaoModal({ colaborador, centros, onCentroCriado, onClose, o
   const carregar = useCallback(async () => {
     if (!colaborador) return;
     try {
-      const d = await rhApi<{ vigencias: Vigencia[] }>(`/api/rh/vigencias?colaboradorId=${colaborador.id}`);
+      const d = await rhApi<{ vigencias: Vigencia[] }>(`/api/rh/vigencias?colaboradorId=${colaborador.id}`, {}, { pin: true });
       setHistorico(d.vigencias.filter((v) => v.tipo === "alocacao"));
     } catch { /* o histórico é só informativo */ }
   }, [colaborador]);

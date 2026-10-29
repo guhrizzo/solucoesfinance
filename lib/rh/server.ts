@@ -9,6 +9,7 @@ import type { Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError, type ApiScope } from "@/lib/apiScope";
 import type { PermissionKey } from "@/lib/accountScope";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { isProAccess } from "@/lib/billing";
 import { resolveScopeSubscription } from "@/lib/scopeSubscription";
@@ -40,12 +41,47 @@ async function actorName(uid: string, email: string | null): Promise<string> {
   }
 }
 
-/** Autoriza a chamada. Devolve o contexto ou a resposta de erro pronta. */
+// Tentativas erradas de PIN por usuário (defesa em profundidade: o bloqueio de
+// 3 tentativas da tela é só do navegador). Memória da instância — basta pra
+// frear tentativa em sequência.
+const pinErros = new Map<string, { n: number; ate: number }>();
+
+/**
+ * Toda ação do RH exige o PIN de 4 dígitos do usuário LOGADO (o mesmo de
+ * users/{uid}/profile/pin usado no resto do app), enviado no header x-rh-pin.
+ * O servidor confere o hash; a tela do navegador é só conveniência.
+ */
+export async function verificarPin(ctx: Pick<RhCtx, "db" | "actor">, request: Request): Promise<NextResponse | null> {
+  const uid = ctx.actor.uid;
+  const trava = pinErros.get(uid);
+  if (trava && trava.ate > Date.now()) {
+    return NextResponse.json({ error: "PIN bloqueado por excesso de tentativas. Aguarde 5 minutos.", pinInvalido: true }, { status: 429 });
+  }
+  const pin = (request.headers.get("x-rh-pin") ?? "").trim();
+  if (!/^\d{4}$/.test(pin)) return NextResponse.json({ error: "Informe o PIN de 4 dígitos para continuar.", pinRequerido: true }, { status: 401 });
+  const snap = await ctx.db.doc(`users/${uid}/profile/pin`).get();
+  const hash = snap.exists ? String(snap.data()?.hash ?? "") : "";
+  if (!hash) return NextResponse.json({ error: "Configure seu PIN de 4 dígitos na página de Usuários antes de usar o RH.", pinNaoCadastrado: true }, { status: 403 });
+  const enviado = createHash("sha256").update(pin).digest("hex");
+  const ok = enviado.length === hash.length && timingSafeEqual(Buffer.from(enviado), Buffer.from(hash));
+  if (ok) { pinErros.delete(uid); return null; }
+  const n = (trava?.n ?? 0) + 1;
+  pinErros.set(uid, { n, ate: n >= 5 ? Date.now() + 5 * 60_000 : 0 });
+  return NextResponse.json({ error: "PIN incorreto. Tente novamente.", pinInvalido: true }, { status: 401 });
+}
+
+/**
+ * Autoriza a chamada. Devolve o contexto ou a resposta de erro pronta.
+ * `pin`: exige o PIN de 4 dígitos. Padrão: sim para qualquer método que grava
+ * (POST/PUT/PATCH/DELETE), não para leituras — que pedem `pin: true` quando
+ * mostram dado sensível (CPF, remuneração, PDF).
+ */
 export async function guardRh(
   request: Request,
   rateKey: string,
   max = 60,
   need: PermissionKey | PermissionKey[] = "rh",
+  pin?: boolean,
 ): Promise<RhCtx | NextResponse> {
   const scope = await requireScope(request, need);
   if (isScopeError(scope)) return NextResponse.json({ error: scope.error }, { status: scope.status });
@@ -65,7 +101,12 @@ export async function guardRh(
       { status: 429, headers: { "Retry-After": String(retryAfterSec) } },
     );
   }
-  return { scope, db, ownerUid: scope.ownerUid, actor: { uid: scope.uid, name: await actorName(scope.uid, scope.email) } };
+  const ctx: RhCtx = { scope, db, ownerUid: scope.ownerUid, actor: { uid: scope.uid, name: await actorName(scope.uid, scope.email) } };
+  if (pin ?? !["GET", "HEAD"].includes(request.method)) {
+    const erro = await verificarPin(ctx, request);
+    if (erro) return erro;
+  }
+  return ctx;
 }
 
 export const isCtx = (r: RhCtx | NextResponse): r is RhCtx => !(r instanceof NextResponse);

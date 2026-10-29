@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, FileText, Lock, LockOpen, Pencil, Plus, Trash2 } from "lucide-react";
-import { Button, EmptyState, Field, Input, KpiTile, Modal, Pill, Table, type Column } from "@/app/components/ui";
+import { Button, EmptyState, Field, Input, KpiTile, Pill, Table, type Column } from "@/app/components/ui";
 import { formatMoney } from "@/lib/format";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { abrirPdf, rhApi } from "./shared";
+import { abrirPdf, rhApi, RhModal as Modal } from "./shared";
 import type { RubricaUI } from "./ConfigFolha";
 
 interface Resultado {

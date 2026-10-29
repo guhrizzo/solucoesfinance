@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Lock, LockOpen, Users } from "lucide-react";
-import { Button, EmptyState, Field, Input, KpiTile, Modal, Pill, Table, type Column } from "@/app/components/ui";
+import { Button, EmptyState, Field, Input, KpiTile, Pill, Table, type Column } from "@/app/components/ui";
 import { formatMoney } from "@/lib/format";
 import { usePeriod } from "@/app/hooks/usePeriod";
-import { fmtData, rhApi, type CustoMes } from "./shared";
+import { fmtData, rhApi, type CustoMes, RhModal as Modal } from "./shared";
 
 interface Rateio { itens: { centroId: string; centroNome: string; valor: number }[]; naoAlocado: number }
 interface Linha { colaboradorId: string; nome: string; cargo: string; vinculo: string; custo: CustoMes; rateio?: Rateio }

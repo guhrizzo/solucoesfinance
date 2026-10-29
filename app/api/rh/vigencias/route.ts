@@ -24,7 +24,8 @@ const ehNumero = (n: number, max: number) => Number.isFinite(n) && n >= 0 && n <
 
 export async function GET(request: Request) {
   try {
-    const ctx = await guardRh(request, "vig-get");
+    // Remuneração individual é dado sensível: exige o PIN.
+    const ctx = await guardRh(request, "vig-get", 60, "rh", true);
     if (!isCtx(ctx)) return ctx;
     const colaboradorId = new URL(request.url).searchParams.get("colaboradorId") ?? "";
     if (!colaboradorId || colaboradorId.includes("/")) return NextResponse.json({ error: "Colaborador inválido." }, { status: 400 });

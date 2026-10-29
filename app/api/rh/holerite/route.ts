@@ -22,10 +22,11 @@ const TITULO: Record<string, string> = {
 
 export async function GET(request: Request) {
   try {
-    const ctx = await guardRh(request, "holerite-get", 40, ["rh", "rh_proprio"]);
+    const url = new URL(request.url);
+    // Baixar o PDF exige o PIN; a lista de documentos disponíveis não.
+    const ctx = await guardRh(request, "holerite-get", 40, ["rh", "rh_proprio"], url.searchParams.get("lista") !== "1");
     if (!isCtx(ctx)) return ctx;
     const gestor = hasPermission(ctx.scope, "rh");
-    const url = new URL(request.url);
     const eventoId = url.searchParams.get("evento");
     const comp = url.searchParams.get("comp") ?? "";
     let colaboradorId = url.searchParams.get("colaboradorId") ?? "";

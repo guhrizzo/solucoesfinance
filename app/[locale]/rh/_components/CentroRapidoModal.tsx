@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Field, Input, Modal, MoneyInput, parseAmount } from "@/app/components/ui";
-import { authedFetch } from "@/lib/authedFetch";
+import { Button, Field, Input, MoneyInput, parseAmount } from "@/app/components/ui";
+import { RhModal as Modal, rhFetch } from "./shared";
 
 interface Similar { id: string; nome: string }
 
@@ -34,11 +34,7 @@ export function CentroRapidoModal({ open, onClose, onResolved }: Props) {
   async function criar(forcar: boolean) {
     setBusy(true); setErro("");
     try {
-      const res = await authedFetch("/api/rh/centros", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ acao: "criar", nome, orcamento: orc ? parseAmount(orc) : undefined, forcar }),
-      });
+      const res = await rhFetch("/api/rh/centros", { method: "POST", body: { acao: "criar", nome, orcamento: orc ? parseAmount(orc) : undefined, forcar } });
       const json = await res.json().catch(() => ({}));
       if (res.status === 409 && Array.isArray(json.similares)) { setSimilares(json.similares); return; }
       if (!res.ok) throw new Error(json.error || "Erro");

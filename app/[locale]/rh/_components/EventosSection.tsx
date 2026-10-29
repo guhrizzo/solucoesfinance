@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Lock, LockOpen, Plus, Trash2 } from "lucide-react";
-import { Button, EmptyState, Field, Input, Modal, Pill, Table, type Column } from "@/app/components/ui";
+import { Button, EmptyState, Field, Input, Pill, Table, type Column } from "@/app/components/ui";
 import { formatMoney } from "@/lib/format";
-import { abrirPdf, rhApi, selectClass, selectStyle, type Colaborador } from "./shared";
+import { abrirPdf, rhApi, selectClass, selectStyle, type Colaborador, RhModal as Modal } from "./shared";
 
 type Tipo = "ferias" | "decimo1" | "decimo2" | "rescisao";
 interface EventoLinha { id: string; tipo: Tipo; nome: string; comp: string; status: "rascunho" | "conferido" | "fechado"; liquido: number; conferidoPorNome: string | null }
@@ -112,12 +112,12 @@ function EventoModal({ id: idInicial, colaboradores, onClose, onChanged }: { id:
   }
 
   async function sugerir() {
-    const r = await chamar(() => rhApi<{ linhas: Linha[]; resultado: Resultado; erros: string[] }>("/api/rh/folha/eventos", { body: { acao: "sugerir", ...corpoCalculo() } }));
+    const r = await chamar(() => rhApi<{ linhas: Linha[]; resultado: Resultado; erros: string[] }>("/api/rh/folha/eventos", { body: { acao: "sugerir", ...corpoCalculo() } }, { pin: false }));
     if (r) { setLinhas(r.linhas); setRes(r.resultado); setErros(r.erros); }
   }
   async function recalcular(novas: Linha[]) {
     setLinhas(novas);
-    const r = await chamar(() => rhApi<{ resultado: Resultado; erros: string[] }>("/api/rh/folha/eventos", { body: { acao: "sugerir", ...corpoCalculo(), linhas: novas } }));
+    const r = await chamar(() => rhApi<{ resultado: Resultado; erros: string[] }>("/api/rh/folha/eventos", { body: { acao: "sugerir", ...corpoCalculo(), linhas: novas } }, { pin: false }));
     if (r) { setRes(r.resultado); setErros(r.erros); }
   }
   async function salvar() {

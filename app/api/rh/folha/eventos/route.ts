@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { guardRh, isCtx, logRh, rhCol, type RhCtx } from "@/lib/rh/server";
+import { guardRh, isCtx, logRh, rhCol, verificarPin, type RhCtx } from "@/lib/rh/server";
 import { carregarParametros, carregarTabelas, tabelaDaCompetencia } from "@/lib/rh/folhaServer";
 import { assinaturaEvento, calcularEvento, sugerirLinhas, type EntradaEvento, type LinhaEvento, type Motivo, type TipoEvento } from "@/lib/rh/eventos";
 import type { TabelaInss, TabelaIrrf } from "@/lib/rh/folha";
@@ -95,9 +95,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const ctx = await guardRh(request, "ev-post", 80);
+    const ctx = await guardRh(request, "ev-post", 80, "rh", false);
     if (!isCtx(ctx)) return ctx;
     const body = await request.json().catch(() => ({}));
+    // "sugerir" só calcula (não grava): não pede PIN a cada ajuste de verba.
+    if (body.acao !== "sugerir") {
+      const erroPin = await verificarPin(ctx, request);
+      if (erroPin) return erroPin;
+    }
     const stamp = { updatedAt: Date.now(), updatedBy: ctx.actor.uid, updatedByName: ctx.actor.name };
 
     // ── Sugerir / salvar: precisam de tipo, colaborador e competência ──────

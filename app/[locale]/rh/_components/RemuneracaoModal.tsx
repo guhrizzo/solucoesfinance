@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, Field, Input, Modal, MoneyInput, Pill, parseAmount } from "@/app/components/ui";
+import { Button, Field, Input, MoneyInput, Pill, parseAmount } from "@/app/components/ui";
 import { formatMoney } from "@/lib/format";
-import { fmtData, hojeISO, rhApi, selectClass, selectStyle, type Colaborador, type Vigencia } from "./shared";
+import { fmtData, hojeISO, rhApi, selectClass, selectStyle, type Colaborador, type Vigencia, RhModal as Modal } from "./shared";
 
 interface Props {
   colaborador: Colaborador | null;
@@ -29,7 +29,7 @@ export function RemuneracaoModal({ colaborador, onClose }: Props) {
     if (!colaborador) return;
     setLoading(true);
     try {
-      const d = await rhApi<{ vigencias: Vigencia[] }>(`/api/rh/vigencias?colaboradorId=${colaborador.id}`);
+      const d = await rhApi<{ vigencias: Vigencia[] }>(`/api/rh/vigencias?colaboradorId=${colaborador.id}`, {}, { pin: true });
       setVigs(d.vigencias);
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("comum.erroCarregar"));

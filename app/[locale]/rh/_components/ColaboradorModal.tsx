@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ShieldCheck } from "lucide-react";
-import { Button, Field, Input, Modal, MoneyInput, parseAmount } from "@/app/components/ui";
-import { rhApi, selectClass, selectStyle, hojeISO, type Colaborador } from "./shared";
+import { Button, Field, Input, MoneyInput, parseAmount } from "@/app/components/ui";
+import { formatarCpf, rhApi, selectClass, selectStyle, hojeISO, type Colaborador, RhModal as Modal } from "./shared";
 
 interface Props {
   open: boolean;
@@ -47,12 +47,12 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
     (async () => {
       try {
         const d = await rhApi<{ cpf?: string; banco?: Record<string, string> | null }>(
-          `/api/rh/colaboradores?id=${colaborador.id}&revelar=1`,
+          `/api/rh/colaboradores?id=${colaborador.id}&revelar=1`, {}, { pin: true },
         );
         if (cancelled) return;
         const b = d.banco ?? {};
         setF({
-          nome: colaborador.nome, cpf: d.cpf ?? "", cargo: colaborador.cargo, vinculo: colaborador.vinculo,
+          nome: colaborador.nome, cpf: formatarCpf(d.cpf ?? ""), cargo: colaborador.cargo, vinculo: colaborador.vinculo,
           dataEntrada: colaborador.dataEntrada, dataSaida: colaborador.dataSaida ?? "", status: colaborador.status,
           dependentes: String(colaborador.dependentes), comissionado: colaborador.comissionado ? "sim" : "nao", salarioInicial: "", membroUid: colaborador.membroUid ?? "",
           banco: b.banco ?? "", agencia: b.agencia ?? "", conta: b.conta ?? "", tipoConta: b.tipoConta ?? "", pix: b.pix ?? "",
@@ -100,9 +100,9 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t("form.nome")}><Input value={f.nome} onChange={(e) => set("nome", e.target.value)} maxLength={120} /></Field>
-          <Field label={t("form.cpf")}><Input inputMode="numeric" value={f.cpf} onChange={(e) => set("cpf", e.target.value)} maxLength={14} /></Field>
-          <Field label={t("form.cargo")}><Input value={f.cargo} onChange={(e) => set("cargo", e.target.value)} maxLength={80} /></Field>
+          <Field label={t("form.nome")}><Input placeholder={t("form.ph.nome")} value={f.nome} onChange={(e) => set("nome", e.target.value)} maxLength={120} /></Field>
+          <Field label={t("form.cpf")}><Input inputMode="numeric" placeholder={t("form.ph.cpf")} value={f.cpf} onChange={(e) => set("cpf", formatarCpf(e.target.value))} maxLength={14} /></Field>
+          <Field label={t("form.cargo")}><Input placeholder={t("form.ph.cargo")} value={f.cargo} onChange={(e) => set("cargo", e.target.value)} maxLength={80} /></Field>
           <Field label={t("form.vinculo")}>
             <select className={selectClass} style={selectStyle} value={f.vinculo} onChange={(e) => set("vinculo", e.target.value)}>
               {(["CLT", "PJ", "estagio", "outro"] as const).map((v) => <option key={v} value={v}>{t(`vinculos.${v}`)}</option>)}
@@ -116,7 +116,7 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
               <option value="inativo">{t("status.inativo")}</option>
             </select>
           </Field>
-          <Field label={t("form.dependentes")}><Input type="number" min={0} max={20} value={f.dependentes} onChange={(e) => set("dependentes", e.target.value)} /></Field>
+          <Field label={t("form.dependentes")}><Input type="number" min={0} max={20} placeholder="0" value={f.dependentes} onChange={(e) => set("dependentes", e.target.value)} /></Field>
           <Field label={t("form.comissionado")}>
             <select className={selectClass} style={selectStyle} value={f.comissionado} onChange={(e) => set("comissionado", e.target.value)}>
               <option value="nao">{t("form.nao")}</option>
@@ -139,17 +139,17 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
         <fieldset className="space-y-3">
           <legend className="mb-1 text-sm font-semibold" style={{ color: "var(--text)" }}>{t("form.banco")}</legend>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={t("form.bancoNome")}><Input value={f.banco} onChange={(e) => set("banco", e.target.value)} maxLength={60} /></Field>
+            <Field label={t("form.bancoNome")}><Input placeholder={t("form.ph.banco")} value={f.banco} onChange={(e) => set("banco", e.target.value)} maxLength={60} /></Field>
             <Field label={t("form.tipoConta")}>
               <select className={selectClass} style={selectStyle} value={f.tipoConta} onChange={(e) => set("tipoConta", e.target.value)}>
-                <option value="" />
+                <option value="">{t("form.ph.tipoConta")}</option>
                 <option value="corrente">{t("form.corrente")}</option>
                 <option value="poupanca">{t("form.poupanca")}</option>
               </select>
             </Field>
-            <Field label={t("form.agencia")}><Input value={f.agencia} onChange={(e) => set("agencia", e.target.value)} maxLength={20} /></Field>
-            <Field label={t("form.conta")}><Input value={f.conta} onChange={(e) => set("conta", e.target.value)} maxLength={30} /></Field>
-            <Field label={t("form.pix")} className="sm:col-span-2"><Input value={f.pix} onChange={(e) => set("pix", e.target.value)} maxLength={80} /></Field>
+            <Field label={t("form.agencia")}><Input placeholder={t("form.ph.agencia")} value={f.agencia} onChange={(e) => set("agencia", e.target.value)} maxLength={20} /></Field>
+            <Field label={t("form.conta")}><Input placeholder={t("form.ph.conta")} value={f.conta} onChange={(e) => set("conta", e.target.value)} maxLength={30} /></Field>
+            <Field label={t("form.pix")} className="sm:col-span-2"><Input placeholder={t("form.ph.pix")} value={f.pix} onChange={(e) => set("pix", e.target.value)} maxLength={80} /></Field>
           </div>
         </fieldset>
 

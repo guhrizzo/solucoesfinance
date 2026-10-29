@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
-import { Button, Card, Field, Input, Modal, Pill } from "@/app/components/ui";
-import { fmtData, hojeISO, rhApi, selectClass, selectStyle } from "./shared";
+import { Button, Card, Field, Input, Pill } from "@/app/components/ui";
+import { fmtData, hojeISO, rhApi, selectClass, selectStyle, RhModal as Modal } from "./shared";
 
 export interface RubricaUI {
   id: string;

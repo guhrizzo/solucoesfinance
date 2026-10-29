@@ -20,6 +20,7 @@ import { AuditoriaTab } from "./_components/AuditoriaTab";
 import { RetornoPorPessoa } from "./_components/RetornoPorPessoa";
 import { FolhaTab } from "./_components/FolhaTab";
 import { MeusHolerites } from "./_components/MeusHolerites";
+import { RhPinProvider } from "./_components/pinGate";
 
 // RH — cadastro de colaboradores, histórico com vigência (salário, benefícios,
 // encargos, alocação), custo mensal por competência e comissões. Os dados sensíveis
@@ -63,6 +64,7 @@ export default function RhPage() {
   const isPro = isProAccess(sub);
 
   return (
+    <RhPinProvider authUid={user.uid}>
     <div className="flex min-h-screen flex-col" style={{ background: "var(--bg)" }}>
       <Navbar activePath="/rh" user={user} onLogout={handleLogout} hidePeriod={acesso === "proprio" || (tab !== "custo" && tab !== "comissoes" && tab !== "folha")} />
       <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 pb-24 sm:px-6">
@@ -113,5 +115,6 @@ export default function RhPage() {
         )}
       </main>
     </div>
+    </RhPinProvider>
   );
 }

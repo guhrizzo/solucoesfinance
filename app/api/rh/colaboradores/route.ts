@@ -51,9 +51,10 @@ async function resolverMembro(ctx: NonNullable<Parameters<typeof logRh>[0]>, val
 
 export async function GET(request: Request) {
   try {
-    const ctx = await guardRh(request, "colab-get");
-    if (!isCtx(ctx)) return ctx;
     const url = new URL(request.url);
+    // Ver CPF e dados bancários completos exige o PIN.
+    const ctx = await guardRh(request, "colab-get", 60, "rh", url.searchParams.get("revelar") === "1");
+    if (!isCtx(ctx)) return ctx;
     const id = url.searchParams.get("id");
 
     if (id) {

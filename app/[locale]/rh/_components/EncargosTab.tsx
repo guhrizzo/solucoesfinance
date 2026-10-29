@@ -17,7 +17,7 @@ export function EncargosTab() {
 
   const carregar = useCallback(async () => {
     try {
-      setVigs((await rhApi<{ vigencias: Vigencia[] }>("/api/rh/vigencias?colaboradorId=_empresa")).vigencias);
+      setVigs((await rhApi<{ vigencias: Vigencia[] }>("/api/rh/vigencias?colaboradorId=_empresa", {}, { pin: true })).vigencias);
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("comum.erroCarregar"));
     }

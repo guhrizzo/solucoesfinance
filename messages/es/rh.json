@@ -78,7 +78,17 @@
     "usuario": "Usuario del sistema",
     "usuarioHint": "Opcional. Da a esta persona la vista \"mis indicadores\" (requiere el permiso \"RR. HH. — mis indicadores\").",
     "usuarioNenhum": "Ninguno",
-    "usuarioDono": "Tú (dueño de la cuenta)"
+    "usuarioDono": "Tú (dueño de la cuenta)",
+    "ph": {
+      "nome": "Ej.: María Pérez",
+      "cpf": "000.000.000-00",
+      "cargo": "Ej.: Analista financiero",
+      "banco": "Ej.: Banco do Brasil",
+      "agencia": "0000",
+      "conta": "00000-0",
+      "pix": "CPF, correo, teléfono o clave aleatoria",
+      "tipoConta": "Selecciona..."
+    }
   },
   "rem": {
     "titulo": "Remuneración de {nome}",
@@ -636,5 +646,9 @@
       "simplificadoHint": "0 = no usar. Si se informa, vale el cálculo más ventajoso.",
       "obs": "Observación (opcional)"
     }
+  },
+  "pin": {
+    "titulo": "Confirma con tu PIN",
+    "subtitulo": "Toda acción en RR. HH. requiere tu PIN de 4 dígitos."
   }
 }

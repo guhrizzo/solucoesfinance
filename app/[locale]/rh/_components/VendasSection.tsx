@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Plus, ShoppingCart, Trash2, Undo2 } from "lucide-react";
-import { Button, EmptyState, Field, Input, Modal, MoneyInput, Pill, Table, parseAmount, type Column } from "@/app/components/ui";
+import { Button, EmptyState, Field, Input, MoneyInput, Pill, Table, parseAmount, type Column } from "@/app/components/ui";
 import { formatMoney } from "@/lib/format";
-import { fmtData, hojeISO, rhApi, selectClass, selectStyle } from "./shared";
+import { fmtData, hojeISO, rhApi, selectClass, selectStyle, RhModal as Modal } from "./shared";
 
 export interface VendaLinha {
   key: string;

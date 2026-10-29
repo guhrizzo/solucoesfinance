@@ -1,5 +1,7 @@
 "use client";
 
+import type { ComponentProps } from "react";
+import { Modal } from "@/app/components/ui";
 import { inputBaseStyle } from "@/app/components/ui/Input";
 import { authedFetch } from "@/lib/authedFetch";
 
@@ -57,16 +59,52 @@ export interface CustoMes {
   salarioDaFolha?: boolean;
 }
 
+// ── PIN de 4 dígitos: toda ação do RH pede o PIN do usuário logado ───────────
+// O RhPinProvider (pinGate.tsx) registra o solicitador abaixo. O servidor
+// confere o PIN de novo (header x-rh-pin) — a tela é só conveniência.
+type Solicitador = () => Promise<string | null>;
+let solicitador: Solicitador | null = null;
+export function registrarSolicitadorPin(fn: Solicitador | null) { solicitador = fn; }
+/** Janela curta pra encadear chamadas de UMA mesma ação (ex.: salvar e recarregar) sem pedir o PIN duas vezes. */
+let ultimo: { pin: string; ate: number } | null = null;
+export async function pedirPin(): Promise<string | null> {
+  if (ultimo && ultimo.ate > Date.now()) return ultimo.pin;
+  if (!solicitador) return null;
+  const pin = await solicitador();
+  ultimo = pin ? { pin, ate: Date.now() + 10_000 } : null;
+  return pin;
+}
+
+/** `pin`: exigir o PIN. Padrão: qualquer método que grava; leituras sensíveis passam `pin: true`; cálculos sem gravação, `pin: false`. */
+export async function rhFetch(path: string, init: { method?: string; body?: unknown } = {}, opts: { pin?: boolean } = {}): Promise<Response> {
+  const method = init.method ?? (init.body ? "POST" : "GET");
+  const headers: Record<string, string> = init.body ? { "Content-Type": "application/json" } : {};
+  if (opts.pin ?? method !== "GET") {
+    const pin = await pedirPin();
+    if (!pin) throw new Error("Ação cancelada: o PIN de 4 dígitos é obrigatório.");
+    headers["x-rh-pin"] = pin;
+  }
+  return authedFetch(path, { method, headers, body: init.body ? JSON.stringify(init.body) : undefined });
+}
+
 /** Chama as rotas /api/rh/** com o ID token; lança Error(mensagem em português). */
-export async function rhApi<T = Record<string, unknown>>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
-  const res = await authedFetch(path, {
-    method: init.method ?? (init.body ? "POST" : "GET"),
-    headers: init.body ? { "Content-Type": "application/json" } : undefined,
-    body: init.body ? JSON.stringify(init.body) : undefined,
-  });
+export async function rhApi<T = Record<string, unknown>>(path: string, init: { method?: string; body?: unknown } = {}, opts: { pin?: boolean } = {}): Promise<T> {
+  const res = await rhFetch(path, init, opts);
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { error?: string }).error || "Erro inesperado.");
+  if (!res.ok) {
+    if ((json as { pinInvalido?: boolean }).pinInvalido) ultimo = null;
+    throw new Error((json as { error?: string }).error || "Erro inesperado.");
+  }
   return json as T;
+}
+
+/** 00000000000 → 000.000.000-00 (formata enquanto digita). */
+export function formatarCpf(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
 }
 
 export const selectStyle: React.CSSProperties = { ...inputBaseStyle };
@@ -85,7 +123,7 @@ export function fmtData(iso: string | null, locale: string): string {
 
 /** Baixa o PDF autenticado e abre numa nova aba. */
 export async function abrirPdf(path: string): Promise<void> {
-  const res = await authedFetch(path);
+  const res = await rhFetch(path, {}, { pin: true });
   if (!res.ok) {
     const j = await res.json().catch(() => ({}));
     throw new Error((j as { error?: string }).error || "Não foi possível gerar o documento.");
@@ -93,4 +131,13 @@ export async function abrirPdf(path: string): Promise<void> {
   const url = URL.createObjectURL(await res.blob());
   window.open(url, "_blank", "noopener");
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Modal do RH: o corpo do Modal base não tem padding; aqui ganha respiro e rolagem própria em formulários longos. */
+export function RhModal({ children, ...props }: ComponentProps<typeof Modal>) {
+  return (
+    <Modal {...props}>
+      <div className="max-h-[calc(100vh-9rem)] overflow-y-auto p-5 sm:p-7">{children}</div>
+    </Modal>
+  );
 }
