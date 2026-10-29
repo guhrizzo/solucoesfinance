@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/owner-alerts",
       "schedule": "5 11 * * *"
+    },
+    {
+      "path": "/api/cron/rh-custos",
+      "schedule": "20 9 * * *"
     }
   ]
 }

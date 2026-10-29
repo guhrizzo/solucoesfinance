@@ -61,7 +61,16 @@
     "noCategories": "Ninguna categoría con movimientos",
     "entriesCount": "{count, plural, one {# movimiento} other {# movimientos}}",
     "editAria": "Editar {name}",
-    "deleteAria": "Eliminar {name}"
+    "deleteAria": "Eliminar {name}",
+    "inactive": "Inactivo",
+    "inactivate": "Inactivar",
+    "reactivate": "Reactivar",
+    "inactivateAria": "Inactivar {name}",
+    "reactivateAria": "Reactivar {name}",
+    "rhBlocked": "Este centro tiene {count, plural, one {# colaborador asignado} other {# colaboradores asignados}} en RR. HH. y no se puede eliminar. Inactívalo o quita las asignaciones en RR. HH.",
+    "inactivateWarn": "Centro inactivado. Tiene {count, plural, one {# colaborador asignado} other {# colaboradores asignados}} en RR. HH.: las asignaciones siguen vigentes, pero el centro no aparece en nuevos gastos.",
+    "inactivated": "Centro inactivado.",
+    "reactivated": "Centro reactivado."
   },
   "expenses": {
     "title": "Gastos de {period}",
@@ -84,7 +93,9 @@
     "deleteAria": "Eliminar {name}",
     "fcBadge": "FC ✓",
     "fcBadgeTitle": "Registrado en el flujo de caja",
-    "expenseFallback": "gasto"
+    "expenseFallback": "gasto",
+    "rhBadge": "RR. HH.",
+    "rhBadgeTitle": "Costo de personal registrado automáticamente por RR. HH. (agregado por centro). No se puede editar aquí."
   },
   "status": {
     "todos": "Todos",

@@ -136,7 +136,7 @@ export default async function LocaleLayout({
               // Keep in sync with AppShell.tsx's INTERNAL_PREFIXES list — this
               // is the pre-hydration value so the sidebar offset (globals.css)
               // never flashes on the first paint of a route change/hard load.
-              var internalPrefixes=['/dashboard','/fluxo-caixa','/contasPagar','/contasReceber','/costCenter','/estoque','/vendas','/impostos','/relatorios','/configuracoes'];
+              var internalPrefixes=['/dashboard','/fluxo-caixa','/contasPagar','/contasReceber','/costCenter','/estoque','/vendas','/impostos','/rh','/relatorios','/configuracoes'];
               var hasNav=internalPrefixes.some(function(p){return path.indexOf(p)===0;});
               document.documentElement.setAttribute('data-has-nav',hasNav?'1':'0');
             }catch(e){}})();`,

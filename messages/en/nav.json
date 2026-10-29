@@ -10,8 +10,10 @@
     "centroCustos": "Cost centers",
     "estoque": "Inventory",
     "vendas": "Sales dashboard",
+    "rh": "HR",
     "comprasAprovacao": "Purchasing — approve orders",
-    "usuarios": "Users"
+    "usuarios": "Users",
+    "rh_proprio": "HR — my indicators"
   },
   "search": "Search transactions...",
   "toggleLayout": "Toggle layout",
@@ -77,6 +79,19 @@
     "prevYear": "Previous year",
     "nextYear": "Next year",
     "currentMonth": "Current month",
-    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    "months": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ]
   }
 }

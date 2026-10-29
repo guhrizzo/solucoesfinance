@@ -30,6 +30,12 @@ export const PERMISSION_CATEGORIES = [
   { key: "centroCustos", label: "Centro de Custos", path: "/costCenter" },
   { key: "estoque", label: "Estoque", path: "/estoque" },
   { key: "vendas", label: "Painel de Vendas", path: "/vendas" },
+  // RH (gestor/financeiro): salários, custo de pessoas, comissões e folha.
+  // Dados sensíveis (LGPD) — só passam pelas rotas /api/rh/** (Admin SDK).
+  { key: "rh", label: "RH", path: "/rh" },
+  // Colaborador comum: vê só os próprios indicadores de venda (e, na etapa 5, o
+  // próprio holerite). Precisa estar vinculado a um colaborador do RH.
+  { key: "rh_proprio", label: "RH — meus indicadores", path: "/rh" },
   // Papel extra do módulo de Compras: aprovar/recusar/cancelar pedidos e gerar
   // o lançamento no Contas a Pagar (ver lib/compras/status.ts). Ver e ajustar
   // pedidos/fornecedores continua pela permissão "contasPagar".

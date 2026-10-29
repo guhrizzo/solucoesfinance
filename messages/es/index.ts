@@ -25,6 +25,7 @@ import assinatura from './assinatura.json';
 import users from './users.json';
 import compras from './compras.json';
 import tour from './tour.json';
+import rh from './rh.json';
 
 const messages = {
   common,
@@ -51,6 +52,7 @@ const messages = {
   users,
   compras,
   tour,
+  rh,
 };
 
 export default messages;
