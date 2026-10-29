@@ -220,7 +220,20 @@
       "nova_tabela_inss": "Nova tabela de INSS",
       "nova_tabela_irrf": "Nova tabela de IRRF",
       "alterou_tabela_inss": "Alterou tabela de INSS",
-      "alterou_tabela_irrf": "Alterou tabela de IRRF"
+      "alterou_tabela_irrf": "Alterou tabela de IRRF",
+      "excluiu_colaborador": "Excluiu colaborador",
+      "corrigiu_vigencia_salario": "Corrigiu salário",
+      "corrigiu_vigencia_beneficio": "Corrigiu benefício",
+      "corrigiu_vigencia_encargos": "Corrigiu encargos",
+      "corrigiu_vigencia_alocacao": "Corrigiu alocação",
+      "excluiu_vigencia_salario": "Excluiu salário",
+      "excluiu_vigencia_beneficio": "Excluiu benefício",
+      "excluiu_vigencia_encargos": "Excluiu encargos",
+      "excluiu_vigencia_alocacao": "Excluiu alocação",
+      "corrigiu_estorno": "Corrigiu estorno",
+      "excluiu_tabela_inss": "Excluiu tabela de INSS",
+      "excluiu_tabela_irrf": "Excluiu tabela de IRRF",
+      "limpou_lancamentos_folha": "Limpou lançamentos da folha"
     }
   },
   "comum": {
@@ -650,5 +663,18 @@
   "pin": {
     "titulo": "Confirme com seu PIN",
     "subtitulo": "Toda ação no RH exige o PIN de 4 dígitos."
+  },
+  "crud": {
+    "editar": "Editar",
+    "excluir": "Excluir",
+    "confirmar": "Confirmar",
+    "cancelar": "Cancelar",
+    "salvar": "Salvar",
+    "novoValor": "Novo valor",
+    "salvarAlteracao": "Salvar alteração",
+    "excluirColaborador": "Excluir colaborador",
+    "confirmaColab": "Excluir e apagar o histórico dele? Não dá para desfazer.",
+    "limparLancamentos": "Limpar lançamentos",
+    "corrigindoVigencia": "Corrigindo uma vigência existente (mantém as datas)."
   }
 }

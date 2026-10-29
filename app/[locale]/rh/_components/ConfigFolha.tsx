@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button, Card, Field, Input, Pill } from "@/app/components/ui";
-import { fmtData, hojeISO, rhApi, selectClass, selectStyle, RhModal as Modal } from "./shared";
+import { AcoesLinha, fmtData, hojeISO, rhApi, selectClass, selectStyle, RhModal as Modal } from "./shared";
 
 export interface RubricaUI {
   id: string;
@@ -154,7 +154,10 @@ export function ConfigFolha() {
                         {t("rem.de")} {fmtData(x.inicio, locale)} · {x.fim ? `${t("rem.ate")} ${fmtData(x.fim, locale)}` : t("rem.emAberto")} · {t("folha.tabelas.faixas", { n: x.dados.faixas.length })}
                         {x.obs && <span className="ml-2 text-xs" style={{ color: "var(--text-subtle)" }}>{x.obs}</span>}
                       </span>
-                      <Button size="sm" variant="ghost" icon={Pencil} onClick={() => abrirTabela(tipo, x)}>{t("colab.editar")}</Button>
+                      <span className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" icon={Pencil} onClick={() => abrirTabela(tipo, x)}>{t("colab.editar")}</Button>
+                        <AcoesLinha onExcluir={() => chamar({ acao: "tabelaExcluir", id: x.id })} />
+                      </span>
                     </li>
                   ))}
                 </ul>

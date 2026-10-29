@@ -80,6 +80,13 @@ export function FolhaMes() {
     } catch (e) { setLancErro(e instanceof Error ? e.message : "Erro"); } finally { setBusy(false); }
   }
 
+  async function limparLanc() {
+    if (!lanc) return;
+    setBusy(true); setLancErro("");
+    try { await post({ acao: "lancamentoLimpar", colaboradorId: lanc.linha.colaboradorId }); setLanc(null); recarregar(); }
+    catch (e) { setLancErro(e instanceof Error ? e.message : "Erro"); } finally { setBusy(false); }
+  }
+
   async function conferir(l: Linha) {
     try { await post({ acao: "conferir", colaboradorId: l.colaboradorId, conferido: !l.conferido }); recarregar(); }
     catch (e) { setErro(e instanceof Error ? e.message : "Erro"); }
@@ -229,6 +236,7 @@ export function FolhaMes() {
             </div>
             {lancErro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{lancErro}</p>}
             <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={limparLanc} disabled={busy}>{t("crud.limparLancamentos")}</Button>
               <Button variant="secondary" onClick={() => setLanc(null)} disabled={busy}>{t("form.cancelar")}</Button>
               <Button onClick={salvarLanc} loading={busy}>{t("form.salvar")}</Button>
             </div>

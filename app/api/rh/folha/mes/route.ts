@@ -79,6 +79,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // ── Limpar os lançamentos variáveis de um colaborador ──────────────────
+    if (body.acao === "lancamentoLimpar") {
+      if (fechada) return bloqueada();
+      const colaboradorId = String(body.colaboradorId ?? "");
+      if (!colaboradorId || colaboradorId.includes("/")) return NextResponse.json({ error: "Colaborador inválido." }, { status: 400 });
+      await rhCol(ctx, "rhFolhaLancamentos").doc(`${comp}_${colaboradorId}`).delete();
+      await logRh(ctx, "limpou_lancamentos_folha", { colaboradorId, info: comp });
+      return NextResponse.json({ ok: true });
+    }
+
     // ── Conferência manual ─────────────────────────────────────────────────
     if (body.acao === "conferir") {
       if (fechada) return bloqueada();

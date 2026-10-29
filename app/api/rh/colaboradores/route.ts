@@ -161,6 +161,70 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * Exclui o colaborador e o que é só dele (vigências, variáveis, lançamentos e
+ * conferências da folha, eventos ainda abertos). Recusa se ele já está em mês
+ * fechado, em evento fechado, em venda atribuída ou em estorno — nesses casos o
+ * caminho é INATIVAR (informar a data de saída), que preserva o histórico.
+ */
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await guardRh(request, "colab-del", 20);
+    if (!isCtx(ctx)) return ctx;
+    const body = await request.json().catch(() => ({}));
+    const id = String(body.id ?? "");
+    if (!id || id.includes("/")) return NextResponse.json({ error: "Colaborador inválido." }, { status: 400 });
+    const ref = rhCol(ctx, "rhColaboradores").doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) return NextResponse.json({ error: "Colaborador não encontrado." }, { status: 404 });
+    const nome = String(snap.data()!.nome ?? "");
+
+    const [custos, folhas, comissoes, eventos, atribs, estornos] = await Promise.all([
+      rhCol(ctx, "rhCustos").where("colaboradorId", "==", id).limit(1).get(),
+      rhCol(ctx, "rhFolhaItens").where("colaboradorId", "==", id).limit(1).get(),
+      rhCol(ctx, "rhComissoes").where("colaboradorId", "==", id).limit(1).get(),
+      rhCol(ctx, "rhEventos").where("colaboradorId", "==", id).get(),
+      rhCol(ctx, "rhAtribuicoes").get(),
+      rhCol(ctx, "rhEstornos").get(),
+    ]);
+    const naLista = (d: FirebaseFirestore.QueryDocumentSnapshot) => ((d.data().itens ?? []) as { colaboradorId: string }[]).some((i) => i.colaboradorId === id);
+    const motivo =
+      !custos.empty || !folhas.empty || !comissoes.empty ? "ele aparece em competência/folha já fechada"
+      : eventos.docs.some((d) => d.data().status === "fechado") ? "ele tem férias, 13º ou rescisão já fechados"
+      : atribs.docs.some(naLista) ? "há vendas atribuídas a ele (remova as atribuições em Comissões)"
+      : estornos.docs.some(naLista) ? "há estornos ligados a ele"
+      : null;
+    if (motivo) return NextResponse.json({ error: `Não dá para excluir: ${motivo}. Para preservar o histórico, inative o colaborador informando a data de saída.` }, { status: 409 });
+
+    const [vigs, vars, lancs, confs, regras] = await Promise.all([
+      rhCol(ctx, "rhVigencias").where("colaboradorId", "==", id).get(),
+      rhCol(ctx, "rhVariaveis").where("colaboradorId", "==", id).get(),
+      rhCol(ctx, "rhFolhaLancamentos").where("colaboradorId", "==", id).get(),
+      rhCol(ctx, "rhFolhaConferencias").where("colaboradorId", "==", id).get(),
+      rhCol(ctx, "rhComissaoRegras").get(),
+    ]);
+    const batch = ctx.db.batch();
+    [...vigs.docs, ...vars.docs, ...lancs.docs, ...confs.docs, ...eventos.docs].forEach((d) => batch.delete(d.ref));
+    // Regra que citava só este colaborador fica sem alvo: desativa em vez de aplicar a todos.
+    regras.docs.forEach((d) => {
+      const ids = (d.data().colaboradorIds ?? []) as string[];
+      if (d.data().escopo === "lista" && ids.includes(id)) {
+        const resto = ids.filter((x) => x !== id);
+        batch.update(d.ref, { colaboradorIds: resto, ...(resto.length === 0 ? { ativa: false } : {}) });
+      }
+    });
+    batch.delete(ref);
+    await batch.commit();
+    await logRh(ctx, "excluiu_colaborador", { colaboradorId: id, colaboradorNome: nome });
+    await recomputarUsoCentros(ctx);
+    await sincronizarSeguro(ctx, monthOf(String(snap.data()!.dataEntrada)));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Erro RH/colaboradores DELETE:", error);
+    return NextResponse.json({ error: "Erro ao excluir o colaborador." }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: Request) {
   try {
     const ctx = await guardRh(request, "colab-patch", 60);

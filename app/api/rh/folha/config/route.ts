@@ -90,6 +90,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // ── Excluir tabela de INSS / IRRF (só a mais recente; a anterior volta a ficar em aberto) ──
+    if (body.acao === "tabelaExcluir") {
+      const id = String(body.id ?? "");
+      if (!id || id.includes("/")) return NextResponse.json({ error: "Tabela inválida." }, { status: 400 });
+      const ref = rhCol(ctx, "rhTabelasLegais").doc(id);
+      const s = await ref.get();
+      if (!s.exists) return NextResponse.json({ error: "Tabela não encontrada." }, { status: 404 });
+      const t = s.data()!;
+      const tipo = t.tipo as "inss" | "irrf";
+      const fechadas = await folhasFechadas(ctx);
+      const mesFim = t.fim ? monthOf(String(t.fim)) : null;
+      if (fechadas.some((c) => c >= monthOf(String(t.inicio)) && (mesFim === null || c <= mesFim))) return NextResponse.json({ error: MSG.competencia_fechada }, { status: 409 });
+      const todas = await carregarTabelas(ctx, tipo);
+      if (todas.some((x) => x.id !== id && x.inicio > String(t.inicio))) return NextResponse.json({ error: "Só a tabela mais recente pode ser excluída. Exclua as posteriores primeiro." }, { status: 409 });
+      const batch = ctx.db.batch();
+      batch.delete(ref);
+      const anterior = todas.find((x) => x.id !== id && x.fim === dayBefore(String(t.inicio)));
+      if (anterior) batch.update(rhCol(ctx, "rhTabelasLegais").doc(anterior.id), { fim: t.fim ?? null });
+      await batch.commit();
+      await logRh(ctx, `excluiu_tabela_${tipo}`, { info: `início ${t.inicio}` });
+      return NextResponse.json({ ok: true });
+    }
+
     // ── Tabelas de INSS / IRRF ─────────────────────────────────────────────
     if (body.acao === "tabela") {
       const t = body.tabela ?? {};

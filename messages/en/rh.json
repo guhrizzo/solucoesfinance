@@ -220,7 +220,20 @@
       "nova_tabela_inss": "New INSS table",
       "nova_tabela_irrf": "New IRRF table",
       "alterou_tabela_inss": "Changed INSS table",
-      "alterou_tabela_irrf": "Changed IRRF table"
+      "alterou_tabela_irrf": "Changed IRRF table",
+      "excluiu_colaborador": "Deleted employee",
+      "corrigiu_vigencia_salario": "Corrected salary",
+      "corrigiu_vigencia_beneficio": "Corrected benefit",
+      "corrigiu_vigencia_encargos": "Corrected charges",
+      "corrigiu_vigencia_alocacao": "Corrected allocation",
+      "excluiu_vigencia_salario": "Deleted salary",
+      "excluiu_vigencia_beneficio": "Deleted benefit",
+      "excluiu_vigencia_encargos": "Deleted charges",
+      "excluiu_vigencia_alocacao": "Deleted allocation",
+      "corrigiu_estorno": "Corrected reversal",
+      "excluiu_tabela_inss": "Deleted INSS table",
+      "excluiu_tabela_irrf": "Deleted IRRF table",
+      "limpou_lancamentos_folha": "Cleared payroll entries"
     }
   },
   "comum": {
@@ -650,5 +663,18 @@
   "pin": {
     "titulo": "Confirm with your PIN",
     "subtitulo": "Every HR action requires your 4-digit PIN."
+  },
+  "crud": {
+    "editar": "Edit",
+    "excluir": "Delete",
+    "confirmar": "Confirm",
+    "cancelar": "Cancel",
+    "salvar": "Save",
+    "novoValor": "New value",
+    "salvarAlteracao": "Save changes",
+    "excluirColaborador": "Delete employee",
+    "confirmaColab": "Delete and erase their history? This can't be undone.",
+    "limparLancamentos": "Clear entries",
+    "corrigindoVigencia": "Correcting an existing period (dates stay the same)."
   }
 }

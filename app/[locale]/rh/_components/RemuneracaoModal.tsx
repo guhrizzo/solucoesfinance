@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Field, Input, MoneyInput, Pill, parseAmount } from "@/app/components/ui";
 import { formatMoney } from "@/lib/format";
-import { fmtData, hojeISO, rhApi, selectClass, selectStyle, type Colaborador, type Vigencia, RhModal as Modal } from "./shared";
+import { AcoesLinha, EdicaoInline, fmtData, hojeISO, rhApi, selectClass, selectStyle, type Colaborador, type Vigencia, RhModal as Modal } from "./shared";
 
 interface Props {
   colaborador: Colaborador | null;
@@ -24,6 +24,7 @@ export function RemuneracaoModal({ colaborador, onClose }: Props) {
   const [salarioDesde, setSalarioDesde] = useState(hojeISO());
   const [ben, setBen] = useState({ nome: "", tipo: "vr", valor: "", inicio: hojeISO() });
   const [encerrando, setEncerrando] = useState<{ id: string; fim: string } | null>(null);
+  const [corrigindo, setCorrigindo] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     if (!colaborador) return;
@@ -96,7 +97,15 @@ export function RemuneracaoModal({ colaborador, onClose }: Props) {
                     <span style={{ color: "var(--text-muted)" }}>
                       {t("rem.de")} {fmtData(v.inicio, locale)} · {v.fim ? `${t("rem.ate")} ${fmtData(v.fim, locale)}` : t("rem.emAberto")}
                     </span>
-                    <span className="mono font-semibold" style={{ color: "var(--text)" }}>{formatMoney(v.valor ?? 0, locale)}</span>
+                    {corrigindo === v.id ? (
+                      <EdicaoInline inicial={String(v.valor ?? "").replace(".", ",")} disabled={busy} onCancelar={() => setCorrigindo(null)}
+                        onSalvar={async (x) => { if (await enviar({ acao: "atualizar", id: v.id, valor: parseAmount(x) })) setCorrigindo(null); }} />
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <span className="mono font-semibold" style={{ color: "var(--text)" }}>{formatMoney(v.valor ?? 0, locale)}</span>
+                        <AcoesLinha disabled={busy} onEditar={() => setCorrigindo(v.id)} onExcluir={() => { enviar({ acao: "excluir", id: v.id }); }} />
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -134,7 +143,13 @@ export function RemuneracaoModal({ colaborador, onClose }: Props) {
                     </span>
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="mono font-semibold">{formatMoney(v.valor ?? 0, locale)}</span>
+                    {corrigindo === v.id ? (
+                      <EdicaoInline inicial={String(v.valor ?? "").replace(".", ",")} disabled={busy} onCancelar={() => setCorrigindo(null)}
+                        onSalvar={async (x) => { if (await enviar({ acao: "atualizar", id: v.id, valor: parseAmount(x) })) setCorrigindo(null); }} />
+                    ) : (<>
+                      <span className="mono font-semibold">{formatMoney(v.valor ?? 0, locale)}</span>
+                      <AcoesLinha disabled={busy} onEditar={() => setCorrigindo(v.id)} onExcluir={() => { enviar({ acao: "excluir", id: v.id }); }} />
+                    </>)}
                     {encerrando?.id === v.id ? (
                       <>
                         <Input type="date" aria-label={t("rem.encerrarEm")} className="!w-40 !py-1.5" value={encerrando.fim} onChange={(e) => setEncerrando({ id: v.id, fim: e.target.value })} />

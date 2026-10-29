@@ -41,6 +41,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // ── Editar (valor, data, tipo, motivo) ─────────────────────────────────
+    if (body.acao === "atualizar") {
+      const id = String(body.id ?? "");
+      if (!id || id.includes("/")) return NextResponse.json({ error: "Estorno inválido." }, { status: 400 });
+      const ref = rhCol(ctx, "rhEstornos").doc(id);
+      const s = await ref.get();
+      if (!s.exists) return NextResponse.json({ error: "Estorno não encontrado." }, { status: 404 });
+      const e = s.data()!;
+      const alvo: string = e.incluidoEm ?? (fechadas.includes(e.compVenda) ? monthOf(e.data) : e.compVenda);
+      if (fechadas.includes(alvo)) return NextResponse.json({ error: `O efeito deste estorno está na competência ${alvo}, que está fechada. Reabra-a (com motivo) para editar.` }, { status: 409 });
+      const tipo = TIPOS.includes(body.tipo) ? (body.tipo as (typeof TIPOS)[number]) : e.tipo;
+      const data = String(body.data ?? e.data);
+      if (!isValidDate(data)) return NextResponse.json({ error: "Data inválida." }, { status: 400 });
+      const [m, anteriores] = [/^(cashflow|vendas)_(.+)$/.exec(String(e.vendaKey)), await carregarEstornos(ctx)];
+      if (!m) return NextResponse.json({ error: "Venda inválida." }, { status: 400 });
+      const venda = await lerVenda(ctx, m[1] as OrigemVenda, m[2]);
+      if (!venda) return NextResponse.json({ error: "Venda não encontrada (ela pode ter sido removida)." }, { status: 404 });
+      const outros = r2(anteriores.filter((x) => x.vendaKey === e.vendaKey && x.id !== id).reduce((t, x) => t + x.valor, 0));
+      const valor = r2(Number(body.valor ?? e.valor));
+      if (!Number.isFinite(valor) || valor <= 0) return NextResponse.json({ error: "Informe o valor estornado." }, { status: 400 });
+      if (valor > r2(venda.valor - outros) + 0.001) return NextResponse.json({ error: "O valor passa do que resta da venda." }, { status: 400 });
+      if (data < venda.date) return NextResponse.json({ error: "A data do estorno não pode ser anterior à venda." }, { status: 400 });
+      if (fechadas.includes(e.compVenda) && fechadas.includes(monthOf(data))) return NextResponse.json({ error: "A competência da venda e a da data do estorno estão fechadas. Use uma data em competência aberta." }, { status: 409 });
+      const margem = await margemDaVendaLida(ctx, venda);
+      await ref.update({
+        tipo, data, valor, motivo: String(body.motivo ?? e.motivo ?? "").trim().slice(0, 200),
+        baseReceita: valor, baseMargem: margem === null ? null : r2((margem * valor) / venda.valor),
+        updatedAt: Date.now(), updatedBy: ctx.actor.uid, updatedByName: ctx.actor.name,
+      });
+      await logRh(ctx, "corrigiu_estorno", { info: `${e.vendaKey} — ${valor}` });
+      await sincronizarSeguro(ctx, e.compVenda < monthOf(data) ? e.compVenda : monthOf(data));
+      return NextResponse.json({ ok: true });
+    }
+
     // ── Criar ──────────────────────────────────────────────────────────────
     const vendaKey = String(body.vendaKey ?? "");
     const m = /^(cashflow|vendas)_(.+)$/.exec(vendaKey);

@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import { Button, Field, Input, Pill } from "@/app/components/ui";
 import { CentroRapidoModal } from "./CentroRapidoModal";
-import { fmtData, hojeISO, rhApi, selectClass, selectStyle, type Centro, type Colaborador, type Vigencia, RhModal as Modal } from "./shared";
+import { AcoesLinha, fmtData, hojeISO, rhApi, selectClass, selectStyle, type Centro, type Colaborador, type Vigencia, RhModal as Modal } from "./shared";
 
 interface Props {
   colaborador: Colaborador | null;
@@ -28,6 +28,7 @@ export function AlocacaoModal({ colaborador, centros, onCentroCriado, onClose, o
   const [erro, setErro] = useState("");
   const [busy, setBusy] = useState(false);
   const [criandoPara, setCriandoPara] = useState<number | null>(null);
+  const [corrigindo, setCorrigindo] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     if (!colaborador) return;
@@ -39,7 +40,7 @@ export function AlocacaoModal({ colaborador, centros, onCentroCriado, onClose, o
 
   useEffect(() => {
     if (!colaborador) return;
-    setErro(""); setDesde(hojeISO());
+    setErro(""); setDesde(hojeISO()); setCorrigindo(null);
     setLinhas(colaborador.alocacao.length > 0
       ? colaborador.alocacao.map((a) => ({ centroId: a.centroId, pct: String(a.pct) }))
       : [{ centroId: "", pct: "100" }]);
@@ -59,11 +60,11 @@ export function AlocacaoModal({ colaborador, centros, onCentroCriado, onClose, o
   async function salvar() {
     setBusy(true); setErro("");
     try {
+      const itens = linhas.map((l) => ({ centroId: l.centroId, pct: Number(l.pct.replace(",", ".")) }));
       await rhApi("/api/rh/vigencias", {
-        body: {
-          tipo: "alocacao", colaboradorId: colaborador!.id, inicio: desde,
-          itens: linhas.map((l) => ({ centroId: l.centroId, pct: Number(l.pct.replace(",", ".")) })),
-        },
+        body: corrigindo
+          ? { acao: "atualizar", id: corrigindo, itens }
+          : { tipo: "alocacao", colaboradorId: colaborador!.id, inicio: desde, itens },
       });
       onSaved();
       onClose();
@@ -120,7 +121,9 @@ export function AlocacaoModal({ colaborador, centros, onCentroCriado, onClose, o
             <Pill tone={fecha ? "pos" : "neg"} dot>{t("alocacao.soma", { valor: soma })}</Pill>
           </div>
 
-          <Field label={t("rem.aPartirDe")} className="max-w-xs"><Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></Field>
+          {corrigindo
+            ? <p className="text-xs font-semibold" style={{ color: "var(--warn)" }}>{t("crud.corrigindoVigencia")} <button type="button" className="underline cursor-pointer" onClick={() => setCorrigindo(null)}>{t("crud.cancelar")}</button></p>
+            : <Field label={t("rem.aPartirDe")} className="max-w-xs"><Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></Field>}
 
           {erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}
 
@@ -129,11 +132,14 @@ export function AlocacaoModal({ colaborador, centros, onCentroCriado, onClose, o
               <h3 className="mb-2 text-sm font-semibold">{t("rem.historico")}</h3>
               <ul className="divide-y rounded-lg border text-sm" style={{ borderColor: "var(--border)" }}>
                 {historico.map((v) => (
-                  <li key={v.id} className="px-3 py-2" style={{ borderColor: "var(--border)" }}>
-                    <span style={{ color: "var(--text-muted)" }}>
+                  <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2" style={{ borderColor: "var(--border)" }}>
+                    <span><span style={{ color: "var(--text-muted)" }}>
                       {t("rem.de")} {fmtData(v.inicio, locale)} · {v.fim ? `${t("rem.ate")} ${fmtData(v.fim, locale)}` : t("rem.emAberto")}
                     </span>
-                    <span className="ml-2 font-semibold">{(v.itens ?? []).map((i) => `${i.centroNome ?? "—"} ${i.pct}%`).join(" · ")}</span>
+                    <span className="ml-2 font-semibold">{(v.itens ?? []).map((i) => `${i.centroNome ?? "—"} ${i.pct}%`).join(" · ")}</span></span>
+                    <AcoesLinha disabled={busy}
+                      onEditar={() => { setCorrigindo(v.id); setLinhas((v.itens ?? []).map((i) => ({ centroId: i.centroId, pct: String(i.pct) }))); }}
+                      onExcluir={async () => { setBusy(true); setErro(""); try { await rhApi("/api/rh/vigencias", { body: { acao: "excluir", id: v.id } }); await carregar(); onSaved(); } catch (e) { setErro(e instanceof Error ? e.message : "Erro"); } finally { setBusy(false); } }} />
                   </li>
                 ))}
               </ul>

@@ -25,6 +25,7 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
   const [f, setF] = useState({ ...VAZIO, dataEntrada: hojeISO() });
   const [membros, setMembros] = useState<{ uid: string; nome: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [confirmaExcluir, setConfirmaExcluir] = useState(false);
   const [erro, setErro] = useState("");
 
   const set = (k: keyof typeof VAZIO, v: string) => setF((p) => ({ ...p, [k]: v }));
@@ -42,6 +43,7 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
   useEffect(() => {
     if (!open) return;
     setErro("");
+    setConfirmaExcluir(false);
     if (!colaborador) { setF({ ...VAZIO, dataEntrada: hojeISO() }); return; }
     let cancelled = false;
     (async () => {
@@ -63,6 +65,22 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
     })();
     return () => { cancelled = true; };
   }, [open, colaborador, t]);
+
+  async function excluir() {
+    if (!colaborador) return;
+    setSaving(true);
+    setErro("");
+    try {
+      await rhApi("/api/rh/colaboradores", { method: "DELETE", body: { id: colaborador.id } });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro");
+      setConfirmaExcluir(false);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function salvar() {
     setSaving(true);
@@ -156,9 +174,16 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
         {colaborador && <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t("form.revelaNota")}</p>}
         {erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}
 
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>{t("form.cancelar")}</Button>
-          <Button onClick={salvar} loading={saving} disabled={saving}>{saving ? t("form.salvando") : t("form.salvar")}</Button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {colaborador ? (
+            confirmaExcluir
+              ? <span className="flex items-center gap-2"><span className="text-xs" style={{ color: "var(--neg)" }}>{t("crud.confirmaColab")}</span><Button variant="danger" size="sm" onClick={excluir} disabled={saving}>{t("crud.confirmar")}</Button><Button variant="ghost" size="sm" onClick={() => setConfirmaExcluir(false)}>{t("crud.cancelar")}</Button></span>
+              : <Button variant="danger" size="sm" onClick={() => setConfirmaExcluir(true)} disabled={saving}>{t("crud.excluirColaborador")}</Button>
+          ) : <span />}
+          <span className="flex gap-2">
+            <Button variant="secondary" onClick={onClose} disabled={saving}>{t("form.cancelar")}</Button>
+            <Button onClick={salvar} loading={saving} disabled={saving}>{saving ? t("form.salvando") : t("form.salvar")}</Button>
+          </span>
         </div>
       </div>
     </Modal>

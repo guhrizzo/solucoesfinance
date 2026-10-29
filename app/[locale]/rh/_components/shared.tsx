@@ -1,7 +1,9 @@
 "use client";
 
-import type { ComponentProps } from "react";
-import { Modal } from "@/app/components/ui";
+import { useState, type ComponentProps } from "react";
+import { useTranslations } from "next-intl";
+import { Pencil, Trash2 } from "lucide-react";
+import { Button, Input, Modal } from "@/app/components/ui";
 import { inputBaseStyle } from "@/app/components/ui/Input";
 import { authedFetch } from "@/lib/authedFetch";
 
@@ -139,5 +141,33 @@ export function RhModal({ children, ...props }: ComponentProps<typeof Modal>) {
     <Modal {...props}>
       <div className="max-h-[calc(100vh-9rem)] overflow-y-auto p-5 sm:p-7">{children}</div>
     </Modal>
+  );
+}
+
+/** Editar + excluir de uma linha de histórico; excluir pede um segundo clique ("Confirmar"). */
+export function AcoesLinha({ onEditar, onExcluir, disabled }: { onEditar?: () => void; onExcluir: () => void; disabled?: boolean }) {
+  const t = useTranslations("rh.crud");
+  const [confirma, setConfirma] = useState(false);
+  return (
+    <span className="flex items-center gap-1">
+      {onEditar && <Button size="sm" variant="ghost" icon={Pencil} disabled={disabled} aria-label={t("editar")} onClick={onEditar} />}
+      {confirma
+        ? <Button size="sm" variant="danger" disabled={disabled} onClick={() => { setConfirma(false); onExcluir(); }}>{t("confirmar")}</Button>
+        : <Button size="sm" variant="ghost" icon={Trash2} disabled={disabled} aria-label={t("excluir")} onClick={() => setConfirma(true)} />}
+    </span>
+  );
+}
+
+/** Campo + salvar/cancelar para corrigir um valor na própria linha. */
+export function EdicaoInline({ inicial, sufixo, onSalvar, onCancelar, disabled }: { inicial: string; sufixo?: string; onSalvar: (v: string) => void; onCancelar: () => void; disabled?: boolean }) {
+  const t = useTranslations("rh.crud");
+  const [v, setV] = useState(inicial);
+  return (
+    <span className="flex items-center gap-1">
+      <Input inputMode="decimal" aria-label={t("novoValor")} className="!w-28 !py-1.5 text-right" value={v} onChange={(e) => setV(e.target.value)} autoFocus />
+      {sufixo && <span className="text-xs">{sufixo}</span>}
+      <Button size="sm" disabled={disabled || !v} onClick={() => onSalvar(v)}>{t("salvar")}</Button>
+      <Button size="sm" variant="ghost" onClick={onCancelar}>{t("cancelar")}</Button>
+    </span>
   );
 }

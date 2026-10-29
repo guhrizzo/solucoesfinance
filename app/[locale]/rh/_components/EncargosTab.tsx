@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Card, Field, Input, Pill } from "@/app/components/ui";
-import { fmtData, hojeISO, rhApi, type Vigencia } from "./shared";
+import { AcoesLinha, EdicaoInline, fmtData, hojeISO, rhApi, type Vigencia } from "./shared";
 
 /** Percentual de encargos da empresa (valor único, com vigência). */
 export function EncargosTab() {
@@ -14,6 +14,14 @@ export function EncargosTab() {
   const [desde, setDesde] = useState(hojeISO());
   const [erro, setErro] = useState("");
   const [busy, setBusy] = useState(false);
+  const [corrigindo, setCorrigindo] = useState<string | null>(null);
+
+  async function chamar(body: Record<string, unknown>) {
+    setBusy(true); setErro("");
+    try { await rhApi("/api/rh/vigencias", { body }); setCorrigindo(null); await carregar(); }
+    catch (e) { setErro(e instanceof Error ? e.message : "Erro"); }
+    finally { setBusy(false); }
+  }
 
   const carregar = useCallback(async () => {
     try {
@@ -64,7 +72,15 @@ export function EncargosTab() {
                 <span style={{ color: "var(--text-muted)" }}>
                   {t("rem.de")} {fmtData(v.inicio, locale)} · {v.fim ? `${t("rem.ate")} ${fmtData(v.fim, locale)}` : t("rem.emAberto")}
                 </span>
-                <span className="mono font-semibold">{v.pct}%</span>
+                {corrigindo === v.id ? (
+                  <EdicaoInline inicial={String(v.pct ?? "").replace(".", ",")} sufixo="%" disabled={busy} onCancelar={() => setCorrigindo(null)}
+                    onSalvar={(x) => chamar({ acao: "atualizar", id: v.id, pct: Number(x.replace(",", ".")) })} />
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span className="mono font-semibold">{v.pct}%</span>
+                    <AcoesLinha disabled={busy} onEditar={() => setCorrigindo(v.id)} onExcluir={() => chamar({ acao: "excluir", id: v.id })} />
+                  </span>
+                )}
               </li>
             ))}
           </ul>

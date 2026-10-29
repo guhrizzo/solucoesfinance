@@ -186,12 +186,13 @@ function EstornoModal({ venda, estornos, onClose, onSaved }: {
   const [valor, setValor] = useState("");
   const [data, setData] = useState(hojeISO());
   const [motivo, setMotivo] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!venda) return;
-    setErro(""); setTipo("devolucao"); setData(hojeISO()); setMotivo("");
+    setEditId(null); setErro(""); setTipo("devolucao"); setData(hojeISO()); setMotivo("");
     setValor(Math.max(0, venda.valor - venda.estornado).toFixed(2).replace(".", ","));
   }, [venda]);
 
@@ -225,13 +226,16 @@ function EstornoModal({ venda, estornos, onClose, onSaved }: {
                   {t(`comissoes.estorno.tipos.${e.tipo}`)} · {fmtData(e.data, locale)} · <strong>{formatMoney(e.valor, locale)}</strong>
                   {e.motivo && <span className="block text-xs" style={{ color: "var(--text-subtle)" }}>{e.motivo}</span>}
                 </span>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => chamar({ acao: "desfazer", id: e.id })}>{t("comissoes.estorno.desfazer")}</Button>
+                <span className="flex gap-1">
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => { setEditId(e.id); setTipo(e.tipo); setData(e.data); setMotivo(e.motivo ?? ""); setValor(e.valor.toFixed(2).replace(".", ",")); setErro(""); }}>{t("crud.editar")}</Button>
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => chamar({ acao: "desfazer", id: e.id })}>{t("comissoes.estorno.desfazer")}</Button>
+                </span>
               </li>
             ))}
           </ul>
         )}
 
-        {restante > 0 && (
+        {(restante > 0 || editId) && (
           <>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t("comissoes.estorno.tipo")}>
@@ -240,7 +244,7 @@ function EstornoModal({ venda, estornos, onClose, onSaved }: {
                 </select>
               </Field>
               <Field label={t("comissoes.estorno.data")}><Input type="date" value={data} onChange={(e) => setData(e.target.value)} /></Field>
-              <Field label={t("comissoes.estorno.valor")} hint={t("comissoes.estorno.restante", { valor: formatMoney(restante, locale) })}>
+              <Field label={t("comissoes.estorno.valor")} hint={t("comissoes.estorno.restante", { valor: formatMoney(restante + (editId ? estornos.find((x) => x.id === editId)?.valor ?? 0 : 0), locale) })}>
                 <MoneyInput value={valor} onValueChange={setValor} />
               </Field>
               <Field label={t("comissoes.estorno.motivo")}><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={200} /></Field>
@@ -248,11 +252,11 @@ function EstornoModal({ venda, estornos, onClose, onSaved }: {
             {erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={onClose} disabled={busy}>{t("form.cancelar")}</Button>
-              <Button loading={busy} disabled={busy || !valor} onClick={() => chamar({ vendaKey: venda.key, tipo, data, valor: parseAmount(valor), motivo })}>{t("comissoes.estorno.registrar")}</Button>
+              <Button loading={busy} disabled={busy || !valor} onClick={() => chamar(editId ? { acao: "atualizar", id: editId, tipo, data, valor: parseAmount(valor), motivo } : { vendaKey: venda.key, tipo, data, valor: parseAmount(valor), motivo })}>{editId ? t("crud.salvarAlteracao") : t("comissoes.estorno.registrar")}</Button>
             </div>
           </>
         )}
-        {restante <= 0 && erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}
+        {restante <= 0 && !editId && erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}
       </div>
     </Modal>
   );

@@ -6,6 +6,7 @@ import { guardRh, isCtx, logRh, rhCol, competenciasFechadas, EMPRESA, listarCent
 import { validarItens } from "@/lib/rh/alocacao";
 import { isValidDate, dayBefore, monthOf } from "@/lib/rh/datas";
 import { validarNovaVigencia, validarEncerramento, type ErroVigencia, type Vigencia } from "@/lib/rh/vigencia";
+import { folhasFechadas } from "@/lib/rh/folhaServer";
 
 // Histórico com vigência: salário e benefícios por colaborador; encargos da
 // empresa (colaboradorId "_empresa"). Nova vigência encerra a anterior no dia
@@ -52,6 +53,69 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const fechadas = await competenciasFechadas(ctx);
     const col = rhCol(ctx, "rhVigencias");
+
+    // ── Corrigir ou excluir uma vigência ───────────────────────────────────
+    // Não toca período já fechado (custo ou folha). Excluir só vale para a
+    // vigência MAIS RECENTE do grupo; a anterior volta a ficar em aberto.
+    if (body.acao === "atualizar" || body.acao === "excluir") {
+      const id = String(body.id ?? "");
+      if (!id || id.includes("/")) return NextResponse.json({ error: "Vigência inválida." }, { status: 400 });
+      const ref = col.doc(id);
+      const snap = await ref.get();
+      if (!snap.exists) return NextResponse.json({ error: "Vigência não encontrada." }, { status: 404 });
+      const v = snap.data()!;
+      const travadas = [...fechadas, ...(await folhasFechadas(ctx))];
+      const mesIni = monthOf(v.inicio);
+      const mesFim = v.fim ? monthOf(v.fim) : null;
+      if (travadas.some((c) => c >= mesIni && (mesFim === null || c <= mesFim))) return NextResponse.json({ error: MSG.competencia_fechada }, { status: 409 });
+      const stamp = { updatedAt: Date.now(), updatedBy: ctx.actor.uid, updatedByName: ctx.actor.name };
+
+      if (body.acao === "excluir") {
+        const grupoSnap = await col.where("colaboradorId", "==", v.colaboradorId).where("tipo", "==", v.tipo).get();
+        const grupo = grupoSnap.docs
+          .map((d) => ({ id: d.id, ...(d.data() as { inicio: string; fim: string | null; nome?: string }) }))
+          .filter((g) => v.tipo !== "beneficio" || String(g.nome ?? "").trim().toLowerCase() === String(v.nome ?? "").trim().toLowerCase());
+        if (grupo.some((g) => g.id !== id && g.inicio > v.inicio)) {
+          return NextResponse.json({ error: "Só a vigência mais recente pode ser excluída. Exclua as posteriores primeiro." }, { status: 409 });
+        }
+        const batch = ctx.db.batch();
+        batch.delete(ref);
+        const anterior = grupo.find((g) => g.id !== id && g.fim === dayBefore(v.inicio));
+        if (anterior) batch.update(col.doc(anterior.id), { fim: v.fim ?? null, ...stamp });
+        await batch.commit();
+      } else {
+        const upd: Record<string, unknown> = {};
+        if (v.tipo === "salario") {
+          const valor = Math.round(Number(body.valor) * 100) / 100;
+          if (!ehNumero(valor, 10_000_000) || valor <= 0) return NextResponse.json({ error: "Informe um salário maior que zero." }, { status: 400 });
+          upd.valor = valor;
+        } else if (v.tipo === "beneficio") {
+          const valor = Math.round(Number(body.valor) * 100) / 100;
+          if (!ehNumero(valor, 10_000_000)) return NextResponse.json({ error: "Valor inválido." }, { status: 400 });
+          upd.valor = valor;
+        } else if (v.tipo === "encargos") {
+          const pct = Number(body.pct);
+          if (!ehNumero(pct, 200)) return NextResponse.json({ error: "Percentual de encargos inválido." }, { status: 400 });
+          upd.pct = Math.round(pct * 100) / 100;
+        } else if (v.tipo === "alocacao") {
+          const erroItens = validarItens(body.itens);
+          if (erroItens) return NextResponse.json({ error: erroItens }, { status: 400 });
+          const porId = new Map((await listarCentros(ctx)).map((c) => [c.id, c]));
+          const itens: { centroId: string; pct: number; centroNome: string }[] = [];
+          for (const it of body.itens as { centroId: string; pct: number }[]) {
+            const c = porId.get(String(it.centroId));
+            if (!c) return NextResponse.json({ error: "Centro de custo não encontrado." }, { status: 400 });
+            itens.push({ centroId: c.id, pct: Math.round(Number(it.pct) * 100) / 100, centroNome: c.nome });
+          }
+          upd.itens = itens;
+        }
+        await ref.update({ ...upd, ...stamp });
+      }
+      await logRh(ctx, body.acao === "excluir" ? `excluiu_vigencia_${v.tipo}` : `corrigiu_vigencia_${v.tipo}`, { colaboradorId: v.colaboradorId === EMPRESA ? undefined : v.colaboradorId, info: `início ${v.inicio}` });
+      if (v.tipo === "alocacao") await recomputarUsoCentros(ctx);
+      await sincronizarSeguro(ctx, mesIni);
+      return NextResponse.json({ ok: true });
+    }
 
     // ── Encerrar uma vigência (ex.: benefício cancelado) ───────────────────
     if (body.acao === "encerrar") {
