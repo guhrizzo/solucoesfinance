@@ -86,7 +86,7 @@ export default function RhPage() {
             </>
           ) : (
           <>
-            <div role="tablist" aria-label={t("title")} className="flex gap-1 overflow-x-auto border-b" style={{ borderColor: "var(--border)" }}>
+            <div role="tablist" aria-label={t("title")} className="flex flex-wrap gap-1 border-b" style={{ borderColor: "var(--border)" }}>
               {TABS.map((k) => (
                 <button
                   key={k}
