@@ -95,7 +95,7 @@
     "fcBadgeTitle": "Lançado no fluxo de caixa",
     "expenseFallback": "despesa",
     "rhBadge": "RH",
-    "rhBadgeTitle": "Custo de pessoal lançado automaticamente pelo RH (agregado por centro). Não pode ser editado aqui."
+    "rhBadgeTitle": "Custo de pessoal previsto pelo RH (orçamento, agregado por centro). A baixa vem do extrato no Fluxo de Caixa; não pode ser editado aqui."
   },
   "status": {
     "todos": "Todos",

@@ -95,7 +95,7 @@
     "fcBadgeTitle": "Posted to cash flow",
     "expenseFallback": "expense",
     "rhBadge": "HR",
-    "rhBadgeTitle": "People cost posted automatically by HR (aggregated per center). It can't be edited here."
+    "rhBadgeTitle": "People cost forecast by HR (budget, aggregated per center). Settlement comes from the bank statement in Cash flow; it can't be edited here."
   },
   "status": {
     "todos": "All",

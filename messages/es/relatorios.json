@@ -161,9 +161,7 @@
       "biggest": "Mayor peso: {line}, con el {pct}% de los ingresos — impulsado principalmente por {cat} ({catPct}% de esa línea).",
       "biggestNoCat": "Mayor peso: {line}, con el {pct}% de los ingresos.",
       "noRevenue": "Sin ingresos en el período — el peso de cada línea se calcula sobre los ingresos, así que aparece cuando haya entradas."
-    },
-    "personnel": "Personal (RR. HH.)",
-    "personnelUnallocated": "Personal — no asignado"
+    }
   },
   "countLabels": {
     "monthsElapsedCurrent": "{count, plural, one {# mes transcurrido} other {# meses transcurridos}}",
