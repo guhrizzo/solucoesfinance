@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       const c = await rhCol(ctx, "rhColaboradores").doc(colaboradorId).get();
       if (!c.exists) return NextResponse.json({ error: "Colaborador não encontrado." }, { status: 404 });
       const l = body.lanc ?? {};
-      const campos = { he50: num(l.he50, 744), he100: num(l.he100, 744), noturnas: num(l.noturnas, 744), faltasDias: num(l.faltasDias, 31), atrasosHoras: num(l.atrasosHoras, 744) };
+      const campos = { he50: num(l.he50, 744), he100: num(l.he100, 744), noturnas: num(l.noturnas, 744), faltasDias: num(l.faltasDias, 31), atrasosHoras: num(l.atrasosHoras, 744), adiantamento: num(l.adiantamento, 10_000_000) };
       if (Object.values(campos).some((v) => v === null)) return NextResponse.json({ error: "Horas e dias devem ser números positivos." }, { status: 400 });
       const extras = (Array.isArray(l.extras) ? l.extras : []).slice(0, 20).map((x: { rubricaId?: string; valor?: number; obs?: string }) => ({
         rubricaId: String(x.rubricaId ?? ""), valor: num(x.valor, 10_000_000) ?? 0, obs: String(x.obs ?? "").slice(0, 80),

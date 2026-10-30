@@ -12,7 +12,7 @@ import type { RubricaUI } from "./ConfigFolha";
 interface Resultado {
   proventos: number; descontos: number; liquido: number; inss: number; irrf: number; fgts: number; erros: string[];
 }
-interface Lanc { he50: number; he100: number; noturnas: number; faltasDias: number; atrasosHoras: number; extras: { rubricaId: string; valor: number; obs?: string }[] }
+interface Lanc { he50: number; he100: number; noturnas: number; faltasDias: number; atrasosHoras: number; adiantamento?: number; extras: { rubricaId: string; valor: number; obs?: string }[] }
 interface Linha { colaboradorId: string; nome: string; cargo: string; lanc: Lanc; resultado: Resultado; conferido: boolean; conferidoPorNome?: string }
 interface Folha {
   comp: string; fechada: boolean; cabecalho: { diasUteis: number; domingosFeriados: number }; linhas: Linha[]; erros: string[]; foraDaFolha: number;
@@ -31,7 +31,7 @@ export function FolhaMes() {
   const [reload, setReload] = useState(0);
   const recarregar = useCallback(() => setReload((n) => n + 1), []);
   const [cab, setCab] = useState({ diasUteis: "", domingosFeriados: "" });
-  const [lanc, setLanc] = useState<{ linha: Linha; f: { he50: string; he100: string; noturnas: string; faltasDias: string; atrasosHoras: string }; extras: { rubricaId: string; valor: string; obs: string }[] } | null>(null);
+  const [lanc, setLanc] = useState<{ linha: Linha; f: { he50: string; he100: string; noturnas: string; faltasDias: string; atrasosHoras: string; adiantamento: string }; extras: { rubricaId: string; valor: string; obs: string }[] } | null>(null);
   const [lancErro, setLancErro] = useState("");
   const [modal, setModal] = useState<"fechar" | "reabrir" | null>(null);
   const [venc, setVenc] = useState<Record<string, string>>({});
@@ -63,7 +63,7 @@ export function FolhaMes() {
     setLancErro("");
     setLanc({
       linha: l,
-      f: { he50: String(l.lanc.he50 || ""), he100: String(l.lanc.he100 || ""), noturnas: String(l.lanc.noturnas || ""), faltasDias: String(l.lanc.faltasDias || ""), atrasosHoras: String(l.lanc.atrasosHoras || "") },
+      f: { he50: String(l.lanc.he50 || ""), he100: String(l.lanc.he100 || ""), noturnas: String(l.lanc.noturnas || ""), faltasDias: String(l.lanc.faltasDias || ""), atrasosHoras: String(l.lanc.atrasosHoras || ""), adiantamento: String(l.lanc.adiantamento || "") },
       extras: l.lanc.extras.map((x) => ({ rubricaId: x.rubricaId, valor: String(x.valor), obs: x.obs ?? "" })),
     });
   }
@@ -74,7 +74,7 @@ export function FolhaMes() {
     try {
       await post({
         acao: "lancamento", colaboradorId: lanc.linha.colaboradorId,
-        lanc: { he50: n(lanc.f.he50), he100: n(lanc.f.he100), noturnas: n(lanc.f.noturnas), faltasDias: n(lanc.f.faltasDias), atrasosHoras: n(lanc.f.atrasosHoras), extras: lanc.extras.map((x) => ({ rubricaId: x.rubricaId, valor: n(x.valor), obs: x.obs })) },
+        lanc: { he50: n(lanc.f.he50), he100: n(lanc.f.he100), noturnas: n(lanc.f.noturnas), faltasDias: n(lanc.f.faltasDias), atrasosHoras: n(lanc.f.atrasosHoras), adiantamento: n(lanc.f.adiantamento), extras: lanc.extras.map((x) => ({ rubricaId: x.rubricaId, valor: n(x.valor), obs: x.obs })) },
       });
       setLanc(null); recarregar();
     } catch (e) { setLancErro(e instanceof Error ? e.message : "Erro"); } finally { setBusy(false); }
@@ -213,7 +213,7 @@ export function FolhaMes() {
           <div className="space-y-4">
             <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t("folha.lanc.nota")}</p>
             <div className="grid gap-3 sm:grid-cols-3">
-              {(["he50", "he100", "noturnas", "faltasDias", "atrasosHoras"] as const).map((k) => (
+              {(["he50", "he100", "noturnas", "faltasDias", "atrasosHoras", "adiantamento"] as const).map((k) => (
                 <Field key={k} label={t(`folha.lanc.campos.${k}`)}><Input inputMode="decimal" value={lanc.f[k]} onChange={(e) => setLanc({ ...lanc, f: { ...lanc.f, [k]: e.target.value } })} /></Field>
               ))}
             </div>

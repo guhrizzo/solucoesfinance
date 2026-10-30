@@ -6,7 +6,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { guardRh, isCtx, logRh, rhCol, verificarPin, type RhCtx } from "@/lib/rh/server";
 import { carregarParametros, carregarTabelas, tabelaDaCompetencia } from "@/lib/rh/folhaServer";
 import { assinaturaEvento, calcularEvento, sugerirLinhas, type EntradaEvento, type LinhaEvento, type Motivo, type TipoEvento } from "@/lib/rh/eventos";
-import type { TabelaInss, TabelaIrrf } from "@/lib/rh/folha";
+import { fgtsDaCategoria, pctMultaDoMotivo, type CategoriaFgts, type TabelaInss, type TabelaIrrf } from "@/lib/rh/folha";
 import { vigenciaEm, type Vigencia } from "@/lib/rh/vigencia";
 import { COMP_RE, isValidDate, lastDay } from "@/lib/rh/datas";
 import { r2 } from "@/lib/rh/custo";
@@ -65,7 +65,11 @@ function entradaDe(tipo: TipoEvento, inputs: Record<string, unknown>, base: { sa
     diasGozo: n(inputs.diasGozo, 60), diasAbono: n(inputs.diasAbono, 30), avos: n(inputs.avos, 12), valor1aParcela: n(inputs.valor1aParcela, 10_000_000),
     motivo: tipo === "rescisao" ? motivo : undefined, diasSaldoSalario: n(inputs.diasSaldoSalario, 31), diasAvisoIndenizado: n(inputs.diasAvisoIndenizado, 90),
     avosDecimo: n(inputs.avosDecimo, 12), avosFerias: n(inputs.avosFerias, 12), periodosFeriasVencidas: n(inputs.periodosFeriasVencidas, 5),
-    saldoFgts: n(inputs.saldoFgts, 100_000_000), pctMultaFgts: n(inputs.pctMultaFgts, 100),
+    saldoFgts: n(inputs.saldoFgts, 100_000_000),
+    // Sem % informado, a multa segue o motivo: 40% sem justa causa, 20% em acordo (parâmetros da folha).
+    pctMultaFgts: inputs.pctMultaFgts === undefined || inputs.pctMultaFgts === null || inputs.pctMultaFgts === ''
+      ? (pctMultaDoMotivo(base.params, motivo) ?? undefined)
+      : n(inputs.pctMultaFgts, 100),
   };
 }
 
@@ -120,17 +124,17 @@ export async function POST(request: Request) {
         // Recalcular as linhas que o usuário editou (sem salvar).
         const editadas = body.linhas ? sanitizarLinhas(body.linhas) : null;
         if (editadas) {
-          const resultado = calcularEvento({ linhas: editadas, dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: c.params.aliquotaFgts });
+          const resultado = calcularEvento({ linhas: editadas, dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: fgtsDaCategoria(c.params, (c.colab.categoriaFgts as CategoriaFgts | undefined) ?? "geral").aliquota });
           return NextResponse.json({ linhas: editadas, resultado, erros: resultado.erros, salarioMensal: c.salarioMensal });
         }
         const { linhas, erros } = sugerirLinhas(tipo, entradaDe(tipo, inputs, c));
-        const resultado = calcularEvento({ linhas, dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: c.params.aliquotaFgts });
+        const resultado = calcularEvento({ linhas, dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: fgtsDaCategoria(c.params, (c.colab.categoriaFgts as CategoriaFgts | undefined) ?? "geral").aliquota });
         return NextResponse.json({ linhas, resultado, erros: [...erros, ...resultado.erros], salarioMensal: c.salarioMensal });
       }
 
       const linhas = sanitizarLinhas(body.linhas);
       if (!linhas || linhas.length === 0 || linhas.some((l) => !l.descricao)) return NextResponse.json({ error: "Informe ao menos uma verba, todas com descrição." }, { status: 400 });
-      const resultado = calcularEvento({ linhas, dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: c.params.aliquotaFgts });
+      const resultado = calcularEvento({ linhas, dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: fgtsDaCategoria(c.params, (c.colab.categoriaFgts as CategoriaFgts | undefined) ?? "geral").aliquota });
       const doc = {
         tipo, colaboradorId, nome: String(c.colab.nome), comp, inputs, linhas,
         resultado: { bases: resultado.bases, inss: resultado.inss, irrf: resultado.irrf, fgts: resultado.fgts, proventos: resultado.proventos, descontos: resultado.descontos, liquido: resultado.liquido },
@@ -162,7 +166,7 @@ export async function POST(request: Request) {
     const recalcular = async () => {
       const c = await contexto(ctx, ev.colaboradorId, ev.comp);
       if (!c) return null;
-      return calcularEvento({ linhas: ev.linhas as LinhaEvento[], dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: c.params.aliquotaFgts });
+      return calcularEvento({ linhas: ev.linhas as LinhaEvento[], dependentes: Number(c.colab.dependentes) || 0, inss: c.inss, irrf: c.irrf, aliquotaFgts: fgtsDaCategoria(c.params, (c.colab.categoriaFgts as CategoriaFgts | undefined) ?? "geral").aliquota });
     };
 
     if (body.acao === "excluir") {

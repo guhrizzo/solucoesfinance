@@ -96,7 +96,13 @@ export function calcularIrrf(
 
 export type TipoRubrica =
   | "salario" | "he50" | "he100" | "adnoturno" | "dsr" | "faltas" | "atrasos" | "comissao" | "bonus"
+  | "insalubridade" | "periculosidade" | "adiantamento"
   | "inss" | "irrf" | "vt" | "manual";
+
+export const TIPOS_RUBRICA: TipoRubrica[] = [
+  "salario", "he50", "he100", "adnoturno", "dsr", "faltas", "atrasos", "comissao", "bonus",
+  "insalubridade", "periculosidade", "adiantamento", "inss", "irrf", "vt", "manual",
+];
 
 export interface Rubrica {
   id: string;
@@ -120,12 +126,59 @@ export interface ParametrosFolha {
   /** Fração do 1/3 constitucional de férias, em % (ex.: um terço = 33,333...). */
   pctTercoFerias: number | null;
   pct1aParcela13: number | null;
+  /** Salário mínimo vigente: base da insalubridade. */
+  salarioMinimo: number | null;
+  /** Periculosidade, em % do salário-base (ex.: 30). */
+  pctPericulosidade: number | null;
+  /** FGTS do jovem aprendiz (ex.: 2) e do doméstico (ex.: 8). */
+  aliquotaFgtsAprendiz: number | null;
+  aliquotaFgtsDomestico: number | null;
+  /** Doméstico: % extra, em conta separada, pra cobrir a multa de rescisão (ex.: 3,2). */
+  pctFgtsRescisorioDomestico: number | null;
+  /** Multa do FGTS na demissão sem justa causa (40) e no acordo entre as partes (20). */
+  multaFgtsPct: number | null;
+  multaFgtsAcordoPct: number | null;
 }
 
 export const PARAMETROS_VAZIOS: ParametrosFolha = {
   horasMes: null, pctHE50: null, pctHE100: null, pctAdNoturno: null, diasBaseMes: null,
   pctVT: null, aliquotaFgts: null, pctTercoFerias: null, pct1aParcela13: null,
+  salarioMinimo: null, pctPericulosidade: null, aliquotaFgtsAprendiz: null, aliquotaFgtsDomestico: null,
+  pctFgtsRescisorioDomestico: null, multaFgtsPct: null, multaFgtsAcordoPct: null,
 };
+
+/** Valores sugeridos (CLT e informados pelo cliente). Entram sozinhos nos campos em branco; tudo é editável. */
+export const PARAMETROS_SUGERIDOS: { [K in keyof ParametrosFolha]: number } = {
+  horasMes: 220, diasBaseMes: 30, pctHE50: 50, pctHE100: 100, pctAdNoturno: 20, pctVT: 6, aliquotaFgts: 8,
+  pctTercoFerias: 33.3333, pct1aParcela13: 50, salarioMinimo: 1621, pctPericulosidade: 30,
+  aliquotaFgtsAprendiz: 2, aliquotaFgtsDomestico: 8, pctFgtsRescisorioDomestico: 3.2, multaFgtsPct: 40, multaFgtsAcordoPct: 20,
+};
+
+/** Tabelas sugeridas. As parcelas a deduzir do IRRF seguem a tabela mensal oficial: conferir com o contador. */
+export const TABELAS_SUGERIDAS = {
+  inss: { inicio: "2026-01-01", faixas: [{ ate: 1621, aliquota: 7.5 }, { ate: 2902.84, aliquota: 9 }, { ate: 4354.27, aliquota: 12 }, { ate: 8475.55, aliquota: 14 }] },
+  irrf: {
+    inicio: "2025-05-01",
+    faixas: [{ ate: 2428.8, aliquota: 0, deduzir: 0 }, { ate: 2826.65, aliquota: 7.5, deduzir: 182.16 }, { ate: 3751.05, aliquota: 15, deduzir: 394.16 }, { ate: 4664.68, aliquota: 22.5, deduzir: 675.49 }, { ate: null, aliquota: 27.5, deduzir: 908.73 }],
+    deducaoDependente: 189.59, descontoSimplificado: 607.2,
+  },
+} as const;
+
+export type CategoriaFgts = "geral" | "aprendiz" | "domestico";
+
+/** Alíquota do FGTS do mês (e o extra do doméstico) conforme a categoria; null = parâmetro faltando. */
+export function fgtsDaCategoria(p: ParametrosFolha, categoria: CategoriaFgts): { aliquota: number | null; rescisorio: number } {
+  if (categoria === "aprendiz") return { aliquota: p.aliquotaFgtsAprendiz, rescisorio: 0 };
+  if (categoria === "domestico") return { aliquota: p.aliquotaFgtsDomestico, rescisorio: p.pctFgtsRescisorioDomestico ?? 0 };
+  return { aliquota: p.aliquotaFgts, rescisorio: 0 };
+}
+
+/** Multa do FGTS na rescisão: 40% sem justa causa, 20% em acordo, nada nos demais casos. */
+export function pctMultaDoMotivo(p: ParametrosFolha, motivo: string): number | null {
+  if (motivo === "sem_justa_causa") return p.multaFgtsPct;
+  if (motivo === "acordo") return p.multaFgtsAcordoPct;
+  return 0;
+}
 
 /** Rubricas sugeridas (o usuário confirma antes de criar; tudo é editável). */
 export const RUBRICAS_PADRAO: Omit<Rubrica, "id">[] = [
@@ -136,11 +189,14 @@ export const RUBRICAS_PADRAO: Omit<Rubrica, "id">[] = [
   { codigo: "0005", nome: "DSR sobre horas extras e adicional noturno", natureza: "provento", tipo: "dsr", incidencia: { inss: true, irrf: true, fgts: true }, ativa: true },
   { codigo: "0006", nome: "Comissões", natureza: "provento", tipo: "comissao", incidencia: { inss: true, irrf: true, fgts: true }, ativa: true },
   { codigo: "0007", nome: "Bônus", natureza: "provento", tipo: "bonus", incidencia: { inss: true, irrf: true, fgts: true }, ativa: true },
+  { codigo: "0008", nome: "Insalubridade", natureza: "provento", tipo: "insalubridade", incidencia: { inss: true, irrf: true, fgts: true }, ativa: true },
+  { codigo: "0009", nome: "Periculosidade", natureza: "provento", tipo: "periculosidade", incidencia: { inss: true, irrf: true, fgts: true }, ativa: true },
   { codigo: "0101", nome: "Faltas", natureza: "desconto", tipo: "faltas", incidencia: { inss: true, irrf: true, fgts: true }, ativa: true },
   { codigo: "0102", nome: "Atrasos", natureza: "desconto", tipo: "atrasos", incidencia: { inss: true, irrf: true, fgts: true }, ativa: true },
   { codigo: "0201", nome: "INSS", natureza: "desconto", tipo: "inss", incidencia: { inss: false, irrf: false, fgts: false }, ativa: true },
   { codigo: "0202", nome: "IRRF", natureza: "desconto", tipo: "irrf", incidencia: { inss: false, irrf: false, fgts: false }, ativa: true },
   { codigo: "0203", nome: "Vale-transporte", natureza: "desconto", tipo: "vt", incidencia: { inss: false, irrf: false, fgts: false }, ativa: true },
+  { codigo: "0204", nome: "Adiantamento salarial", natureza: "desconto", tipo: "adiantamento", incidencia: { inss: false, irrf: false, fgts: false }, ativa: true },
 ];
 
 export function validarRubrica(b: Record<string, unknown>): { ok: true; rubrica: Omit<Rubrica, "id"> } | { ok: false; erro: string } {
@@ -150,8 +206,7 @@ export function validarRubrica(b: Record<string, unknown>): { ok: true; rubrica:
   if (nome.length < 2) return { ok: false, erro: "Informe o nome da rubrica." };
   const natureza = b.natureza === "desconto" ? "desconto" : b.natureza === "provento" ? "provento" : null;
   if (!natureza) return { ok: false, erro: "Natureza inválida." };
-  const tipos: TipoRubrica[] = ["salario", "he50", "he100", "adnoturno", "dsr", "faltas", "atrasos", "comissao", "bonus", "inss", "irrf", "vt", "manual"];
-  if (!tipos.includes(b.tipo as TipoRubrica)) return { ok: false, erro: "Tipo inválido." };
+  if (!TIPOS_RUBRICA.includes(b.tipo as TipoRubrica)) return { ok: false, erro: "Tipo inválido." };
   const inc = (b.incidencia ?? {}) as Record<string, unknown>;
   return {
     ok: true,
@@ -167,10 +222,12 @@ export interface LancamentoMes {
   noturnas: number;
   faltasDias: number;
   atrasosHoras: number;
+  /** Adiantamento de salário pago no mês (R$): desconta do líquido, sem incidência. */
+  adiantamento: number;
   extras: { rubricaId: string; valor: number; obs?: string }[];
 }
 
-export const LANCAMENTO_VAZIO: LancamentoMes = { he50: 0, he100: 0, noturnas: 0, faltasDias: 0, atrasosHoras: 0, extras: [] };
+export const LANCAMENTO_VAZIO: LancamentoMes = { he50: 0, he100: 0, noturnas: 0, faltasDias: 0, atrasosHoras: 0, adiantamento: 0, extras: [] };
 
 export interface ItemFolha {
   codigo: string;
@@ -189,6 +246,8 @@ export interface ResultadoFolha {
   irrf: number;
   irrfMetodo: "legal" | "simplificado" | null;
   fgts: number;
+  /** Doméstico: FGTS extra (conta separada da multa de rescisão). */
+  fgtsRescisorio: number;
   proventos: number;
   descontos: number;
   liquido: number;
@@ -208,6 +267,10 @@ export interface EntradaFolha {
   lanc: LancamentoMes;
   comissao: number;
   bonus: number;
+  /** Grau de insalubridade em % do salário mínimo (0, 10, 20 ou 40). */
+  insalubridadePct: number;
+  periculosidade: boolean;
+  categoriaFgts: CategoriaFgts;
   /** Valor mensal do benefício vale-transporte vigente (0 = sem VT). */
   vtBeneficio: number;
   diasUteis: number;
@@ -262,6 +325,14 @@ export function calcularFolhaColab(e: EntradaFolha): ResultadoFolha {
     lanca("faltas", (e.salarioMensal / (p.diasBaseMes as number)) * l.faltasDias, `${l.faltasDias} dia(s)`);
   }
   if (l.atrasosHoras > 0) lanca("atrasos", valorHora * l.atrasosHoras, `${l.atrasosHoras} h`);
+  // Adicionais sobre a parte do mês em que a pessoa esteve ativa (mesma proporção do salário).
+  const proporcao = e.salarioMensal > 0 ? Math.min(1, e.salarioPeriodo / e.salarioMensal) : 1;
+  if (e.insalubridadePct > 0 && exige(p.salarioMinimo !== null && p.salarioMinimo > 0, "Informe o salário mínimo nos parâmetros da folha (base da insalubridade).")) {
+    lanca("insalubridade", (p.salarioMinimo as number) * (e.insalubridadePct / 100) * proporcao, `${e.insalubridadePct}% s/ mínimo`);
+  }
+  if (e.periculosidade && exige(p.pctPericulosidade !== null, "Informe o % de periculosidade nos parâmetros da folha.")) {
+    lanca("periculosidade", e.salarioPeriodo * ((p.pctPericulosidade as number) / 100), `${p.pctPericulosidade}%`);
+  }
   if (e.comissao !== 0) lanca("comissao", e.comissao, undefined, e.comissao < 0 ? "desconto" : "provento");
   if (e.bonus > 0) lanca("bonus", e.bonus);
   for (const x of l.extras) {
@@ -299,8 +370,17 @@ export function calcularFolhaColab(e: EntradaFolha): ResultadoFolha {
     }
   }
 
+  // Adiantamento de salário: só desconta do líquido (sem incidência).
+  if (l.adiantamento > 0) lanca("adiantamento", l.adiantamento);
+
   let fgts = 0;
-  if (exige(p.aliquotaFgts !== null, "Informe a alíquota do FGTS nos parâmetros.")) fgts = r2((bases.fgts * (p.aliquotaFgts as number)) / 100);
+  let fgtsRescisorio = 0;
+  const fg = fgtsDaCategoria(p, e.categoriaFgts);
+  const msgFgts = e.categoriaFgts === "aprendiz" ? "Informe a alíquota do FGTS do jovem aprendiz nos parâmetros." : e.categoriaFgts === "domestico" ? "Informe a alíquota do FGTS do doméstico nos parâmetros." : "Informe a alíquota do FGTS nos parâmetros.";
+  if (exige(fg.aliquota !== null, msgFgts)) {
+    fgts = r2((bases.fgts * (fg.aliquota as number)) / 100);
+    fgtsRescisorio = r2((bases.fgts * fg.rescisorio) / 100);
+  }
 
   const proventos = r2(itens.filter((i) => i.natureza === "provento").reduce((s, i) => s + i.valor, 0));
   const descontos = r2(itens.filter((i) => i.natureza === "desconto").reduce((s, i) => s + i.valor, 0));
@@ -314,5 +394,5 @@ export function calcularFolhaColab(e: EntradaFolha): ResultadoFolha {
     }, 0),
   );
   if (e.salarioPeriodo <= 0) avisos.push(`${e.nomeColaborador}: sem salário no mês.`);
-  return { itens, bases, inss, irrf, irrfMetodo, fgts, proventos, descontos, liquido: r2(proventos - descontos), custoSalarioBase, erros, avisos };
+  return { itens, bases, inss, irrf, irrfMetodo, fgts, fgtsRescisorio, proventos, descontos, liquido: r2(proventos - descontos), custoSalarioBase, erros, avisos };
 }
