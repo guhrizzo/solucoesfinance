@@ -24,6 +24,10 @@ export interface Colaborador {
   alocacao: { centroId: string; centroNome: string; pct: number }[];
   semAlocacao: boolean;
   membroUid: string | null;
+  jornada: { tipo: string; cargaSemanal: number | null; horario: string };
+  insalubridade: number;
+  periculosidade: boolean;
+  categoriaFgts: "geral" | "aprendiz" | "domestico";
 }
 
 export interface Centro {
@@ -107,6 +111,12 @@ export function formatarCpf(v: string): string {
     .replace(/^(\d{3})(\d)/, "$1.$2")
     .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+}
+
+/** 00000000 -> 00000-000 */
+export function formatarCep(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 }
 
 export const selectStyle: React.CSSProperties = { ...inputBaseStyle };

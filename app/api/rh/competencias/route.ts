@@ -59,9 +59,7 @@ export async function POST(request: Request) {
           comp, colaboradorId: l.colaboradorId, nome: l.nome, cargo: l.cargo, vinculo: l.vinculo, custo: l.custo, rateio: l.rateio, fechadoEm: now,
         });
       }
-      // Comissão congelada (base, regra e % efetivo): serve de referência pra
-      // ajustar estornos futuros de vendas desta competência. Os estornos que
-      // entraram neste fechamento ficam marcados e não afetam outro mês.
+      // Comissão lançada congelada no fechamento (base, valor e % efetivo).
       const com = await apurarComissoes(ctx, comp);
       for (const r of com.porColab.values()) {
         batch.set(rhCol(ctx, "rhComissoes").doc(`${comp}_${r.colaboradorId}`), {
@@ -69,7 +67,6 @@ export async function POST(request: Request) {
           base: r.base, comissao: r.comissao, pctEfetivo: r.pctEfetivo, ajusteTotal: r.ajusteTotal, total: r.total, fechadoEm: now,
         });
       }
-      com.estornosAplicados.forEach((id) => batch.update(rhCol(ctx, "rhEstornos").doc(id), { incluidoEm: comp }));
       batch.set(ref, {
         status: "fechada", fechadaEm: now, fechadaPor: ctx.actor.uid, fechadaPorNome: ctx.actor.name, total, qtd: linhas.length,
       }, { merge: true });
@@ -87,12 +84,8 @@ export async function POST(request: Request) {
       const snap = await rhCol(ctx, "rhCustos").where("comp", "==", comp).get();
       const batch = ctx.db.batch();
       snap.docs.forEach((d) => batch.delete(d.ref));
-      const [comSnap, estSnap] = await Promise.all([
-        rhCol(ctx, "rhComissoes").where("comp", "==", comp).get(),
-        rhCol(ctx, "rhEstornos").where("incluidoEm", "==", comp).get(),
-      ]);
+      const comSnap = await rhCol(ctx, "rhComissoes").where("comp", "==", comp).get();
       comSnap.docs.forEach((d) => batch.delete(d.ref));
-      estSnap.docs.forEach((d) => batch.update(d.ref, { incluidoEm: FieldValue.delete() }));
       batch.set(ref, {
         status: "aberta",
         reaberturas: FieldValue.arrayUnion({ em: Date.now(), por: ctx.actor.uid, porNome: ctx.actor.name, motivo }),

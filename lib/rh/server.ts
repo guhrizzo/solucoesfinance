@@ -5,7 +5,7 @@
 // SOMENTE servidor.
 
 import { NextResponse } from "next/server";
-import { FieldValue, type Firestore } from "firebase-admin/firestore";
+import { type Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError, type ApiScope } from "@/lib/apiScope";
 import type { PermissionKey } from "@/lib/accountScope";
@@ -16,7 +16,7 @@ import { resolveScopeSubscription } from "@/lib/scopeSubscription";
 import { calcularCustoMes, r2, type BeneficioVig, type CustoMes, type Vinculo } from "./custo";
 import { diasAtivos, type Vigencia } from "./vigencia";
 import { ratear, type DadosAlocacao, type Rateio } from "./alocacao";
-import { lastDay, monthOf, nextComp, todayKey } from "./datas";
+import { monthOf, nextComp, todayKey } from "./datas";
 import { apurarComissoes, type ResultadoComissao } from "./comissaoServer";
 import { salariosDaFolhaFechada } from "./folhaServer";
 
@@ -256,16 +256,11 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
 }
 
 /**
- * Lança o custo de pessoas da competência como ORÇAMENTO de cada centro de custo
- * (coleção `expenses`, status "pendente" = previsto, origem "rh"). Não é baixa:
- * a baixa vem do extrato, no Fluxo de Caixa. Nada disso vai pra DRE.
- * Idempotente: id determinístico por competência+centro.
- *
- * Privacidade: o lançamento é AGREGADO por centro — quem só tem a permissão
- * "centroCustos" não consegue ver o custo individual de ninguém.
- * Sem espelho no Fluxo de Caixa: o dinheiro só sai quando a folha é paga.
- * O custo sem alocação NÃO vira despesa de centro (fica só como pendência no RH).
- * Competência fechada usa o retrato congelado (rhCustos).
+ * A alocação do colaborador NÃO lança nada no Centro de Custo: o custo de
+ * pessoas fica só no RH (aba Custo mensal). Esta rotina apura os totais da
+ * competência e REMOVE lançamentos antigos de origem "rh" (o orçamento que
+ * versões anteriores criavam em `expenses`), pra não aparecerem como baixa no
+ * centro. Competência fechada usa o retrato congelado (rhCustos).
  */
 export async function sincronizarCentros(ctx: RhBase, comp: string): Promise<{ total: number; naoAlocado: number }> {
   const compRef = rhCol(ctx, "rhCompetencias").doc(comp);
@@ -284,45 +279,17 @@ export async function sincronizarCentros(ctx: RhBase, comp: string): Promise<{ t
     linhas = (await apurarCompetencia(ctx, comp)).map((l) => ({ rateio: l.rateio, total: l.custo.total }));
   }
 
-  const porCentro = new Map<string, { nome: string; valor: number }>();
   let naoAlocado = 0;
   let total = 0;
   for (const l of linhas) {
     total += l.total;
     naoAlocado += l.rateio.naoAlocado;
-    for (const i of l.rateio.itens) {
-      const cur = porCentro.get(i.centroId) ?? { nome: i.centroNome, valor: 0 };
-      porCentro.set(i.centroId, { nome: i.centroNome, valor: cur.valor + i.valor });
-    }
   }
 
   const expCol = ctx.db.collection("expenses");
   const existentes = await expCol.where("userId", "==", ctx.ownerUid).where("rhComp", "==", comp).get();
   const batch = ctx.db.batch();
-  const manter = new Set<string>();
-  const data = lastDay(comp);
-  for (const [centroId, { nome, valor }] of porCentro) {
-    if (valor <= 0) continue;
-    const id = `rh_${comp}_${centroId}`;
-    manter.add(id);
-    batch.set(expCol.doc(id), {
-      description: `Pessoal (RH) — ${comp}`,
-      category: "Pessoal (RH)",
-      center: nome,
-      amount: r2(valor),
-      date: data,
-      // Só o ORÇAMENTO (previsto): a baixa acontece quando o pagamento aparecer
-      // no extrato do Fluxo de Caixa — nada vira "realizado" nem entra no caixa daqui.
-      status: "pendente",
-      paidAt: FieldValue.delete(),
-      userId: ctx.ownerUid,
-      origem: "rh",
-      rhComp: comp,
-      rhCentroId: centroId,
-      createdAt: new Date(),
-    }, { merge: true });
-  }
-  existentes.docs.forEach((d) => { if (!manter.has(d.id)) batch.delete(d.ref); });
+  existentes.docs.forEach((d) => { if (d.data().origem === "rh") batch.delete(d.ref); });
   batch.set(compRef, { totalPessoal: r2(total), totalNaoAlocado: r2(naoAlocado), sincronizadoEm: Date.now() }, { merge: true });
   await batch.commit();
   return { total: r2(total), naoAlocado: r2(naoAlocado) };

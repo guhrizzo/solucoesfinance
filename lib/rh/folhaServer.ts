@@ -13,8 +13,8 @@
 
 import { createHash } from "node:crypto";
 import {
-  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_VAZIOS,
-  type LancamentoMes, type ParametrosFolha, type ResultadoFolha, type Rubrica, type TabelaInss, type TabelaIrrf,
+  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_SUGERIDOS, PARAMETROS_VAZIOS, RUBRICAS_PADRAO, TABELAS_SUGERIDAS,
+  type CategoriaFgts, type LancamentoMes, type ParametrosFolha, type ResultadoFolha, type Rubrica, type TabelaInss, type TabelaIrrf,
 } from "./folha";
 import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vigencia";
 import { firstDay, lastDay } from "./datas";
@@ -30,6 +30,39 @@ export async function carregarParametros(ctx: RhBase): Promise<ParametrosFolha> 
     out[k] = typeof v === "number" && Number.isFinite(v) ? v : null;
   }
   return out;
+}
+
+/**
+ * Primeiro uso da folha: preenche sozinho o que ainda não existe — parâmetros em
+ * branco, rubricas (só se não houver nenhuma) e as tabelas de INSS/IRRF (só se
+ * não houver nenhuma). Nunca sobrescreve nada que você já tenha informado; ids
+ * fixos evitam duplicar em chamadas simultâneas. Tudo continua editável.
+ */
+export async function garantirPadroesFolha(ctx: RhBase): Promise<void> {
+  const cfgRef = rhCol(ctx, "rhConfig").doc("folha");
+  const [cfg, rubs, tInss, tIrrf] = await Promise.all([
+    cfgRef.get(), rhCol(ctx, "rhRubricas").limit(1).get(), carregarTabelas(ctx, "inss"), carregarTabelas(ctx, "irrf"),
+  ]);
+  const atual = (cfg.exists ? cfg.data() : {}) as Record<string, unknown>;
+  const faltam = Object.entries(PARAMETROS_SUGERIDOS).filter(([k]) => !(typeof atual[k] === "number" && Number.isFinite(atual[k] as number)));
+  const batch = ctx.db.batch();
+  let mudou = false;
+  if (faltam.length > 0) { batch.set(cfgRef, Object.fromEntries(faltam), { merge: true }); mudou = true; }
+  if (rubs.empty) {
+    RUBRICAS_PADRAO.forEach((r) => batch.set(rhCol(ctx, "rhRubricas").doc(`padrao_${r.tipo}`), { ...r, createdAt: Date.now() }));
+    mudou = true;
+  }
+  if (tInss.length === 0) {
+    const t = TABELAS_SUGERIDAS.inss;
+    batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_inss"), { tipo: "inss", inicio: t.inicio, fim: null, faixas: t.faixas, obs: "Valores sugeridos — conferir com o contador", createdAt: Date.now() });
+    mudou = true;
+  }
+  if (tIrrf.length === 0) {
+    const t = TABELAS_SUGERIDAS.irrf;
+    batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_irrf"), { tipo: "irrf", inicio: t.inicio, fim: null, faixas: t.faixas, deducaoDependente: t.deducaoDependente, descontoSimplificado: t.descontoSimplificado, obs: "Valores sugeridos — conferir com o contador", createdAt: Date.now() });
+    mudou = true;
+  }
+  if (mudou) await batch.commit();
 }
 
 export async function carregarRubricas(ctx: RhBase): Promise<Rubrica[]> {
@@ -119,6 +152,7 @@ export async function apurarFolha(ctx: RhBase, comp: string): Promise<FolhaApura
     return { ...base, fechada, linhas, erros: [], foraDaFolha, tabelas: (f.tabelas as FolhaApurada["tabelas"]) ?? { inssId: null, irrfId: null } };
   }
 
+  await garantirPadroesFolha(ctx);
   const [params, rubricas, tInss, tIrrf, vigSnap, varSnap, lancSnap, confSnap, comissoes] = await Promise.all([
     carregarParametros(ctx), carregarRubricas(ctx), carregarTabelas(ctx, "inss"), carregarTabelas(ctx, "irrf"),
     rhCol(ctx, "rhVigencias").get(),
@@ -154,11 +188,13 @@ export async function apurarFolha(ctx: RhBase, comp: string): Promise<FolhaApura
     const salarioMensal = vigenciaEm(sal, ultimo)?.dados.valor ?? 0;
     const salarioPeriodo = Math.round(valorProporcional(sal, dias, comp, (x) => x.valor) * 100) / 100;
     const l = lancs.get(d.id);
-    const lanc: LancamentoMes = { ...LANCAMENTO_VAZIO, ...(l ? { he50: l.he50 ?? 0, he100: l.he100 ?? 0, noturnas: l.noturnas ?? 0, faltasDias: l.faltasDias ?? 0, atrasosHoras: l.atrasosHoras ?? 0, extras: l.extras ?? [] } : {}) };
+    const lanc: LancamentoMes = { ...LANCAMENTO_VAZIO, ...(l ? { he50: l.he50 ?? 0, he100: l.he100 ?? 0, noturnas: l.noturnas ?? 0, faltasDias: l.faltasDias ?? 0, atrasosHoras: l.atrasosHoras ?? 0, adiantamento: l.adiantamento ?? 0, extras: l.extras ?? [] } : {}) };
     const comissao = comissoes.porColab.get(d.id)?.total ?? 0;
     const resultado = calcularFolhaColab({
       nomeColaborador: String(c.nome), dependentes: Number(c.dependentes) || 0, salarioMensal, salarioPeriodo, lanc, comissao,
       bonus: bonus.get(d.id) ?? 0,
+      insalubridadePct: Number(c.insalubridade) || 0, periculosidade: c.periculosidade === true,
+      categoriaFgts: (c.categoriaFgts as CategoriaFgts | undefined) ?? "geral",
       vtBeneficio: Math.round(valorProporcional(vts.get(d.id) ?? [], dias, comp, (x) => x.valor) * 100) / 100,
       diasUteis: cabecalho.diasUteis, domingosFeriados: cabecalho.domingosFeriados,
       rubricas, params, inss: inss?.dados as TabelaInss | null ?? null, irrf: irrf?.dados as TabelaIrrf | null ?? null,

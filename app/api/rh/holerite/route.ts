@@ -102,6 +102,7 @@ export async function GET(request: Request) {
         linhas: r.itens.map((i) => ({ codigo: i.codigo, descricao: i.nome, ref: i.ref, provento: i.natureza === "provento" ? i.valor : undefined, desconto: i.natureza === "desconto" ? i.valor : undefined })),
         bases: [
           { rotulo: "Base INSS", valor: r.bases.inss }, { rotulo: "Base IRRF", valor: r.bases.irrf }, { rotulo: "Base FGTS", valor: r.bases.fgts }, { rotulo: "FGTS do mês", valor: r.fgts },
+          ...(r.fgtsRescisorio > 0 ? [{ rotulo: "FGTS rescisório (extra)", valor: r.fgtsRescisorio }] : []),
         ],
         totais: { proventos: r.proventos, descontos: r.descontos, liquido: r.liquido },
         notas: r.irrfMetodo === "simplificado" ? ["IRRF calculado pelo desconto simplificado (mais vantajoso)."] : [],

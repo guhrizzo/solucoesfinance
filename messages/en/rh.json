@@ -87,7 +87,43 @@
       "agencia": "0000",
       "conta": "00000-0",
       "pix": "Tax ID, e-mail, phone or random key",
-      "tipoConta": "Select..."
+      "tipoConta": "Select...",
+      "jornadaTipo": "Select",
+      "horario": "08:00–17:00, 1h break"
+    },
+    "endereco": "Address",
+    "cep": "ZIP code",
+    "logradouro": "Street",
+    "numero": "Number",
+    "complemento": "Complement",
+    "bairro": "Neighborhood",
+    "cidade": "City",
+    "uf": "State",
+    "jornada": "Work schedule",
+    "jornadaTipo": "Schedule",
+    "cargaSemanal": "Weekly hours",
+    "horario": "Hours",
+    "adicionais": "Premiums and FGTS",
+    "insalubridade": "Unhealthy-work premium",
+    "insalubridadeHint": "% of the minimum wage",
+    "periculosidade": "Hazard premium",
+    "periculosidadeHint": "30% of base salary. Cannot be combined with the unhealthy-work premium.",
+    "nenhum": "None",
+    "grauMinimo": "Low (10%)",
+    "grauMedio": "Medium (20%)",
+    "grauMaximo": "High (40%)",
+    "categoriaFgts": "FGTS category",
+    "jornadas": {
+      "5x2": "5x2 (Mon–Fri)",
+      "6x1": "6x1",
+      "12x36": "12x36",
+      "parcial": "Part-time",
+      "outra": "Other"
+    },
+    "fgts": {
+      "geral": "General (CLT) — 8%",
+      "aprendiz": "Apprentice — 2%",
+      "domestico": "Domestic — 8% + 3.2%"
     }
   },
   "rem": {
@@ -211,7 +247,7 @@
       "fechou_evento_folha": "Closed event",
       "reabriu_evento_folha": "Reopened event",
       "baixou_holerite": "Downloaded payslip",
-      "baixou_documento": "Downloaded receipt",
+      "baixou_documento": "Opened document",
       "carregou_rubricas_padrao": "Loaded default items",
       "criou_rubrica": "Created pay item",
       "alterou_rubrica": "Changed pay item",
@@ -233,7 +269,12 @@
       "corrigiu_estorno": "Corrected reversal",
       "excluiu_tabela_inss": "Deleted INSS table",
       "excluiu_tabela_irrf": "Deleted IRRF table",
-      "limpou_lancamentos_folha": "Cleared payroll entries"
+      "limpou_lancamentos_folha": "Cleared payroll entries",
+      "lancou_comissao": "Entered commission",
+      "removeu_comissao": "Removed commission",
+      "anexou_documento": "Attached document",
+      "removeu_documento": "Deleted document",
+      "consultou_irpf": "Viewed IRPF statement"
     }
   },
   "comum": {
@@ -271,44 +312,6 @@
     "agoraNao": "Not now"
   },
   "comissoes": {
-    "resumo": {
-      "titulo": "Commission by employee",
-      "nota": "Sale period. Reversals from already-closed months come back as a negative adjustment in the period of the reversal date. The total goes into the employee's monthly cost.",
-      "total": "Commissions this month",
-      "vendasAtribuidas": "Assigned sales",
-      "vazio": "No assigned sales this month",
-      "semRegra": "No rule",
-      "semCusto": "{count, plural, one {# sale was left out of the margin base for lack of product cost} other {# sales were left out of the margin base for lack of product cost}}. Add the cost in Reports → Sales.",
-      "cols": {
-        "colaborador": "Employee",
-        "regra": "Rule",
-        "base": "Base",
-        "comissao": "Commission",
-        "ajustes": "Reversal adjustments",
-        "total": "Total"
-      }
-    },
-    "vendas": {
-      "titulo": "Sales this month",
-      "nota": "Assign each sale to whoever sold it (you can split it). Only assigned sales earn commission. Margin = revenue − product cost − taxes − card fee − marketplace fee − other costs.",
-      "vazio": "No sales this month",
-      "truncado": "Showing the first 500 sales of the month.",
-      "foraDoCaixa": "off cash flow",
-      "semCusto": "no cost",
-      "naoAtribuida": "unassigned",
-      "atribuir": "Assign",
-      "editar": "Edit",
-      "estorno": "Reversal",
-      "estornado": "reversed {valor}",
-      "cols": {
-        "data": "Date",
-        "venda": "Sale",
-        "valor": "Amount",
-        "margem": "Margin",
-        "vendedores": "Sellers",
-        "acoes": "Actions"
-      }
-    },
     "atribuicao": {
       "titulo": "Sale sellers",
       "nota": "Split the sale among one or more commissioned people; the total must be 100%.",
@@ -316,22 +319,6 @@
       "adicionar": "Add seller",
       "remover": "Remove assignment",
       "semComissionados": "No commissioned employees. Tick \"Commissioned?\" under Employees → Edit."
-    },
-    "estorno": {
-      "titulo": "Reversal, cancellation or return",
-      "nota": "If the sale's month is still open, its commission is recalculated. If it's already closed, the amount comes back as a negative adjustment in the period of the reversal date.",
-      "tipo": "Type",
-      "tipos": {
-        "estorno": "Reversal",
-        "cancelamento": "Cancellation",
-        "devolucao": "Return"
-      },
-      "data": "Reversal date",
-      "valor": "Amount reversed",
-      "restante": "{valor} left",
-      "motivo": "Reason (optional)",
-      "registrar": "Register",
-      "desfazer": "Undo"
     },
     "regras": {
       "titulo": "Commission rules",
@@ -373,13 +360,21 @@
       "resumoFaixa": "Tiered ({modo}) on {base}",
       "efeito": "Closed periods don't change: closing freezes the commission."
     },
-    "premissas": {
-      "titulo": "Margin assumptions",
-      "nota": "Estimates as % of revenue, used only by margin-based rules. The marketplace fee comes real, from the order entry.",
-      "imposto": "Effective tax (%)",
-      "debito": "Debit card fee (%)",
-      "credito": "Credit card fee (%)",
-      "outros": "Other costs — freight etc. (%)"
+    "manual": {
+      "titulo": "Commission by employee",
+      "nota": "Enter each employee's commission base and percentage, month by month; the amount to pay is calculated and goes into the monthly cost. It does not depend on sales.",
+      "total": "Commissions this month",
+      "lancadas": "Employees with commission",
+      "vazio": "No commissioned employees. Mark \"commissioned\" on the employee record.",
+      "base": "Base (R$)",
+      "salvar": "Save",
+      "remover": "Clear",
+      "fechada": "Closed period: reopen it to change commissions.",
+      "salvo": "Saved",
+      "naoLancado": "not entered",
+      "colaborador": "Employee",
+      "pct": "Commission (%)",
+      "valor": "Amount to pay"
     }
   },
   "retorno": {
@@ -457,7 +452,8 @@
     "sub": {
       "mes": "Monthly payroll",
       "eventos": "Vacation, 13th & termination",
-      "config": "Tables & parameters"
+      "config": "Tables & parameters",
+      "irpf": "IRPF statement"
     },
     "mes": {
       "liquidoTotal": "Net pay",
@@ -506,7 +502,8 @@
         "he100": "Overtime 100% (h)",
         "noturnas": "Night-premium hours (h)",
         "faltasDias": "Absences (days)",
-        "atrasosHoras": "Late time (hours)"
+        "atrasosHoras": "Late time (hours)",
+        "adiantamento": "Salary advance (R$)"
       },
       "extras": "Other earnings and deductions",
       "rubrica": "Item",
@@ -611,7 +608,10 @@
         "inss": "INSS",
         "irrf": "IRRF",
         "vt": "Transport voucher",
-        "manual": "Manual (extra)"
+        "manual": "Manual (extra)",
+        "insalubridade": "Unhealthy-work premium",
+        "periculosidade": "Hazard premium",
+        "adiantamento": "Salary advance"
       },
       "semIncidencia": "no incidence",
       "codigo": "Code",
@@ -619,7 +619,8 @@
       "natureza": "Nature",
       "tipo": "Type",
       "incidencia": "Applies to",
-      "incidenciaNota": "On a deduction, the tick means it reduces the base (e.g. absences)."
+      "incidenciaNota": "On a deduction, the tick means it reduces the base (e.g. absences).",
+      "padraoFaltantes": "Add the missing suggested items"
     },
     "parametros": {
       "titulo": "Payroll parameters",
@@ -633,8 +634,16 @@
         "pctVT": "Transport voucher deduction (%)",
         "aliquotaFgts": "FGTS rate (%)",
         "pctTercoFerias": "Vacation third (%)",
-        "pct1aParcela13": "13th 1st installment (%)"
-      }
+        "pct1aParcela13": "13th 1st installment (%)",
+        "salarioMinimo": "Minimum wage (R$) — unhealthy-work premium base",
+        "pctPericulosidade": "Hazard premium (% of base salary)",
+        "aliquotaFgtsAprendiz": "FGTS for apprentices (%)",
+        "aliquotaFgtsDomestico": "FGTS for domestic workers (%)",
+        "pctFgtsRescisorioDomestico": "Domestic: extra FGTS for the severance fine (%)",
+        "multaFgtsPct": "FGTS fine — dismissal without cause (%)",
+        "multaFgtsAcordoPct": "FGTS fine — mutual agreement (%)"
+      },
+      "sugeridos": "Fill suggested values (blank fields)"
     },
     "tabelas": {
       "titulo": "INSS and IRRF tables",
@@ -657,7 +666,27 @@
       "deducaoDependente": "Deduction per dependent (R$)",
       "simplificado": "Simplified deduction (R$)",
       "simplificadoHint": "0 = don't use. If set, the more favourable calculation applies.",
-      "obs": "Note (optional)"
+      "obs": "Note (optional)",
+      "usarSugerida": "Fill with the suggested table",
+      "obsSugerida": "Suggested values — check with your accountant"
+    },
+    "irpf": {
+      "titulo": "Annual income-tax (IRPF) statement",
+      "nota": "Income, social security and income tax withheld for an employee in the year, adding up closed payrolls and events (vacation, 13th salary, termination).",
+      "colaborador": "Employee",
+      "ano": "Year",
+      "gerar": "Generate statement",
+      "pdf": "Download PDF",
+      "mes": "Month",
+      "rendimento": "Taxable income",
+      "dependentes": "Dependents",
+      "irrf": "Tax withheld",
+      "totalRendimentos": "Taxable income",
+      "total13": "13th salary (excl.)",
+      "totalIrrf": "Tax withheld in the year",
+      "vazio": "No closed payroll in this year.",
+      "eventos": "Vacation, 13th salary and termination",
+      "rodape": "(*) Tax computed with the simplified deduction. Management document for review: the official income statement is issued by your accountant."
     }
   },
   "pin": {
@@ -676,5 +705,24 @@
     "confirmaColab": "Delete and erase their history? This can't be undone.",
     "limparLancamentos": "Clear entries",
     "corrigindoVigencia": "Correcting an existing period (dates stay the same)."
+  },
+  "docs": {
+    "titulo": "Attached documents",
+    "nota": "PDF, PNG, JPG or WEBP up to 3 MB. Only HR users with the PIN can see the files.",
+    "categoria": "Document type",
+    "anexar": "Attach document",
+    "vazio": "No documents attached.",
+    "grande": "File too large (3 MB maximum).",
+    "abrir": "Open document",
+    "remover": "Delete document",
+    "salveAntes": "Save the employee to attach documents.",
+    "categorias": {
+      "contrato": "Contract",
+      "identificacao": "ID (RG/CPF/CNH)",
+      "comprovante": "Proof (address, education)",
+      "exame": "Medical exam (ASO)",
+      "atestado": "Medical certificate",
+      "outro": "Other"
+    }
   }
 }
