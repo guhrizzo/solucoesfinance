@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { guardRh, isCtx, logRh, rhCol } from "@/lib/rh/server";
-import { carregarParametros, carregarRubricas, carregarTabelas, folhasFechadas } from "@/lib/rh/folhaServer";
+import { carregarParametros, carregarRubricas, carregarTabelas, folhasFechadas, garantirPadroesFolha } from "@/lib/rh/folhaServer";
 import { RUBRICAS_PADRAO, validarRubrica, validarTabelaInss, validarTabelaIrrf, type ParametrosFolha } from "@/lib/rh/folha";
 import { validarNovaVigencia, type ErroVigencia } from "@/lib/rh/vigencia";
 import { dayBefore, isValidDate, monthOf } from "@/lib/rh/datas";
@@ -28,6 +28,7 @@ export async function GET(request: Request) {
   try {
     const ctx = await guardRh(request, "fcfg-get");
     if (!isCtx(ctx)) return ctx;
+    await garantirPadroesFolha(ctx);
     const [parametros, rubricas, inss, irrf, fechadas] = await Promise.all([
       carregarParametros(ctx), carregarRubricas(ctx), carregarTabelas(ctx, "inss"), carregarTabelas(ctx, "irrf"), folhasFechadas(ctx),
     ]);

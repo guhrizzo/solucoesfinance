@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button, Card, Field, Input, Pill } from "@/app/components/ui";
+import { PARAMETROS_SUGERIDOS, TABELAS_SUGERIDAS, TIPOS_RUBRICA } from "@/lib/rh/folha";
 import { AcoesLinha, fmtData, hojeISO, rhApi, selectClass, selectStyle, RhModal as Modal } from "./shared";
 
 export interface RubricaUI {
@@ -36,18 +37,7 @@ const PARAMS = [
   "salarioMinimo", "pctPericulosidade", "aliquotaFgtsAprendiz", "aliquotaFgtsDomestico", "pctFgtsRescisorioDomestico", "multaFgtsPct", "multaFgtsAcordoPct",
 ] as const;
 
-/** Valores informados pelo cliente (FGTS, multa, periculosidade; mínimo = 1.º teto do INSS). Só preenchem campos em branco. */
-const PARAMS_SUGERIDOS: Record<string, string> = {
-  aliquotaFgts: "8", aliquotaFgtsAprendiz: "2", aliquotaFgtsDomestico: "8", pctFgtsRescisorioDomestico: "3.2",
-  multaFgtsPct: "40", multaFgtsAcordoPct: "20", pctPericulosidade: "30", salarioMinimo: "1621",
-};
-
-/** Tabelas informadas pelo cliente. As parcelas a deduzir do IRRF seguem a tabela mensal oficial: conferir com o contador. */
-const TABELAS_SUGERIDAS = {
-  inss: { inicio: "2026-01-01", faixas: [{ ate: "1621", aliquota: "7.5", deduzir: "0" }, { ate: "2902.84", aliquota: "9", deduzir: "0" }, { ate: "4354.27", aliquota: "12", deduzir: "0" }, { ate: "8475.55", aliquota: "14", deduzir: "0" }], dep: "0", simp: "0" },
-  irrf: { inicio: "2025-05-01", faixas: [{ ate: "2428.80", aliquota: "0", deduzir: "0" }, { ate: "2826.65", aliquota: "7.5", deduzir: "182.16" }, { ate: "3751.05", aliquota: "15", deduzir: "394.16" }, { ate: "4664.68", aliquota: "22.5", deduzir: "675.49" }, { ate: "", aliquota: "27.5", deduzir: "908.73" }], dep: "189.59", simp: "607.20" },
-} as const;
-const TIPOS_RUBRICA = ["salario", "he50", "he100", "adnoturno", "dsr", "faltas", "atrasos", "comissao", "bonus", "insalubridade", "periculosidade", "adiantamento", "inss", "irrf", "vt", "manual"] as const;
+const str = (n: number | null | undefined) => (n === null || n === undefined ? "" : String(n));
 
 /** Aba "Tabelas e parâmetros": parâmetros da empresa, rubricas e tabelas de INSS/IRRF com vigência. */
 export function ConfigFolha() {
@@ -196,7 +186,7 @@ export function ConfigFolha() {
         </div>
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={salvarPar}>{t("form.salvar")}</Button>
-          <Button size="sm" variant="secondary" onClick={() => setPar((p) => ({ ...p, ...Object.fromEntries(Object.entries(PARAMS_SUGERIDOS).filter(([k]) => !p[k]).map(([k, v]) => [k, v])) }))}>{t("folha.parametros.sugeridos")}</Button>
+          <Button size="sm" variant="secondary" onClick={() => setPar((p) => ({ ...p, ...Object.fromEntries(Object.entries(PARAMETROS_SUGERIDOS).filter(([k]) => !p[k]).map(([k, v]) => [k, String(v)])) }))}>{t("folha.parametros.sugeridos")}</Button>
           {parMsg && <span role="status" className="text-xs" style={{ color: "var(--text-muted)" }}>{parMsg}</span>}
         </div>
       </Card>
@@ -286,7 +276,7 @@ export function ConfigFolha() {
             {!tab.id && (
               <div className="flex flex-wrap items-end gap-3">
                 <Field label={t("folha.tabelas.inicio")} className="max-w-xs"><Input type="date" value={tab.inicio} onChange={(e) => setTab({ ...tab, inicio: e.target.value })} /></Field>
-                <Button size="sm" variant="secondary" onClick={() => { const x = TABELAS_SUGERIDAS[tab.tipo]; setTab({ ...tab, inicio: x.inicio, faixas: x.faixas.map((f) => ({ ...f })), dep: x.dep, simp: x.simp, obs: t("folha.tabelas.obsSugerida") }); }}>{t("folha.tabelas.usarSugerida")}</Button>
+                <Button size="sm" variant="secondary" onClick={() => { const x = TABELAS_SUGERIDAS[tab.tipo]; setTab({ ...tab, inicio: x.inicio, faixas: x.faixas.map((f) => ({ ate: str(f.ate), aliquota: String(f.aliquota), deduzir: str("deduzir" in f ? f.deduzir : 0) })), dep: String("deducaoDependente" in x ? x.deducaoDependente : 0), simp: String("descontoSimplificado" in x ? x.descontoSimplificado : 0), obs: t("folha.tabelas.obsSugerida") }); }}>{t("folha.tabelas.usarSugerida")}</Button>
               </div>
             )}
             <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t(tab.tipo === "inss" ? "folha.tabelas.notaInss" : "folha.tabelas.notaIrrf")}</p>

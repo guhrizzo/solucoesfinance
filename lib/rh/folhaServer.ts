@@ -13,7 +13,7 @@
 
 import { createHash } from "node:crypto";
 import {
-  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_VAZIOS,
+  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_SUGERIDOS, PARAMETROS_VAZIOS, RUBRICAS_PADRAO, TABELAS_SUGERIDAS,
   type CategoriaFgts, type LancamentoMes, type ParametrosFolha, type ResultadoFolha, type Rubrica, type TabelaInss, type TabelaIrrf,
 } from "./folha";
 import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vigencia";
@@ -30,6 +30,39 @@ export async function carregarParametros(ctx: RhBase): Promise<ParametrosFolha> 
     out[k] = typeof v === "number" && Number.isFinite(v) ? v : null;
   }
   return out;
+}
+
+/**
+ * Primeiro uso da folha: preenche sozinho o que ainda não existe — parâmetros em
+ * branco, rubricas (só se não houver nenhuma) e as tabelas de INSS/IRRF (só se
+ * não houver nenhuma). Nunca sobrescreve nada que você já tenha informado; ids
+ * fixos evitam duplicar em chamadas simultâneas. Tudo continua editável.
+ */
+export async function garantirPadroesFolha(ctx: RhBase): Promise<void> {
+  const cfgRef = rhCol(ctx, "rhConfig").doc("folha");
+  const [cfg, rubs, tInss, tIrrf] = await Promise.all([
+    cfgRef.get(), rhCol(ctx, "rhRubricas").limit(1).get(), carregarTabelas(ctx, "inss"), carregarTabelas(ctx, "irrf"),
+  ]);
+  const atual = (cfg.exists ? cfg.data() : {}) as Record<string, unknown>;
+  const faltam = Object.entries(PARAMETROS_SUGERIDOS).filter(([k]) => !(typeof atual[k] === "number" && Number.isFinite(atual[k] as number)));
+  const batch = ctx.db.batch();
+  let mudou = false;
+  if (faltam.length > 0) { batch.set(cfgRef, Object.fromEntries(faltam), { merge: true }); mudou = true; }
+  if (rubs.empty) {
+    RUBRICAS_PADRAO.forEach((r) => batch.set(rhCol(ctx, "rhRubricas").doc(`padrao_${r.tipo}`), { ...r, createdAt: Date.now() }));
+    mudou = true;
+  }
+  if (tInss.length === 0) {
+    const t = TABELAS_SUGERIDAS.inss;
+    batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_inss"), { tipo: "inss", inicio: t.inicio, fim: null, faixas: t.faixas, obs: "Valores sugeridos — conferir com o contador", createdAt: Date.now() });
+    mudou = true;
+  }
+  if (tIrrf.length === 0) {
+    const t = TABELAS_SUGERIDAS.irrf;
+    batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_irrf"), { tipo: "irrf", inicio: t.inicio, fim: null, faixas: t.faixas, deducaoDependente: t.deducaoDependente, descontoSimplificado: t.descontoSimplificado, obs: "Valores sugeridos — conferir com o contador", createdAt: Date.now() });
+    mudou = true;
+  }
+  if (mudou) await batch.commit();
 }
 
 export async function carregarRubricas(ctx: RhBase): Promise<Rubrica[]> {
@@ -119,6 +152,7 @@ export async function apurarFolha(ctx: RhBase, comp: string): Promise<FolhaApura
     return { ...base, fechada, linhas, erros: [], foraDaFolha, tabelas: (f.tabelas as FolhaApurada["tabelas"]) ?? { inssId: null, irrfId: null } };
   }
 
+  await garantirPadroesFolha(ctx);
   const [params, rubricas, tInss, tIrrf, vigSnap, varSnap, lancSnap, confSnap, comissoes] = await Promise.all([
     carregarParametros(ctx), carregarRubricas(ctx), carregarTabelas(ctx, "inss"), carregarTabelas(ctx, "irrf"),
     rhCol(ctx, "rhVigencias").get(),

@@ -147,6 +147,23 @@ export const PARAMETROS_VAZIOS: ParametrosFolha = {
   pctFgtsRescisorioDomestico: null, multaFgtsPct: null, multaFgtsAcordoPct: null,
 };
 
+/** Valores sugeridos (CLT e informados pelo cliente). Entram sozinhos nos campos em branco; tudo é editável. */
+export const PARAMETROS_SUGERIDOS: { [K in keyof ParametrosFolha]: number } = {
+  horasMes: 220, diasBaseMes: 30, pctHE50: 50, pctHE100: 100, pctAdNoturno: 20, pctVT: 6, aliquotaFgts: 8,
+  pctTercoFerias: 33.3333, pct1aParcela13: 50, salarioMinimo: 1621, pctPericulosidade: 30,
+  aliquotaFgtsAprendiz: 2, aliquotaFgtsDomestico: 8, pctFgtsRescisorioDomestico: 3.2, multaFgtsPct: 40, multaFgtsAcordoPct: 20,
+};
+
+/** Tabelas sugeridas. As parcelas a deduzir do IRRF seguem a tabela mensal oficial: conferir com o contador. */
+export const TABELAS_SUGERIDAS = {
+  inss: { inicio: "2026-01-01", faixas: [{ ate: 1621, aliquota: 7.5 }, { ate: 2902.84, aliquota: 9 }, { ate: 4354.27, aliquota: 12 }, { ate: 8475.55, aliquota: 14 }] },
+  irrf: {
+    inicio: "2025-05-01",
+    faixas: [{ ate: 2428.8, aliquota: 0, deduzir: 0 }, { ate: 2826.65, aliquota: 7.5, deduzir: 182.16 }, { ate: 3751.05, aliquota: 15, deduzir: 394.16 }, { ate: 4664.68, aliquota: 22.5, deduzir: 675.49 }, { ate: null, aliquota: 27.5, deduzir: 908.73 }],
+    deducaoDependente: 189.59, descontoSimplificado: 607.2,
+  },
+} as const;
+
 export type CategoriaFgts = "geral" | "aprendiz" | "domestico";
 
 /** Alíquota do FGTS do mês (e o extra do doméstico) conforme a categoria; null = parâmetro faltando. */
