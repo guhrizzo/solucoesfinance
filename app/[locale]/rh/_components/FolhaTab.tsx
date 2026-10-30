@@ -5,9 +5,10 @@ import { useTranslations } from "next-intl";
 import { ConfigFolha } from "./ConfigFolha";
 import { EventosSection } from "./EventosSection";
 import { FolhaMes } from "./FolhaMes";
+import { IrpfSection } from "./IrpfSection";
 import { rhApi, type Colaborador } from "./shared";
 
-type Sub = "mes" | "eventos" | "config";
+type Sub = "mes" | "eventos" | "irpf" | "config";
 
 /** Folha de pagamento: folha do mês, férias/13º/rescisão e configuração (rubricas, tabelas, parâmetros). */
 export function FolhaTab() {
@@ -22,7 +23,7 @@ export function FolhaTab() {
   return (
     <div className="space-y-4">
       <div role="tablist" aria-label={t("tabs.folha")} className="flex gap-2">
-        {(["mes", "eventos", "config"] as const).map((k) => (
+        {(["mes", "eventos", "irpf", "config"] as const).map((k) => (
           <button
             key={k} role="tab" aria-selected={sub === k} onClick={() => setSub(k)}
             className="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold"
@@ -34,6 +35,7 @@ export function FolhaTab() {
       </div>
       {sub === "mes" && <FolhaMes />}
       {sub === "eventos" && <EventosSection colaboradores={colaboradores} />}
+      {sub === "irpf" && <IrpfSection colaboradores={colaboradores} />}
       {sub === "config" && <ConfigFolha />}
     </div>
   );

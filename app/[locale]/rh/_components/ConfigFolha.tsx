@@ -31,8 +31,23 @@ interface Config {
   folhasFechadas: string[];
 }
 
-const PARAMS = ["horasMes", "diasBaseMes", "pctHE50", "pctHE100", "pctAdNoturno", "pctVT", "aliquotaFgts", "pctTercoFerias", "pct1aParcela13"] as const;
-const TIPOS_RUBRICA = ["salario", "he50", "he100", "adnoturno", "dsr", "faltas", "atrasos", "comissao", "bonus", "inss", "irrf", "vt", "manual"] as const;
+const PARAMS = [
+  "horasMes", "diasBaseMes", "pctHE50", "pctHE100", "pctAdNoturno", "pctVT", "aliquotaFgts", "pctTercoFerias", "pct1aParcela13",
+  "salarioMinimo", "pctPericulosidade", "aliquotaFgtsAprendiz", "aliquotaFgtsDomestico", "pctFgtsRescisorioDomestico", "multaFgtsPct", "multaFgtsAcordoPct",
+] as const;
+
+/** Valores informados pelo cliente (FGTS, multa, periculosidade; mínimo = 1.º teto do INSS). Só preenchem campos em branco. */
+const PARAMS_SUGERIDOS: Record<string, string> = {
+  aliquotaFgts: "8", aliquotaFgtsAprendiz: "2", aliquotaFgtsDomestico: "8", pctFgtsRescisorioDomestico: "3.2",
+  multaFgtsPct: "40", multaFgtsAcordoPct: "20", pctPericulosidade: "30", salarioMinimo: "1621",
+};
+
+/** Tabelas informadas pelo cliente. As parcelas a deduzir do IRRF seguem a tabela mensal oficial: conferir com o contador. */
+const TABELAS_SUGERIDAS = {
+  inss: { inicio: "2026-01-01", faixas: [{ ate: "1621", aliquota: "7.5", deduzir: "0" }, { ate: "2902.84", aliquota: "9", deduzir: "0" }, { ate: "4354.27", aliquota: "12", deduzir: "0" }, { ate: "8475.55", aliquota: "14", deduzir: "0" }], dep: "0", simp: "0" },
+  irrf: { inicio: "2025-05-01", faixas: [{ ate: "2428.80", aliquota: "0", deduzir: "0" }, { ate: "2826.65", aliquota: "7.5", deduzir: "182.16" }, { ate: "3751.05", aliquota: "15", deduzir: "394.16" }, { ate: "4664.68", aliquota: "22.5", deduzir: "675.49" }, { ate: "", aliquota: "27.5", deduzir: "908.73" }], dep: "189.59", simp: "607.20" },
+} as const;
+const TIPOS_RUBRICA = ["salario", "he50", "he100", "adnoturno", "dsr", "faltas", "atrasos", "comissao", "bonus", "insalubridade", "periculosidade", "adiantamento", "inss", "irrf", "vt", "manual"] as const;
 
 /** Aba "Tabelas e parâmetros": parâmetros da empresa, rubricas e tabelas de INSS/IRRF com vigência. */
 export function ConfigFolha() {
@@ -181,6 +196,7 @@ export function ConfigFolha() {
         </div>
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={salvarPar}>{t("form.salvar")}</Button>
+          <Button size="sm" variant="secondary" onClick={() => setPar((p) => ({ ...p, ...Object.fromEntries(Object.entries(PARAMS_SUGERIDOS).filter(([k]) => !p[k]).map(([k, v]) => [k, v])) }))}>{t("folha.parametros.sugeridos")}</Button>
           {parMsg && <span role="status" className="text-xs" style={{ color: "var(--text-muted)" }}>{parMsg}</span>}
         </div>
       </Card>
@@ -192,7 +208,7 @@ export function ConfigFolha() {
             <p className="mt-1 text-xs" style={{ color: "var(--text-subtle)" }}>{t("folha.rubricas.nota")}</p>
           </div>
           <span className="flex gap-2">
-            {cfg.rubricas.length === 0 && <Button size="sm" variant="secondary" onClick={() => chamar({ acao: "rubricasPadrao" })}>{t("folha.rubricas.padrao")}</Button>}
+            {TIPOS_RUBRICA.some((k) => k !== "manual" && !cfg.rubricas.some((r) => r.tipo === k)) && <Button size="sm" variant="secondary" onClick={() => chamar({ acao: "rubricasPadrao" })}>{cfg.rubricas.length === 0 ? t("folha.rubricas.padrao") : t("folha.rubricas.padraoFaltantes")}</Button>}
             <Button size="sm" icon={Plus} onClick={() => { setRubErro(""); setRub({ _novo: true, codigo: "", nome: "", natureza: "provento", tipo: "manual", incidencia: { inss: false, irrf: false, fgts: false }, ativa: true }); }}>{t("folha.rubricas.nova")}</Button>
           </span>
         </div>
@@ -267,7 +283,12 @@ export function ConfigFolha() {
             <p className="flex items-start gap-2 rounded-lg p-3 text-xs" style={{ background: "var(--warn-weak)", color: "var(--text)" }}>
               <AlertTriangle size={14} className="mt-0.5 shrink-0" style={{ color: "var(--warn)" }} aria-hidden />{t("folha.tabelas.aviso")}
             </p>
-            {!tab.id && <Field label={t("folha.tabelas.inicio")} className="max-w-xs"><Input type="date" value={tab.inicio} onChange={(e) => setTab({ ...tab, inicio: e.target.value })} /></Field>}
+            {!tab.id && (
+              <div className="flex flex-wrap items-end gap-3">
+                <Field label={t("folha.tabelas.inicio")} className="max-w-xs"><Input type="date" value={tab.inicio} onChange={(e) => setTab({ ...tab, inicio: e.target.value })} /></Field>
+                <Button size="sm" variant="secondary" onClick={() => { const x = TABELAS_SUGERIDAS[tab.tipo]; setTab({ ...tab, inicio: x.inicio, faixas: x.faixas.map((f) => ({ ...f })), dep: x.dep, simp: x.simp, obs: t("folha.tabelas.obsSugerida") }); }}>{t("folha.tabelas.usarSugerida")}</Button>
+              </div>
+            )}
             <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t(tab.tipo === "inss" ? "folha.tabelas.notaInss" : "folha.tabelas.notaIrrf")}</p>
             {tab.faixas.map((f, i) => (
               <div key={i} className={`grid items-end gap-2 ${tab.tipo === "irrf" ? "sm:grid-cols-[1fr_1fr_1fr_auto]" : "sm:grid-cols-[1fr_1fr_auto]"}`}>

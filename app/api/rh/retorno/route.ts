@@ -5,10 +5,6 @@ export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import { hasPermission } from "@/lib/accountScope";
 import { guardRh, isCtx, logRh, rhCol, apurarCompetencia, competenciasFechadas, listarCentros } from "@/lib/rh/server";
-import {
-  carregarConfigMargem, carregarCustos, carregarEstornos, lerVendasEmLote, taxasPorPedido, vendaCalc,
-} from "@/lib/rh/comissaoServer";
-import { margemDaVenda, r2 } from "@/lib/rh/comissao";
 import { calcularRetorno, type CustoPessoaMes, type VendaRetorno } from "@/lib/rh/retorno";
 import { COMP_RE, monthOf, nextComp, todayKey } from "@/lib/rh/datas";
 
@@ -78,35 +74,10 @@ export async function GET(request: Request) {
       }
     }
 
-    // ── Vendas atribuídas no período ─────────────────────────────────────────
-    const todasAtribs = await rhCol(ctx, "rhAtribuicoes").where("comp", ">=", from).where("comp", "<=", to).get();
-    const atribs = todasAtribs.docs.map((d) => ({ key: d.id, ...(d.data() as { origem: "cashflow" | "vendas"; refId: string; comp: string; date: string; itens: { colaboradorId: string; pct: number }[] }) }));
-    const [lidas, tabelaCustos, cfg, estornos, estoque] = await Promise.all([
-      lerVendasEmLote(ctx, atribs), carregarCustos(ctx), carregarConfigMargem(ctx), carregarEstornos(ctx),
-      ctx.db.collection("estoque").where("userId", "==", ctx.ownerUid).get(),
-    ]);
-    const taxas = await taxasPorPedido(ctx, lidas);
-    const preco = new Map(estoque.docs.map((d) => [String(d.data().sku ?? "").trim().toUpperCase(), Number(d.data().price) || 0]));
-    const porKey = new Map(atribs.map((a) => [a.key, a]));
-    const estornado = new Map<string, number>();
-    estornos.forEach((e) => estornado.set(e.vendaKey, (estornado.get(e.vendaKey) ?? 0) + e.valor));
-
-    const vendas: VendaRetorno[] = lidas.map((v) => {
-      const tabela = (preco.get(v.sku.toUpperCase()) ?? 0) * v.qty;
-      return {
-        key: v.key, comp: monthOf(v.date), sku: v.sku, amount: v.valor,
-        margem: margemDaVenda(vendaCalc(v, taxas, tabelaCustos, []), cfg),
-        desconto: tabela > v.valor ? r2(tabela - v.valor) : 0,
-        estornado: estornado.get(v.key) ?? 0,
-        itens: porKey.get(v.key)!.itens,
-      };
-    });
+    // O RH não usa vendas: o retorno parte só da comissão lançada e do custo da pessoa.
+    const vendas: VendaRetorno[] = [];
 
     const r = calcularRetorno({ vendas, custos, nomes, filtros: { colaboradorIds, centroId, sku, semCustoPessoal: !gestor } });
-
-    // Opções dos filtros (produtos vistos nas vendas do período).
-    const produtos = new Map<string, string>();
-    lidas.forEach((v) => { if (v.sku && !produtos.has(v.sku)) produtos.set(v.sku, v.descricao); });
 
     if (gestor) await logRh(ctx, "consultou_retorno", { info: `${from} a ${to}` });
     return NextResponse.json({
@@ -118,9 +89,9 @@ export async function GET(request: Request) {
         ? {
             colaboradores: colabSnap.docs.map((d) => ({ id: d.id, nome: String(d.data().nome ?? "") })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
             centros: (await listarCentros(ctx)).map((c) => ({ id: c.id, nome: c.nome })),
-            produtos: [...produtos].map(([sku, nome]) => ({ sku, nome })).sort((a, b) => a.sku.localeCompare(b.sku)),
+            produtos: [],
           }
-        : { colaboradores: [], centros: [], produtos: [...produtos].map(([sku, nome]) => ({ sku, nome })).sort((a, b) => a.sku.localeCompare(b.sku)) },
+        : { colaboradores: [], centros: [], produtos: [] },
     });
   } catch (error) {
     console.error("Erro RH/retorno GET:", error);

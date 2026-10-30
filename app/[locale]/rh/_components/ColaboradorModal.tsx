@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ShieldCheck } from "lucide-react";
 import { Button, Field, Input, MoneyInput, parseAmount } from "@/app/components/ui";
-import { formatarCpf, rhApi, selectClass, selectStyle, hojeISO, type Colaborador, RhModal as Modal } from "./shared";
+import { DocumentosColaborador } from "./DocumentosColaborador";
+import { formatarCep, formatarCpf, rhApi, selectClass, selectStyle, hojeISO, type Colaborador, RhModal as Modal } from "./shared";
 
 interface Props {
   open: boolean;
@@ -18,6 +19,9 @@ const VAZIO = {
   nome: "", cpf: "", cargo: "", vinculo: "CLT", dataEntrada: "", dataSaida: "", status: "ativo",
   dependentes: "0", comissionado: "nao", salarioInicial: "", membroUid: "",
   banco: "", agencia: "", conta: "", tipoConta: "", pix: "",
+  cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
+  jornadaTipo: "", cargaSemanal: "", horario: "",
+  insalubridade: "0", periculosidade: "nao", categoriaFgts: "geral",
 };
 
 export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props) {
@@ -48,16 +52,23 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
     let cancelled = false;
     (async () => {
       try {
-        const d = await rhApi<{ cpf?: string; banco?: Record<string, string> | null }>(
+        const d = await rhApi<{ cpf?: string; banco?: Record<string, string> | null; endereco?: Record<string, string> | null }>(
           `/api/rh/colaboradores?id=${colaborador.id}&revelar=1`, {}, { pin: true },
         );
         if (cancelled) return;
         const b = d.banco ?? {};
+        const en = d.endereco ?? {};
         setF({
           nome: colaborador.nome, cpf: formatarCpf(d.cpf ?? ""), cargo: colaborador.cargo, vinculo: colaborador.vinculo,
           dataEntrada: colaborador.dataEntrada, dataSaida: colaborador.dataSaida ?? "", status: colaborador.status,
           dependentes: String(colaborador.dependentes), comissionado: colaborador.comissionado ? "sim" : "nao", salarioInicial: "", membroUid: colaborador.membroUid ?? "",
           banco: b.banco ?? "", agencia: b.agencia ?? "", conta: b.conta ?? "", tipoConta: b.tipoConta ?? "", pix: b.pix ?? "",
+          cep: formatarCep(en.cep ?? ""), logradouro: en.logradouro ?? "", numero: en.numero ?? "", complemento: en.complemento ?? "",
+          bairro: en.bairro ?? "", cidade: en.cidade ?? "", uf: en.uf ?? "",
+          jornadaTipo: colaborador.jornada?.tipo ?? "", cargaSemanal: colaborador.jornada?.cargaSemanal ? String(colaborador.jornada.cargaSemanal) : "",
+          horario: colaborador.jornada?.horario ?? "",
+          insalubridade: String(colaborador.insalubridade ?? 0), periculosidade: colaborador.periculosidade ? "sim" : "nao",
+          categoriaFgts: colaborador.categoriaFgts ?? "geral",
         });
       } catch (e) {
         if (!cancelled) setErro(e instanceof Error ? e.message : t("comum.erroCarregar"));
@@ -92,6 +103,9 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
         comissionado: f.comissionado === "sim",
         membroUid: f.membroUid || null,
         banco: { banco: f.banco, agencia: f.agencia, conta: f.conta, tipoConta: f.tipoConta, pix: f.pix },
+        endereco: { cep: f.cep, logradouro: f.logradouro, numero: f.numero, complemento: f.complemento, bairro: f.bairro, cidade: f.cidade, uf: f.uf },
+        jornada: { tipo: f.jornadaTipo, cargaSemanal: f.cargaSemanal ? Number(f.cargaSemanal.replace(",", ".")) : null, horario: f.horario },
+        insalubridade: Number(f.insalubridade) || 0, periculosidade: f.periculosidade === "sim", categoriaFgts: f.categoriaFgts,
       };
       if (colaborador) {
         await rhApi("/api/rh/colaboradores", { method: "PATCH", body: { id: colaborador.id, ...payload } });
@@ -170,6 +184,60 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
             <Field label={t("form.pix")} className="sm:col-span-2"><Input placeholder={t("form.ph.pix")} value={f.pix} onChange={(e) => set("pix", e.target.value)} maxLength={80} /></Field>
           </div>
         </fieldset>
+
+        <fieldset className="space-y-3">
+          <legend className="mb-1 text-sm font-semibold" style={{ color: "var(--text)" }}>{t("form.endereco")}</legend>
+          <div className="grid gap-3 sm:grid-cols-6">
+            <Field label={t("form.cep")} className="sm:col-span-2"><Input inputMode="numeric" placeholder="00000-000" value={f.cep} onChange={(e) => set("cep", formatarCep(e.target.value))} maxLength={9} /></Field>
+            <Field label={t("form.logradouro")} className="sm:col-span-3"><Input value={f.logradouro} onChange={(e) => set("logradouro", e.target.value)} maxLength={120} /></Field>
+            <Field label={t("form.numero")} className="sm:col-span-1"><Input value={f.numero} onChange={(e) => set("numero", e.target.value)} maxLength={12} /></Field>
+            <Field label={t("form.complemento")} className="sm:col-span-2"><Input value={f.complemento} onChange={(e) => set("complemento", e.target.value)} maxLength={60} /></Field>
+            <Field label={t("form.bairro")} className="sm:col-span-2"><Input value={f.bairro} onChange={(e) => set("bairro", e.target.value)} maxLength={60} /></Field>
+            <Field label={t("form.cidade")} className="sm:col-span-1"><Input value={f.cidade} onChange={(e) => set("cidade", e.target.value)} maxLength={60} /></Field>
+            <Field label={t("form.uf")} className="sm:col-span-1"><Input value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} maxLength={2} /></Field>
+          </div>
+        </fieldset>
+
+        <fieldset className="space-y-3">
+          <legend className="mb-1 text-sm font-semibold" style={{ color: "var(--text)" }}>{t("form.jornada")}</legend>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field label={t("form.jornadaTipo")}>
+              <select className={selectClass} style={selectStyle} value={f.jornadaTipo} onChange={(e) => set("jornadaTipo", e.target.value)}>
+                <option value="">{t("form.ph.jornadaTipo")}</option>
+                {(["5x2", "6x1", "12x36", "parcial", "outra"] as const).map((j) => <option key={j} value={j}>{t(`form.jornadas.${j}`)}</option>)}
+              </select>
+            </Field>
+            <Field label={t("form.cargaSemanal")}><Input inputMode="decimal" placeholder="44" value={f.cargaSemanal} onChange={(e) => set("cargaSemanal", e.target.value.replace(/[^\d,.]/g, ""))} maxLength={5} /></Field>
+            <Field label={t("form.horario")}><Input placeholder={t("form.ph.horario")} value={f.horario} onChange={(e) => set("horario", e.target.value)} maxLength={80} /></Field>
+          </div>
+        </fieldset>
+
+        <fieldset className="space-y-3">
+          <legend className="mb-1 text-sm font-semibold" style={{ color: "var(--text)" }}>{t("form.adicionais")}</legend>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field label={t("form.insalubridade")} hint={t("form.insalubridadeHint")}>
+              <select className={selectClass} style={selectStyle} value={f.insalubridade} onChange={(e) => setF((p) => ({ ...p, insalubridade: e.target.value, periculosidade: e.target.value !== "0" ? "nao" : p.periculosidade }))}>
+                <option value="0">{t("form.nenhum")}</option>
+                <option value="10">{t("form.grauMinimo")}</option>
+                <option value="20">{t("form.grauMedio")}</option>
+                <option value="40">{t("form.grauMaximo")}</option>
+              </select>
+            </Field>
+            <Field label={t("form.periculosidade")} hint={t("form.periculosidadeHint")}>
+              <select className={selectClass} style={selectStyle} value={f.periculosidade} onChange={(e) => setF((p) => ({ ...p, periculosidade: e.target.value, insalubridade: e.target.value === "sim" ? "0" : p.insalubridade }))}>
+                <option value="nao">{t("form.nao")}</option>
+                <option value="sim">{t("form.sim")}</option>
+              </select>
+            </Field>
+            <Field label={t("form.categoriaFgts")}>
+              <select className={selectClass} style={selectStyle} value={f.categoriaFgts} onChange={(e) => set("categoriaFgts", e.target.value)}>
+                {(["geral", "aprendiz", "domestico"] as const).map((c) => <option key={c} value={c}>{t(`form.fgts.${c}`)}</option>)}
+              </select>
+            </Field>
+          </div>
+        </fieldset>
+
+        {colaborador ? <DocumentosColaborador colaboradorId={colaborador.id} /> : <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t("docs.salveAntes")}</p>}
 
         {colaborador && <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t("form.revelaNota")}</p>}
         {erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}

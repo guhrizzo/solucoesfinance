@@ -153,3 +153,60 @@ test("evento: INSS do 13º é calculado à parte da remuneração normal", async
   assert.equal(separado.bases.inssNormal, 2000);
   assert.equal(separado.bases.inssDecimo, 2000);
 });
+
+test("folha: insalubridade (% do mínimo), periculosidade (% do salário) e adiantamento", async () => {
+  const { calcularFolhaColab, LANCAMENTO_VAZIO } = await import("../../lib/rh/folha.ts");
+  const params = { ...PARAMS, salarioMinimo: 1500, pctPericulosidade: 30 };
+  const insal = calcularFolhaColab(await entradaFolha({ params, insalubridadePct: 20 }));
+  assert.deepEqual(insal.erros, []);
+  assert.equal(insal.itens.find((i) => i.tipo === "insalubridade").valor, 300); // 20% de 1500
+  assert.equal(insal.bases.fgts, 2300); // entra na base do FGTS
+  const per = calcularFolhaColab(await entradaFolha({ params, periculosidade: true }));
+  assert.equal(per.itens.find((i) => i.tipo === "periculosidade").valor, 600); // 30% de 2000
+  // proporcional ao período ativo
+  const meio = calcularFolhaColab(await entradaFolha({ params, periculosidade: true, salarioPeriodo: 1000 }));
+  assert.equal(meio.itens.find((i) => i.tipo === "periculosidade").valor, 300);
+  // sem salário mínimo informado: erro em vez de número inventado
+  const sem = calcularFolhaColab(await entradaFolha({ insalubridadePct: 20 }));
+  assert.match(sem.erros.join(" "), /salário mínimo/);
+  // adiantamento: só desconta do líquido, sem mexer nas bases
+  const base = calcularFolhaColab(await entradaFolha());
+  const adi = calcularFolhaColab(await entradaFolha({ lanc: { ...LANCAMENTO_VAZIO, adiantamento: 500 } }));
+  assert.equal(adi.liquido, base.liquido - 500);
+  assert.equal(adi.bases.inss, base.bases.inss);
+  assert.equal(adi.custoSalarioBase, base.custoSalarioBase);
+});
+
+test("FGTS por categoria e multa conforme o motivo da rescisão", async () => {
+  const { calcularFolhaColab, fgtsDaCategoria, pctMultaDoMotivo } = await import("../../lib/rh/folha.ts");
+  const params = { ...PARAMS, aliquotaFgtsAprendiz: 2, aliquotaFgtsDomestico: 8, pctFgtsRescisorioDomestico: 3.2, multaFgtsPct: 40, multaFgtsAcordoPct: 20 };
+  const ap = calcularFolhaColab(await entradaFolha({ params, categoriaFgts: "aprendiz" }));
+  assert.equal(ap.fgts, 40); // 2% de 2000
+  const dom = calcularFolhaColab(await entradaFolha({ params, categoriaFgts: "domestico" }));
+  assert.equal(dom.fgts, 160);
+  assert.equal(dom.fgtsRescisorio, 64); // 3,2% de 2000
+  const geral = calcularFolhaColab(await entradaFolha({ params }));
+  assert.equal(geral.fgts, 160);
+  assert.equal(geral.fgtsRescisorio, 0);
+  assert.equal(fgtsDaCategoria({ ...params, aliquotaFgtsAprendiz: null }, "aprendiz").aliquota, null);
+  assert.equal(pctMultaDoMotivo(params, "sem_justa_causa"), 40);
+  assert.equal(pctMultaDoMotivo(params, "acordo"), 20);
+  assert.equal(pctMultaDoMotivo(params, "pedido_demissao"), 0);
+  assert.equal(pctMultaDoMotivo(params, "justa_causa"), 0);
+});
+
+test("demonstrativo de IRPF soma folhas e eventos fechados só do ano pedido", async () => {
+  const { montarDemonstrativoIrpf } = await import("../../lib/rh/irpf.ts");
+  const folhas = [
+    { comp: "2026-02", dependentes: 1, baseIrrf: 3000, inss: 300, irrf: 50, metodo: "legal" },
+    { comp: "2026-01", dependentes: 1, baseIrrf: 3000, inss: 300, irrf: 50, metodo: "simplificado" },
+    { comp: "2025-12", dependentes: 1, baseIrrf: 9999, inss: 999, irrf: 999, metodo: "legal" },
+  ];
+  const eventos = [{ id: "e1", tipo: "decimo2", comp: "2026-12", rendimentoNormal: 0, rendimento13: 1500, inss: 150, irrf: 20 }];
+  const d = montarDemonstrativoIrpf(2026, folhas, eventos);
+  assert.deepEqual(d.meses.map((m) => m.comp), ["2026-01", "2026-02"]);
+  assert.equal(d.totais.rendimentos, 6000);
+  assert.equal(d.totais.rendimentos13, 1500);
+  assert.equal(d.totais.inss, 750);
+  assert.equal(d.totais.irrf, 120);
+});

@@ -87,7 +87,43 @@
       "agencia": "0000",
       "conta": "00000-0",
       "pix": "CPF, e-mail, telefone ou chave aleatória",
-      "tipoConta": "Selecione..."
+      "tipoConta": "Selecione...",
+      "jornadaTipo": "Selecione",
+      "horario": "08:00–17:00, 1h de intervalo"
+    },
+    "endereco": "Endereço",
+    "cep": "CEP",
+    "logradouro": "Rua / logradouro",
+    "numero": "Número",
+    "complemento": "Complemento",
+    "bairro": "Bairro",
+    "cidade": "Cidade",
+    "uf": "UF",
+    "jornada": "Jornada de trabalho",
+    "jornadaTipo": "Escala",
+    "cargaSemanal": "Carga horária semanal (h)",
+    "horario": "Horário",
+    "adicionais": "Adicionais e FGTS",
+    "insalubridade": "Insalubridade",
+    "insalubridadeHint": "% sobre o salário mínimo",
+    "periculosidade": "Periculosidade",
+    "periculosidadeHint": "30% sobre o salário-base. Não acumula com insalubridade.",
+    "nenhum": "Não tem",
+    "grauMinimo": "Grau mínimo (10%)",
+    "grauMedio": "Grau médio (20%)",
+    "grauMaximo": "Grau máximo (40%)",
+    "categoriaFgts": "Categoria para o FGTS",
+    "jornadas": {
+      "5x2": "5x2 (seg a sex)",
+      "6x1": "6x1",
+      "12x36": "12x36",
+      "parcial": "Tempo parcial",
+      "outra": "Outra"
+    },
+    "fgts": {
+      "geral": "Geral (CLT) — 8%",
+      "aprendiz": "Jovem aprendiz — 2%",
+      "domestico": "Doméstico — 8% + 3,2%"
     }
   },
   "rem": {
@@ -211,7 +247,7 @@
       "fechou_evento_folha": "Fechou evento",
       "reabriu_evento_folha": "Reabriu evento",
       "baixou_holerite": "Baixou holerite",
-      "baixou_documento": "Baixou recibo",
+      "baixou_documento": "Abriu documento",
       "carregou_rubricas_padrao": "Carregou rubricas padrão",
       "criou_rubrica": "Criou rubrica",
       "alterou_rubrica": "Alterou rubrica",
@@ -233,7 +269,12 @@
       "corrigiu_estorno": "Corrigiu estorno",
       "excluiu_tabela_inss": "Excluiu tabela de INSS",
       "excluiu_tabela_irrf": "Excluiu tabela de IRRF",
-      "limpou_lancamentos_folha": "Limpou lançamentos da folha"
+      "limpou_lancamentos_folha": "Limpou lançamentos da folha",
+      "lancou_comissao": "Lançou comissão",
+      "removeu_comissao": "Removeu comissão",
+      "anexou_documento": "Anexou documento",
+      "removeu_documento": "Excluiu documento",
+      "consultou_irpf": "Consultou demonstrativo de IRPF"
     }
   },
   "comum": {
@@ -271,44 +312,6 @@
     "agoraNao": "Agora não"
   },
   "comissoes": {
-    "resumo": {
-      "titulo": "Comissão apurada por colaborador",
-      "nota": "Competência da venda. Estornos de meses já fechados voltam como ajuste negativo na competência da data do estorno. O total entra no custo mensal do colaborador.",
-      "total": "Comissões do mês",
-      "vendasAtribuidas": "Vendas atribuídas",
-      "vazio": "Nenhuma venda atribuída neste mês",
-      "semRegra": "Sem regra",
-      "semCusto": "{count, plural, one {# venda ficou fora da base de margem por falta de custo do produto} other {# vendas ficaram fora da base de margem por falta de custo do produto}}. Cadastre o custo em Relatórios → Vendas.",
-      "cols": {
-        "colaborador": "Colaborador",
-        "regra": "Regra",
-        "base": "Base",
-        "comissao": "Comissão",
-        "ajustes": "Ajustes de estorno",
-        "total": "Total"
-      }
-    },
-    "vendas": {
-      "titulo": "Vendas do mês",
-      "nota": "Atribua cada venda a quem vendeu (pode dividir entre pessoas). Só venda atribuída gera comissão. Margem = receita − custo do produto − impostos − taxa de cartão − taxa do marketplace − outros custos.",
-      "vazio": "Nenhuma venda neste mês",
-      "truncado": "Mostrando as 500 primeiras vendas do mês.",
-      "foraDoCaixa": "fora do caixa",
-      "semCusto": "sem custo",
-      "naoAtribuida": "não atribuída",
-      "atribuir": "Atribuir",
-      "editar": "Editar",
-      "estorno": "Estorno",
-      "estornado": "estornado {valor}",
-      "cols": {
-        "data": "Data",
-        "venda": "Venda",
-        "valor": "Valor",
-        "margem": "Margem",
-        "vendedores": "Vendedores",
-        "acoes": "Ações"
-      }
-    },
     "atribuicao": {
       "titulo": "Vendedores da venda",
       "nota": "Divida a venda entre uma ou mais pessoas comissionadas; a soma precisa ser 100%.",
@@ -316,22 +319,6 @@
       "adicionar": "Adicionar vendedor",
       "remover": "Remover atribuição",
       "semComissionados": "Nenhum colaborador comissionado. Marque \"É comissionado?\" em Colaboradores → Editar."
-    },
-    "estorno": {
-      "titulo": "Estorno, cancelamento ou devolução",
-      "nota": "Se o mês da venda ainda está aberto, a comissão dele é recalculada. Se já foi fechado, o valor volta como ajuste negativo na competência da data do estorno.",
-      "tipo": "Tipo",
-      "tipos": {
-        "estorno": "Estorno",
-        "cancelamento": "Cancelamento",
-        "devolucao": "Devolução"
-      },
-      "data": "Data do estorno",
-      "valor": "Valor estornado",
-      "restante": "Resta {valor}",
-      "motivo": "Motivo (opcional)",
-      "registrar": "Registrar",
-      "desfazer": "Desfazer"
     },
     "regras": {
       "titulo": "Regras de comissão",
@@ -373,13 +360,21 @@
       "resumoFaixa": "Por faixa ({modo}) sobre {base}",
       "efeito": "Competências já fechadas não mudam: o fechamento congela a comissão."
     },
-    "premissas": {
-      "titulo": "Premissas da margem",
-      "nota": "Estimativas em % da receita, usadas só nas regras sobre margem. A taxa do marketplace vem real, do lançamento do pedido.",
-      "imposto": "Imposto efetivo (%)",
-      "debito": "Taxa do cartão de débito (%)",
-      "credito": "Taxa do cartão de crédito (%)",
-      "outros": "Outros custos — frete etc. (%)"
+    "manual": {
+      "titulo": "Comissão por colaborador",
+      "nota": "Informe a base e o percentual da comissão de cada colaborador, mês a mês; o valor a pagar é calculado e entra no custo mensal. Não depende de vendas.",
+      "total": "Comissões do mês",
+      "lancadas": "Colaboradores com comissão",
+      "vazio": "Nenhum colaborador comissionado. Marque \"comissionado\" no cadastro do colaborador.",
+      "base": "Base (R$)",
+      "salvar": "Salvar",
+      "remover": "Limpar",
+      "fechada": "Competência fechada: reabra para alterar as comissões.",
+      "salvo": "Salvo",
+      "naoLancado": "não lançado",
+      "colaborador": "Colaborador",
+      "pct": "Comissão (%)",
+      "valor": "Valor a pagar"
     }
   },
   "retorno": {
@@ -457,7 +452,8 @@
     "sub": {
       "mes": "Folha do mês",
       "eventos": "Férias, 13º e rescisão",
-      "config": "Tabelas e parâmetros"
+      "config": "Tabelas e parâmetros",
+      "irpf": "Demonstrativo de IRPF"
     },
     "mes": {
       "liquidoTotal": "Líquido a pagar",
@@ -506,7 +502,8 @@
         "he100": "Horas extras 100% (h)",
         "noturnas": "Horas com adicional noturno (h)",
         "faltasDias": "Faltas (dias)",
-        "atrasosHoras": "Atrasos (horas)"
+        "atrasosHoras": "Atrasos (horas)",
+        "adiantamento": "Adiantamento de salário (R$)"
       },
       "extras": "Outros proventos e descontos",
       "rubrica": "Rubrica",
@@ -611,7 +608,10 @@
         "inss": "INSS",
         "irrf": "IRRF",
         "vt": "Vale-transporte",
-        "manual": "Manual (extra)"
+        "manual": "Manual (extra)",
+        "insalubridade": "Insalubridade",
+        "periculosidade": "Periculosidade",
+        "adiantamento": "Adiantamento salarial"
       },
       "semIncidencia": "sem incidência",
       "codigo": "Código",
@@ -619,7 +619,8 @@
       "natureza": "Natureza",
       "tipo": "Tipo",
       "incidencia": "Incide em",
-      "incidenciaNota": "Em um desconto, a marca significa que ele reduz a base (ex.: faltas)."
+      "incidenciaNota": "Em um desconto, a marca significa que ele reduz a base (ex.: faltas).",
+      "padraoFaltantes": "Adicionar rubricas sugeridas que faltam"
     },
     "parametros": {
       "titulo": "Parâmetros da folha",
@@ -633,8 +634,16 @@
         "pctVT": "Desconto do vale-transporte (%)",
         "aliquotaFgts": "Alíquota do FGTS (%)",
         "pctTercoFerias": "Terço de férias (%)",
-        "pct1aParcela13": "1ª parcela do 13º (%)"
-      }
+        "pct1aParcela13": "1ª parcela do 13º (%)",
+        "salarioMinimo": "Salário mínimo (R$) — base da insalubridade",
+        "pctPericulosidade": "Periculosidade (% do salário-base)",
+        "aliquotaFgtsAprendiz": "FGTS do jovem aprendiz (%)",
+        "aliquotaFgtsDomestico": "FGTS do doméstico (%)",
+        "pctFgtsRescisorioDomestico": "Doméstico: FGTS extra da multa de rescisão (%)",
+        "multaFgtsPct": "Multa do FGTS — sem justa causa (%)",
+        "multaFgtsAcordoPct": "Multa do FGTS — acordo entre as partes (%)"
+      },
+      "sugeridos": "Preencher valores sugeridos (campos em branco)"
     },
     "tabelas": {
       "titulo": "Tabelas de INSS e IRRF",
@@ -657,7 +666,27 @@
       "deducaoDependente": "Dedução por dependente (R$)",
       "simplificado": "Desconto simplificado (R$)",
       "simplificadoHint": "0 = não usar. Se informado, vale o cálculo mais vantajoso.",
-      "obs": "Observação (opcional)"
+      "obs": "Observação (opcional)",
+      "usarSugerida": "Preencher com a tabela sugerida",
+      "obsSugerida": "Valores sugeridos — conferir com o contador"
+    },
+    "irpf": {
+      "titulo": "Demonstrativo anual de IRPF",
+      "nota": "Rendimentos, INSS e imposto de renda retido na fonte de um colaborador no ano, somando as folhas e os eventos (férias, 13º, rescisão) já fechados.",
+      "colaborador": "Colaborador",
+      "ano": "Ano",
+      "gerar": "Gerar demonstrativo",
+      "pdf": "Baixar PDF",
+      "mes": "Mês",
+      "rendimento": "Rendimento tributável",
+      "dependentes": "Dependentes",
+      "irrf": "IRRF retido",
+      "totalRendimentos": "Rendimentos tributáveis",
+      "total13": "13º (excl.)",
+      "totalIrrf": "IRRF retido no ano",
+      "vazio": "Nenhuma folha fechada neste ano.",
+      "eventos": "Férias, 13º e rescisão",
+      "rodape": "(*) IRRF calculado pelo desconto simplificado. Documento gerencial de conferência: o Informe de Rendimentos oficial é emitido pelo contador."
     }
   },
   "pin": {
@@ -676,5 +705,24 @@
     "confirmaColab": "Excluir e apagar o histórico dele? Não dá para desfazer.",
     "limparLancamentos": "Limpar lançamentos",
     "corrigindoVigencia": "Corrigindo uma vigência existente (mantém as datas)."
+  },
+  "docs": {
+    "titulo": "Documentos anexados",
+    "nota": "PDF, PNG, JPG ou WEBP de até 3 MB. Só quem tem acesso ao RH e o PIN vê os arquivos.",
+    "categoria": "Tipo do documento",
+    "anexar": "Anexar documento",
+    "vazio": "Nenhum documento anexado.",
+    "grande": "Arquivo grande demais (máximo de 3 MB).",
+    "abrir": "Abrir documento",
+    "remover": "Excluir documento",
+    "salveAntes": "Salve o colaborador para poder anexar documentos.",
+    "categorias": {
+      "contrato": "Contrato",
+      "identificacao": "Identificação (RG/CPF/CNH)",
+      "comprovante": "Comprovante (residência, escolaridade)",
+      "exame": "Exame (ASO)",
+      "atestado": "Atestado",
+      "outro": "Outro"
+    }
   }
 }

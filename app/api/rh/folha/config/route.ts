@@ -20,6 +20,8 @@ const MSG: Record<ErroVigencia, string> = {
 
 const LIMITES: Record<keyof ParametrosFolha, number> = {
   horasMes: 744, pctHE50: 500, pctHE100: 500, pctAdNoturno: 500, diasBaseMes: 31, pctVT: 100, aliquotaFgts: 100, pctTercoFerias: 100, pct1aParcela13: 100,
+  salarioMinimo: 1_000_000, pctPericulosidade: 100, aliquotaFgtsAprendiz: 100, aliquotaFgtsDomestico: 100,
+  pctFgtsRescisorioDomestico: 100, multaFgtsPct: 100, multaFgtsAcordoPct: 100,
 };
 
 export async function GET(request: Request) {
@@ -60,11 +62,16 @@ export async function POST(request: Request) {
 
     // ── Rubricas ───────────────────────────────────────────────────────────
     if (body.acao === "rubricasPadrao") {
-      if ((await carregarRubricas(ctx)).length > 0) return NextResponse.json({ error: "Já existem rubricas cadastradas." }, { status: 409 });
+      // Cria só as rubricas sugeridas que ainda não existem (por tipo), sem mexer nas suas.
+      const existentes = await carregarRubricas(ctx);
+      const tipos = new Set(existentes.map((r) => r.tipo));
+      const codigos = new Set(existentes.map((r) => r.codigo));
+      const faltam = RUBRICAS_PADRAO.filter((r) => !tipos.has(r.tipo) && !codigos.has(r.codigo));
+      if (faltam.length === 0) return NextResponse.json({ error: "Todas as rubricas sugeridas já existem." }, { status: 409 });
       const batch = ctx.db.batch();
-      RUBRICAS_PADRAO.forEach((r) => batch.set(rhCol(ctx, "rhRubricas").doc(), { ...r, createdAt: Date.now() }));
+      faltam.forEach((r) => batch.set(rhCol(ctx, "rhRubricas").doc(), { ...r, createdAt: Date.now() }));
       await batch.commit();
-      await logRh(ctx, "carregou_rubricas_padrao");
+      await logRh(ctx, "carregou_rubricas_padrao", { info: faltam.map((r) => r.nome).join(", ") });
       return NextResponse.json({ ok: true });
     }
     if (body.acao === "rubrica") {

@@ -42,5 +42,12 @@ service firebase.storage {
     match /compras/{allPaths=**} {
       allow read, write: if false;
     }
+
+    // Documentos de colaboradores (RH): rh/{ownerUid}/{colaboradorId}/{arquivo}.
+    // NENHUM acesso pelo client — só as rotas /api/rh/documentos (Admin SDK),
+    // que exigem permissão de RH e o PIN.
+    match /rh/{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }
