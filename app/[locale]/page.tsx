@@ -446,9 +446,15 @@ export default function FinanceHome() {
                     {t("hero.ctaPrimary")} <ArrowRight size={16} />
                   </button>
                 </Link>
-                <button className="btn-outline text-white font-medium px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
-                  {t("hero.ctaSecondary")}
-                </button>
+                <a
+                  href={`https://wa.me/5511926198042?text=${encodeURIComponent(t("hero.ctaSecondaryMessage"))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <button className="btn-outline text-white font-medium px-7 py-3.5 rounded-xl flex items-center gap-2 cursor-pointer">
+                    {t("hero.ctaSecondary")}
+                  </button>
+                </a>
               </div>
 
               <div className="flex items-center gap-6 mt-10 pt-10 border-t border-white/10 fade-in-delay-3">
@@ -895,60 +901,60 @@ export default function FinanceHome() {
         </div>
       </section>
 
-      {/* App para Windows */}
-      <section id="baixar-app" className="py-24 bg-white scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-3">
-                {t("downloadApp.eyebrow")}
-              </p>
-              <h2 className="text-4xl font-extrabold text-blue-950 leading-tight mb-5">
-                {t("downloadApp.title")}
-              </h2>
-              <p className="text-slate-500 leading-relaxed mb-8 max-w-lg">{t("downloadApp.body")}</p>
-              <a
-                href={DESKTOP_DOWNLOAD_URL}
-                rel="noopener"
-                onClick={trackDownloadClick}
-                className="btn-primary inline-flex items-center gap-2 text-white font-semibold px-8 py-4 rounded-xl text-base"
-              >
-                <Download size={18} aria-hidden="true" />
-                {t("downloadApp.cta")}
-              </a>
-              <p className="text-slate-500 text-sm mt-4 flex items-center gap-2">
-                <Monitor size={14} aria-hidden="true" className="shrink-0" />
-                {t("downloadApp.meta")}
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
-              <h3 className="text-blue-950 font-bold mb-5">{t("downloadApp.stepsTitle")}</h3>
-              <ol className="space-y-5">
-                {(["step1", "step2", "step3"] as const).map((step, i) => (
-                  <li key={step} className="flex gap-4">
-                    <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
-                      {i + 1}
-                    </span>
-                    <p className="text-slate-600 text-sm leading-relaxed">{t(`downloadApp.${step}`)}</p>
-                  </li>
-                ))}
-              </ol>
-              <p className="text-slate-500 text-xs mt-6 pt-5 border-t border-slate-200">
-                {t("downloadApp.verify")}{" "}
-                <a
-                  href={DESKTOP_RELEASES_URL}
-                  rel="noopener"
-                  className="text-blue-600 font-semibold underline underline-offset-2"
-                >
-                  {t("downloadApp.verifyLink")}
-                </a>
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      {/* App para Windows */}
+      <section id="baixar-app" className="py-24 bg-white scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <p className="text-blue-600 text-sm font-semibold mono uppercase tracking-widest mb-3">
+                {t("downloadApp.eyebrow")}
+              </p>
+              <h2 className="text-4xl font-extrabold text-blue-950 leading-tight mb-5">
+                {t("downloadApp.title")}
+              </h2>
+              <p className="text-slate-500 leading-relaxed mb-8 max-w-lg">{t("downloadApp.body")}</p>
+              <a
+                href={DESKTOP_DOWNLOAD_URL}
+                rel="noopener"
+                onClick={trackDownloadClick}
+                className="btn-primary inline-flex items-center gap-2 text-white font-semibold px-8 py-4 rounded-xl text-base"
+              >
+                <Download size={18} aria-hidden="true" />
+                {t("downloadApp.cta")}
+              </a>
+              <p className="text-slate-500 text-sm mt-4 flex items-center gap-2">
+                <Monitor size={14} aria-hidden="true" className="shrink-0" />
+                {t("downloadApp.meta")}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
+              <h3 className="text-blue-950 font-bold mb-5">{t("downloadApp.stepsTitle")}</h3>
+              <ol className="space-y-5">
+                {(["step1", "step2", "step3"] as const).map((step, i) => (
+                  <li key={step} className="flex gap-4">
+                    <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <p className="text-slate-600 text-sm leading-relaxed">{t(`downloadApp.${step}`)}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-slate-500 text-xs mt-6 pt-5 border-t border-slate-200">
+                {t("downloadApp.verify")}{" "}
+                <a
+                  href={DESKTOP_RELEASES_URL}
+                  rel="noopener"
+                  className="text-blue-600 font-semibold underline underline-offset-2"
+                >
+                  {t("downloadApp.verifyLink")}
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
