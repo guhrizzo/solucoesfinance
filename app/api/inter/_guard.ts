@@ -1,11 +1,13 @@
 // app/api/inter/_guard.ts
-// Portão comum das rotas /api/inter/* que mexem na CONEXÃO (conexao, testar):
-// token válido (requireScope), só o DONO da conta, plano Pro (mesmo padrão de
-// app/api/analyze-nf-retencao) e rate limit por conta. Não é rota (não se chama
-// route.ts), só um módulo compartilhado.
+// Portão comum das rotas /api/inter/*: token válido (requireScope), plano Pro
+// (mesmo padrão de app/api/analyze-nf-retencao) e rate limit por conta. Por
+// padrão só o DONO passa (rotas que mexem na CONEXÃO: conexao, testar); com
+// `permission` (ex.: sincronizar) basta o membro ter essa permissão da conta.
+// Não é rota (não se chama route.ts), só um módulo compartilhado.
 
 import { NextResponse } from "next/server";
 import { requireScope, isScopeError, type ApiScope } from "@/lib/apiScope";
+import type { PermissionKey } from "@/lib/accountScope";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { isProAccess } from "@/lib/billing";
 import { resolveScopeSubscription } from "@/lib/scopeSubscription";
@@ -17,14 +19,19 @@ type GuardOpts = {
   rate: { windowMs: number; max: number };
   /** false só pra desconectar: quem perdeu o Pro ainda precisa poder apagar os segredos. */
   requirePro?: boolean;
+  /**
+   * Libera membros com esta permissão (donos sempre passam). Sem ela, a rota é
+   * só do dono — comportamento das rotas de conexão.
+   */
+  permission?: PermissionKey;
 };
 
 export async function guardInter(req: Request, opts: GuardOpts): Promise<ApiScope | NextResponse> {
-  const scope = await requireScope(req);
+  const scope = await requireScope(req, opts.permission);
   if (isScopeError(scope)) {
     return NextResponse.json({ error: scope.error }, { status: scope.status });
   }
-  if (!scope.isOwner) {
+  if (!opts.permission && !scope.isOwner) {
     return NextResponse.json(
       { error: "Só o dono da conta pode gerenciar a integração com o Banco Inter." },
       { status: 403 }

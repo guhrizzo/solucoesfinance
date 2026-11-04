@@ -106,13 +106,15 @@ export async function POST(req: NextRequest) {
       updatedAt: now,
       updatedBy: scope.uid,
     });
-    // merge: preserva lastSyncAt (cursor da sincronização) de uma conexão anterior.
+    // Conexão NOVA: o cursor da sincronização zera (o set acima já não traz
+    // lastSyncAt; aqui sai do status), pra primeira sincronização buscar 30 dias.
     batch.set(
       db.doc(statusPath(scope.ownerUid)),
       {
         connected: true,
         contaMasked: maskConta(conta) ?? FieldValue.delete(),
         certExpiresAt: ck.expiresAt,
+        lastSyncAt: FieldValue.delete(),
         lastSyncError: null,
       },
       { merge: true }
@@ -203,13 +205,16 @@ export async function DELETE(req: NextRequest) {
     const db = await getAdminDb();
     const batch = db.batch();
     batch.delete(db.doc(secretsPath(scope.ownerUid)));
-    // interPendentes não é tocado; lastSyncAt fica como histórico.
+    // interPendentes não é tocado. O cursor lastSyncAt NÃO sobrevive ao
+    // desconectar (o doc de segredos some e o status perde o campo): uma
+    // reconexão começa do zero, com a busca de 30 dias.
     batch.set(
       db.doc(statusPath(scope.ownerUid)),
       {
         connected: false,
         contaMasked: FieldValue.delete(),
         certExpiresAt: FieldValue.delete(),
+        lastSyncAt: FieldValue.delete(),
         lastSyncError: null,
       },
       { merge: true }
