@@ -11,6 +11,7 @@
 //   InterSyncError. Nada de segredo, PEM ou conteúdo do extrato vai para log.
 
 import { createHash } from "node:crypto";
+import type { Firestore } from "firebase-admin/firestore";
 import { fetchExtrato, type InterTx } from "./inter";
 import { decryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "./interCrypto";
 import { suggestAll, type CashEntryLite, type Suggestion } from "./interMatch";
@@ -116,7 +117,7 @@ export type SyncDeps = {
 };
 
 /** Lançamentos do Fluxo de Caixa no período (com folga de ±3 dias) no formato do motor de sugestão. */
-async function lerCashflow(db: any, ownerUid: string, from: string, to: string): Promise<CashEntryLite[]> {
+async function lerCashflow(db: Firestore, ownerUid: string, from: string, to: string): Promise<CashEntryLite[]> {
   const de = toISO(isoMs(from) - FOLGA_MATCH_DIAS * DAY);
   const ate = toISO(isoMs(to) + FOLGA_MATCH_DIAS * DAY);
   const snap = await db
@@ -149,7 +150,7 @@ async function lerCashflow(db: any, ownerUid: string, from: string, to: string):
  * Lança InterSyncError (mensagem legível) em qualquer falha.
  */
 export async function syncOwner(
-  db: any,
+  db: Firestore,
   ownerUid: string,
   now: number = Date.now(),
   deps: SyncDeps = {}
@@ -159,7 +160,7 @@ export async function syncOwner(
   const statusRef = db.doc(`users/${ownerUid}/profile/interStatus`);
 
   // Conexão ausente: nada a registrar no status (a conta está desconectada).
-  let conexao: Record<string, any>;
+  let conexao: Record<string, unknown>;
   try {
     const snap = await conexaoRef.get();
     if (!snap.exists) throw new InterSyncError(MSG_NAO_CONECTADO, "nao-conectado");
@@ -172,7 +173,7 @@ export async function syncOwner(
   try {
     let secrets: InterSecrets;
     try {
-      secrets = decryptInterSecrets(conexao as EncryptedInterSecrets);
+      secrets = decryptInterSecrets(conexao as unknown as EncryptedInterSecrets);
     } catch {
       throw new InterSyncError(MSG_CONFIG, "config");
     }
@@ -202,10 +203,10 @@ export async function syncOwner(
       for (let i = 0; i < txs.length; i += LOTE) {
         const lote = txs.slice(i, i + LOTE);
         const refs = lote.map((t) => pendCol.doc(pendenteDocId(t.txKey)));
-        novos += await db.runTransaction(async (t: any) => {
+        novos += await db.runTransaction(async (t) => {
           const snaps = await t.getAll(...refs);
           const existing = new Map<string, InterPendente>();
-          snaps.forEach((s: any, k: number) => {
+          snaps.forEach((s, k) => {
             if (s.exists) existing.set(lote[k].txKey, s.data() as InterPendente);
           });
           const novosLote = mergePendentes(existing, lote, suggestions, now);
@@ -217,7 +218,7 @@ export async function syncOwner(
 
     // Cursor só avança se a conexão ainda é a mesma (desconectar/reconectar no
     // meio da sincronização não pode herdar o cursor desta).
-    await db.runTransaction(async (t: any) => {
+    await db.runTransaction(async (t) => {
       const atual = await t.get(conexaoRef);
       if (!atual.exists || (atual.data() ?? {}).createdAt !== conexao.createdAt) return;
       t.update(conexaoRef, { lastSyncAt: now });
