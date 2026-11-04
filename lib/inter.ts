@@ -57,25 +57,46 @@ function parseValor(v: unknown): number {
   return Math.abs(n);
 }
 
+/** Valor para decidir se uma linha não reconhecida importa: NaN quando ilegível (≠ 0, conta). */
+function valorOuNaN(v: unknown): number {
+  try {
+    return parseValor(v);
+  } catch {
+    return NaN;
+  }
+}
+
 /**
  * Converte a resposta do extrato (simples ou completo) em transações.
  * `txKey`: usa `idTransacao` quando existe; senão um hash de data+tipo+valor+descrição
  * com um contador de ordem (para transações idênticas no mesmo dia). O contador vale por chamada:
  * para o fallback ser estável, passe TODAS as linhas da janela de uma vez (ver fetchExtrato).
+ *
+ * Linha com valor ≠ 0 e `tipoOperacao` desconhecido ou data ilegível NÃO some em silêncio:
+ * se houver alguma, lança erro em português (sem conteúdo das linhas) e nada é importado —
+ * assim o cursor da sincronização não avança por cima de lançamentos perdidos caso o formato
+ * real da API seja diferente do assumido. Linhas de valor 0 seguem descartadas sem erro.
  */
 export function parseExtrato(raw: unknown): InterTx[] {
   if (!isRec(raw) || !Array.isArray(raw.transacoes)) return [];
   const vistos = new Map<string, number>();
   const out: InterTx[] = [];
+  let naoReconhecidos = 0;
   for (const item of raw.transacoes) {
     if (!isRec(item)) continue;
     const op = str(item.tipoOperacao).toUpperCase();
-    if (op !== "C" && op !== "D") continue;
+    if (op !== "C" && op !== "D") {
+      if (valorOuNaN(item.valor) !== 0) naoReconhecidos++;
+      continue;
+    }
     const amount = parseValor(item.valor);
     if (amount === 0) continue;
     // ASSUNÇÃO (não verificado contra conta real): prioridade dataEntrada → dataInclusao → dataTransacao.
     const date = (str(item.dataEntrada) || str(item.dataInclusao) || str(item.dataTransacao)).slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      naoReconhecidos++;
+      continue;
+    }
     const type = op === "C" ? "entrada" : "saida";
     const description = str(item.descricao) || str(item.titulo) || str(item.tipoTransacao) || "Movimento Inter";
     const id = str(item.idTransacao);
@@ -90,6 +111,9 @@ export function parseExtrato(raw: unknown): InterTx[] {
     }
     const counterparty = counterpartyOf(item.detalhes, type === "entrada");
     out.push({ txKey, date, amount, type, description, ...(counterparty ? { counterparty } : {}) });
+  }
+  if (naoReconhecidos > 0) {
+    throw new Error(`Formato inesperado do extrato do Banco Inter (${naoReconhecidos} lançamento(s) não reconhecido(s)). Nada foi importado.`);
   }
   return out;
 }

@@ -107,3 +107,37 @@ test("valor ausente ou ilegível lança erro em português (não some em silênc
   }
   assert.deepEqual(parseExtrato({ transacoes: [{ dataEntrada: "2026-10-05", tipoOperacao: "C", valor: "0,00", descricao: "x" }] }), []);
 });
+
+test("tipoOperacao desconhecido com valor ≠ 0 lança erro e nada é importado (sem conteúdo da linha)", () => {
+  assert.throws(
+    () => parseExtrato({ transacoes: [...simples.transacoes, { dataEntrada: "2026-10-05", tipoOperacao: "X", valor: "10.00", descricao: "SEGREDO-LINHA" }] }),
+    (e) => {
+      assert.match(e.message, /Formato inesperado do extrato do Banco Inter \(1 lançamento\(s\) não reconhecido\(s\)\)\. Nada foi importado\./);
+      assert.ok(!e.message.includes("SEGREDO-LINHA"));
+      return true;
+    },
+  );
+  // sem tipoOperacao e valor ilegível também conta (não é valor 0)
+  assert.throws(() => parseExtrato({ transacoes: [{ dataEntrada: "2026-10-05", valor: "abc" }] }), /Formato inesperado/);
+});
+
+test("data ilegível com valor ≠ 0 lança erro; conta todas as linhas perdidas", () => {
+  assert.throws(
+    () => parseExtrato({ transacoes: [
+      { dataEntrada: "05/10/2026", tipoOperacao: "C", valor: "10.00", descricao: "x" },
+      { tipoOperacao: "D", valor: "5.00", descricao: "y" },
+      { dataMovimento: "2026-10-05", tipoOperacao: "Z", valor: 7, descricao: "z" },
+    ] }),
+    /\(3 lançamento\(s\) não reconhecido\(s\)\)/,
+  );
+});
+
+test("linhas de valor 0 com tipoOperacao ou data ruins seguem descartadas em silêncio", () => {
+  const r = parseExtrato({ transacoes: [
+    { dataEntrada: "2026-10-05", tipoOperacao: "X", valor: "0.00", descricao: "a" },
+    { dataEntrada: "lixo", tipoOperacao: "C", valor: 0, descricao: "b" },
+    { tipoOperacao: "", valor: "0,00" },
+    ...simples.transacoes,
+  ] });
+  assert.equal(r.length, 2);
+});

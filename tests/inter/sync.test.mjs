@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { planSync, mergePendentes, syncOwner, pendenteDocId, InterSyncError } from "../../lib/interSync";
 import { encryptInterSecrets } from "../../lib/interCrypto";
+import { parseExtrato } from "../../lib/inter";
 
 const DAY = 86400000;
 const NOW = Date.parse("2026-11-03T12:00:00Z");
@@ -235,6 +236,26 @@ test("syncOwner em erro grava lastSyncError, não avança o cursor e não apaga 
   assert.match(st.lastSyncError, /Credenciais do Banco Inter/);
   assert.ok(db.store.has(`users/${OWNER}/interPendentes/id:1`));
   assert.ok(db.store.has(`users/${OWNER}/interPendentes/id:2`));
+});
+
+test("syncOwner com formato inesperado do extrato grava lastSyncError e não avança o cursor", async () => {
+  const db = setup();
+  await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => EXTRATO });
+  // Mesmo caminho do fetchExtrato real: o parse lança e o erro sobe até o syncOwner.
+  const formatoNovo = async () => parseExtrato({ transacoes: [
+    { dataMovimento: "2026-11-04", tipoOperacao: "CREDITO", valor: "99.90", descricao: "PIX RECEBIDO" },
+  ] });
+  await assert.rejects(syncOwner(db, OWNER, NOW + DAY, { fetchExtrato: formatoNovo }), (e) => {
+    assert.ok(e instanceof InterSyncError);
+    assert.equal(e.kind, "falha");
+    assert.match(e.message, /Formato inesperado do extrato do Banco Inter \(1 lançamento\(s\) não reconhecido\(s\)\)/);
+    return true;
+  });
+  assert.equal(db.store.get(`integracoesBanco/${OWNER}`).lastSyncAt, NOW);
+  const st = db.store.get(`users/${OWNER}/profile/interStatus`);
+  assert.equal(st.lastSyncAt, NOW);
+  assert.match(st.lastSyncError, /Formato inesperado do extrato do Banco Inter/);
+  assert.ok(!st.lastSyncError.includes("PIX RECEBIDO"));
 });
 
 test("syncOwner nunca grava mensagem com PEM no status", async () => {
