@@ -298,7 +298,7 @@
     "formDescConnect": "Informe as credenciais da integração e envie o certificado e a chave.",
     "formDescUpdate": "Preencha só o que mudou. Certificado e chave devem ser enviados juntos.",
     "helpTitle": "Onde gerar as credenciais",
-    "helpBody": "No Internet Banking do Inter Empresas, abra a área de Integrações (API) e crie uma nova integração com permissão de leitura de extrato. Ao criar, o Inter mostra o Client ID e o Client Secret e permite baixar o certificado (.crt) e a chave (.key). Guarde esses arquivos: a chave só é baixada uma vez.",
+    "helpBody": "No Internet Banking do Inter Empresas, crie uma integração de API com permissão de leitura de extrato. Depois copie o Client ID e o Client Secret e baixe o certificado (.crt) e a chave (.key). Em caso de dúvida, consulte a documentação oficial do Inter.",
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
     "certFile": "Certificado (.crt ou .pem)",

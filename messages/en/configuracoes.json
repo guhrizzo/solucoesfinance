@@ -298,7 +298,7 @@
     "formDescConnect": "Enter the integration credentials and upload the certificate and key.",
     "formDescUpdate": "Fill in only what changed. Certificate and key must be uploaded together.",
     "helpTitle": "Where to generate the credentials",
-    "helpBody": "In Inter Empresas Internet Banking, open the Integrations (API) area and create a new integration with statement read permission. When you create it, Inter shows the Client ID and Client Secret and lets you download the certificate (.crt) and key (.key). Keep these files: the key is only downloaded once.",
+    "helpBody": "In Inter Empresas Internet Banking, create an API integration with statement read permission. Then copy the Client ID and Client Secret and download the certificate (.crt) and the key (.key). If in doubt, check Inter's official documentation.",
     "clientId": "Client ID",
     "clientSecret": "Client Secret",
     "certFile": "Certificate (.crt or .pem)",
