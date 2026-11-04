@@ -1,6 +1,7 @@
-// Banco Inter (API Empresas): extrato via mTLS. Referência: OpenAPI oficial do Inter
-// (developers.inter.co) — GET /banking/v2/extrato/completo, escopo extrato.read,
-// máx. 90 dias por consulta, 10 chamadas/min (token: 5/min, validade 60 min).
+// Banco Inter (API Empresas): extrato via mTLS. Formato conferido numa cópia de terceiros do
+// OpenAPI do Inter (edusouza/inter-pj-cli, spec/), NÃO contra a documentação oficial ao vivo
+// (developers.inter.co) nem contra uma conta real. Endpoint: GET /banking/v2/extrato/completo,
+// escopo extrato.read, máx. 90 dias por consulta, 10 chamadas/min (token: 5/min, validade 60 min).
 import https from "node:https";
 import { createHash, X509Certificate } from "node:crypto";
 import type { InterSecrets } from "./interCrypto.ts";
@@ -16,6 +17,7 @@ export type InterTx = {
 
 const HOST = "cdpj.partners.bancointer.com.br";
 const MAX_DAYS = 90;
+// ASSUNÇÃO (não verificado contra conta real): tamanhoPagina=1000 é aceito pela API.
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 50;
 
@@ -39,9 +41,27 @@ function counterpartyOf(detalhes: unknown, entrada: boolean): string | undefined
 }
 
 /**
+ * Valor monetário → número positivo. Aceita number, "150.50" e pt-BR ("1.234,56": com vírgula,
+ * pontos são milhar). Negativo vira positivo (o sinal vem de tipoOperacao). Valor ausente ou
+ * ilegível lança erro em português (nunca some em silêncio); 0 é válido e o chamador descarta.
+ * ASSUNÇÃO (não verificado contra conta real): formato do `valor` (string decimal com ponto).
+ */
+function parseValor(v: unknown): number {
+  let n = NaN;
+  if (typeof v === "number") n = v;
+  else if (typeof v === "string" && v.trim()) {
+    const t = v.trim();
+    n = Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t);
+  }
+  if (!Number.isFinite(n)) throw new Error("O Banco Inter devolveu um lançamento com valor ausente ou ilegível. Nada foi importado.");
+  return Math.abs(n);
+}
+
+/**
  * Converte a resposta do extrato (simples ou completo) em transações.
  * `txKey`: usa `idTransacao` quando existe; senão um hash de data+tipo+valor+descrição
- * com um contador de ordem (para transações idênticas no mesmo dia).
+ * com um contador de ordem (para transações idênticas no mesmo dia). O contador vale por chamada:
+ * para o fallback ser estável, passe TODAS as linhas da janela de uma vez (ver fetchExtrato).
  */
 export function parseExtrato(raw: unknown): InterTx[] {
   if (!isRec(raw) || !Array.isArray(raw.transacoes)) return [];
@@ -51,8 +71,9 @@ export function parseExtrato(raw: unknown): InterTx[] {
     if (!isRec(item)) continue;
     const op = str(item.tipoOperacao).toUpperCase();
     if (op !== "C" && op !== "D") continue;
-    const amount = Math.abs(Number(item.valor));
-    if (!Number.isFinite(amount) || amount === 0) continue;
+    const amount = parseValor(item.valor);
+    if (amount === 0) continue;
+    // ASSUNÇÃO (não verificado contra conta real): prioridade dataEntrada → dataInclusao → dataTransacao.
     const date = (str(item.dataEntrada) || str(item.dataInclusao) || str(item.dataTransacao)).slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
     const type = op === "C" ? "entrada" : "saida";
@@ -170,6 +191,7 @@ async function getToken(agent: https.Agent, s: InterSecrets): Promise<string> {
 
 async function getJson(agent: https.Agent, s: InterSecrets, token: string, path: string): Promise<unknown> {
   const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+  // ASSUNÇÃO (não verificado contra conta real): x-conta-corrente só dígitos, sem zeros à esquerda.
   const conta = str(s.conta).replace(/\D/g, "").replace(/^0+/, "");
   if (conta) headers["x-conta-corrente"] = conta;
   let r: Resp;
@@ -193,13 +215,18 @@ export async function fetchExtrato(secrets: InterSecrets, from: string, to: stri
     const token = await getToken(agent, secrets);
     const all: InterTx[] = [];
     for (const w of windowsBetween(from, to)) {
+      // Junta as linhas de todas as páginas da janela e faz UM parse: o contador de ordem do txKey
+      // (fallback sem idTransacao) fica único na janela e independe do tamanho de página.
+      const linhas: unknown[] = [];
+      // ASSUNÇÃO (não verificado contra conta real): `pagina` é 0-based e totalPaginas conta páginas.
       for (let pagina = 0; pagina < MAX_PAGES; pagina++) {
         const q = new URLSearchParams({ dataInicio: w.from, dataFim: w.to, pagina: String(pagina), tamanhoPagina: String(PAGE_SIZE) });
         const raw = await getJson(agent, secrets, token, `/banking/v2/extrato/completo?${q}`);
-        all.push(...parseExtrato(raw));
+        if (isRec(raw) && Array.isArray(raw.transacoes)) linhas.push(...raw.transacoes);
         const total = isRec(raw) ? Number(raw.totalPaginas) : 0;
         if (!Number.isFinite(total) || pagina + 1 >= total) break;
       }
+      all.push(...parseExtrato({ transacoes: linhas }));
     }
     return all;
   } finally {
