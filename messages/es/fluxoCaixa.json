@@ -269,6 +269,7 @@
     "suggestCreate": "Sugerencia: crear movimiento en {category}",
     "suggestMissing": "El movimiento sugerido ya no existe o ya fue vinculado. Usa “Vincular a otro…” para elegir otro o crear uno nuevo.",
     "noSuggestion": "Sin sugerencia — usa “Vincular a otro…”.",
+    "possibleMatch": "Ya existe en el Flujo de Caja un movimiento del mismo tipo y valor cerca de esta fecha. Para no duplicarlo, elige en “Vincular a otro…”: vincularlo o crear uno nuevo.",
     "closedMonth": "Mes cerrado en Informes (todos los movimientos conciliados). Reabre el mes para crear o vincular.",
     "pickerTitle": "Movimientos del mismo valor (hasta 10 días de diferencia) aún sin vínculo",
     "pickerEmpty": "Ningún movimiento compatible.",

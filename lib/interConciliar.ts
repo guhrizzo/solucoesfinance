@@ -116,3 +116,18 @@ export function linkCandidates<T extends CashEntryLite>(p: InterPendente, entrie
       && Math.abs(dayNum(e.date) - dt) <= janelaDias)
     .sort((a, b) => Math.abs(dayNum(a.date) - dt) - Math.abs(dayNum(b.date) - dt) || a.id.localeCompare(b.id));
 }
+
+/** Janela (dias) da checagem de possível duplicata antes do "criar" sugerido. */
+export const POSSIVEL_DUPLICATA_DIAS = 3;
+
+/**
+ * A sugestão "criar" é calculada UMA vez, na sincronização. Se depois disso
+ * entrou no caixa um lançamento compatível (mesmo tipo e valor, ±3 dias, sem
+ * `interTxId` — ex.: digitado à mão ou importado), confirmar a sugestão criaria
+ * um lançamento em dobro. true = há candidato: o "Confirmar"/"Confirmar
+ * sugestões" não cria sozinho; o usuário escolhe em "Vincular a outro…" (onde
+ * criar explicitamente continua permitido).
+ */
+export function hasPossibleMatch<T extends CashEntryLite>(p: InterPendente, entries: T[]): boolean {
+  return linkCandidates(p, entries, POSSIVEL_DUPLICATA_DIAS).length > 0;
+}

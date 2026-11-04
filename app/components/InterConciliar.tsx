@@ -30,7 +30,7 @@ import { authedFetch } from "@/lib/authedFetch";
 import { stampUpdate } from "@/lib/audit";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { CASHFLOW_CATEGORIES, categoryLabel } from "@/lib/cashflowCategories";
-import { buildCashEntry, canResolve, isClaimedByOther, linkCandidates } from "@/lib/interConciliar";
+import { buildCashEntry, canResolve, hasPossibleMatch, isClaimedByOther, linkCandidates } from "@/lib/interConciliar";
 import type { CashEntryLite } from "@/lib/interMatch";
 import type { InterPendente, InterStatus } from "@/lib/interTypes";
 
@@ -186,7 +186,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   const linkedTxKeys = useMemo(() => new Set(txs.map(e => e.interTxId).filter(Boolean) as string[]), [txs]);
 
   /** O que "Confirmar" faria com a sugestão do item — ou o motivo de não poder. */
-  function planFor(item: Item): { plan: Plan | null; problem: "missing" | "closed" | "none" | "busy" | null } {
+  function planFor(item: Item): { plan: Plan | null; problem: "missing" | "closed" | "none" | "busy" | "possibleMatch" | null } {
     if (isClaimedByOther(item, now, authUid ?? "")) return { plan: null, problem: "busy" };
     const s = item.suggestion;
     if (!s) return { plan: null, problem: "none" };
@@ -197,6 +197,9 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
       return { plan: { kind: "vincular", cashflowId: s.cashflowId }, problem: null };
     }
     if (!canResolve("criar", item.date, closedMonths)) return { plan: null, problem: "closed" };
+    // Sugestão calculada na sincronização: se depois disso entrou no caixa um
+    // lançamento compatível, criar sozinho duplicaria — o usuário escolhe.
+    if (hasPossibleMatch(item, txs)) return { plan: null, problem: "possibleMatch" };
     return { plan: { kind: "criar", category: s.category }, problem: null };
   }
 
@@ -270,10 +273,11 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
     }
 
     // vincular
+    // Mês do item: sempre; mês do lançamento: aqui se ele já está carregado e,
+    // de todo jeito, de novo dentro da transação.
+    if (!canResolve("vincular", item.date, closedMonths)) throw new ConcError("closed");
     const known = txById.get(plan.cashflowId);
-    if (known && (!canResolve("vincular", item.date, closedMonths) || !canResolve("vincular", known.date, closedMonths))) {
-      throw new ConcError("closed");
-    }
+    if (known && !canResolve("vincular", known.date, closedMonths)) throw new ConcError("closed");
     const entryRef = doc(db, "users", ownerUid, "cashflow", plan.cashflowId);
     await runTransaction(db, async (tr) => {
       const s = await tr.get(itemRef);
@@ -547,8 +551,8 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
                               : null}
                         </p>
                         {problem && (
-                          <p className="text-xs mt-1" style={{ color: problem === "closed" ? "var(--warn)" : "var(--neg)" }}>
-                            {t(problem === "missing" ? "suggestMissing" : problem === "closed" ? "closedMonth" : problem === "busy" ? "claimedByOther" : "noSuggestion")}
+                          <p className="text-xs mt-1" style={{ color: problem === "closed" || problem === "possibleMatch" ? "var(--warn)" : "var(--neg)" }}>
+                            {t(problem === "missing" ? "suggestMissing" : problem === "closed" ? "closedMonth" : problem === "busy" ? "claimedByOther" : problem === "possibleMatch" ? "possibleMatch" : "noSuggestion")}
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-2.5">

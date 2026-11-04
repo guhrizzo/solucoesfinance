@@ -1,7 +1,7 @@
 // Regras puras da fila "A conciliar" (lib/interConciliar.ts).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { canResolve, buildCashEntry, closedMonthsFrom, linkCandidates, monthOf, isClaimedByOther, CLAIM_TTL_MS } from "../../lib/interConciliar";
+import { canResolve, buildCashEntry, closedMonthsFrom, linkCandidates, monthOf, isClaimedByOther, CLAIM_TTL_MS, hasPossibleMatch } from "../../lib/interConciliar";
 
 const item = (o) => ({
   txKey: "tx-1", date: "2026-10-10", amount: 150.5, type: "saida", description: "  PIX ENVIADO FULANO  ",
@@ -68,6 +68,18 @@ test("linkCandidates: mesmo tipo e valor, sem interTxId, dentro da janela, por p
     ent({ id: "valor", amount: 150.51 }),
   ]);
   assert.deepEqual(r.map(e => e.id), ["perto", "longe"]);
+});
+
+test("hasPossibleMatch: lançamento compatível (±3 dias, sem vínculo) bloqueia o criar sugerido", () => {
+  // digitado à mão depois da sincronização: mesmo tipo/valor, 2 dias depois
+  assert.equal(hasPossibleMatch(item({}), [ent({ date: "2026-10-12" })]), true);
+  assert.equal(hasPossibleMatch(item({}), [ent({ date: "2026-10-07" })]), true);
+  // fora da janela de 3 dias, já vinculado, outro tipo ou outro valor: não bloqueia
+  assert.equal(hasPossibleMatch(item({}), [ent({ date: "2026-10-14" })]), false);
+  assert.equal(hasPossibleMatch(item({}), [ent({ interTxId: "tx-1" })]), false);
+  assert.equal(hasPossibleMatch(item({}), [ent({ type: "entrada" })]), false);
+  assert.equal(hasPossibleMatch(item({}), [ent({ amount: 150.49 })]), false);
+  assert.equal(hasPossibleMatch(item({}), []), false);
 });
 
 test("isClaimedByOther: reserva ativa de outra pessoa/aba bloqueia; a própria, expirada ou sem reserva não", () => {

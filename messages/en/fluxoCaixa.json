@@ -269,6 +269,7 @@
     "suggestCreate": "Suggestion: create entry in {category}",
     "suggestMissing": "The suggested entry no longer exists or is already linked. Use “Link to another…” to pick another one or create a new one.",
     "noSuggestion": "No suggestion — use “Link to another…”.",
+    "possibleMatch": "The Cash Flow already has an entry of the same type and amount close to this date. To avoid a duplicate, choose in “Link to another…”: link to it or create a new one.",
     "closedMonth": "Month closed in Reports (all entries reconciled). Reopen the month to create or link.",
     "pickerTitle": "Entries with the same amount (up to 10 days apart) not linked yet",
     "pickerEmpty": "No matching entries.",

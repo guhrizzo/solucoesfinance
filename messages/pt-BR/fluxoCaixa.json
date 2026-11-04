@@ -269,6 +269,7 @@
     "suggestCreate": "Sugestão: criar lançamento em {category}",
     "suggestMissing": "O lançamento sugerido não existe mais ou já foi vinculado. Use “Vincular a outro…” para escolher outro ou criar um novo.",
     "noSuggestion": "Sem sugestão — use “Vincular a outro…”.",
+    "possibleMatch": "Já existe no Fluxo de Caixa um lançamento do mesmo tipo e valor perto desta data. Para não duplicar, escolha em “Vincular a outro…”: vincular a ele ou criar um novo.",
     "closedMonth": "Mês fechado em Relatórios (todos os lançamentos conciliados). Reabra o mês para criar ou vincular.",
     "pickerTitle": "Lançamentos do mesmo valor (até 10 dias de diferença) ainda sem vínculo",
     "pickerEmpty": "Nenhum lançamento compatível.",
