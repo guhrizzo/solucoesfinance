@@ -7,7 +7,8 @@
     "feedback": "Errores y sugerencias",
     "feedbackAdmin": "Tickets",
     "analytics": "Analytics",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "bancoInter": "Banco Inter"
   },
   "perfil": {
     "fallbackUser": "Usuario",
@@ -274,6 +275,60 @@
     "freq": {
       "semanal": "Semanal (cada lunes)",
       "mensal": "Mensual (día 1)"
+    }
+  },
+  "bancoInter": {
+    "loading": "Cargando…",
+    "loadError": "No se pudo cargar el estado de la conexión con Banco Inter.",
+    "title": "Banco Inter",
+    "desc": "Importa el extracto de tu cuenta empresarial para conciliarlo con el Flujo de Caja.",
+    "badgeConnected": "Conectado",
+    "badgeDisconnected": "Desconectado",
+    "account": "Cuenta",
+    "accountDefault": "Cuenta principal",
+    "lastSync": "Última sincronización",
+    "neverSynced": "Aún no sincronizó",
+    "certValidUntil": "Certificado válido hasta",
+    "lastError": "Último error:",
+    "certExpired": "El certificado de Banco Inter venció el {date}. Genera uno nuevo en el Internet Banking y súbelo en Actualizar credenciales.",
+    "certExpiring": "El certificado de Banco Inter vence en {days, plural, one {# día} other {# días}} ({date}). Genera uno nuevo antes para que la sincronización no se detenga.",
+    "test": "Probar conexión",
+    "formTitleConnect": "Conectar con Banco Inter",
+    "formTitleUpdate": "Actualizar credenciales",
+    "formDescConnect": "Ingresa las credenciales de la integración y sube el certificado y la clave.",
+    "formDescUpdate": "Completa solo lo que cambió. El certificado y la clave deben subirse juntos.",
+    "helpTitle": "Dónde generar las credenciales",
+    "helpBody": "En el Internet Banking de Inter Empresas, abre el área de Integraciones (API) y crea una nueva integración con permiso de lectura de extracto. Al crearla, Inter muestra el Client ID y el Client Secret y permite descargar el certificado (.crt) y la clave (.key). Guarda estos archivos: la clave se descarga una sola vez.",
+    "clientId": "Client ID",
+    "clientSecret": "Client Secret",
+    "certFile": "Certificado (.crt o .pem)",
+    "keyFile": "Clave privada (.key o .pem)",
+    "conta": "Número de cuenta (opcional)",
+    "contaHint": "Úsalo si tienes más de una cuenta en Inter. Solo números.",
+    "keepPlaceholder": "Déjalo en blanco para mantener",
+    "secretsNote": "Los datos se envían una sola vez, quedan cifrados en el servidor y no se vuelven a mostrar.",
+    "connect": "Conectar",
+    "update": "Actualizar credenciales",
+    "connectedOk": "Banco Inter conectado.",
+    "updatedOk": "Credenciales actualizadas.",
+    "testOk": "La conexión con Banco Inter funciona.",
+    "disconnectedOk": "Banco Inter desconectado.",
+    "disconnectTitle": "Desconectar",
+    "disconnectDesc": "Elimina las credenciales guardadas. Los movimientos ya importados se conservan.",
+    "disconnect": "Desconectar",
+    "confirmTitle": "¿Desconectar Banco Inter?",
+    "confirmMessage": "Las credenciales se eliminarán y la sincronización del extracto se detendrá. Para volver, tendrás que conectar de nuevo con el certificado y la clave.",
+    "proTitle": "Banco Inter es del plan Pro",
+    "proBody": "Importa el extracto de Inter automáticamente y concílialo con el Flujo de Caja.",
+    "proCta": "Conocer el plan Pro",
+    "errors": {
+      "requiredAll": "Completa Client ID y Client Secret y sube el certificado y la clave.",
+      "nothingToUpdate": "Completa al menos un campo para actualizar.",
+      "certAndKey": "Sube el certificado y la clave juntos.",
+      "fileTooBig": "Archivo demasiado grande (máximo 20 KB).",
+      "fileRead": "No se pudo leer el archivo.",
+      "network": "Fallo de conexión. Revisa tu internet e inténtalo de nuevo.",
+      "generic": "No se pudo completar la operación. Inténtalo de nuevo."
     }
   }
 }
