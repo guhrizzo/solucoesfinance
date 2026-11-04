@@ -13,8 +13,12 @@
 //   • ignorar  → item ignorado
 //   • desfazer → item volta a pendente (apaga resolvedAt/resolvedBy)
 // Criar e vincular gravam no caixa, então pedem o PIN como o formulário.
+// Criar RESERVA o item (resolvedBy/resolvedAt com status ainda "pendente",
+// ver isClaimedByOther) antes de qualquer baixa automática: outro membro/aba
+// aborta antes de tocar em contas; se algo falhar depois da reserva, ela é
+// liberada e, se a baixa já tiver gravado, o usuário é avisado do que mudou.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Check, EyeOff, Landmark, Link2, Plus, RefreshCw, Undo2, X } from "lucide-react";
 import { Button, Modal, Pill } from "./ui";
@@ -26,7 +30,7 @@ import { authedFetch } from "@/lib/authedFetch";
 import { stampUpdate } from "@/lib/audit";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { CASHFLOW_CATEGORIES, categoryLabel } from "@/lib/cashflowCategories";
-import { buildCashEntry, canResolve, linkCandidates } from "@/lib/interConciliar";
+import { buildCashEntry, canResolve, isClaimedByOther, linkCandidates } from "@/lib/interConciliar";
 import type { CashEntryLite } from "@/lib/interMatch";
 import type { InterPendente, InterStatus } from "@/lib/interTypes";
 
@@ -48,10 +52,23 @@ export type InterNewEntry = {
 
 type Firestore = import("firebase/firestore").Firestore;
 
-type ErrCode = "stale" | "missing" | "linked" | "mismatch" | "closed" | "noAuth" | "duplicate";
+type ErrCode = "stale" | "missing" | "linked" | "mismatch" | "closed" | "noAuth" | "duplicate" | "busy" | "orphan";
+
+type SettledKind = "bill" | "tax" | "receivable" | "expense";
 
 class ConcError extends Error {
-  constructor(public code: ErrCode) { super(code); }
+  constructor(public code: ErrCode, public kinds: SettledKind[] = []) { super(code); }
+}
+
+/** Que baixas automáticas o lançamento carregava (campos gravados por settleNewEntry). */
+function settledKinds(entry: Record<string, unknown> | null): SettledKind[] {
+  if (!entry) return [];
+  const out: SettledKind[] = [];
+  if (entry.sourceBillId) out.push("bill");
+  if (entry.settledTaxId) out.push("tax");
+  if (entry.settledReceivableId) out.push("receivable");
+  if (entry.sourceExpenseId) out.push("expense");
+  return out;
 }
 
 type Plan = { kind: "criar"; category: string } | { kind: "vincular"; cashflowId: string };
@@ -89,6 +106,21 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [pickCat, setPickCat] = useState<Record<string, string>>({});
   const [pin, setPin] = useState<{ run: () => Promise<void> } | null>(null);
+  // Trava síncrona contra execução dupla (Enter + clique no PIN, duplo clique):
+  // o `busy` só muda depois de um render, a ref vale na hora.
+  const inFlight = useRef(false);
+  // Relógio das reservas de outras execuções (atualiza a cada minuto).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  async function guarded(fn: () => Promise<void>) {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try { await fn(); } finally { inFlight.current = false; }
+  }
 
   // Status da conexão + fila pendente (alimenta o badge mesmo com o painel fechado).
   // Só igualdade em `status` (sem orderBy no servidor): evita índice composto;
@@ -154,7 +186,8 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   const linkedTxKeys = useMemo(() => new Set(txs.map(e => e.interTxId).filter(Boolean) as string[]), [txs]);
 
   /** O que "Confirmar" faria com a sugestão do item — ou o motivo de não poder. */
-  function planFor(item: Item): { plan: Plan | null; problem: "missing" | "closed" | "none" | null } {
+  function planFor(item: Item): { plan: Plan | null; problem: "missing" | "closed" | "none" | "busy" | null } {
+    if (isClaimedByOther(item, now, authUid ?? "")) return { plan: null, problem: "busy" };
     const s = item.suggestion;
     if (!s) return { plan: null, problem: "none" };
     if (s.kind === "vincular") {
@@ -168,6 +201,9 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   }
 
   function errText(e: unknown): string {
+    if (e instanceof ConcError && e.code === "orphan") {
+      return t("errors.orphan", { targets: e.kinds.map(k => t(`kinds.${k}`)).join(", ") });
+    }
     if (e instanceof ConcError) return t(`errors.${e.code}`);
     return t("errors.generic", { message: e instanceof Error ? e.message : String(e) });
   }
@@ -175,7 +211,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   /** Executa UM plano (criar/vincular) numa transação. Lança ConcError. */
   async function applyPlan(item: Item, plan: Plan) {
     if (!authUid) throw new ConcError("noAuth");
-    const [{ getFirebase }, { doc, collection, getDoc, runTransaction }] = await Promise.all([
+    const [{ getFirebase }, { doc, collection, runTransaction, deleteField }] = await Promise.all([
       import("@/lib/firebase"),
       import("firebase/firestore"),
     ]);
@@ -186,21 +222,50 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
     if (plan.kind === "criar") {
       if (!canResolve("criar", item.date, closedMonths)) throw new ConcError("closed");
       if (linkedTxKeys.has(item.txKey)) throw new ConcError("duplicate");
-      // Releitura antes da baixa automática: não dá baixa numa conta a receber
-      // / a pagar por um item que outra pessoa já resolveu.
-      const pre = await getDoc(itemRef);
-      if (!pre.exists() || pre.data().status !== "pendente") throw new ConcError("stale");
+      const me = authUid;
+      // 1) RESERVA atômica do item ANTES de qualquer baixa automática: quem
+      //    chegar depois (outro membro, outra aba) aborta aqui, sem tocar em
+      //    conta a pagar/receber/imposto. Ver isClaimedByOther/CLAIM_TTL_MS.
+      const token = Date.now();
+      await runTransaction(db, async (tr) => {
+        const s = await tr.get(itemRef);
+        if (!s.exists() || s.data().status !== "pendente") throw new ConcError("stale");
+        if (isClaimedByOther(s.data(), Date.now(), me)) throw new ConcError("busy");
+        tr.update(itemRef, { resolvedBy: me, resolvedAt: token });
+      });
+
       const base = buildCashEntry(item, plan.category);
       const data: InterNewEntry = { ...base, category: plan.category, note: "", createdAt: Date.now(), costCenterId: "", costCenterName: "" };
-      await createEntry(data, async (cdb, entry) => {
-        await runTransaction(cdb, async (tr) => {
-          const s = await tr.get(itemRef);
-          if (!s.exists() || s.data().status !== "pendente") throw new ConcError("stale");
-          const newRef = doc(collection(cdb, "users", ownerUid, "cashflow"));
-          tr.set(newRef, entry);
-          tr.update(itemRef, { ...resolved(), cashflowId: newRef.id });
+      // Lançamento já com os vínculos da baixa (preenchido quando o commit roda).
+      let settledEntry: Record<string, unknown> | null = null;
+      try {
+        // 2) Baixa automática pelo caminho do formulário; 3) commit atômico do
+        //    lançamento + item, só se a reserva ainda for desta execução.
+        await createEntry(data, async (cdb, entry) => {
+          settledEntry = entry;
+          await runTransaction(cdb, async (tr) => {
+            const s = await tr.get(itemRef);
+            const d = s.exists() ? s.data() : null;
+            if (!d || d.status !== "pendente" || d.resolvedBy !== me || d.resolvedAt !== token) throw new ConcError("stale");
+            const newRef = doc(collection(cdb, "users", ownerUid, "cashflow"));
+            tr.set(newRef, entry);
+            tr.update(itemRef, { ...resolved(), cashflowId: newRef.id });
+          });
         });
-      });
+      } catch (e) {
+        // Libera a reserva (só se ainda for a desta execução).
+        await runTransaction(db, async (tr) => {
+          const s = await tr.get(itemRef);
+          const d = s.exists() ? s.data() : null;
+          if (d && d.status === "pendente" && d.resolvedBy === me && d.resolvedAt === token) {
+            tr.update(itemRef, { resolvedAt: deleteField(), resolvedBy: deleteField() });
+          }
+        }).catch(() => undefined);
+        // A baixa já gravou e o lançamento não: avisa explicitamente o quê.
+        const kinds = settledKinds(settledEntry);
+        if (kinds.length) throw new ConcError("orphan", kinds);
+        throw e;
+      }
       return;
     }
 
@@ -213,6 +278,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
     await runTransaction(db, async (tr) => {
       const s = await tr.get(itemRef);
       if (!s.exists() || s.data().status !== "pendente") throw new ConcError("stale");
+      if (isClaimedByOther(s.data(), Date.now(), authUid)) throw new ConcError("busy");
       const es = await tr.get(entryRef);
       if (!es.exists()) throw new ConcError("missing");
       const d = es.data();
@@ -237,6 +303,8 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
       const s = await tr.get(itemRef);
       const atual = s.exists() ? s.data().status : null;
       if (atual !== (to === "ignorado" ? "pendente" : "ignorado")) throw new ConcError("stale");
+      // Não ignora um item que outra execução está criando agora.
+      if (to === "ignorado" && isClaimedByOther(s.data()!, Date.now(), authUid)) throw new ConcError("busy");
       tr.update(itemRef, to === "ignorado"
         ? { status: "ignorado", resolvedAt: Date.now(), resolvedBy: authUid }
         : { status: "pendente", resolvedAt: deleteField(), resolvedBy: deleteField() });
@@ -252,21 +320,23 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
     setPin({ run });
   }
 
-  async function handlePinSuccess(value: string) {
-    if (!authUid || !pin) return;
-    const result = await verifyPin(authUid, value);
-    if (result === "ok") { const run = pin.run; setPin(null); await run(); return; }
-    if (result === "wrong" && !getPinLockStatus().locked) {
-      (window as unknown as { __pinModalShake?: (m: string) => void }).__pinModalShake?.(tPin("wrong"));
-      return;
-    }
-    setPin(null);
-    setMsg({ tone: "neg", text: result === "no_pin" ? tPin("notConfigured") : tPin("lockedRetry") });
+  function handlePinSuccess(value: string) {
+    return guarded(async () => {
+      if (!authUid || !pin) return;
+      const result = await verifyPin(authUid, value);
+      if (result === "ok") { const run = pin.run; setPin(null); await run(); return; }
+      if (result === "wrong" && !getPinLockStatus().locked) {
+        (window as unknown as { __pinModalShake?: (m: string) => void }).__pinModalShake?.(tPin("wrong"));
+        return;
+      }
+      setPin(null);
+      setMsg({ tone: "neg", text: result === "no_pin" ? tPin("notConfigured") : tPin("lockedRetry") });
+    });
   }
 
   // ── Ações ──────────────────────────────────────────────────────────────────
   function runPlan(item: Item, plan: Plan) {
-    withPin(async () => {
+    return guarded(() => withPin(async () => {
       setBusy(item.id);
       try {
         await applyPlan(item, plan);
@@ -277,19 +347,21 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
       } finally {
         setBusy(null);
       }
-    });
+    }));
   }
 
-  async function runQueue(item: Item, to: "ignorado" | "pendente") {
-    setBusy(item.id);
-    try {
-      await setQueueStatus(item, to);
-      setMsg({ tone: "info", text: t(to === "ignorado" ? "done.ignorar" : "done.desfazer") });
-    } catch (e) {
-      setMsg({ tone: "neg", text: errText(e) });
-    } finally {
-      setBusy(null);
-    }
+  function runQueue(item: Item, to: "ignorado" | "pendente") {
+    return guarded(async () => {
+      setBusy(item.id);
+      try {
+        await setQueueStatus(item, to);
+        setMsg({ tone: "info", text: t(to === "ignorado" ? "done.ignorar" : "done.desfazer") });
+      } catch (e) {
+        setMsg({ tone: "neg", text: errText(e) });
+      } finally {
+        setBusy(null);
+      }
+    });
   }
 
   const confirmaveis = pendentes.filter(i => planFor(i).plan);
@@ -297,17 +369,23 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   function confirmAll() {
     const lote = confirmaveis.map(i => ({ item: i, plan: planFor(i).plan! }));
     if (lote.length === 0) return;
-    withPin(async () => {
+    return guarded(() => withPin(async () => {
       setBusy("__batch");
       let ok = 0, fail = 0;
+      const orphans: string[] = [];
       // Em sequência, como a importação: duas baixas na mesma conta em paralelo
       // leriam o saldo antigo e uma sobrescreveria a outra.
       for (const { item, plan } of lote) {
-        try { await applyPlan(item, plan); ok++; } catch { fail++; }
+        try { await applyPlan(item, plan); ok++; } catch (e) {
+          fail++;
+          // Baixa gravada sem lançamento: não pode sumir no resumo do lote.
+          if (e instanceof ConcError && e.code === "orphan") orphans.push(`${item.description}: ${errText(e)}`);
+        }
       }
       setBusy(null);
-      setMsg({ tone: fail ? "neg" : "pos", text: t("batchDone", { ok, fail }) });
-    });
+      const resumo = t("batchDone", { ok, fail });
+      setMsg({ tone: fail ? "neg" : "pos", text: orphans.length ? `${resumo} ${orphans.join(" ")}` : resumo });
+    }));
   }
 
   async function sync() {
@@ -470,7 +548,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
                         </p>
                         {problem && (
                           <p className="text-xs mt-1" style={{ color: problem === "closed" ? "var(--warn)" : "var(--neg)" }}>
-                            {t(problem === "missing" ? "suggestMissing" : problem === "closed" ? "closedMonth" : "noSuggestion")}
+                            {t(problem === "missing" ? "suggestMissing" : problem === "closed" ? "closedMonth" : problem === "busy" ? "claimedByOther" : "noSuggestion")}
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-2.5">

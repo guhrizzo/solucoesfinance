@@ -67,6 +67,35 @@ export function closedMonthsFrom(entries: { date?: string; reconciled?: boolean 
   return out;
 }
 
+/**
+ * Reserva ("claim") de um item pendente durante o `criar`: antes de qualquer
+ * baixa automática o cliente grava `resolvedBy` = authUid e `resolvedAt` = um
+ * token (timestamp) no item, mantendo `status: "pendente"` — as regras só
+ * deixam o cliente mexer em status/cashflowId/resolvedAt/resolvedBy/suggestion,
+ * então a reserva usa esses campos. A reserva vale por CLAIM_TTL_MS (cobre o
+ * tempo de escolha no SettlePickModal); depois disso expira sozinha, para que
+ * uma aba fechada no meio não trave o item para sempre.
+ */
+export const CLAIM_TTL_MS = 15 * 60 * 1000;
+
+/**
+ * true se o item está reservado por OUTRA execução (outro membro, outra aba ou
+ * outra ação) e a reserva ainda não expirou. `myToken` = o `resolvedAt` que
+ * esta execução gravou ao reservar (a reserva própria não bloqueia).
+ */
+export function isClaimedByOther(
+  item: { status?: string; resolvedAt?: number; resolvedBy?: string },
+  now: number,
+  me: string,
+  myToken?: number
+): boolean {
+  if (item.status !== "pendente") return false;
+  const at = Number(item.resolvedAt);
+  if (!item.resolvedBy || !Number.isFinite(at) || at <= 0) return false;
+  if (now - at >= CLAIM_TTL_MS) return false;
+  return !(item.resolvedBy === me && myToken !== undefined && at === myToken);
+}
+
 function dayNum(iso: string): number {
   const [y, m, d] = iso.split("-").map(Number);
   return Math.round(Date.UTC(y, m - 1, d) / 86_400_000);

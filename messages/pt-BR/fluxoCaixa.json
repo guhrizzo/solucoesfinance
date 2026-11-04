@@ -294,11 +294,20 @@
       "closed": "Mês fechado: reabra o mês em Relatórios para criar ou vincular.",
       "noAuth": "Sessão expirada. Entre de novo.",
       "duplicate": "Já existe um lançamento vinculado a esta transação.",
-      "generic": "Não foi possível concluir: {message}"
+      "generic": "Não foi possível concluir: {message}",
+      "busy": "Este item está sendo conciliado agora por outra pessoa (ou outra aba). Tente de novo em alguns minutos.",
+      "orphan": "Atenção: a baixa automática já foi aplicada ({targets}), mas o lançamento NÃO foi gravado no Fluxo de Caixa. Confira e corrija a baixa manualmente antes de tentar de novo."
     },
     "pin": {
       "title": "Confirmar conciliação",
       "subtitle": "Digite seu PIN de 4 dígitos para gravar no Fluxo de Caixa"
+    },
+    "claimedByOther": "Em conciliação agora por outra pessoa (ou outra aba). Tente de novo em alguns minutos.",
+    "kinds": {
+      "bill": "conta a pagar",
+      "tax": "imposto",
+      "receivable": "conta a receber",
+      "expense": "despesa do centro de custo"
     }
   }
 }

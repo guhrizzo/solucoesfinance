@@ -294,11 +294,20 @@
       "closed": "Month closed: reopen the month in Reports to create or link.",
       "noAuth": "Session expired. Sign in again.",
       "duplicate": "An entry is already linked to this transaction.",
-      "generic": "Could not complete: {message}"
+      "generic": "Could not complete: {message}",
+      "busy": "This item is being reconciled right now by someone else (or another tab). Try again in a few minutes.",
+      "orphan": "Warning: the automatic settlement was already applied ({targets}), but the entry was NOT saved to the Cash Flow. Check and fix the settlement manually before trying again."
     },
     "pin": {
       "title": "Confirm reconciliation",
       "subtitle": "Enter your 4-digit PIN to write to the Cash Flow"
+    },
+    "claimedByOther": "Being reconciled right now by someone else (or another tab). Try again in a few minutes.",
+    "kinds": {
+      "bill": "bill to pay",
+      "tax": "tax",
+      "receivable": "receivable",
+      "expense": "cost center expense"
     }
   }
 }
