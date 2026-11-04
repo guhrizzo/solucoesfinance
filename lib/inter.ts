@@ -4,7 +4,7 @@
 // escopo extrato.read, máx. 90 dias por consulta, 10 chamadas/min (token: 5/min, validade 60 min).
 import https from "node:https";
 import { createHash, X509Certificate } from "node:crypto";
-import type { InterSecrets } from "./interCrypto.ts";
+import type { InterSecrets } from "./interCrypto";
 
 export type InterTx = {
   txKey: string;

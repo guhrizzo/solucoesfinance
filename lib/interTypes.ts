@@ -1,8 +1,8 @@
 // Tipos compartilhados (cliente + servidor) da integração Banco Inter.
 // Os documentos são gravados pelo Admin SDK; ver regras em firestore.rules.
 
-import type { InterTx } from "./inter.ts";
-import type { Suggestion } from "./interMatch.ts";
+import type { InterTx } from "./inter";
+import type { Suggestion } from "./interMatch";
 
 /**
  * users/{ownerUid}/interPendentes/{txKey} — transação do extrato aguardando

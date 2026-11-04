@@ -1,8 +1,8 @@
 // Motor de sugestão da conciliação do extrato Banco Inter: para cada transação
 // do extrato sugere VINCULAR a um lançamento já existente no Fluxo de Caixa ou
 // CRIAR um novo (com categoria sugerida). Módulo puro, sem I/O.
-import type { InterTx } from "./inter.ts";
-import { CASHFLOW_CATEGORIES } from "./cashflowCategories.ts";
+import type { InterTx } from "./inter";
+import { CASHFLOW_CATEGORIES } from "./cashflowCategories";
 
 export type CashEntryLite = {
   id: string;

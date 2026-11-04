@@ -4,7 +4,7 @@
 // de lib/rh/crypto.ts, mas com a chave própria INTER_ENC_KEY (lida a cada chamada).
 // `conta` não é segredo: fica em claro no documento, fora deste envelope.
 
-import { decryptText, encryptText, loadKey } from "./rh/crypto.ts";
+import { decryptText, encryptText, loadKey } from "./rh/crypto";
 
 export type InterSecrets = {
   clientId: string;
