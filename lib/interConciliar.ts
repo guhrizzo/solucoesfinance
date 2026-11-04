@@ -117,6 +117,24 @@ export function linkCandidates<T extends CashEntryLite>(p: InterPendente, entrie
     .sort((a, b) => Math.abs(dayNum(a.date) - dt) - Math.abs(dayNum(b.date) - dt) || a.id.localeCompare(b.id));
 }
 
+/**
+ * Desfazer conciliação: o lançamento do caixa só perde o `interTxId` se ainda
+ * aponta para ESTA transação (se foi excluído ou religado a outra, não mexe).
+ * O lançamento em si é mantido.
+ */
+export function shouldUnlinkEntry(entry: { interTxId?: unknown } | null | undefined, txKey: string): boolean {
+  return !!entry && !!txKey && entry.interTxId === txKey;
+}
+
+/**
+ * Exclusão de um lançamento do Fluxo de Caixa que veio/foi vinculado pela fila:
+ * o item volta para "pendente" só se está conciliado com ESTE lançamento — a
+ * transação do banco não pode sumir junto com o lançamento.
+ */
+export function shouldReopenOnDelete(item: { status?: unknown; cashflowId?: unknown } | null | undefined, cashflowId: string): boolean {
+  return !!item && !!cashflowId && item.status === "conciliado" && item.cashflowId === cashflowId;
+}
+
 /** Janela (dias) da checagem de possível duplicata antes do "criar" sugerido. */
 export const POSSIVEL_DUPLICATA_DIAS = 3;
 

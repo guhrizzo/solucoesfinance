@@ -279,13 +279,23 @@
     "emptyPending": "Nothing to reconcile.",
     "emptyPendingHint": "New statement transactions will show up here.",
     "emptyIgnored": "No ignored transactions.",
+    "tabConciliated": "Reconciled",
+    "emptyConciliated": "No reconciled transactions.",
+    "linkedTo": "Linked to “{description}” on {date}",
+    "linkedMissing": "Linked entry not found in the Cash Flow (it may have been deleted).",
+    "conciliatedAt": "reconciled on {date}",
+    "unconciliate": "Undo reconciliation",
+    "unconciliateConfirm": "The transaction goes back to Pending and the entry loses its link to the statement. The Cash Flow entry itself is kept (not deleted).",
+    "cancel": "Cancel",
+    "loadMore": "Load more",
     "loadError": "Could not load the queue. Reload the page.",
     "batchDone": "{ok, plural, one {# reconciled} other {# reconciled}}{fail, plural, =0 {.} one {, # with a problem.} other {, # with problems.}}",
     "done": {
       "criar": "Entry created and reconciled.",
       "vincular": "Transaction linked to the entry.",
       "ignorar": "Transaction ignored.",
-      "desfazer": "Transaction moved back to Pending."
+      "desfazer": "Transaction moved back to Pending.",
+      "desconciliar": "Reconciliation undone: the transaction is back in Pending and the entry stays in the Cash Flow."
     },
     "errors": {
       "stale": "This item was already resolved (maybe by someone else on the team).",
@@ -302,6 +312,10 @@
     "pin": {
       "title": "Confirm reconciliation",
       "subtitle": "Enter your 4-digit PIN to write to the Cash Flow"
+    },
+    "pinUndo": {
+      "title": "Undo reconciliation",
+      "subtitle": "Enter your 4-digit PIN. The Cash Flow entry is kept."
     },
     "claimedByOther": "Being reconciled right now by someone else (or another tab). Try again in a few minutes.",
     "kinds": {

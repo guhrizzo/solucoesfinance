@@ -279,13 +279,23 @@
     "emptyPending": "Nada por conciliar.",
     "emptyPendingHint": "Cuando el extracto traiga transacciones nuevas, aparecerán aquí.",
     "emptyIgnored": "Ninguna transacción ignorada.",
+    "tabConciliated": "Conciliados",
+    "emptyConciliated": "Ninguna transacción conciliada.",
+    "linkedTo": "Vinculada a “{description}” del {date}",
+    "linkedMissing": "Movimiento vinculado no encontrado en el Flujo de Caja (puede haber sido eliminado).",
+    "conciliatedAt": "conciliada el {date}",
+    "unconciliate": "Deshacer conciliación",
+    "unconciliateConfirm": "La transacción vuelve a Pendientes y el movimiento pierde el vínculo con el extracto. El movimiento del Flujo de Caja se mantiene (no se elimina).",
+    "cancel": "Cancelar",
+    "loadMore": "Cargar más",
     "loadError": "No se pudo cargar la cola. Recarga la página.",
     "batchDone": "{ok, plural, one {# conciliada} other {# conciliadas}}{fail, plural, =0 {.} one {, # con problema.} other {, # con problemas.}}",
     "done": {
       "criar": "Movimiento creado y conciliado.",
       "vincular": "Transacción vinculada al movimiento.",
       "ignorar": "Transacción ignorada.",
-      "desfazer": "La transacción volvió a Pendientes."
+      "desfazer": "La transacción volvió a Pendientes.",
+      "desconciliar": "Conciliación deshecha: la transacción volvió a Pendientes y el movimiento sigue en el Flujo de Caja."
     },
     "errors": {
       "stale": "Este ítem ya fue resuelto (quizás por otra persona del equipo).",
@@ -302,6 +312,10 @@
     "pin": {
       "title": "Confirmar conciliación",
       "subtitle": "Ingresa tu PIN de 4 dígitos para guardar en el Flujo de Caja"
+    },
+    "pinUndo": {
+      "title": "Deshacer conciliación",
+      "subtitle": "Ingresa tu PIN de 4 dígitos. El movimiento del Flujo de Caja se mantiene."
     },
     "claimedByOther": "En conciliación ahora por otra persona (u otra pestaña). Inténtalo de nuevo en unos minutos.",
     "kinds": {

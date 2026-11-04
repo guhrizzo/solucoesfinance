@@ -12,7 +12,10 @@
 //   • vincular → interTxId no lançamento existente + item conciliado
 //   • ignorar  → item ignorado
 //   • desfazer → item volta a pendente (apaga resolvedAt/resolvedBy)
-// Criar e vincular gravam no caixa, então pedem o PIN como o formulário.
+//   • desfazer conciliação (aba Conciliados) → item volta a pendente e o
+//                lançamento perde só o interTxId (o lançamento é MANTIDO)
+// Criar, vincular e desfazer conciliação gravam no caixa, então pedem o PIN.
+// Excluir no Fluxo de Caixa um lançamento conciliado reabre o item (CashFlow.tsx).
 // Criar RESERVA o item (resolvedBy/resolvedAt com status ainda "pendente",
 // ver isClaimedByOther) antes de qualquer baixa automática: outro membro/aba
 // aborta antes de tocar em contas; se algo falhar depois da reserva, ela é
@@ -30,7 +33,7 @@ import { authedFetch } from "@/lib/authedFetch";
 import { stampUpdate } from "@/lib/audit";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { CASHFLOW_CATEGORIES, categoryLabel } from "@/lib/cashflowCategories";
-import { buildCashEntry, canResolve, hasPossibleMatch, isClaimedByOther, linkCandidates } from "@/lib/interConciliar";
+import { buildCashEntry, canResolve, hasPossibleMatch, isClaimedByOther, linkCandidates, shouldUnlinkEntry } from "@/lib/interConciliar";
 import type { CashEntryLite } from "@/lib/interMatch";
 import type { InterPendente, InterStatus } from "@/lib/interTypes";
 
@@ -77,6 +80,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const cents = (v: unknown) => Math.round(Number(v) * 100);
 const fallbackCategory = (type: "entrada" | "saida") => (type === "entrada" ? "Outros recebimentos" : "Outros gastos");
 const sortItems = (a: Item, b: Item) => a.date.localeCompare(b.date) || (a.createdAt ?? 0) - (b.createdAt ?? 0);
+/** Conciliados: mais recentes primeiro (ordenação no cliente — sem índice composto). */
+const sortRecentes = (a: Item, b: Item) => (b.resolvedAt ?? 0) - (a.resolvedAt ?? 0) || b.date.localeCompare(a.date);
+/** Tamanho da página da aba Conciliados ("Carregar mais" soma outra). */
+const CONC_PAGE = 100;
+
+type View = "pendentes" | "ignorados" | "conciliados";
 
 export default function InterConciliar({ ownerUid, authUid, actorName, txs, closedMonths, createEntry }: {
   ownerUid: string;
@@ -100,12 +109,16 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   const [ignorados, setIgnorados] = useState<Item[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"pendentes" | "ignorados">("pendentes");
+  const [view, setView] = useState<View>("pendentes");
+  const [conciliados, setConciliados] = useState<Item[]>([]);
+  const [concLimit, setConcLimit] = useState(CONC_PAGE);
+  const [concFull, setConcFull] = useState(false);
+  const [confirmUndo, setConfirmUndo] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: "pos" | "neg" | "info"; text: string } | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [pickCat, setPickCat] = useState<Record<string, string>>({});
-  const [pin, setPin] = useState<{ run: () => Promise<void> } | null>(null);
+  const [pin, setPin] = useState<{ run: () => Promise<void>; title?: string; subtitle?: string } | null>(null);
   // Trava síncrona contra execução dupla (Enter + clique no PIN, duplo clique):
   // o `busy` só muda depois de um render, a ref vale na hora.
   const inFlight = useRef(false);
@@ -181,6 +194,36 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
     })();
     return () => { cancelled = true; unsub?.(); };
   }, [isPro, ownerUid, open, view]);
+
+  // Conciliados: só enquanto a aba está aberta, com limite (só igualdade em
+  // `status` + limit, sem orderBy: dispensa índice composto; ordena aqui).
+  useEffect(() => {
+    if (!isPro || !ownerUid || !open || view !== "conciliados") return;
+    let cancelled = false;
+    let unsub: (() => void) | undefined;
+    (async () => {
+      try {
+        const [{ getFirebase }, { collection, query, where, limit, onSnapshot }] = await Promise.all([
+          import("@/lib/firebase"),
+          import("firebase/firestore"),
+        ]);
+        const { db } = await getFirebase();
+        if (cancelled) return;
+        unsub = onSnapshot(
+          query(collection(db, "users", ownerUid, "interPendentes"), where("status", "==", "conciliado"), limit(concLimit)),
+          (s) => {
+            setLoadError(false);
+            setConcFull(s.size >= concLimit);
+            setConciliados(s.docs.map(d => ({ ...(d.data() as InterPendente), id: d.id })).sort(sortRecentes));
+          },
+          () => setLoadError(true)
+        );
+      } catch {
+        setLoadError(true);
+      }
+    })();
+    return () => { cancelled = true; unsub?.(); };
+  }, [isPro, ownerUid, open, view, concLimit]);
 
   const txById = useMemo(() => new Map(txs.map(e => [e.id, e])), [txs]);
   const linkedTxKeys = useMemo(() => new Set(txs.map(e => e.interTxId).filter(Boolean) as string[]), [txs]);
@@ -315,13 +358,42 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
     });
   }
 
+  /**
+   * Desfazer conciliação: numa transação (leituras antes das escritas), o item
+   * volta a "pendente" e o lançamento do caixa — se ainda existe e aponta para
+   * esta transação — perde só o `interTxId` (com carimbo de edição). O
+   * lançamento em si é mantido.
+   */
+  async function unconciliate(item: Item) {
+    if (!authUid) throw new ConcError("noAuth");
+    const me = authUid;
+    const [{ getFirebase }, { doc, runTransaction, deleteField }] = await Promise.all([
+      import("@/lib/firebase"),
+      import("firebase/firestore"),
+    ]);
+    const { db } = await getFirebase();
+    const itemRef = doc(db, "users", ownerUid, "interPendentes", item.id);
+    await runTransaction(db, async (tr) => {
+      const s = await tr.get(itemRef);
+      const d = s.exists() ? s.data() : null;
+      if (!d || d.status !== "conciliado") throw new ConcError("stale");
+      const cfId = typeof d.cashflowId === "string" && d.cashflowId ? d.cashflowId : null;
+      const entryRef = cfId ? doc(db, "users", ownerUid, "cashflow", cfId) : null;
+      const es = entryRef ? await tr.get(entryRef) : null;
+      if (entryRef && es?.exists() && shouldUnlinkEntry(es.data(), String(d.txKey ?? ""))) {
+        tr.update(entryRef, { interTxId: deleteField(), ...stampUpdate({ uid: me, name: actorName }) });
+      }
+      tr.update(itemRef, { status: "pendente", cashflowId: deleteField(), resolvedAt: deleteField(), resolvedBy: deleteField() });
+    });
+  }
+
   // ── PIN (mesma trava do formulário: PIN do usuário LOGADO) ────────────────
-  async function withPin(run: () => Promise<void>) {
+  async function withPin(run: () => Promise<void>, labels?: { title: string; subtitle: string }) {
     if (!authUid) { setMsg({ tone: "neg", text: t("errors.noAuth") }); return; }
     const hash = await loadPinHash(authUid);
     if (!hash) { setMsg({ tone: "neg", text: tPin("notConfigured") }); return; }
     setMsg(null);
-    setPin({ run });
+    setPin({ run, ...labels });
   }
 
   function handlePinSuccess(value: string) {
@@ -366,6 +438,21 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
         setBusy(null);
       }
     });
+  }
+
+  function runUnconciliate(item: Item) {
+    return guarded(() => withPin(async () => {
+      setBusy(item.id);
+      try {
+        await unconciliate(item);
+        setConfirmUndo(null);
+        setMsg({ tone: "info", text: t("done.desconciliar") });
+      } catch (e) {
+        setMsg({ tone: "neg", text: errText(e) });
+      } finally {
+        setBusy(null);
+      }
+    }, { title: t("pinUndo.title"), subtitle: t("pinUndo.subtitle") }));
   }
 
   const confirmaveis = pendentes.filter(i => planFor(i).plan);
@@ -416,7 +503,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
   const fmtDay = (iso: string) => (iso ? formatDate(`${iso}T12:00:00`, locale) : "—");
   const count = pendentes.length;
   const working = busy !== null;
-  const lista = view === "pendentes" ? pendentes : ignorados;
+  const lista = view === "pendentes" ? pendentes : view === "ignorados" ? ignorados : conciliados;
 
   const expiresAt = status?.certExpiresAt;
   const daysLeft = expiresAt ? Math.ceil((expiresAt - Date.now()) / DAY_MS) : null;
@@ -482,11 +569,11 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
           {/* Abas + ações gerais */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--cf-input)" }} role="tablist">
-              {(["pendentes", "ignorados"] as const).map(v => (
-                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { setView(v); setPickerFor(null); }}
+              {(["pendentes", "ignorados", "conciliados"] as const).map(v => (
+                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { setView(v); setPickerFor(null); setConfirmUndo(null); }}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
                   style={view === v ? { background: "var(--surface)", color: "var(--text)" } : { background: "transparent", color: "var(--cf-text-2)" }}>
-                  {v === "pendentes" ? t("tabPending", { count }) : t("tabIgnored")}
+                  {v === "pendentes" ? t("tabPending", { count }) : v === "ignorados" ? t("tabIgnored") : t("tabConciliated")}
                 </button>
               ))}
             </div>
@@ -507,7 +594,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
           ) : lista.length === 0 ? (
             <div className="rounded-xl px-4 py-8 text-center" style={{ border: "1px dashed var(--border-strong)" }}>
               <p className="text-sm font-semibold" style={{ color: "var(--cf-text)" }}>
-                {view === "pendentes" ? t("emptyPending") : t("emptyIgnored")}
+                {view === "pendentes" ? t("emptyPending") : view === "ignorados" ? t("emptyIgnored") : t("emptyConciliated")}
               </p>
               {view === "pendentes" && <p className="text-xs mt-1" style={{ color: "var(--cf-text-2)" }}>{t("emptyPendingHint")}</p>}
             </div>
@@ -607,15 +694,51 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
                           onClick={() => runQueue(item, "pendente")}>{t("undo")}</Button>
                       </div>
                     )}
+
+                    {view === "conciliados" && (() => {
+                      const linked = item.cashflowId ? txById.get(item.cashflowId) : undefined;
+                      return (
+                        <>
+                          <p className="text-xs mt-2" style={{ color: "var(--cf-text-2)" }}>
+                            {linked
+                              ? t("linkedTo", { description: linked.description, date: fmtDay(linked.date) })
+                              : t("linkedMissing")}
+                            {item.resolvedAt ? ` · ${t("conciliatedAt", { date: formatDateTime(item.resolvedAt, locale) })}` : ""}
+                          </p>
+                          {confirmUndo === item.id ? (
+                            <div className="mt-2.5 rounded-lg p-3 space-y-2" style={{ background: "var(--warn-weak)" }}>
+                              <p className="text-xs" style={{ color: "var(--warn)" }}>{t("unconciliateConfirm")}</p>
+                              <div className="flex flex-wrap gap-2">
+                                <Button variant="secondary" size="sm" icon={Undo2} disabled={working} loading={rowBusy}
+                                  onClick={() => runUnconciliate(item)}>{t("unconciliate")}</Button>
+                                <Button variant="ghost" size="sm" disabled={working}
+                                  onClick={() => setConfirmUndo(null)}>{t("cancel")}</Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex mt-2.5">
+                              <Button variant="secondary" size="sm" icon={Undo2} disabled={working}
+                                onClick={() => setConfirmUndo(item.id)}>{t("unconciliate")}</Button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </li>
                 );
               })}
             </ul>
           )}
+          {view === "conciliados" && !loadError && concFull && (
+            <div className="flex justify-center">
+              <Button variant="ghost" size="sm" disabled={working}
+                onClick={() => setConcLimit(n => n + CONC_PAGE)}>{t("loadMore")}</Button>
+            </div>
+          )}
         </div>
       </Modal>
 
-      <PinModal open={!!pin} title={t("pin.title")} subtitle={t("pin.subtitle")}
+      <PinModal open={!!pin} title={pin?.title ?? t("pin.title")} subtitle={pin?.subtitle ?? t("pin.subtitle")}
         onClose={() => setPin(null)} onSuccess={handlePinSuccess} />
     </>
   );

@@ -279,13 +279,23 @@
     "emptyPending": "Nada a conciliar.",
     "emptyPendingHint": "Quando o extrato trouxer transações novas, elas aparecem aqui.",
     "emptyIgnored": "Nenhuma transação ignorada.",
+    "tabConciliated": "Conciliados",
+    "emptyConciliated": "Nenhuma transação conciliada.",
+    "linkedTo": "Vinculada a “{description}” de {date}",
+    "linkedMissing": "Lançamento vinculado não encontrado no Fluxo de Caixa (pode ter sido excluído).",
+    "conciliatedAt": "conciliada em {date}",
+    "unconciliate": "Desfazer conciliação",
+    "unconciliateConfirm": "A transação volta para Pendentes e o lançamento perde o vínculo com o extrato. O lançamento no Fluxo de Caixa é mantido (não é excluído).",
+    "cancel": "Cancelar",
+    "loadMore": "Carregar mais",
     "loadError": "Não foi possível carregar a fila. Recarregue a página.",
     "batchDone": "{ok, plural, one {# conciliada} other {# conciliadas}}{fail, plural, =0 {.} one {, # com problema.} other {, # com problema.}}",
     "done": {
       "criar": "Lançamento criado e conciliado.",
       "vincular": "Transação vinculada ao lançamento.",
       "ignorar": "Transação ignorada.",
-      "desfazer": "Transação voltou para Pendentes."
+      "desfazer": "Transação voltou para Pendentes.",
+      "desconciliar": "Conciliação desfeita: a transação voltou para Pendentes e o lançamento continua no Fluxo de Caixa."
     },
     "errors": {
       "stale": "Este item já foi resolvido (talvez por outra pessoa da equipe).",
@@ -302,6 +312,10 @@
     "pin": {
       "title": "Confirmar conciliação",
       "subtitle": "Digite seu PIN de 4 dígitos para gravar no Fluxo de Caixa"
+    },
+    "pinUndo": {
+      "title": "Desfazer conciliação",
+      "subtitle": "Digite seu PIN de 4 dígitos. O lançamento no Fluxo de Caixa é mantido."
     },
     "claimedByOther": "Em conciliação agora por outra pessoa (ou outra aba). Tente de novo em alguns minutos.",
     "kinds": {

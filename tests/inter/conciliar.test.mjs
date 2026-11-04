@@ -1,7 +1,7 @@
 // Regras puras da fila "A conciliar" (lib/interConciliar.ts).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { canResolve, buildCashEntry, closedMonthsFrom, linkCandidates, monthOf, isClaimedByOther, CLAIM_TTL_MS, hasPossibleMatch } from "../../lib/interConciliar";
+import { canResolve, buildCashEntry, closedMonthsFrom, linkCandidates, monthOf, isClaimedByOther, CLAIM_TTL_MS, hasPossibleMatch, shouldUnlinkEntry, shouldReopenOnDelete } from "../../lib/interConciliar";
 
 const item = (o) => ({
   txKey: "tx-1", date: "2026-10-10", amount: 150.5, type: "saida", description: "  PIX ENVIADO FULANO  ",
@@ -80,6 +80,23 @@ test("hasPossibleMatch: lançamento compatível (±3 dias, sem vínculo) bloquei
   assert.equal(hasPossibleMatch(item({}), [ent({ type: "entrada" })]), false);
   assert.equal(hasPossibleMatch(item({}), [ent({ amount: 150.49 })]), false);
   assert.equal(hasPossibleMatch(item({}), []), false);
+});
+
+test("shouldUnlinkEntry: só tira o vínculo do lançamento que ainda aponta para esta transação", () => {
+  assert.equal(shouldUnlinkEntry({ interTxId: "tx-1" }, "tx-1"), true);
+  assert.equal(shouldUnlinkEntry({ interTxId: "tx-2" }, "tx-1"), false);
+  assert.equal(shouldUnlinkEntry({}, "tx-1"), false);
+  assert.equal(shouldUnlinkEntry(null, "tx-1"), false); // lançamento excluído
+  assert.equal(shouldUnlinkEntry({ interTxId: "" }, ""), false);
+});
+
+test("shouldReopenOnDelete: reabre só o item conciliado com o lançamento excluído", () => {
+  assert.equal(shouldReopenOnDelete({ status: "conciliado", cashflowId: "c1" }, "c1"), true);
+  assert.equal(shouldReopenOnDelete({ status: "conciliado", cashflowId: "c2" }, "c1"), false);
+  assert.equal(shouldReopenOnDelete({ status: "pendente", cashflowId: "c1" }, "c1"), false);
+  assert.equal(shouldReopenOnDelete({ status: "ignorado" }, "c1"), false);
+  assert.equal(shouldReopenOnDelete(undefined, "c1"), false);
+  assert.equal(shouldReopenOnDelete({ status: "conciliado", cashflowId: "" }, ""), false);
 });
 
 test("isClaimedByOther: reserva ativa de outra pessoa/aba bloqueia; a própria, expirada ou sem reserva não", () => {

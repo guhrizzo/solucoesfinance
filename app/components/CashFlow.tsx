@@ -25,7 +25,7 @@ import { stampCreate, stampUpdate, stampSettle, type Actor } from "@/lib/audit";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import { authedFetch } from "@/lib/authedFetch";
-import { closedMonthsFrom } from "@/lib/interConciliar";
+import { closedMonthsFrom, shouldReopenOnDelete } from "@/lib/interConciliar";
 import InterConciliar from "./InterConciliar";
 import "./cashflow.css";
 
@@ -1915,15 +1915,38 @@ export default function CashFlowPage() {
     if (!confirmId || !uid || deleting) return;
     setDeleting(true);
     try {
-      const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
+      const [{ getFirebase }, { doc, deleteDoc, collection, query, where, getDocs, runTransaction, deleteField }] =
+        await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
       const { db } = await getFirebase();
+      const tx = txs.find(t => t.id === confirmId);
+      // Lançamento conciliado com uma transação do Banco Inter: acha o item da
+      // fila ANTES de excluir (pelo campo txKey — o id do doc pode ser
+      // "x:<hash>"), para a transação do banco não sumir junto.
+      const filaRefs = tx?.interTxId
+        ? (await getDocs(query(collection(db, "users", uid, "interPendentes"), where("txKey", "==", tx.interTxId)))).docs.map(d => d.ref)
+        : [];
       // Se essa saída tinha lançado uma despesa automaticamente num centro de
       // custo, remove a despesa junto — ela não existia antes desse pagamento.
-      const tx = txs.find(t => t.id === confirmId);
       if (tx?.expenseAutoCreated && tx.sourceExpenseId) {
         await deleteDoc(doc(db, "expenses", tx.sourceExpenseId)).catch(() => {});
       }
-      await deleteDoc(doc(db, "users", uid, "cashflow", confirmId));
+      const cfRef = doc(db, "users", uid, "cashflow", confirmId);
+      if (filaRefs.length === 0) {
+        await deleteDoc(cfRef);
+      } else {
+        // Mesma transação: exclui o lançamento e devolve o item a "A conciliar"
+        // (só se ele está conciliado com ESTE lançamento).
+        const deletedId = confirmId;
+        await runTransaction(db, async (tr) => {
+          const snaps = await Promise.all(filaRefs.map(r => tr.get(r)));
+          for (const s of snaps) {
+            if (s.exists() && shouldReopenOnDelete(s.data(), deletedId)) {
+              tr.update(s.ref, { status: "pendente", cashflowId: deleteField(), resolvedAt: deleteField(), resolvedBy: deleteField() });
+            }
+          }
+          tr.delete(cfRef);
+        });
+      }
       setConfirmId(null);
     } catch (e: any) { alert("Erro ao deletar: " + e.message); }
     finally { setDeleting(false); }
