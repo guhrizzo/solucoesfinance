@@ -15,6 +15,7 @@ import { fetchExtrato, type InterTx } from "./inter";
 import { decryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "./interCrypto";
 import { suggestAll, type CashEntryLite, type Suggestion } from "./interMatch";
 import type { InterPendente } from "./interTypes";
+import { todayKey } from "./rh/datas";
 
 const DAY = 86_400_000;
 const PRIMEIRA_VEZ_DIAS = 30;
@@ -30,15 +31,18 @@ const isoMs = (iso: string) => Date.parse(iso + "T00:00:00Z");
 // ---------- puras ----------
 
 /**
- * Período a buscar (YYYY-MM-DD, em UTC). Primeira vez: últimos 30 dias.
+ * Período a buscar (YYYY-MM-DD, dia de Brasília). Primeira vez: últimos 30 dias.
  * Depois: desde lastSyncAt − 3 dias (sobreposição pega lançamentos que o banco
  * registra com atraso) até hoje.
  */
 export function planSync(args: { lastSyncAt?: number; now: number }): { from: string; to: string } {
-  const to = toISO(args.now);
+  // "Hoje" é o dia civil de Brasília (UTC-3), como no resto do app: entre 21h e
+  // 23h59 o dia UTC já virou e mandaria dataFim = amanhã para o Inter.
+  const to = todayKey(new Date(args.now));
   const temCursor = typeof args.lastSyncAt === "number" && Number.isFinite(args.lastSyncAt);
-  const fromMs = temCursor ? args.lastSyncAt! - SOBREPOSICAO_DIAS * DAY : args.now - PRIMEIRA_VEZ_DIAS * DAY;
-  const from = toISO(fromMs);
+  const from = temCursor
+    ? todayKey(new Date(args.lastSyncAt! - SOBREPOSICAO_DIAS * DAY))
+    : toISO(isoMs(to) - PRIMEIRA_VEZ_DIAS * DAY);
   // Cursor no futuro (relógio torto): nunca devolve um período invertido.
   return { from: from > to ? to : from, to };
 }

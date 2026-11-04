@@ -25,6 +25,21 @@ test("planSync com cursor no futuro não inverte o período", () => {
   assert.deepEqual(r, { from: "2026-11-03", to: "2026-11-03" });
 });
 
+test("planSync usa o dia de Brasília: 23h30 BRT ainda é 'hoje', não amanhã", () => {
+  const now = Date.parse("2026-11-03T02:30:00Z"); // 23:30 BRT de 02/11
+  const r = planSync({ now });
+  assert.equal(r.to, "2026-11-02");
+  assert.equal(r.from, "2026-10-03"); // to − 30 dias
+});
+
+test("planSync incremental: from = dia de Brasília de (lastSyncAt − 3 dias)", () => {
+  const now = Date.parse("2026-11-03T12:00:00Z");
+  // 03/11 02:00Z − 3d = 31/10 02:00Z = 30/10 23:00 BRT (dia UTC seria 31/10)
+  assert.equal(planSync({ lastSyncAt: Date.parse("2026-11-03T02:00:00Z"), now }).from, "2026-10-30");
+  // 03:00Z − 3d = 00:00 BRT do mesmo dia
+  assert.equal(planSync({ lastSyncAt: Date.parse("2026-11-03T03:00:00Z"), now }).from, "2026-10-31");
+});
+
 // ---------- mergePendentes ----------
 
 test("mergePendentes ignora txKey já existente em qualquer status", () => {
