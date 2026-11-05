@@ -21,6 +21,7 @@ import FeedbackAdminTab from "./FeedbackAdminTab";
 import AnalyticsAdminTab from "./AnalyticsAdminTab";
 import WhatsAppTab from "./WhatsAppTab";
 import IntegracoesTab from "./IntegracoesTab";
+import AdminConectarCliente from "./AdminConectarCliente";
 
 interface AuthUser {
   uid: string;
@@ -162,7 +163,10 @@ export default function ConfiguracoesPage() {
           {tab === "aparencia" && <AparenciaTab showToast={showToast} />}
           {tab === "whatsapp" && <WhatsAppTab showToast={showToast} defaultName={user.displayName ?? ""} />}
           {tab === "integracoes" && showIntegracoes && (
-            <IntegracoesTab ownerUid={scope.ownerUid} isPro={isPro} isAdmin={isAdmin} showToast={showToast} />
+            <IntegracoesTab ownerUid={scope.ownerUid} isPro={isPro} isAdmin={isAdmin}
+              showToast={showToast}
+              adminSlot={isAdmin ? <AdminConectarCliente showToast={showToast} /> : undefined}
+            />
           )}
           {tab === "feedback" && <FeedbackTab showToast={showToast} />}
           {tab === "feedbackAdmin" && isAdmin && <FeedbackAdminTab showToast={showToast} />}

@@ -4,7 +4,7 @@
 // Seção "Bancos e pagamentos" da aba Integrações. Cartão do Banco Inter SOMENTE
 // LEITURA para o cliente: a conexão é feita pela equipe NexusFi (painel de adm).
 // O status é lido ao vivo de users/{ownerUid}/profile/interStatus (somente
-// leitura pelo client), como em BancoInterTab.
+// leitura pelo client), como no painel anterior.
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
