@@ -213,6 +213,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // auditoriaIntegracoes/{id} — trilha de quem (adm supremo) conectou, testou
+    // ou desconectou um banco de qual cliente. Gravada SOMENTE pelo Admin SDK
+    // (rotas /api/admin/inter/*); o client nunca lê nem escreve. Regra
+    // explícita (além do fallback) pra deixar claro que é proposital.
+    match /auditoriaIntegracoes/{id} {
+      allow read, write: if false;
+    }
+
     // analytics_daily, analytics_monthly, analytics_page_daily,
     // analytics_download_clickers, analytics_summary (aba
     // "Analytics" de Configurações — métricas da PLATAFORMA, não de uma
