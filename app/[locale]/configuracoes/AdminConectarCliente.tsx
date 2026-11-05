@@ -17,6 +17,7 @@ import ConfirmModal from "@/app/components/ConfirmModal";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { InterStatus } from "@/lib/interTypes";
+import { createGenerationToken } from "@/lib/generationToken";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
 
@@ -55,6 +56,8 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
   const [formError, setFormError] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [now] = useState(() => Date.now()); // referência estável p/ validade do certificado
+  // Geração do alvo: nova busca/edição do e-mail invalida lookups, refreshes e leituras de arquivo em voo.
+  const genRef = useRef(createGenerationToken());
   const busyRef = useRef(false); // trava síncrona contra duplo envio
   const mountedRef = useRef(true);
   const certRef = useRef<HTMLInputElement>(null);
@@ -131,6 +134,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
       return;
     }
     busyRef.current = true;
+    const gen = genRef.current.bump();
     setBusy("search");
     // Novo alvo: nada do cliente anterior pode sobrar na tela.
     setTarget(null);
@@ -142,6 +146,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     busyRef.current = false;
     if (!mountedRef.current) return;
     setBusy(null);
+    if (!genRef.current.isCurrent(gen)) return; // o e-mail/alvo mudou durante a busca
     if (!r.ok) {
       setSearchError(r.error);
       return;
@@ -150,14 +155,15 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
   }
 
   /** Recarrega o status do cliente atual depois de uma ação. */
-  async function refreshStatus(current: Target) {
+  async function refreshStatus(current: Target, gen: number) {
     const r = await lookup(current.email);
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || !genRef.current.isCurrent(gen)) return; // alvo trocou: descarta
     if (r.ok) setTarget(r.target);
     else showToast(r.error, "error");
   }
 
   function onEmailChange(value: string) {
+    genRef.current.bump(); // qualquer edição invalida o que estiver em voo
     setEmail(value);
     // Editar o e-mail invalida o cliente mostrado (e seus campos).
     if (target && value.trim().toLowerCase() !== target.email.toLowerCase()) {
@@ -172,6 +178,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     const input = e.target;
     const file = input.files?.[0];
     if (!file) return set(null);
+    const gen = genRef.current.current();
     // Tamanho checado ANTES de ler o conteúdo.
     if (file.size > MAX_PEM_CHARS) {
       setFormError(t("errors.fileTooBig"));
@@ -180,11 +187,11 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     }
     try {
       const text = await readText(file);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || !genRef.current.isCurrent(gen)) return;
       setFormError("");
       set({ name: file.name, text });
     } catch {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || !genRef.current.isCurrent(gen)) return;
       setFormError(t("errors.fileRead"));
       input.value = "";
       set(null);
@@ -198,8 +205,8 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     if (clientId.trim()) body.clientId = clientId.trim();
     if (clientSecret.trim()) body.clientSecret = clientSecret.trim();
     if (conta.trim()) body.conta = conta.trim();
-    if (cert) body.certPem = cert.text;
-    if (key) body.keyPem = key.text;
+    if (cert?.text) body.certPem = cert.text;
+    if (key?.text) body.keyPem = key.text;
 
     if (mode === "connect") {
       if (!body.clientId || !body.clientSecret || !body.certPem || !body.keyPem) {
@@ -218,6 +225,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     }
 
     busyRef.current = true;
+    const gen = genRef.current.current();
     setBusy(mode);
     const r = await call(mode === "connect" ? "POST" : "PUT", "/api/admin/inter/conexao", {
       clienteEmail: target.email,
@@ -236,7 +244,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     }
     clearSecrets(); // segredos saem da memória do React após o sucesso
     showToast(t(mode === "connect" ? "connectedOk" : "updatedOk"), "success");
-    await refreshStatus(target);
+    await refreshStatus(target, gen);
     busyRef.current = false;
     if (mountedRef.current) setBusy(null);
   }
@@ -244,6 +252,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
   async function test() {
     if (busyRef.current || !target || !target.pro) return;
     busyRef.current = true;
+    const gen = genRef.current.current();
     setBusy("test");
     const r = await call("POST", "/api/admin/inter/testar", { clienteEmail: target.email });
     if (!mountedRef.current) {
@@ -251,7 +260,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
       return;
     }
     showToast(r.ok ? t("testOk") : r.error, r.ok ? "success" : "error");
-    await refreshStatus(target); // o servidor grava o último erro no status
+    await refreshStatus(target, gen); // o servidor grava o último erro no status
     busyRef.current = false;
     if (mountedRef.current) setBusy(null);
   }
@@ -259,6 +268,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
   async function disconnect() {
     if (busyRef.current || !target) return;
     busyRef.current = true;
+    const gen = genRef.current.current();
     setBusy("disconnect");
     const r = await call("DELETE", "/api/admin/inter/conexao", { clienteEmail: target.email });
     if (!mountedRef.current) {
@@ -275,7 +285,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     clearSecrets();
     setFormError("");
     showToast(t("disconnectedOk"), "success");
-    await refreshStatus(target);
+    await refreshStatus(target, gen);
     busyRef.current = false;
     if (mountedRef.current) setBusy(null);
   }
@@ -314,6 +324,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
               autoComplete="off"
               spellCheck={false}
               placeholder={t("emailPlaceholder")}
+              disabled={working}
               onChange={(e) => onEmailChange(e.target.value)}
             />
           </div>
