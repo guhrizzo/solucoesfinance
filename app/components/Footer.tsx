@@ -76,9 +76,6 @@ export default function Footer() {
             </div>
           ))}
         </div>
-        <div className="mb-8 flex justify-center md:justify-start">
-          <SecurePaymentSeal variant="footer" />
-        </div>
         <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left">
             <p className="text-blue-300/75 text-xs">{t("rights", { year })}</p>
@@ -90,6 +87,9 @@ export default function Footer() {
               <Shield size={12} /> {t("lgpd")}
             </div>
           </div>
+        </div>
+        <div className="border-t border-white/5 mt-8 pt-8 flex justify-center">
+          <SecurePaymentSeal variant="footer" />
         </div>
       </div>
     </footer>
