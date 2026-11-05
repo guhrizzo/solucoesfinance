@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { User as UserIcon, Palette, MessageSquarePlus, Inbox, BarChart3, MessageCircle, Landmark } from "lucide-react";
+import { User as UserIcon, Palette, MessageSquarePlus, Inbox, BarChart3, MessageCircle, Plug } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import { PageLoader } from "@/app/components/ui";
 import { useToast } from "@/app/components/useToast";
@@ -20,7 +20,7 @@ import FeedbackTab from "./FeedbackTab";
 import FeedbackAdminTab from "./FeedbackAdminTab";
 import AnalyticsAdminTab from "./AnalyticsAdminTab";
 import WhatsAppTab from "./WhatsAppTab";
-import BancoInterTab from "./BancoInterTab";
+import IntegracoesTab from "./IntegracoesTab";
 
 interface AuthUser {
   uid: string;
@@ -28,7 +28,7 @@ interface AuthUser {
   displayName: string | null;
 }
 
-type TabId = "perfil" | "aparencia" | "whatsapp" | "bancoInter" | "feedback" | "feedbackAdmin" | "analytics";
+type TabId = "perfil" | "aparencia" | "whatsapp" | "integracoes" | "feedback" | "feedbackAdmin" | "analytics";
 
 const BASE_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "perfil", icon: UserIcon },
@@ -37,8 +37,8 @@ const BASE_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "feedback", icon: MessageSquarePlus },
 ];
 
-// Banco Inter: só o dono da conta (membros nunca veem). Quem não é Pro vê o aviso de upgrade.
-const INTER_TAB: { id: TabId; icon: React.ElementType } = { id: "bancoInter", icon: Landmark };
+// Integrações: só o dono da conta (membros nunca veem). Quem não é Pro vê o aviso de plano no cartão do banco.
+const INTEGRACOES_TAB: { id: TabId; icon: React.ElementType } = { id: "integracoes", icon: Plug };
 
 const ADMIN_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "feedbackAdmin", icon: Inbox },
@@ -58,11 +58,11 @@ export default function ConfiguracoesPage() {
   const sub = useSubscription();
   const isPro = isProAccess(sub);
   // Só aparece depois que o escopo carregou e confirmou que é o dono.
-  const showInter = !scope.loading && scope.isOwner && !!scope.ownerUid && !sub.loading;
+  const showIntegracoes = !scope.loading && scope.isOwner && !!scope.ownerUid && !sub.loading;
   const tabs = useMemo(() => {
-    const base = showInter ? [...BASE_TABS, INTER_TAB] : BASE_TABS;
+    const base = showIntegracoes ? [...BASE_TABS, INTEGRACOES_TAB] : BASE_TABS;
     return isAdmin ? [...base, ...ADMIN_TABS] : base;
-  }, [isAdmin, showInter]);
+  }, [isAdmin, showIntegracoes]);
 
   const activePath = "/configuracoes";
 
@@ -147,8 +147,8 @@ export default function ConfiguracoesPage() {
           )}
           {tab === "aparencia" && <AparenciaTab showToast={showToast} />}
           {tab === "whatsapp" && <WhatsAppTab showToast={showToast} defaultName={user.displayName ?? ""} />}
-          {tab === "bancoInter" && showInter && (
-            <BancoInterTab showToast={showToast} ownerUid={scope.ownerUid} isPro={isPro} />
+          {tab === "integracoes" && showIntegracoes && (
+            <IntegracoesTab ownerUid={scope.ownerUid} isPro={isPro} isAdmin={isAdmin} showToast={showToast} />
           )}
           {tab === "feedback" && <FeedbackTab showToast={showToast} />}
           {tab === "feedbackAdmin" && isAdmin && <FeedbackAdminTab showToast={showToast} />}

@@ -8,7 +8,8 @@
     "feedbackAdmin": "Chamados",
     "analytics": "Analytics",
     "whatsapp": "WhatsApp",
-    "bancoInter": "Banco Inter"
+    "bancoInter": "Banco Inter",
+    "integracoes": "Integrações"
   },
   "perfil": {
     "fallbackUser": "Usuário",
@@ -329,6 +330,40 @@
       "fileRead": "Não foi possível ler o arquivo.",
       "network": "Falha de conexão. Verifique a internet e tente novamente.",
       "generic": "Não foi possível concluir a operação. Tente novamente."
+    }
+  },
+  "integracoes": {
+    "marketplacesTitle": "Marketplaces",
+    "marketplacesDesc": "Conecte suas lojas para importar vendas e estoque.",
+    "banksTitle": "Bancos e pagamentos",
+    "banksDesc": "Conexões bancárias feitas pela equipe NexusFi, em modo somente leitura.",
+    "adminTitle": "Área da equipe NexusFi",
+    "loading": "Carregando…",
+    "loadError": "Não foi possível carregar o status da conexão bancária.",
+    "interName": "Banco Inter",
+    "interDesc": "Extrato da conta empresarial para conciliar com o Fluxo de Caixa.",
+    "badgeConnected": "Conectado",
+    "badgeDisconnected": "Desconectado",
+    "account": "Conta",
+    "accountDefault": "Conta principal",
+    "lastSync": "Última sincronização",
+    "neverSynced": "Ainda não sincronizado",
+    "certValidUntil": "Certificado válido até",
+    "lastError": "Último erro:",
+    "certExpired": "O certificado do Banco Inter venceu em {date}. Fale com a equipe NexusFi para renová-lo.",
+    "certExpiring": "O certificado do Banco Inter vence em {days, plural, one {# dia} other {# dias}} ({date}). Fale com a equipe NexusFi para renová-lo antes disso e a sincronização não parar.",
+    "configuredByTeam": "Configurado pela equipe NexusFi",
+    "contactTeam": "Fale com a equipe NexusFi para conectar seu banco.",
+    "openQueue": "Abrir fila \"A conciliar\"",
+    "proTitle": "O Banco Inter é um recurso do plano Pro",
+    "proBody": "Importe o extrato do Inter automaticamente e concilie com o Fluxo de Caixa.",
+    "proCta": "Ver o plano Pro",
+    "soonBadge": "Em breve",
+    "institutions": {
+      "pagbank": "PagBank",
+      "mercadopago": "Mercado Pago",
+      "stone": "Stone",
+      "cielo": "Cielo"
     }
   }
 }

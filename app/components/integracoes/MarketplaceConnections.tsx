@@ -118,6 +118,7 @@ export function useIntegrationReturnToast(showToast: ShowToast): void {
   }, []);
 }
 
+// Páginas que não são o Estoque devem chamar useIntegrationReturnToast elas mesmas (o componente não chama).
 export default function MarketplaceConnections({ ownerUid, returnTo, showToast }: MarketplaceConnectionsProps) {
   const t = useTranslations("estoque");
   const locale = useLocale();
@@ -125,6 +126,9 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
   const platformLabel = (p: Plataforma) => t(`platformName.${p}`);
 
   const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
+  // Só depois do 1º snapshot se sabe quais canais já estão conectados.
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Confirmação no estilo NexusFi (substitui o confirm() nativo do navegador).
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -161,15 +165,25 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
         if (cancelled) return;
 
         const qIntegracoes = query(collection(db, "integracoes"), where("userId", "==", ownerUid));
-        unsubIntegracoes = onSnapshot(qIntegracoes, (snap) => {
-          const list: Integracao[] = [];
-          snap.forEach((doc) => {
-            list.push({ id: doc.id, ...doc.data() } as Integracao);
-          });
-          setIntegracoes(list);
-        });
+        unsubIntegracoes = onSnapshot(
+          qIntegracoes,
+          (snap) => {
+            const list: Integracao[] = [];
+            snap.forEach((doc) => {
+              list.push({ id: doc.id, ...doc.data() } as Integracao);
+            });
+            setIntegracoes(list);
+            setLoadError(false);
+            setLoaded(true);
+          },
+          () => {
+            console.error("Erro ao ouvir integrações");
+            setLoadError(true);
+          }
+        );
       } catch (err) {
         console.error("Erro ao ouvir integrações:", err);
+        setLoadError(true);
       }
     })();
 
@@ -299,6 +313,13 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
           document.body
         )}
 
+      {loadError && (
+        <p role="alert" className="text-xs" style={{ color: "var(--neg)" }}>{t("integrationsModal.loadError")}</p>
+      )}
+      {!loaded && !loadError && (
+        <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.loading")}</p>
+      )}
+
       {/* Canais Disponíveis */}
       <div className="space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.available")}</h4>
@@ -322,7 +343,8 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
           ) : (
             <button
               onClick={() => handleConnectAccount("mercadolivre")}
-              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
+              disabled={!loaded}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--primary)", color: "white" }}
             >
               {t("integrationsModal.connectAccount")}
@@ -350,7 +372,8 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
           ) : (
             <button
               onClick={() => handleConnectAccount("shopee")}
-              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
+              disabled={!loaded}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--primary)", color: "white" }}
             >
               {t("integrationsModal.connectAccount")}
@@ -379,7 +402,8 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
           ) : (
             <button
               onClick={() => handleConnectAccount("tiktokshop")}
-              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
+              disabled={!loaded}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--primary)", color: "white" }}
             >
               {t("integrationsModal.connectAccount")}
@@ -408,7 +432,8 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
           ) : (
             <button
               onClick={() => handleConnectAccount("shein")}
-              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
+              disabled={!loaded}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--primary)", color: "white" }}
             >
               {t("integrationsModal.connectAccount")}

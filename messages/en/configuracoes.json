@@ -8,7 +8,8 @@
     "feedbackAdmin": "Tickets",
     "analytics": "Analytics",
     "whatsapp": "WhatsApp",
-    "bancoInter": "Banco Inter"
+    "bancoInter": "Banco Inter",
+    "integracoes": "Integrations"
   },
   "perfil": {
     "fallbackUser": "User",
@@ -329,6 +330,40 @@
       "fileRead": "Could not read the file.",
       "network": "Connection failed. Check your internet and try again.",
       "generic": "Could not complete the operation. Please try again."
+    }
+  },
+  "integracoes": {
+    "marketplacesTitle": "Marketplaces",
+    "marketplacesDesc": "Connect your stores to import sales and inventory.",
+    "banksTitle": "Banks and payments",
+    "banksDesc": "Bank connections set up by the NexusFi team, read-only.",
+    "adminTitle": "NexusFi team area",
+    "loading": "Loading…",
+    "loadError": "Could not load the bank connection status.",
+    "interName": "Banco Inter",
+    "interDesc": "Business account statement to reconcile with Cash Flow.",
+    "badgeConnected": "Connected",
+    "badgeDisconnected": "Disconnected",
+    "account": "Account",
+    "accountDefault": "Main account",
+    "lastSync": "Last sync",
+    "neverSynced": "Not synced yet",
+    "certValidUntil": "Certificate valid until",
+    "lastError": "Last error:",
+    "certExpired": "The Banco Inter certificate expired on {date}. Contact the NexusFi team to renew it.",
+    "certExpiring": "The Banco Inter certificate expires in {days, plural, one {# day} other {# days}} ({date}). Contact the NexusFi team to renew it before then so syncing does not stop.",
+    "configuredByTeam": "Set up by the NexusFi team",
+    "contactTeam": "Contact the NexusFi team to connect your bank.",
+    "openQueue": "Open the \"To reconcile\" queue",
+    "proTitle": "Banco Inter is a Pro plan feature",
+    "proBody": "Import your Inter statement automatically and reconcile it with Cash Flow.",
+    "proCta": "See the Pro plan",
+    "soonBadge": "Coming soon",
+    "institutions": {
+      "pagbank": "PagBank",
+      "mercadopago": "Mercado Pago",
+      "stone": "Stone",
+      "cielo": "Cielo"
     }
   }
 }
