@@ -15,7 +15,7 @@ test("parseReturnTo aceita prefixo de idioma pt-BR/en/es", () => {
 });
 
 test("parseReturnTo rejeita valores fora da lista", () => {
-  for (const v of ["//evil.com", "https://x.com", "/estoque/../x", "/estoque?x=1", "\evil", "", null, undefined, "/outra", "/fr/estoque"]) {
+  for (const v of ["//evil.com", "https://x.com", "/estoque/../x", "/estoque?x=1", "\\evil", "/\\evil.com", "/%2Fevil.com", "", null, undefined, "/outra", "/fr/estoque"]) {
     assert.equal(parseReturnTo(v), "/estoque", String(v));
   }
 });

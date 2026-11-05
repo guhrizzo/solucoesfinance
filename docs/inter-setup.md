@@ -26,7 +26,7 @@ A conexão **não é mais feita pelo cliente**. Só um **adm supremo** (os e-mai
 2. Entre como adm supremo → Configurações → Integrações → "Conectar em nome do cliente".
 3. Digite o e-mail do **dono da conta** do cliente e clique **Buscar**. Confira o nome/status exibido.
 4. Preencha Client ID, Client Secret, conta corrente e anexe o `.crt` e o `.key`.
-5. Clique **Conectar** (primeira vez). Depois use **Atualizar** (parcial: só os campos enviados mudam), **Testar** (token + consulta ao extrato) ou **Desconectar**.
+5. Clique **Conectar** (primeira vez). Depois use **Atualizar** (parcial: só os campos enviados mudam), **Testar** (certificado + token, escopo `extrato.read`) ou **Desconectar**.
 6. Apague as cópias locais do `.crt`/`.key` e limpe o secret de onde foi anotado.
 
 ## 1. Variáveis de ambiente (Vercel)
@@ -76,13 +76,13 @@ O adm informa esses dados no painel. O sistema valida o certificado (guarda a da
 |---|---|---|
 | `/api/admin/inter/cliente` | adm supremo | Busca o dono pelo e-mail e devolve só o status (sem uid, sem segredo). |
 | `/api/admin/inter/conexao` | adm supremo | POST conectar, PUT atualizar, DELETE desconectar. |
-| `/api/admin/inter/testar` | adm supremo | Token + consulta ao extrato. |
+| `/api/admin/inter/testar` | adm supremo | Certificado + token (escopo `extrato.read`); não consulta o extrato. |
 | `/api/inter/conexao`, `/api/inter/testar` | — | **Respondem 403** (rotas antigas do dono). |
-| `/api/inter/sincronizar`, cron | dono Pro / cron | Inalterados. |
+| `/api/inter/sincronizar`, cron | dono Pro, ou membro com a permissão `fluxoCaixa` sob o plano Pro do dono / cron | Inalterados. |
 
 ## 6. Auditoria
 
-Coleção só de servidor **`auditoriaIntegracoes`**: cada ação do adm grava um registro com **quem** (adm), **qual cliente**, **ação**, **ok/falha** e um **erro curto de texto fixo**. Nunca grava segredo, certificado, chave ou corpo da requisição. Registra uma vez por ação, inclusive em falha. Ainda **não há tela** para ler o log (consulte no console do Firebase).
+Coleção só de servidor **`auditoriaIntegracoes`**: cada ação do adm grava um registro com **quem** (adm), **qual cliente**, **ação**, **ok/falha** e um **erro curto de texto fixo**. Nunca grava segredo, certificado, chave ou corpo da requisição. Registra uma vez por ação sobre um alvo resolvido, inclusive em falha (Pro, validação, chave). Falhas antes de resolver o alvo (403 do guard, corpo inválido, e-mail desconhecido, membro ou login do portal como alvo) e as buscas de cliente **não** são auditadas. Ainda **não há tela** para ler o log (consulte no console do Firebase).
 
 ## 7. Suposições NÃO verificadas com conta real
 
@@ -98,7 +98,7 @@ Estão marcadas como `ASSUNÇÃO` em `lib/inter.ts`:
 
 1. Cliente Pro/cortesia ativo, `INTER_ENC_KEY` definida, regras publicadas (inclui `auditoriaIntegracoes`).
 2. Como adm supremo: Integrações → "Conectar em nome do cliente" → e-mail do dono → **Buscar** → preencher e **Conectar**.
-3. Clicar **Testar** — deve obter token e consultar o extrato sem erro.
+3. Clicar **Testar** — deve validar o certificado e obter o token (escopo `extrato.read`) sem erro; não consulta o extrato.
 4. Como o cliente (dono): confirmar que a aba Integrações mostra o Inter somente leitura e que **não** há campo de credencial. Rodar **Sincronizar** no Fluxo de Caixa e conferir quantidade, datas e valores dos itens em "A conciliar" contra o app do Inter (atenção a datas deslocadas e centavos).
 5. Conciliar **um** item (criar lançamento ou vincular) e conferir o lançamento no Fluxo de Caixa e o saldo.
 6. Conferir que o registro apareceu em `auditoriaIntegracoes` (sem segredo) e que `/api/inter/conexao` responde 403 para o dono.
@@ -119,5 +119,6 @@ Estão marcadas como `ASSUNÇÃO` em `lib/inter.ts`:
 - Sem tela para ler `auditoriaIntegracoes`.
 - Sem webhooks: só sincronização manual e diária.
 - Uma conexão por conta (dono).
+- O painel do adm não consegue limpar um valor de `conta` já existente: dá para alterar, mas só remover desconectando e reconectando.
 - Fechar a aba no meio de "criar" pode deixar uma baixa (settlement) órfã.
 - A reserva de um item expira em 15 min usando o relógio do cliente.

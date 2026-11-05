@@ -135,7 +135,8 @@ test("connectInter com configuradoPelaEquipe grava interStatus.configuradoPelaEq
 
 test("connectInter sem conta não grava contaMasked", async () => {
   const db = setup();
-  const { conta, ...semConta } = FULL;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { conta: _conta, ...semConta } = FULL;
   const r = await connectInter(db, OWNER, semConta);
   assert.equal(r.ok, true);
   assert.equal(r.contaMasked, undefined);
