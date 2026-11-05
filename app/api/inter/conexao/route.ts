@@ -5,63 +5,30 @@
 //   PUT    — atualizar credenciais: campos opcionais; certificado e chave vêm juntos.
 //   DELETE — desconectar: apaga os segredos (interPendentes ficam intactos).
 //
-// Só o DONO da conta, plano Pro (exceto DELETE). Os segredos são cifrados com
-// INTER_ENC_KEY e gravados em integracoesBanco/{ownerUid} (só Admin SDK); o
-// resumo público vai para users/{ownerUid}/profile/interStatus. As respostas
-// NUNCA ecoam segredo, PEM nem campo *Enc, e nada do corpo é logado.
+// Só o DONO da conta, plano Pro (exceto DELETE). A lógica (validação final,
+// certificado/chave, cifragem com INTER_ENC_KEY, gravação em
+// integracoesBanco/{ownerUid} e users/{ownerUid}/profile/interStatus) mora em
+// lib/interConexaoServer.ts; aqui fica só guarda → corpo → núcleo → resposta.
+// As respostas NUNCA ecoam segredo, PEM nem campo *Enc, e nada do corpo é logado.
 
 import { NextRequest, NextResponse } from "next/server";
-import { X509Certificate, createPrivateKey } from "node:crypto";
-import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { certExpiresAt } from "@/lib/inter";
-import { decryptInterSecrets, encryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "@/lib/interCrypto";
-import { maskConta, validateConexaoBody } from "@/lib/interConexao";
+import { validateConexaoBody } from "@/lib/interConexao";
+import { connectInter, disconnectInter, updateInter, type InterAccountResult } from "@/lib/interConexaoServer";
 import { errCode, guardInter, interKeyConfigured, SERVER_CONFIG_ERROR } from "../_guard";
 
 export const runtime = "nodejs";
 
 const RATE = { windowMs: 10 * 60 * 1000, max: 10 }; // 10 alterações / 10 min por conta
 
-const secretsPath = (ownerUid: string) => `integracoesBanco/${ownerUid}`;
-const statusPath = (ownerUid: string) => `users/${ownerUid}/profile/interStatus`;
-
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
 
-/**
- * Confere certificado + chave: legíveis, certificado dentro da validade e chave
- * correspondente ao certificado. Devolve a validade (epoch ms) ou uma mensagem
- * de erro legível — nunca o conteúdo dos arquivos.
- */
-function checkCertKey(certPem: string, keyPem: string): { expiresAt: number } | { error: string } {
-  let expiresAt: number;
-  try {
-    expiresAt = certExpiresAt(certPem);
-  } catch (e) {
-    // certExpiresAt já lança mensagem nossa, em português e sem conteúdo do PEM.
-    return { error: e instanceof Error ? e.message : "Certificado do Banco Inter inválido." };
-  }
-  if (!Number.isFinite(expiresAt)) return { error: "Não foi possível ler a validade do certificado do Banco Inter." };
-  if (expiresAt < Date.now()) {
-    return { error: "O certificado do Banco Inter está expirado. Gere um novo no Internet Banking." };
-  }
-
-  let key;
-  try {
-    key = createPrivateKey(keyPem);
-  } catch {
-    return { error: "Chave privada inválida ou protegida por senha. Envie o arquivo .key gerado no Internet Banking." };
-  }
-  try {
-    if (!new X509Certificate(certPem).checkPrivateKey(key)) {
-      return { error: "A chave privada não corresponde ao certificado enviado." };
-    }
-  } catch {
-    return { error: "A chave privada não corresponde ao certificado enviado." };
-  }
-  return { expiresAt };
+/** Resultado do núcleo → resposta HTTP (mesmo formato de antes da extração). */
+function toResponse(r: InterAccountResult) {
+  if (!r.ok) return bad(r.error, r.status);
+  return NextResponse.json({ ok: true, certExpiresAt: r.certExpiresAt, contaMasked: r.contaMasked ?? null });
 }
 
 async function readJson(req: NextRequest): Promise<unknown> {
@@ -81,50 +48,15 @@ export async function POST(req: NextRequest) {
 
   const v = validateConexaoBody(await readJson(req), "create");
   if (!v.ok) return bad(v.error);
-  const { clientId, clientSecret, certPem, keyPem, conta } = v.value;
 
-  const ck = checkCertKey(certPem!, keyPem!);
-  if ("error" in ck) return bad(ck.error);
-
-  let enc: EncryptedInterSecrets;
+  let db: Awaited<ReturnType<typeof getAdminDb>>;
   try {
-    enc = encryptInterSecrets({ clientId: clientId!, clientSecret: clientSecret!, certPem: certPem!, keyPem: keyPem! });
-  } catch {
-    return bad(SERVER_CONFIG_ERROR, 500);
-  }
-
-  try {
-    const db = await getAdminDb();
-    const now = Date.now();
-    const batch = db.batch();
-    // set sem merge: reconectar substitui por completo os segredos antigos.
-    batch.set(db.doc(secretsPath(scope.ownerUid)), {
-      provider: "inter",
-      ...enc,
-      conta: conta ?? null,
-      createdAt: now,
-      updatedAt: now,
-      updatedBy: scope.uid,
-    });
-    // Conexão NOVA: o cursor da sincronização zera (o set acima já não traz
-    // lastSyncAt; aqui sai do status), pra primeira sincronização buscar 30 dias.
-    batch.set(
-      db.doc(statusPath(scope.ownerUid)),
-      {
-        connected: true,
-        contaMasked: maskConta(conta) ?? FieldValue.delete(),
-        certExpiresAt: ck.expiresAt,
-        lastSyncAt: FieldValue.delete(),
-        lastSyncError: null,
-      },
-      { merge: true }
-    );
-    await batch.commit();
-    return NextResponse.json({ ok: true, certExpiresAt: ck.expiresAt, contaMasked: maskConta(conta) ?? null });
+    db = await getAdminDb();
   } catch (e) {
     console.error("[inter/conexao POST] falha ao gravar:", errCode(e));
     return bad("Não foi possível salvar a conexão com o Banco Inter. Tente novamente.", 500);
   }
+  return toResponse(await connectInter(db, scope.ownerUid, v.value, { updatedBy: scope.uid }));
 }
 
 // ---------- PUT: atualizar credenciais ----------
@@ -136,62 +68,15 @@ export async function PUT(req: NextRequest) {
 
   const v = validateConexaoBody(await readJson(req), "update");
   if (!v.ok) return bad(v.error);
-  const input = v.value;
 
+  let db: Awaited<ReturnType<typeof getAdminDb>>;
   try {
-    const db = await getAdminDb();
-    const ref = db.doc(secretsPath(scope.ownerUid));
-    const snap = await ref.get();
-    if (!snap.exists) return bad("O Banco Inter não está conectado. Conecte primeiro.", 404);
-    const data = snap.data() ?? {};
-
-    // Só decifra o que já existe se algum segredo não veio no corpo.
-    const precisaAtuais = !input.clientId || !input.clientSecret || !input.certPem || !input.keyPem;
-    let atuais: InterSecrets | null = null;
-    if (precisaAtuais) {
-      try {
-        atuais = decryptInterSecrets(data as EncryptedInterSecrets);
-      } catch {
-        return bad(SERVER_CONFIG_ERROR, 500);
-      }
-    }
-    const merged: InterSecrets = {
-      clientId: input.clientId ?? atuais!.clientId,
-      clientSecret: input.clientSecret ?? atuais!.clientSecret,
-      certPem: input.certPem ?? atuais!.certPem,
-      keyPem: input.keyPem ?? atuais!.keyPem,
-    };
-    const conta = input.conta !== undefined ? input.conta : (typeof data.conta === "string" ? data.conta : "");
-
-    // Revalida sempre o par final (mesmo sem troca: o certificado guardado pode ter vencido).
-    const ck = checkCertKey(merged.certPem, merged.keyPem);
-    if ("error" in ck) return bad(ck.error);
-
-    let enc: EncryptedInterSecrets;
-    try {
-      enc = encryptInterSecrets(merged);
-    } catch {
-      return bad(SERVER_CONFIG_ERROR, 500);
-    }
-
-    const batch = db.batch();
-    batch.update(ref, { ...enc, conta: conta || null, updatedAt: Date.now(), updatedBy: scope.uid });
-    batch.set(
-      db.doc(statusPath(scope.ownerUid)),
-      {
-        connected: true,
-        contaMasked: maskConta(conta) ?? FieldValue.delete(),
-        certExpiresAt: ck.expiresAt,
-        lastSyncError: null,
-      },
-      { merge: true }
-    );
-    await batch.commit();
-    return NextResponse.json({ ok: true, certExpiresAt: ck.expiresAt, contaMasked: maskConta(conta) ?? null });
+    db = await getAdminDb();
   } catch (e) {
     console.error("[inter/conexao PUT] falha ao atualizar:", errCode(e));
     return bad("Não foi possível atualizar a conexão com o Banco Inter. Tente novamente.", 500);
   }
+  return toResponse(await updateInter(db, scope.ownerUid, v.value, { updatedBy: scope.uid }));
 }
 
 // ---------- DELETE: desconectar ----------
@@ -201,28 +86,14 @@ export async function DELETE(req: NextRequest) {
   const scope = await guardInter(req, { rateKey: "inter-conexao", rate: RATE, requirePro: false });
   if (scope instanceof NextResponse) return scope;
 
+  let db: Awaited<ReturnType<typeof getAdminDb>>;
   try {
-    const db = await getAdminDb();
-    const batch = db.batch();
-    batch.delete(db.doc(secretsPath(scope.ownerUid)));
-    // interPendentes não é tocado. O cursor lastSyncAt NÃO sobrevive ao
-    // desconectar (o doc de segredos some e o status perde o campo): uma
-    // reconexão começa do zero, com a busca de 30 dias.
-    batch.set(
-      db.doc(statusPath(scope.ownerUid)),
-      {
-        connected: false,
-        contaMasked: FieldValue.delete(),
-        certExpiresAt: FieldValue.delete(),
-        lastSyncAt: FieldValue.delete(),
-        lastSyncError: null,
-      },
-      { merge: true }
-    );
-    await batch.commit();
-    return NextResponse.json({ ok: true });
+    db = await getAdminDb();
   } catch (e) {
     console.error("[inter/conexao DELETE] falha ao desconectar:", errCode(e));
     return bad("Não foi possível desconectar o Banco Inter. Tente novamente.", 500);
   }
+  const r = await disconnectInter(db, scope.ownerUid);
+  if (!r.ok) return bad(r.error, r.status);
+  return NextResponse.json({ ok: true });
 }

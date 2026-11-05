@@ -28,4 +28,6 @@ export type InterStatus = {
   lastSyncAt?: number;
   lastSyncError?: string | null;
   certExpiresAt?: number;
+  /** true quando a equipe (adm supremo) configurou a conexão; some ao desconectar. */
+  configuradoPelaEquipe?: boolean;
 };

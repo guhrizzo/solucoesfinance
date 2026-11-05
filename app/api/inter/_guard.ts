@@ -62,18 +62,6 @@ export async function guardInter(req: Request, opts: GuardOpts): Promise<ApiScop
   return scope;
 }
 
-/** A chave de cifragem existe? Checado antes de tocar em segredo, pra falhar com mensagem genérica. */
-export function interKeyConfigured(): boolean {
-  return !!process.env.INTER_ENC_KEY?.trim();
-}
-
-/**
- * Pra log: só o código do erro (ex.: "permission-denied"), nunca a mensagem —
- * mensagens de bibliotecas podem citar dados do documento ou da requisição.
- */
-export function errCode(e: unknown): string {
-  const c = typeof e === "object" && e !== null ? (e as { code?: unknown }).code : undefined;
-  return typeof c === "string" || typeof c === "number" ? String(c) : "sem-codigo";
-}
-
-export const SERVER_CONFIG_ERROR = "Integração com o Banco Inter indisponível no momento (configuração do servidor). Avise o suporte.";
+// Movidos pra um módulo puro (usado também pelo núcleo e pelos testes em node);
+// reexportados aqui pra manter os imports existentes.
+export { errCode, interKeyConfigured, SERVER_CONFIG_ERROR } from "@/lib/interErrors";
