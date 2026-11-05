@@ -10,31 +10,21 @@ import { PageLoader } from "@/app/components/ui";
 import ConfirmModal from "@/app/components/ConfirmModal";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
-  Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
+  Settings, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
   Loader2, ArrowRight, Package, X, CheckCircle, Download, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Shopee OCULTA da interface por enquanto. A integração de backend continua
-// existindo (rotas /api/shopee/*, lib/shopee.ts, webhooks, tipos) — só
-// escondemos os pontos de entrada visíveis no Estoque: aba de filtro, painel
-// "Resumo Shopee", o canal "Shopee" no modal de integrações e a opção Shopee
-// no vínculo manual.
-// Para voltar a exibir a Shopee, troque para `true`.
-const SHOPEE_UI_VISIVEL = false;
-
-// TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
-const TIKTOKSHOP_UI_VISIVEL = true;
-
-// Shein: visível desde 2026-10 por decisão do dono, MESMO antes da aprovação do
-// app na Shein — até haver SHEIN_APP_ID/APP_SECRET reais a conexão não
-// funciona. Volte para `false` (aqui e em vendas/_components/shared.ts) se
-// precisar esconder de novo.
-const SHEIN_UI_VISIVEL = true;
-
-type Plataforma = "mercadolivre" | "shopee" | "tiktokshop" | "shein";
+// Flags de visibilidade dos canais (Shopee oculta, TikTok Shop e Shein
+// visíveis) — compartilhadas com a aba Integrações de Configurações.
+import {
+  SHOPEE_UI_VISIVEL,
+  TIKTOKSHOP_UI_VISIVEL,
+  SHEIN_UI_VISIVEL,
+  type Plataforma,
+} from "@/app/components/integracoes/flags";
+// Cartões de conexão do modal de integrações + toasts de retorno do OAuth.
+import MarketplaceConnections, { useIntegrationReturnToast } from "@/app/components/integracoes/MarketplaceConnections";
 
 // Interfaces de Dados
 interface ProdutoEstoque {
@@ -290,73 +280,9 @@ export default function EstoquePage() {
     };
   }, [user, ownerUid]);
 
-  // Capturar retornos de OAuth (parâmetros da URL)
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const integration = url.searchParams.get("integration");
-    const message = url.searchParams.get("message");
-    const imported = url.searchParams.get("imported");
-    const warning = url.searchParams.get("warning");
-
-    if (integration === "ml_success") {
-      if (warning === "limited_permissions") {
-        showToast(t("toast.mlConnectedLimited"), "info");
-      } else {
-        showToast(
-          imported && imported !== "0"
-            ? t("toast.mlIntegratedImported", { count: imported })
-            : t("toast.mlIntegrated"),
-          "success"
-        );
-      }
-      cleanUrlParams();
-    } else if (integration === "shopee_success") {
-      if (warning === "limited_permissions") {
-        showToast(t("toast.shopeeConnectedLimited"), "info");
-      } else {
-        showToast(
-          imported && imported !== "0"
-            ? t("toast.shopeeIntegratedImported", { count: imported })
-            : t("toast.shopeeIntegrated"),
-          "success"
-        );
-      }
-      cleanUrlParams();
-    } else if (integration === "tiktok_success") {
-      if (warning === "limited_permissions") {
-        showToast(t("toast.tiktokConnectedLimited"), "info");
-      } else {
-        showToast(
-          imported && imported !== "0"
-            ? t("toast.tiktokIntegratedImported", { count: imported })
-            : t("toast.tiktokIntegrated"),
-          "success"
-        );
-      }
-      cleanUrlParams();
-    } else if (integration === "shein_success") {
-      if (warning === "limited_permissions") {
-        showToast(t("toast.sheinConnectedLimited"), "info");
-      } else {
-        showToast(
-          imported && imported !== "0"
-            ? t("toast.sheinIntegratedImported", { count: imported })
-            : t("toast.sheinIntegrated"),
-          "success"
-        );
-      }
-      cleanUrlParams();
-    } else if (integration === "ml_error" || integration === "shopee_error" || integration === "tiktok_error" || integration === "shein_error") {
-      showToast(t("toast.integrationError", { message: message || t("toast.integrationErrorGeneric") }), "error");
-      cleanUrlParams();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const cleanUrlParams = () => {
-    const newUrl = window.location.pathname;
-    window.history.replaceState({}, document.title, newUrl);
-  };
+  // Capturar retornos de OAuth (parâmetros da URL) — mesma lógica de antes,
+  // agora no hook compartilhado com a aba Integrações de Configurações.
+  useIntegrationReturnToast(showToast);
 
   // Controlar classe modal-open no body para efeito de desfoque (blur) na navbar
   useEffect(() => {
@@ -430,31 +356,6 @@ export default function EstoquePage() {
     () => integracoes.some((i) => i.platform === "mercadolivre"),
     [integracoes]
   );
-
-  // Resumo de identidade da(s) conta(s) de um canal, pro badge do modal.
-  const resumoContas = (platform: Plataforma) => {
-    const contas = integracoes.filter((i) => i.platform === platform);
-    if (contas.length === 0) return null;
-    if (contas.length === 1) return t("accountsSummary.one", { name: contas[0].accountName });
-    return t("accountsSummary.many", { count: contas.length });
-  };
-
-  // Estado do token de uma integração — texto transparente, sem alarme falso
-  // (o access token renova sozinho na próxima chamada via getValidAccessToken).
-  const statusToken = (i: Integracao) => {
-    if (!i.accessToken || i.accessToken.startsWith("mock_")) return t("tokenStatus.simMode");
-    if (!i.expiresAt) return t("tokenStatus.connected");
-    return i.expiresAt > Date.now()
-      ? t("tokenStatus.validUntil", {
-          date: new Date(i.expiresAt).toLocaleString(locale, {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        })
-      : t("tokenStatus.renewsNext");
-  };
 
   // Puxa o resumo quando há loja Shopee conectada (na carga e ao abrir o modal).
   useEffect(() => {
@@ -570,39 +471,6 @@ export default function EstoquePage() {
     } catch (err) {
       console.error(err);
       showToast(t("toast.productRemoveError"), "error");
-    }
-  };
-
-  // Desconectar Integração
-  const handleDisconnect = (id: string, platform: Plataforma) => {
-    setConfirmDialog({
-      title: t("confirm.disconnectTitle"),
-      message: t("confirm.disconnectMsg", { platform: platformLabel(platform) }),
-      confirmText: t("confirm.disconnectAction"),
-      onConfirm: () => doDisconnect(id),
-    });
-  };
-
-  const doDisconnect = async (id: string) => {
-    try {
-      const { getFirebase } = await import("@/lib/firebase");
-      const { db } = await getFirebase();
-      const { doc, deleteDoc, collection, query, where, getDocs } = await import("firebase/firestore");
-
-      // Remover integração
-      await deleteDoc(doc(db, "integracoes", id));
-
-      // Remover vínculos associados a essa integração
-      const qVinculos = query(collection(db, "vinculos"), where("userId", "==", ownerUid), where("connectionId", "==", id));
-      const snapVinculos = await getDocs(qVinculos);
-      for (const d of snapVinculos.docs) {
-        await deleteDoc(doc(db, "vinculos", d.id));
-      }
-
-      showToast(t("toast.integrationRemoved"), "success");
-    } catch (err) {
-      console.error(err);
-      showToast(t("toast.disconnectError"), "error");
     }
   };
 
@@ -743,41 +611,6 @@ export default function EstoquePage() {
       totalIntegracoes: integracoes.length
     };
   }, [produtos, integracoes, vinculos]);
-
-  // Redirecionamento OAuth das Plataformas
-  const handleConnectAccount = async (platform: Plataforma) => {
-    if (!user) return;
-
-    // Shopee/TikTok Shop/Shein: rota autenticada (POST) — o ownerUid sai do
-    // ID token, não da URL.
-    if (platform === "shopee" || platform === "tiktokshop" || platform === "shein") {
-      const failKey = platform === "shopee" ? "shopeeConnectFail" : platform === "tiktokshop" ? "tiktokConnectFail" : "sheinConnectFail";
-      const errKey = platform === "shopee" ? "shopeeConnectError" : platform === "tiktokshop" ? "tiktokConnectError" : "sheinConnectError";
-      try {
-        const res = await authedFetch(`/api/auth/${platform}/redirect`, { method: "POST" });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.authUrl) {
-          showToast(data.error || t(`toast.${failKey}`), "error");
-          return;
-        }
-        // TikTok Shop abre em nova guia (pedido do usuário) — o fluxo de
-        // autorização dele tende a travar/perder a sessão do Nexus quando
-        // navega na mesma guia. ML/Shopee continuam navegando na mesma guia.
-        if (platform === "tiktokshop") {
-          window.open(data.authUrl, "_blank", "noopener,noreferrer");
-        } else {
-          window.location.href = data.authUrl;
-        }
-      } catch (err) {
-        console.error(err);
-        showToast(err instanceof Error ? err.message : t(`toast.${errKey}`), "error");
-      }
-      return;
-    }
-
-    // TODO: migrar o ML pro mesmo fluxo autenticado (hoje ainda é GET com userId na URL).
-    window.location.href = `/api/auth/${platform}/redirect?userId=${ownerUid}`;
-  };
 
   if (blocked) return <AccessDenied category={tNav("items.estoque")} />;
 
@@ -1388,186 +1221,8 @@ export default function EstoquePage() {
               </button>
             </div>
 
-            <div className="p-5 space-y-6">
-
-              {/* Canais Disponíveis */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.available")}</h4>
-
-                {/* Canal 1: Mercado Livre */}
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center gap-2">
-                      <img src="/Logotipo_MercadoLivre.png" alt="Mercado Livre" style={{ height: "40px", objectFit: "contain" }} />
-                      <div className="text-center">
-                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.mlDesc")}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {resumoContas("mercadolivre") ? (
-                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
-                      {resumoContas("mercadolivre")}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleConnectAccount("mercadolivre")}
-                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
-                      style={{ background: "var(--primary)", color: "white" }}
-                    >
-                      {t("integrationsModal.connectAccount")}
-                    </button>
-                  )}
-                </div>
-
-                {/* Canal 2: Shopee — oculto da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo). */}
-                {SHOPEE_UI_VISIVEL && (
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center gap-2">
-                      <img src="/Shopee.svg" alt="Shopee" style={{ height: "40px", objectFit: "contain" }} />
-                      <div className="text-center">
-                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.shopeeDesc")}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {resumoContas("shopee") ? (
-                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
-                      {resumoContas("shopee")}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleConnectAccount("shopee")}
-                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
-                      style={{ background: "var(--primary)", color: "white" }}
-                    >
-                      {t("integrationsModal.connectAccount")}
-                    </button>
-                  )}
-                </div>
-                )}
-
-                {/* Canal 3: TikTok Shop */}
-                {TIKTOKSHOP_UI_VISIVEL && (
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center gap-2">
-                      <img src="/TikTokShop.svg" alt="TikTok Shop" style={{ height: "40px", objectFit: "contain" }} />
-                      <div className="text-center">
-                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.tiktokDesc")}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {resumoContas("tiktokshop") ? (
-                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
-                      {resumoContas("tiktokshop")}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleConnectAccount("tiktokshop")}
-                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
-                      style={{ background: "var(--primary)", color: "white" }}
-                    >
-                      {t("integrationsModal.connectAccount")}
-                    </button>
-                  )}
-                </div>
-                )}
-
-                {/* Canal 4: Shein */}
-                {SHEIN_UI_VISIVEL && (
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center gap-2">
-                      <img src="/Shein.svg" alt="Shein" style={{ height: "40px", objectFit: "contain" }} />
-                      <div className="text-center">
-                        <div className="text-[10px]" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.sheinDesc")}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {resumoContas("shein") ? (
-                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 text-right">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
-                      {resumoContas("shein")}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleConnectAccount("shein")}
-                      className="px-3.5 py-2 rounded-lg text-xs font-bold border-none cursor-pointer"
-                      style={{ background: "var(--primary)", color: "white" }}
-                    >
-                      {t("integrationsModal.connectAccount")}
-                    </button>
-                  )}
-                </div>
-                )}
-
-              </div>
-
-              {/* Contas Conectadas */}
-              <div className="space-y-3 pt-2" style={{ borderTop: "1px solid var(--cf-border)" }}>
-                <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--cf-text-3)" }}>{t("integrationsModal.yourAccounts", { count: integracoes.length })}</h4>
-
-                {integracoes.length === 0 ? (
-                  <div className="text-center py-4 text-xs" style={{ color: "var(--cf-text-3)" }}>
-                    {t("integrationsModal.noneConnected")}
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {integracoes.map((item) => (
-                      <div key={item.id} className="p-3 rounded-lg text-xs" style={{ background: "var(--cf-input)" }}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <img
-                              src={
-                                item.platform === "mercadolivre"
-                                  ? "/Logotipo_MercadoLivre.png"
-                                  : item.platform === "shopee"
-                                  ? "/Shopee.svg"
-                                  : item.platform === "tiktokshop"
-                                  ? "/TikTokShop.svg"
-                                  : "/Shein.svg"
-                              }
-                              alt={item.platform}
-                              style={{ height: "20px", objectFit: "contain" }}
-                            />
-                            <span className="font-semibold truncate" style={{ color: "var(--cf-text)" }}>{item.accountName}</span>
-                            <span className="text-[10px] shrink-0" style={{ color: "var(--cf-text-3)" }}>({item.accountId})</span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => handleConnectAccount(item.platform)}
-                              className="p-1 px-2 rounded hover:bg-black/5 cursor-pointer border-none font-bold"
-                              style={{ background: "transparent", color: "var(--cf-text-2)" }}
-                              title={t("integrationsModal.reconnectTitle")}
-                            >
-                              <RefreshCw size={12} className="inline mr-1" /> {t("integrationsModal.reconnect")}
-                            </button>
-                            <button
-                              onClick={() => handleDisconnect(item.id, item.platform)}
-                              className="p-1 px-2 rounded hover:bg-red-500/10 cursor-pointer border-none text-red-500 font-bold"
-                              style={{ background: "transparent" }}
-                            >
-                              <LogOut size={12} className="inline mr-1" /> {t("integrationsModal.disconnect")}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-1.5 pl-7 text-[10px] leading-relaxed" style={{ color: "var(--cf-text-3)" }}>
-                          {statusToken(item)}
-                          {item.createdAt ? t("integrationsModal.connectedOn", { date: new Date(item.createdAt).toLocaleDateString(locale) }) : ""}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+            <div className="p-5">
+              <MarketplaceConnections ownerUid={ownerUid} returnTo="/estoque" showToast={showToast} />
             </div>
           </div>
         </div>
