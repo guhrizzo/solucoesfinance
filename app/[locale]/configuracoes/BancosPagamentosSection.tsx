@@ -169,7 +169,7 @@ export default function BancosPagamentosSection({ ownerUid, isPro }: { ownerUid:
       {/* Instituições planejadas: sem ação. */}
       <div className="grid gap-3 sm:grid-cols-2">
         {INSTITUICOES_EM_BREVE.map((id) => (
-          <Card key={id} padding="md" className="flex items-center justify-between gap-2 opacity-70" aria-disabled="true">
+          <Card key={id} padding="md" className="flex items-center justify-between gap-2 opacity-70">
             <span className="text-sm font-semibold" style={{ color: "var(--db-text)" }}>{t(`institutions.${id}`)}</span>
             <Pill tone="muted">{t("soonBadge")}</Pill>
           </Card>

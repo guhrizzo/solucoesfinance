@@ -64,6 +64,20 @@ export default function ConfiguracoesPage() {
     return isAdmin ? [...base, ...ADMIN_TABS] : base;
   }, [isAdmin, showIntegracoes]);
 
+  // Retorno do OAuth (?integration=...): abre a aba Integrações uma única vez, quando ela
+  // estiver disponível. Os parâmetros da URL e o toast ficam com IntegracoesTab (hook no mount).
+  const [returnHandled, setReturnHandled] = useState(false);
+  useEffect(() => {
+    if (returnHandled || !showIntegracoes) return;
+    setReturnHandled(true);
+    if (new URLSearchParams(window.location.search).has("integration")) setTab("integracoes");
+  }, [returnHandled, showIntegracoes]);
+
+  // Aba some (ex.: escopo mudou): volta para o Perfil.
+  useEffect(() => {
+    if (tab === "integracoes" && !showIntegracoes) setTab("perfil");
+  }, [tab, showIntegracoes]);
+
   const activePath = "/configuracoes";
 
   useEffect(() => {
