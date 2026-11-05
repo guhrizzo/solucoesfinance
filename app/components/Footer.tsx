@@ -2,6 +2,7 @@ import { Shield } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "./LocaleSwitcher";
+import SecurePaymentSeal from "./SecurePaymentSeal";
 
 export default function Footer() {
   const t = useTranslations("landing.footer");
@@ -74,6 +75,9 @@ export default function Footer() {
               </ul>
             </div>
           ))}
+        </div>
+        <div className="mb-8 flex justify-center md:justify-start">
+          <SecurePaymentSeal variant="footer" />
         </div>
         <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left">

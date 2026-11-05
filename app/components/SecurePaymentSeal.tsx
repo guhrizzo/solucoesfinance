@@ -10,8 +10,40 @@ import { ShieldCheck, Lock, CreditCard, RefreshCcw } from "lucide-react";
  * hospedada do Asaas (nenhum dado de cartão passa por nós — ver lib/asaas.ts)
  * e o site é servido por HTTPS. Não exibe certificações que não possuímos.
  */
-export default function SecurePaymentSeal() {
+export default function SecurePaymentSeal({ variant = "default" }: { variant?: "default" | "footer" }) {
   const t = useTranslations("assinatura.contrato");
+
+  if (variant === "footer") {
+    return (
+      <div
+        role="note"
+        aria-label={t("sealTitle")}
+        className="inline-flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-4 py-3"
+        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+      >
+        <span className="flex items-center gap-2.5">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{ background: "rgba(34,197,94,0.18)", color: "#4ade80" }}
+          >
+            <ShieldCheck size={20} />
+          </span>
+          <span className="block">
+            <span className="block text-sm font-bold leading-tight text-white">{t("sealTitle")}</span>
+            <span className="block text-[11px] text-blue-300/75">{t("sealSubtitle")}</span>
+          </span>
+        </span>
+        <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-blue-200/80">
+          <span className="inline-flex items-center gap-1.5">
+            <Lock size={12} style={{ color: "#4ade80" }} /> {t("sealEncrypted")}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <CreditCard size={12} style={{ color: "#4ade80" }} /> {t("sealNoCard")}
+          </span>
+        </span>
+      </div>
+    );
+  }
 
   const items = [
     { Icon: Lock, label: t("sealEncrypted") },
