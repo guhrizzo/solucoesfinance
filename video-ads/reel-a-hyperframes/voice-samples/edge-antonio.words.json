@@ -1,0 +1,302 @@
+[
+ {
+  "text": "Você",
+  "start": 0.1,
+  "end": 0.45
+ },
+ {
+  "text": "vendeu",
+  "start": 0.4625,
+  "end": 0.8375
+ },
+ {
+  "text": "trinta",
+  "start": 0.85,
+  "end": 1.1875
+ },
+ {
+  "text": "mil",
+  "start": 1.2,
+  "end": 1.375
+ },
+ {
+  "text": "reais",
+  "start": 1.3875,
+  "end": 1.8125
+ },
+ {
+  "text": "no",
+  "start": 1.825,
+  "end": 1.9
+ },
+ {
+  "text": "Mercado",
+  "start": 1.9125,
+  "end": 2.375
+ },
+ {
+  "text": "Livre",
+  "start": 2.3875,
+  "end": 2.8125
+ },
+ {
+  "text": "Mas",
+  "start": 3.675,
+  "end": 3.95
+ },
+ {
+  "text": "sobrou",
+  "start": 3.9625,
+  "end": 4.3125
+ },
+ {
+  "text": "quanto",
+  "start": 4.325,
+  "end": 4.775
+ },
+ {
+  "text": "Comissão",
+  "start": 5.6375,
+  "end": 6.2875
+ },
+ {
+  "text": "tarifa",
+  "start": 6.5125,
+  "end": 7.025
+ },
+ {
+  "text": "frete",
+  "start": 7.2875,
+  "end": 7.8
+ },
+ {
+  "text": "cada",
+  "start": 8.0125,
+  "end": 8.3
+ },
+ {
+  "text": "taxa",
+  "start": 8.3125,
+  "end": 8.6625
+ },
+ {
+  "text": "num",
+  "start": 8.675,
+  "end": 8.8
+ },
+ {
+  "text": "lugar",
+  "start": 8.8125,
+  "end": 9.1125
+ },
+ {
+  "text": "diferente",
+  "start": 9.125,
+  "end": 9.75
+ },
+ {
+  "text": "Na",
+  "start": 10.6125,
+  "end": 10.775
+ },
+ {
+  "text": "Nexus",
+  "start": 10.7875,
+  "end": 11.275
+ },
+ {
+  "text": "Fi",
+  "start": 11.2875,
+  "end": 11.5375
+ },
+ {
+  "text": "a",
+  "start": 11.8,
+  "end": 11.925
+ },
+ {
+  "text": "venda",
+  "start": 11.9375,
+  "end": 12.3125
+ },
+ {
+  "text": "entra",
+  "start": 12.325,
+  "end": 12.575
+ },
+ {
+  "text": "no",
+  "start": 12.5875,
+  "end": 12.7
+ },
+ {
+  "text": "caixa",
+  "start": 12.7125,
+  "end": 13.1375
+ },
+ {
+  "text": "e",
+  "start": 13.15,
+  "end": 13.2
+ },
+ {
+  "text": "as",
+  "start": 13.2125,
+  "end": 13.375
+ },
+ {
+  "text": "taxas",
+  "start": 13.3875,
+  "end": 13.7625
+ },
+ {
+  "text": "saem",
+  "start": 13.775,
+  "end": 14.025
+ },
+ {
+  "text": "separadas",
+  "start": 14.0375,
+  "end": 14.8
+ },
+ {
+  "text": "O",
+  "start": 15.6625,
+  "end": 15.775
+ },
+ {
+  "text": "saldo",
+  "start": 15.7875,
+  "end": 16.1875
+ },
+ {
+  "text": "já",
+  "start": 16.2,
+  "end": 16.3375
+ },
+ {
+  "text": "mostra",
+  "start": 16.35,
+  "end": 16.7875
+ },
+ {
+  "text": "o",
+  "start": 16.8,
+  "end": 16.825
+ },
+ {
+  "text": "que",
+  "start": 16.8375,
+  "end": 16.9375
+ },
+ {
+  "text": "sobrou",
+  "start": 16.95,
+  "end": 17.375
+ },
+ {
+  "text": "sem",
+  "start": 17.6875,
+  "end": 17.8875
+ },
+ {
+  "text": "planilha",
+  "start": 17.9,
+  "end": 18.4
+ },
+ {
+  "text": "e",
+  "start": 18.4125,
+  "end": 18.4625
+ },
+ {
+  "text": "sem",
+  "start": 18.475,
+  "end": 18.65
+ },
+ {
+  "text": "conferir",
+  "start": 18.6625,
+  "end": 19.1125
+ },
+ {
+  "text": "repasse",
+  "start": 19.125,
+  "end": 19.65
+ },
+ {
+  "text": "na",
+  "start": 19.6625,
+  "end": 19.75
+ },
+ {
+  "text": "mão",
+  "start": 19.7625,
+  "end": 20.05
+ },
+ {
+  "text": "Teste",
+  "start": 20.9125,
+  "end": 21.2625
+ },
+ {
+  "text": "a",
+  "start": 21.275,
+  "end": 21.3125
+ },
+ {
+  "text": "Nexus",
+  "start": 21.325,
+  "end": 21.75
+ },
+ {
+  "text": "Fi",
+  "start": 21.7625,
+  "end": 21.9125
+ },
+ {
+  "text": "grátis",
+  "start": 21.925,
+  "end": 22.375
+ },
+ {
+  "text": "por",
+  "start": 22.3875,
+  "end": 22.55
+ },
+ {
+  "text": "sete",
+  "start": 22.5625,
+  "end": 22.95
+ },
+ {
+  "text": "dias",
+  "start": 22.9625,
+  "end": 23.425
+ },
+ {
+  "text": "sem",
+  "start": 23.625,
+  "end": 23.8375
+ },
+ {
+  "text": "cartão",
+  "start": 23.85,
+  "end": 24.35
+ },
+ {
+  "text": "Link",
+  "start": 25.2125,
+  "end": 25.625
+ },
+ {
+  "text": "na",
+  "start": 25.6375,
+  "end": 25.75
+ },
+ {
+  "text": "bio",
+  "start": 25.7625,
+  "end": 26.0875
+ }
+]

@@ -1,0 +1,54 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+
+    #e-ring { position: absolute; left: 190px; top: 560px; width: 700px; height: 700px; border-radius: 50%; border: 3px solid #2a4f94; opacity: 0; }
+    #e-use { position: absolute; left: 0; right: 0; top: 520px; text-align: center; font-family: "Sora", sans-serif; font-weight: 700; font-size: 80px; }
+    #e-logo { position: absolute; left: 190px; top: 640px; width: 700px; height: auto; }
+    #e-btn { position: absolute; left: 190px; top: 1000px; width: 700px; height: 140px; border-radius: 70px; background: linear-gradient(135deg, #2f80ff, #1451b8); box-shadow: 0 25px 80px #1f6feb99; font-family: "Sora", sans-serif; font-weight: 800; font-size: 54px; display: flex; align-items: center; justify-content: center; }
+    #e-url { position: absolute; left: 0; right: 0; top: 1170px; text-align: center; font-size: 36px; letter-spacing: 0.08em; color: #9db6dc; font-weight: 600; }
+    #e-ring2 { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border: 6px solid #ffffff; border-radius: 50%; opacity: 0; }
+    .cur { position: absolute; left: 0; top: 0; width: 64px; height: 64px; }
+    #e-glow { position: absolute; left: -160px; top: 300px; width: 1400px; height: 1400px; border-radius: 50%; background: radial-gradient(#1f6feb55, transparent 62%); opacity: 0; }
+    
+  </style>
+  <div id="root" data-composition-id="e" data-width="1080" data-height="1920">
+    <div id="e-glow"></div><div id="e-ring"></div>
+    <div id="e-use">Use a</div>
+    <img id="e-logo" src="assets/img/nexus_fi_logo_branco.png" alt="NexusFi" />
+    <div id="e-btn">Acesse agora →</div>
+    <div id="e-url">nexusfi.com.br</div>
+    <div id="e-ring2"></div>
+    <svg class="cur" viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z" fill="#ffffff" stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round" /></svg>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    tl.to("#e-glow", { opacity: 1, duration: 1.2 }, 0.2);
+    tl.fromTo("#e-ring", { opacity: 0, scale: 0.85 }, { opacity: 0.5, scale: 1, duration: 1.2, ease: "power2.out" }, 0.55 - 0.3);
+    up("#e-use", 0.55 - 0.1, 0.45);
+    pop("#e-logo", 1.62 - 0.15, 0.55);
+    pop("#e-btn", 2.23 + 0.1, 0.5);
+    up("#e-url", 2.23 + 0.35, 0.5);
+    tl.fromTo(".cur", { x: 800, y: 1300, opacity: 0 }, { x: 560, y: 1075, opacity: 1, duration: 0.7, ease: "power2.inOut" }, 2.23 + 0.6);
+    ring("#e-ring2", 572, 1082, 2.23 + 1.4);
+    tl.fromTo("#e-btn", { scale: 1 }, { scale: 0.95, duration: 0.1, ease: "power2.out", immediateRender: false }, 2.23 + 1.4);
+    tl.to("#e-btn", { scale: 1, duration: 0.3, ease: "back.out(2)" }, 2.23 + 1.5);
+    
+    tl.fromTo("#root", { scale: 1.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 0);
+    window.__timelines["e"] = tl;
+  </script>
+</template>

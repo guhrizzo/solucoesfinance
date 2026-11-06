@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:'Sora';src:url('file:///C:/Users/Gustavo/Desktop/solucoesfinance/app/fonts/sora.woff2');font-weight:100 900}
+@font-face{font-family:'Hanken';src:url('file:///C:/Users/Gustavo/Desktop/solucoesfinance/app/fonts/hanken-grotesk.woff2');font-weight:100 900}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1350px;overflow:hidden;background:#06142B}
+.slide{position:relative;width:1080px;height:1350px;overflow:hidden;color:#fff;font-family:'Hanken',sans-serif;
+  background:radial-gradient(900px 700px at 85% 8%,#0A2A63 0%,transparent 70%),
+             radial-gradient(900px 800px at 0% 100%,#0B3B7A 0%,transparent 65%),#06142B}
+.sora{font-family:'Sora',sans-serif}
+.tag{font-family:'Sora';font-size:26px;font-weight:600;letter-spacing:6px;color:#19C3E6;text-transform:uppercase}
+.mark{position:absolute;left:96px;top:300px;width:46px;height:46px;background:#19C3E6;clip-path:polygon(0 0,100% 0,0 100%)}
+.hl{position:relative;display:inline-block;padding:0 22px;margin-left:-22px;z-index:0}
+.hl::before{content:'';position:absolute;inset:6px 0 -2px 0;background:linear-gradient(100deg,#1F6FEB 0%,#19C3E6 55%,#1FD18B 100%);transform:skewY(-1.6deg);z-index:-1}
+.logo{position:absolute;left:96px;bottom:96px;height:74px}
+.dots{position:absolute;left:0;right:0;bottom:50px;display:flex;justify-content:center;gap:12px}
+.dots i{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.28)}
+.dots i.on{background:#fff}
+.arrow{position:absolute;right:0;top:0;bottom:0;width:64px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(to right,transparent,rgba(255,255,255,.07))}
+.rule{position:absolute;left:96px;right:96px;height:2px;background:rgba(255,255,255,.35)}
+</style></head><body>
+<div class="slide">
+  <div class="mark" style="top:150px"></div>
+  <div class="tag" style="position:absolute;left:96px;top:96px">E agora?</div>
+  <div class="sora" style="position:absolute;left:96px;right:110px;top:236px;font-size:84px;line-height:1.08;font-weight:700;letter-spacing:-2.4px">
+    A gente está<br><span class="hl">só começando.</span>
+  </div>
+  <div style="position:absolute;left:96px;right:120px;top:560px">
+    <div style="display:flex;gap:26px;align-items:flex-start;padding:26px 0;border-bottom:2px solid rgba(255,255,255,.14)">
+      <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(100deg,#1F6FEB 0%,#19C3E6 55%,#1FD18B 100%);margin-top:16px;flex:none"></div>
+      <div><div class="sora" style="font-size:36px;font-weight:600;letter-spacing:-.6px">Fluxo de caixa</div>
+      <div style="font-size:28px;color:rgba(255,255,255,.66);margin-top:6px">Entradas e saídas num só lugar</div></div></div>
+    <div style="display:flex;gap:26px;align-items:flex-start;padding:26px 0;border-bottom:2px solid rgba(255,255,255,.14)">
+      <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(100deg,#1F6FEB 0%,#19C3E6 55%,#1FD18B 100%);margin-top:16px;flex:none"></div>
+      <div><div class="sora" style="font-size:36px;font-weight:600;letter-spacing:-.6px">Contas a pagar e a receber</div>
+      <div style="font-size:28px;color:rgba(255,255,255,.66);margin-top:6px">Baixa automática pelo fluxo de caixa</div></div></div>
+    <div style="display:flex;gap:26px;align-items:flex-start;padding:26px 0;border-bottom:2px solid rgba(255,255,255,.14)">
+      <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(100deg,#1F6FEB 0%,#19C3E6 55%,#1FD18B 100%);margin-top:16px;flex:none"></div>
+      <div><div class="sora" style="font-size:36px;font-weight:600;letter-spacing:-.6px">Relatórios e DRE</div>
+      <div style="font-size:28px;color:rgba(255,255,255,.66);margin-top:6px">Resultado do mês sem planilha</div></div></div>
+    <div style="display:flex;gap:26px;align-items:flex-start;padding:26px 0;border-bottom:2px solid rgba(255,255,255,.14)">
+      <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(100deg,#1F6FEB 0%,#19C3E6 55%,#1FD18B 100%);margin-top:16px;flex:none"></div>
+      <div><div class="sora" style="font-size:36px;font-weight:600;letter-spacing:-.6px">Feito com você</div>
+      <div style="font-size:28px;color:rgba(255,255,255,.66);margin-top:6px">Bugs e sugestões viram melhorias</div></div></div>
+  </div>
+  <div class="arrow"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="rgba(255,255,255,.55)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="dots"><i class=""></i><i class=""></i><i class="on"></i><i class=""></i></div>
+</div></body></html>

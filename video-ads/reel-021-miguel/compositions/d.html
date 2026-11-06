@@ -1,0 +1,62 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+
+    #d-title { position: absolute; left: 0; right: 0; top: 220px; text-align: center; font-size: 76px; }
+    #d-frame { position: absolute; left: 109px; top: 360px; width: 862px; height: 691px; background: #0b1220; border: 2px solid #2a4f94; border-radius: 56px; box-shadow: 0 30px 90px #1f6feb55; }
+    #d-screen { position: absolute; inset: 10px; border-radius: 46px; overflow: hidden; }
+    #d-wrap { position: absolute; left: 0; top: 0; width: 842px; height: 671px; transform-origin: 0 0; }
+    #d-img { position: absolute; left: 0; top: 0; width: 842px; height: 671px; }
+    .rg { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border: 5px solid #5aa2ff; border-radius: 50%; opacity: 0; }
+    .cur { position: absolute; left: 0; top: 0; width: 56px; height: 56px; }
+    .mod { position: absolute; top: 1085px; height: 86px; width: 286px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 30px; font-weight: 800; border-radius: 26px; }
+    #d-m1 { left: 90px; } #d-m2 { left: 397px; } #d-m3 { left: 704px; }
+    #d-cap { position: absolute; left: 90px; right: 90px; top: 1215px; text-align: center; font-family: "Sora", sans-serif; font-weight: 700; font-size: 60px; }
+    
+  </style>
+  <div id="root" data-composition-id="d" data-width="1080" data-height="1920">
+    <div id="d-title" class="h">Tudo em <span class="b">um só lugar</span></div>
+    <div id="d-frame">
+      <div id="d-screen">
+        <div id="d-wrap" data-layout-allow-overflow><img id="d-img" src="assets/screens/fluxo-caixa.png" alt="Fluxo de caixa da NexusFi" /></div>
+        <div id="d-r1" class="rg"></div>
+        <svg class="cur" viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z" fill="#ffffff" stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round" /></svg>
+      </div>
+    </div>
+    <div id="d-m1" class="card mod"><span class="g">●</span> Fluxo de caixa</div><div id="d-m2" class="card mod"><span class="g">●</span> Contas a pagar</div><div id="d-m3" class="card mod"><span class="g">●</span> Impostos</div>
+    <div id="d-cap"><span id="d-w0" class="w">faz</span> <span id="d-w1" class="w b">toda</span> <span id="d-w2" class="w b">a</span> <span id="d-w3" class="w b">diferença.</span></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    up("#d-title", 0.55 - 0.1, 0.55);
+    tl.fromTo("#d-frame", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 1.35 - 0.2);
+    tl.fromTo("#d-wrap", { scale: 1, x: 0, y: 0 }, { scale: 1.18, x: -40, y: -120, duration: 1.6, ease: "sine.inOut" }, 1.79);
+    tl.fromTo(".cur", { x: 760, y: 560, opacity: 0 }, { x: 343, y: 610, opacity: 1, duration: 1.0, ease: "power2.inOut" }, 1.79 + 0.2);
+    ring("#d-r1", 355, 617, 2.78);
+    pop("#d-m1", 1.91 - 0.1, 0.5);
+    pop("#d-m2", 2.41 - 0.1, 0.5);
+    pop("#d-m3", 2.93 - 0.1, 0.5);
+    tl.fromTo("#d-w0", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 3.61);
+    tl.fromTo("#d-w1", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 3.91);
+    tl.fromTo("#d-w2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 4.17);
+    tl.fromTo("#d-w3", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 4.23);
+    
+    tl.fromTo("#root", { x: 1080 }, { x: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+    tl.to("#root", { scale: 0.85, opacity: 0, duration: 0.5, ease: "power3.in" }, 5.24 - 0.5);
+    window.__timelines["d"] = tl;
+  </script>
+</template>
