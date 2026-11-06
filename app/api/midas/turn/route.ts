@@ -8,12 +8,13 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
-import { buildSystemPrompt, parseTurn } from "@/lib/midas/prompt";
+import { buildSystemPrompt, normalizeHistory, parseTurn } from "@/lib/midas/prompt";
 
 const ANTHROPIC_MODEL = "claude-sonnet-5";
 const MAX_MESSAGE_LEN = 800;
 const MAX_HISTORY_TURNS = 6;
 const TIMEOUT_MS = 12_000;
+const MAX_BODY_BYTES = 16384;
 
 type ChatTurn = { role: "user" | "bot"; text: string };
 
@@ -22,7 +23,7 @@ const empty = () => NextResponse.json({ reply: null, slots: {} }, { status: 200 
 function sanitizeHistory(history: unknown): ChatTurn[] {
   if (!Array.isArray(history)) return [];
   const turns: ChatTurn[] = [];
-  for (const item of history) {
+  for (const item of history.slice(-MAX_HISTORY_TURNS)) {
     if (!item || typeof item !== "object") continue;
     const role = (item as { role?: unknown }).role;
     const text = (item as { text?: unknown }).text;
@@ -35,6 +36,10 @@ function sanitizeHistory(history: unknown): ChatTurn[] {
 
 export async function POST(request: Request) {
   try {
+    if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) return empty();
+    const { limited } = checkRateLimit(`midas-turn:${getClientIp(request)}`, { windowMs: 5 * 60 * 1000, max: 20 });
+    if (limited) return empty();
+
     let body: { message?: unknown; history?: unknown; locale?: unknown; consented?: unknown };
     try {
       body = await request.json();
@@ -45,9 +50,6 @@ export async function POST(request: Request) {
 
     const message = typeof body.message === "string" ? body.message.trim().slice(0, MAX_MESSAGE_LEN) : "";
     if (!message) return empty();
-
-    const { limited } = checkRateLimit(`midas-turn:${getClientIp(request)}`, { windowMs: 5 * 60 * 1000, max: 20 });
-    if (limited) return empty();
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return empty();
@@ -71,8 +73,7 @@ export async function POST(request: Request) {
           max_tokens: 400,
           system: buildSystemPrompt(locale),
           messages: [
-            ...history.map((t) => ({ role: t.role === "user" ? "user" : "assistant", content: t.text })),
-            { role: "user", content: message },
+            ...normalizeHistory(history, message),
           ],
         }),
       });

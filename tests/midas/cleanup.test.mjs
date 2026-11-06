@@ -16,3 +16,10 @@ test("deleteExpiredLeads apaga só os vencidos, em mais de um lote", async () =>
   assert.deepEqual(left, ["edge", "fresh1"]);
   assert.equal(await deleteExpiredLeads(db, now), 0);
 });
+
+test("doc sem expiresAt não é apagado (documentado: lead sempre nasce com expiresAt)", async () => {
+  const db = createFakeFirestore();
+  await db.doc("demoLeads/semExpira").set({ status: "started" });
+  assert.equal(await deleteExpiredLeads(db, 1_000_000), 0);
+  assert.equal((await db.doc("demoLeads/semExpira").get()).exists, true);
+});

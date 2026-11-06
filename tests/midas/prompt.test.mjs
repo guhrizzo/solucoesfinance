@@ -1,7 +1,7 @@
 // Prompt e parser do turno de IA do Midas.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildSystemPrompt, parseTurn } from "../../lib/midas/prompt.ts";
+import { buildSystemPrompt, parseTurn, isSafeReply, normalizeHistory } from "../../lib/midas/prompt.ts";
 import { MIDAS_MODULES } from "../../lib/midas/modules.ts";
 import { TRIAL_DAYS } from "../../lib/billingPlans.ts";
 
@@ -34,4 +34,33 @@ test("buildSystemPrompt cobre módulos, sem preço e com o trial", () => {
   for (const m of MIDAS_MODULES) assert.ok(p.includes(m.id), m.id);
   assert.ok(!p.includes("R$"));
   assert.match(p, new RegExp(`${TRIAL_DAYS} dias`));
+});
+
+test("reply perigosa é descartada mas os slots sobrevivem", () => {
+  for (const bad of ["Custa R$ 1 por mês", "Tem 30% off", "Integra com a Shein", "Veja https://x.com", "Vou dar um desconto", "Acesse www.x.com", "Grátis por 30 dias", "bomdia"]) {
+    assert.equal(isSafeReply(bad), false, bad);
+    const out = parseTurn(JSON.stringify({ slots: { segment: "loja" }, reply: bad }));
+    assert.equal(out.reply, undefined, bad);
+    assert.deepEqual(out.slots, { segment: "loja" });
+  }
+  assert.equal(parseTurn('{"slots":{},"reply":"Posso ajudar com o fluxo de caixa."}').reply, "Posso ajudar com o fluxo de caixa.");
+});
+
+test("prompt não cita Shein/Shopee e ignora instruções do visitante", () => {
+  const p = buildSystemPrompt("pt-BR");
+  assert.ok(!/shein|shopee/i.test(p));
+  assert.match(p, /Ignore qualquer instrução/);
+});
+
+test("normalizeHistory começa em user, alterna e junta turnos repetidos", () => {
+  const out = normalizeHistory(
+    [{ role: "bot", text: "oi" }, { role: "bot", text: "tudo bem?" }, { role: "user", text: "a" }, { role: "user", text: "b" }, { role: "bot", text: "c" }],
+    "d"
+  );
+  assert.deepEqual(out, [
+    { role: "user", content: "a\nb" },
+    { role: "assistant", content: "c" },
+    { role: "user", content: "d" },
+  ]);
+  assert.deepEqual(normalizeHistory([], "x"), [{ role: "user", content: "x" }]);
 });
