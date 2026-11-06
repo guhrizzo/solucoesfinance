@@ -42,7 +42,7 @@ const SEGMENTS: [Segment, RegExp][] = [
 const PAINS: [Pain, RegExp][] = [
   ["estoque", /\b(estoque|inventario|inventory|stock|existencias|almoxarifado)\b/],
   ["contas", /\b(contas a pagar|contas a receber|boletos?|cobranca|cobrancas|inadimplen\w*|fornecedores?|bills|invoices|receivables|payables|cuentas por pagar|cuentas por cobrar|facturas)\b/],
-  ["impostos", /\b(impostos?|tributos?|nota fiscal|notas fiscais|nfs?-?e?|simples nacional|das|taxes|tax|impuestos)\b/],
+  ["impostos", /\b(impostos?|tributos?|nota fiscal|notas fiscais|nfs?-?e?|simples nacional|guia do das|das mei|das simples|taxes|tax|impuestos)\b/],
   ["relatorios", /\b(relatorios?|dre|reports?|reportes?|informes?|indicadores|kpis?)\b/],
   ["canais", /\b(canais|canal de venda|integrar|integracao|integracoes|channels|integration|canales|integracion)\b/],
   ["vendas", /\b(vendas|vender|pdv|frente de caixa|sales|selling|ventas|vender mais|clientes?)\b/],
@@ -90,12 +90,11 @@ export function interpret(text: string): Interpretation {
   const tool = firstMatch(s, TOOLS);
   if (tool) out.tool = tool;
 
+  const pain = firstMatch(s, PAINS);
+  if (pain) out.pain = pain;
   if (VISIBILITY.some((re) => re.test(s))) {
     out.visibilityGap = true;
-    out.pain = "financeiro";
-  } else {
-    const pain = firstMatch(s, PAINS);
-    if (pain) out.pain = pain;
+    if (!pain) out.pain = "financeiro";
   }
 
   if (OVERVIEW.test(s)) out.wantsOverview = true;
@@ -103,8 +102,9 @@ export function interpret(text: string): Interpretation {
   const bare = s.replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
   const words = bare.split(" ");
   if (words.length <= 3) {
-    if (YES.has(bare) || YES.has(words[0])) out.yes = true;
-    else if (NO.has(bare) || NO.has(words[0])) out.no = true;
+    const negated = NO.has(bare) || words.some((w) => w === "nao" || w === "no" || w === "not");
+    if (negated) out.no = true;
+    else if (YES.has(bare) || YES.has(words[0])) out.yes = true;
   }
 
   return out;
