@@ -1,6 +1,6 @@
 // lib/midas/flow.ts
 // Motor do fluxo conversacional do Midas: puro, sem I/O nem React.
-import { interpret } from "./interpret";
+import { interpret, type Interpretation } from "./interpret";
 import { modulesForPain } from "./modules";
 import type { Context, Pain, Segment, StepId, Tool } from "./types";
 
@@ -59,6 +59,15 @@ export function chipsFor(state: MidasState): string[] {
 export function progress(state: MidasState): number {
   const step = state.step === "doubts" ? "confirm" : state.step;
   return MAIN.indexOf(step) / (MAIN.length - 1);
+}
+
+/** 1–3 palavras, ≤40 caracteres, só letras/espaços/apóstrofo/hífen e fora das palavras-chave do fluxo. */
+function looksLikeName(text: string, r: Interpretation): boolean {
+  const t = text.trim();
+  if (!t || t.length > 40) return false;
+  if (!/^[\p{L}][\p{L}\p{M}' ’-]*$/u.test(t)) return false;
+  if (t.split(/\s+/).length > 3) return false;
+  return !(r.segment || r.pain || r.tool || r.visibilityGap || r.wantsOverview || r.yes || r.no);
 }
 
 /** Primeira pergunta de slot ainda sem resposta; se todas respondidas, "deepen". */
@@ -125,6 +134,8 @@ export function applyAnswer(state: MidasState, answer: Answer): MidasState {
       if (chip) return stay(state, state.ctx, true);
       const { ctx, found } = fillSlots(state.ctx, undefined, text);
       if (found) return moveTo(state, nextOpen(ctx), ctx);
+      // Só guarda como nome o que parece nome; pergunta, sim/não etc. repetem a etapa com a dica.
+      if (!looksLikeName(text, r!)) return stay(state, ctx, true);
       return moveTo(state, nextOpen(ctx), { ...ctx, name: text.trim().slice(0, 40) });
     }
     case "segment":

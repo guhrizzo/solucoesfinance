@@ -9,7 +9,22 @@
     "title": "Privacy Policy",
     "lastUpdated": "Last updated: {date}",
     "lastUpdatedValue": "September 3, 2026",
-    "ptOnlyNotice": "The full text of this Policy is kept in Portuguese because it cites provisions of Brazilian law (the LGPD). A reviewed version in other languages will be published later."
+    "ptOnlyNotice": "The full text of this Policy is kept in Portuguese because it cites provisions of Brazilian law (the LGPD). A reviewed version in other languages will be published later.",
+    "midas": {
+      "title": "Guided demo (Midas)",
+      "intro": "In the guided demo on the home page, the Midas assistant talks with you before any sign-up. The conversation is only recorded after you click \"Ok, let's go\" and accept the demo's privacy notice.",
+      "dataTitle": "Data collected:",
+      "data": "your answers (business segment, main challenge and the tools you use today), your first name if you choose to share it, an anonymous session identifier and the conversation text.",
+      "purposesTitle": "Purposes:",
+      "purposes": "to personalize the demo, to improve NexusFi, and so the NexusFi team can contact you, for commercial purposes, about the demo and the platform trial.",
+      "aiTitle": "Artificial intelligence provider:",
+      "ai": "only if you consent, the text you type freely is sent to Anthropic, which processes it to generate Midas's replies. This processing may involve international data transfer (section 6).",
+      "retentionTitle": "How long:",
+      "retention": "answers are kept for 12 months and then deleted automatically.",
+      "linkTitle": "Link to your account:",
+      "link": "if you sign up later, the conversation is linked to your account to track the start of your trial.",
+      "contact": "To request deletion of this data or to exercise any right in section 8, write to our Data Protection Officer (DPO): <mail></mail>."
+    }
   },
   "accessibility": {
     "meta": {

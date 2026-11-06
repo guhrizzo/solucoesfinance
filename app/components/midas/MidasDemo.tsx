@@ -10,6 +10,7 @@ import {
 } from "@/lib/midas/flow";
 import { interpret } from "@/lib/midas/interpret";
 import { MIDAS_MODULES } from "@/lib/midas/modules";
+import { shouldResendCompleted } from "@/lib/midas/resend";
 import type { Pain } from "@/lib/midas/types";
 import { MidasHeader } from "./MidasHeader";
 import { MessageList } from "./MessageList";
@@ -43,6 +44,7 @@ const isSlotStep = (s: string): s is SlotStep => (SLOT_STEPS as readonly string[
 
 const MORE_PAGE = 3;
 const TURN_TIMEOUT_MS = 15_000;
+const RESEND_COMPLETED_MS = 10_000;
 const NEAR_BOTTOM_PX = 120;
 
 function readTopic(): Pain | null {
@@ -134,6 +136,10 @@ function MidasDemoInner() {
   const lastSyncedRef = useRef(boot.state.consented ? serialize(boot.state) : "");
   const retryRef = useRef<(() => void) | null>(null);
   const stateRef = useRef(state);
+  const itemsRef = useRef<ChatItem[]>([]);
+  /** Reenvio único do "completed" quando o servidor não confirmou (sessão rápida demais). */
+  const resendTriedRef = useRef(false);
+  const resendTimerRef = useRef<number | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const introRef = useRef<HTMLElement>(null);
@@ -162,7 +168,13 @@ function MidasDemoInner() {
   });
 
   // Cancela /turn pendente ao desmontar.
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      if (resendTimerRef.current) window.clearTimeout(resendTimerRef.current);
+    },
+    [],
+  );
 
   const typing = queue.length > 0;
   const locked = typing || busy;
@@ -192,6 +204,7 @@ function MidasDemoInner() {
 
   // Persistência local (retomada da sessão).
   useEffect(() => {
+    itemsRef.current = [...items, ...queue];
     saveSession({ sessionId, state, items: [...items, ...queue], shownModules: shownFrom([...items, ...queue]), leadStarted: leadStartedRef.current });
   }, [sessionId, state, items, queue]);
 
@@ -209,9 +222,23 @@ function MidasDemoInner() {
       saveSession({ sessionId, state, items: all, shownModules: shownFrom(all), leadStarted: true });
     }
     const token = reqTokenRef.current;
-    void syncLead(buildLeadPayload(sessionId, locale, state, all, shownFrom(all), status)).then((ok) => {
+    void syncLead(buildLeadPayload(sessionId, locale, state, all, shownFrom(all), status)).then((res) => {
       // Falhou duas vezes: o próximo passe reenvia (desde que a sessão ainda seja a mesma).
-      if (!ok && token === reqTokenRef.current && lastSyncedRef.current === key) lastSyncedRef.current = "";
+      if (!res.ok && token === reqTokenRef.current && lastSyncedRef.current === key) lastSyncedRef.current = "";
+      // No CTA e o servidor não confirmou "completed" (ex.: sessão muito rápida): reenvia uma vez após ~10s.
+      if (
+        res.ok && status === "completed" && token === reqTokenRef.current &&
+        shouldResendCompleted(true, res.status) && !resendTriedRef.current
+      ) {
+        resendTriedRef.current = true;
+        resendTimerRef.current = window.setTimeout(() => {
+          resendTimerRef.current = null;
+          const cur = stateRef.current;
+          if (token !== reqTokenRef.current || cur.step !== "cta") return;
+          const latest = itemsRef.current;
+          void syncLead(buildLeadPayload(sessionId, locale, cur, latest, shownFrom(latest), "completed"));
+        }, RESEND_COMPLETED_MS);
+      }
     });
   }, [state, items, queue, sessionId, locale]);
 
@@ -230,8 +257,11 @@ function MidasDemoInner() {
       const timer = window.setTimeout(() => controller.abort(), TURN_TIMEOUT_MS);
       setBusy(true);
       retryRef.current = null;
-      const history = historyItems
-        .filter((i) => i.kind === "text" && i.text)
+      const prior = historyItems.filter((i) => i.kind === "text" && i.text);
+      // A mensagem atual vai em `message`; não duplica no histórico.
+      const last = prior[prior.length - 1];
+      if (last && last.role === "user" && last.text === message) prior.pop();
+      const history = prior
         .slice(-6)
         .map((i) => ({ role: i.role, text: i.text as string }));
       let reply: string | null = null;
@@ -391,6 +421,9 @@ function MidasDemoInner() {
     focusNextRef.current = "intro";
     leadStartedRef.current = false;
     lastSyncedRef.current = "";
+    resendTriedRef.current = false;
+    if (resendTimerRef.current) window.clearTimeout(resendTimerRef.current);
+    resendTimerRef.current = null;
     setSessionId(newSessionId());
     setItems([]);
     setQueue([]);

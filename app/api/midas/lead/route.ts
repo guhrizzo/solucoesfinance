@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { sendWhatsAppAlert, isWhatsAppConfigured, toWhatsAppNumber } from "@/lib/whatsapp";
-import { sanitizeLeadInput, upsertLead, setWhatsAppResult } from "@/lib/midas/leadServer";
+import { sanitizeLeadInput, upsertLead, setWhatsAppResult, buildLeadAlertText } from "@/lib/midas/leadServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     if (!input) return NextResponse.json({ ok: false }, { status: 200 });
 
     const db = await getAdminDb();
-    const { justCompleted } = await upsertLead(db, input, Date.now());
+    const { status, justCompleted } = await upsertLead(db, input, Date.now());
 
     if (justCompleted) {
       let result: "sent" | "not_configured" | "failed" = "failed";
@@ -35,17 +35,7 @@ export async function POST(request: Request) {
         if (!isWhatsAppConfigured() || !phone) {
           result = "not_configured";
         } else {
-          // Sem formatação do WhatsApp (*, _, ~) nem separadores de linha Unicode.
-          const clean = (v: string) => v.replace(/[*_~\u2028\u2029]/g, "");
-          const text = [
-            "Novo lead concluiu a demo do Midas",
-            input.segment ? `segmento: ${input.segment}` : null,
-            input.mainPain ? `dor: ${input.mainPain}` : null,
-            input.currentTools.length ? `usa: ${input.currentTools.slice(0, 3).join(", ")}` : null,
-          ]
-            .filter(Boolean)
-            .map((l) => clean(String(l)))
-            .join(" | ");
+          const text = buildLeadAlertText(input);
           const r = await sendWhatsAppAlert({ phone, name: "equipe", companyName: "NexusFi", text });
           result = r.ok ? "sent" : r.reason === "not_configured" ? "not_configured" : "failed";
         }
@@ -54,7 +44,7 @@ export async function POST(request: Request) {
       }
       await setWhatsAppResult(db, input.sessionId, result);
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, status });
   } catch {
     return NextResponse.json({ ok: false }, { status: 200 });
   }

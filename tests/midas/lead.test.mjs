@@ -2,7 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createFakeFirestore } from "../support/fakeFirestore.mjs";
-import { sanitizeLeadInput, upsertLead, markConverted, LEAD_RETENTION_MS, MIN_SESSION_MS } from "../../lib/midas/leadServer.ts";
+import { sanitizeLeadInput, upsertLead, markConverted, LEAD_RETENTION_MS, MIN_SESSION_MS, buildLeadAlertText } from "../../lib/midas/leadServer.ts";
+import { shouldResendCompleted } from "../../lib/midas/resend.ts";
 
 const SID = "3f2b8c1e-5a4d-4e7b-9c1a-0d2e4f6a8b1c";
 const convo = Array.from({ length: 4 }, (_, i) => ({ role: i % 2 ? "bot" : "user", text: `m${i}`, ts: i }));
@@ -21,7 +22,7 @@ test("sanitize trunca strings, arrays e transcript", () => {
     base({
       name: "  " + "n".repeat(100) + "  ",
       locale: "fr",
-      currentTools: Array.from({ length: 15 }, () => "t".repeat(200)),
+      currentTools: Array.from({ length: 15 }, () => "planilha"),
       transcript: Array.from({ length: 60 }, (_, i) => ({ role: i % 2 ? "bot" : "user", text: "x".repeat(2000), ts: i })),
       consent: { accepted: true, version: "v".repeat(50) },
     })
@@ -29,8 +30,7 @@ test("sanitize trunca strings, arrays e transcript", () => {
   assert.ok(out);
   assert.equal(out.name.length, 60);
   assert.equal(out.locale, "pt-BR");
-  assert.equal(out.currentTools.length, 10);
-  assert.equal(out.currentTools[0].length, 80);
+  assert.deepEqual(out.currentTools, ["planilha"]); // duplicados somem
   assert.equal(out.transcript.length, 40);
   assert.equal(out.transcript[0].text.length, 800);
   assert.equal(out.consent.version.length, 20);
@@ -144,4 +144,46 @@ test("markConverted com id inexistente ou inválido → false sem lançar", asyn
   const db = createFakeFirestore();
   assert.equal(await markConverted(db, SID, "u"), false);
   assert.equal(await markConverted(db, "nope", "u"), false);
+});
+
+test("sanitize: listas só aceitam valores conhecidos (texto livre some)", () => {
+  const out = sanitizeLeadInput(
+    base({
+      currentTools: ["planilha", "https://evil.example/x", "nenhum", "ERP caseiro"],
+      painPoints: ["estoque", "visibilityGap", "ligue 0800", "http://x.co"],
+      interestedModules: ["fluxoCaixa", "pdv", "<script>", "visite http://x.co"],
+    })
+  );
+  assert.deepEqual(out.currentTools, ["planilha", "nenhum"]);
+  assert.deepEqual(out.painPoints, ["estoque", "visibilityGap"]);
+  assert.deepEqual(out.interestedModules, ["fluxoCaixa", "pdv"]);
+});
+
+test("texto do aviso: só enums, sem URL e sem quebra de linha/tab/4+ espaços", () => {
+  const nl = "a\nb";
+  const out = sanitizeLeadInput(base({ segment: "loja", mainPain: "estoque", currentTools: ["planilha", "http://evil.co", nl, "sistema\n\t    x"] }));
+  const text = buildLeadAlertText(out);
+  assert.equal(text, "Novo lead concluiu a demo do Midas | segmento: loja | dor: estoque | usa: planilha");
+  assert.doesNotMatch(text, /http|evil/);
+  // Valores fora do enum nunca entram no texto, mesmo se escaparem da sanitização.
+  const forced = buildLeadAlertText({ segment: "loja\n\t    x", mainPain: "estoque", currentTools: ["sistema\n", "nenhum"] });
+  assert.doesNotMatch(forced, /[\r\n\t]| {4,}/);
+  assert.equal(forced, "Novo lead concluiu a demo do Midas | dor: estoque | usa: nenhum");
+});
+
+test("shouldResendCompleted: só no CTA e sem confirmação do servidor", () => {
+  assert.equal(shouldResendCompleted(true, "in_progress"), true);
+  assert.equal(shouldResendCompleted(true, undefined), true);
+  assert.equal(shouldResendCompleted(true, "completed"), false);
+  assert.equal(shouldResendCompleted(true, "converted"), false);
+  assert.equal(shouldResendCompleted(false, "in_progress"), false);
+});
+
+test("sessão rápida (< MIN_SESSION_MS) fica in_progress; reenvio depois de 8s conclui", async () => {
+  const db = createFakeFirestore();
+  await upsertLead(db, sanitizeLeadInput(base({ status: "in_progress" })), 0);
+  const fast = await upsertLead(db, sanitizeLeadInput(base({ status: "completed", transcript: convo })), MIN_SESSION_MS - 1);
+  assert.equal(shouldResendCompleted(true, fast.status), true);
+  const later = await upsertLead(db, sanitizeLeadInput(base({ status: "completed", transcript: convo })), MIN_SESSION_MS + 2000);
+  assert.deepEqual(later, { status: "completed", justCompleted: true });
 });

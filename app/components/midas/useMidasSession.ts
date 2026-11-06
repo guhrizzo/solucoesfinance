@@ -191,23 +191,37 @@ export function buildLeadPayload(
   return out;
 }
 
-/** Fire-and-forget com no máximo uma nova tentativa. Nunca rejeita: resolve false se as duas falharem. */
-export function syncLead(payload: LeadPayload): Promise<boolean> {
-  const send = () =>
+export interface SyncResult {
+  ok: boolean;
+  /** Status salvo no servidor (quando a resposta o traz). */
+  status?: string;
+}
+
+/**
+ * Fire-and-forget com no máximo uma nova tentativa. Nunca rejeita.
+ * HTTP 200 com `{ ok: false }` (consentimento recusado, limite de taxa) conta como falha.
+ */
+export function syncLead(payload: LeadPayload): Promise<SyncResult> {
+  const send = (): Promise<SyncResult> =>
     fetch("/api/midas/lead", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
       keepalive: true,
-    }).then((r) => {
-      if (!r.ok) throw new Error("lead");
-      return true;
-    });
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("lead");
+        return r.json() as Promise<{ ok?: unknown; status?: unknown }>;
+      })
+      .then((d) => {
+        if (!d || d.ok !== true) throw new Error("lead");
+        return { ok: true, status: typeof d.status === "string" ? d.status : undefined };
+      });
   return send().catch(
     () =>
-      new Promise<boolean>((resolve) => {
+      new Promise<SyncResult>((resolve) => {
         setTimeout(() => {
-          send().then(resolve, () => resolve(false));
+          send().then(resolve, () => resolve({ ok: false }));
         }, 1500);
       }),
   );

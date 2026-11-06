@@ -2,7 +2,8 @@
 // Persistência do lead da demo do Midas (coleção demoLeads/{sessionId}).
 // SOMENTE servidor: quem fala com o Firestore é o Admin SDK (app/api/midas/*),
 // e o `db` entra por parâmetro pra os testes injetarem um Firestore em memória.
-import type { Lead, Pain, Segment } from "./types";
+import { MIDAS_MODULES } from "./modules";
+import type { Lead, Pain, Segment, Tool } from "./types";
 
 /** Retenção do lead: 12 meses ≈ 365 dias em ms (sem helper de calendário no projeto; simples e determinístico). */
 export const LEAD_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
@@ -10,7 +11,7 @@ export const LEAD_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 export const LEAD_COLLECTION = "demoLeads";
 
 /** Tempo mínimo entre o início da sessão e a conclusão pra disparar o aviso (anti-spam). */
-export const MIN_SESSION_MS = 20_000;
+export const MIN_SESSION_MS = 8_000;
 /** Mensagens mínimas (e quantas do usuário) pra a conversa contar como real. */
 const MIN_TRANSCRIPT_MSGS = 4;
 const MIN_USER_MSGS = 2;
@@ -40,6 +41,8 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const LOCALES = ["pt-BR", "en", "es"] as const;
 const SEGMENTS: Segment[] = ["loja", "ecommerce", "servicos", "industria", "distribuidora", "outro"];
 const PAINS: Pain[] = ["financeiro", "contas", "estoque", "vendas", "impostos", "relatorios", "canais", "tudo"];
+const TOOLS: Tool[] = ["planilha", "caderno", "sistema", "app_banco", "memoria", "contagem", "marketplace", "nenhum"];
+const MODULE_IDS: string[] = MIDAS_MODULES.map((m) => m.id);
 const STATUSES: ClientStatus[] = ["started", "in_progress", "completed"];
 const RANK: Record<Lead["status"], number> = { started: 0, in_progress: 1, completed: 2, converted: 3 };
 
@@ -49,8 +52,10 @@ const str = (v: unknown, max: number): string | undefined => {
   const t = v.trim().slice(0, max);
   return t || undefined;
 };
-const strList = (v: unknown, itemMax: number, cap = 10): string[] =>
-  Array.isArray(v) ? v.map((x) => str(x, itemMax)).filter((x): x is string => !!x).slice(0, cap) : [];
+
+/** Só valores conhecidos passam; o resto some em silêncio (nada de texto livre no lead/aviso). */
+const allowList = (v: unknown, allowed: readonly string[], cap = 10): string[] =>
+  Array.isArray(v) ? Array.from(new Set(v.filter((x): x is string => typeof x === "string" && allowed.includes(x)))).slice(0, cap) : [];
 
 export function isValidSessionId(v: unknown): v is string {
   return typeof v === "string" && UUID_V4.test(v);
@@ -79,9 +84,9 @@ export function sanitizeLeadInput(raw: unknown): LeadInput | null {
   const out: LeadInput = {
     sessionId: raw.sessionId,
     locale,
-    currentTools: strList(raw.currentTools, 80),
-    painPoints: strList(raw.painPoints, 80),
-    interestedModules: strList(raw.interestedModules, 80),
+    currentTools: allowList(raw.currentTools, TOOLS),
+    painPoints: allowList(raw.painPoints, [...PAINS, "visibilityGap"]),
+    interestedModules: allowList(raw.interestedModules, MODULE_IDS),
     transcript,
     status,
     consent: { accepted: true, version: str(c.version, 20) ?? "" },
@@ -94,9 +99,20 @@ export function sanitizeLeadInput(raw: unknown): LeadInput | null {
 }
 
 // Subconjunto do Firestore Admin que usamos (permite injetar o fake nos testes).
+interface DocSnapLike {
+  exists: boolean;
+  data(): unknown;
+}
+interface DocRefLike {
+  set(data: Record<string, unknown>, options?: { merge?: boolean }): unknown;
+}
+interface TxLike {
+  get(ref: DocRefLike): Promise<DocSnapLike>;
+  set(ref: DocRefLike, data: Record<string, unknown>, options?: { merge?: boolean }): unknown;
+}
 interface DbLike {
-  doc(path: string): any;
-  runTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
+  doc(path: string): DocRefLike;
+  runTransaction<T>(fn: (tx: TxLike) => Promise<T>): Promise<T>;
 }
 
 /** Cria ou atualiza o lead. Idempotente; o status só avança. */
@@ -182,9 +198,12 @@ const CLEANUP_BATCH = 400;
 const CLEANUP_MAX_LOOPS = 50;
 
 // Subconjunto de Firestore usado na limpeza (o fake dos testes implementa o mesmo).
+interface CleanupQuery {
+  limit(n: number): { get(): Promise<{ empty: boolean; docs: { ref: unknown }[] }> };
+}
 interface CleanupDb {
-  collection(path: string): { where(f: string, op: string, v: unknown): any };
-  batch(): { delete(ref: any): unknown; commit(): Promise<unknown> };
+  collection(path: string): { where(f: string, op: string, v: unknown): CleanupQuery };
+  batch(): { delete(ref: never): unknown; commit(): Promise<unknown> };
 }
 
 /** Apaga leads com expiresAt < now, em lotes de 400 (teto de 50 voltas). Devolve quantos apagou. */
@@ -194,10 +213,29 @@ export async function deleteExpiredLeads(db: CleanupDb, now: number): Promise<nu
     const snap = await db.collection(LEAD_COLLECTION).where("expiresAt", "<", now).limit(CLEANUP_BATCH).get();
     if (snap.empty) break;
     const batch = db.batch();
-    for (const d of snap.docs) batch.delete(d.ref);
+    for (const d of snap.docs) batch.delete(d.ref as never);
     await batch.commit();
     deleted += snap.docs.length;
     if (snap.docs.length < CLEANUP_BATCH) break;
   }
   return deleted;
+}
+
+/**
+ * Texto do aviso de WhatsApp: só valores de enum/conhecidos, sem quebras de linha,
+ * tabs nem 4+ espaços (o template da Meta rejeita) e sem formatação do WhatsApp.
+ */
+export function buildLeadAlertText(input: Pick<LeadInput, "segment" | "mainPain" | "currentTools">): string {
+  const clean = (v: string) =>
+    v.replace(/[*_~\u2028\u2029]/g, "").replace(/[\r\n\t]+/g, " ").replace(/ {4,}/g, "   ").trim();
+  const tools = input.currentTools.filter((x) => (TOOLS as string[]).includes(x)).slice(0, 3);
+  return [
+    "Novo lead concluiu a demo do Midas",
+    input.segment && SEGMENTS.includes(input.segment) ? `segmento: ${input.segment}` : null,
+    input.mainPain && PAINS.includes(input.mainPain) ? `dor: ${input.mainPain}` : null,
+    tools.length ? `usa: ${tools.join(", ")}` : null,
+  ]
+    .filter((l): l is string => !!l)
+    .map(clean)
+    .join(" | ");
 }

@@ -214,3 +214,18 @@ test("goBack para deepen limpa visibilityGap", () => {
   assert.equal(s.step, "deepen");
   assert.equal(s.ctx.visibilityGap, undefined);
 });
+
+test("etapa de nome: só guarda como nome o que parece nome", () => {
+  const atName = () => chip(initialState(), "start");
+  for (const bad of ["quanto custa?", "sim", "nao", "1234", "eu tenho muita coisa para fazer aqui", "a".repeat(41), "Maria 2"]) {
+    const s = applyAnswer(atName(), { text: bad });
+    assert.equal(s.step, "name", bad);
+    assert.equal(s.ctx.name, undefined, bad);
+    assert.equal(s.ctx.retry, true, bad);
+  }
+  for (const ok of ["Maria", "João da Silva", "D'Ávila", "Ana-Clara"]) {
+    const s = applyAnswer(atName(), { text: ok });
+    assert.equal(s.step, "segment", ok);
+    assert.equal(s.ctx.name, ok);
+  }
+});
