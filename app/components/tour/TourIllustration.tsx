@@ -27,8 +27,9 @@ export function StepIcon({ id, size = 16, strokeWidth }: { id: string; size?: nu
   return <Icon size={size} strokeWidth={strokeWidth} aria-hidden="true" />;
 }
 
-/** Cena animada em CSS puro (sem vídeo): ícone flutuando + decoração por tipo. */
-export function TourIllustration({ stepId, animation }: { stepId: string; animation: TourAnimation }) {
+/** Cena animada em CSS puro (sem vídeo): ícone flutuando + decoração por tipo.
+ *  Sem `stepId` (ex.: prévia de módulo na demo do Midas), o ícone cai no Sparkles. */
+export function TourIllustration({ stepId = "", animation }: { stepId?: string; animation: TourAnimation }) {
   return (
     <div className="nxt-stage" aria-hidden="true">
       {animation === "bars" || animation === "report" ? (

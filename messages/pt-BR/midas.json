@@ -17,7 +17,22 @@
     "preview": "ver prévia",
     "humanWhatsapp": "Falar com uma pessoa no WhatsApp",
     "progress": "Progresso da conversa",
-    "didntUnderstand": "Hum, não entendi bem. Pode escolher uma opção ou me contar de outro jeito?"
+    "didntUnderstand": "Hum, não entendi bem. Pode escolher uma opção ou me contar de outro jeito?",
+    "introHello": "Olá!",
+    "introLine": "A Midas, sua assistente de gestão, te mostra o NexusFi na prática",
+    "introWelcome": "Em poucos minutos eu entendo como funciona o seu negócio e mostro só o que faz sentido para você.",
+    "introStart": "Ok, vamos lá",
+    "privacyAi": "Se você escrever livremente, o texto pode ser processado por um provedor de inteligência artificial.",
+    "chipsCaption": "Selecione uma opção ou digite no chat abaixo:",
+    "inputLabel": "Sua mensagem",
+    "you": "Você",
+    "footerNote": "Usamos suas respostas só para personalizar esta demonstração.",
+    "whatsappPrefill": "Olá! Vim pela demonstração guiada do NexusFi e gostaria de falar com uma pessoa.",
+    "doubtFallback": "Anotei sua dúvida. Para uma resposta agora, fale com uma pessoa no WhatsApp.",
+    "hidePreview": "ocultar prévia",
+    "restart": "Recomeçar",
+    "metaTitle": "Midas · demonstração guiada do NexusFi",
+    "metaDescription": "Converse com a Midas e veja na prática como o NexusFi ajudaria o seu negócio."
   },
   "steps": {
     "welcome": {
