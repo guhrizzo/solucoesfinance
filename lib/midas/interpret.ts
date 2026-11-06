@@ -1,7 +1,7 @@
 // lib/midas/interpret.ts
 // Interpretador de texto livre do Midas: dicionario combinado pt/en/es.
 // Sem dependencias; regex simples (sem quantificadores aninhados).
-import type { Segment, Pain, Tool } from "@/lib/midas/types.ts";
+import type { Segment, Pain, Tool } from "./types";
 
 export interface Interpretation {
   segment?: Segment;

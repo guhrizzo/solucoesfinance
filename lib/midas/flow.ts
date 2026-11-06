@@ -1,10 +1,10 @@
 // lib/midas/flow.ts
 // Motor do fluxo conversacional do Midas: puro, sem I/O nem React.
-import { interpret } from "@/lib/midas/interpret.ts";
-import { modulesForPain } from "@/lib/midas/modules.ts";
-import type { Context, Pain, Segment, StepId, Tool } from "@/lib/midas/types.ts";
+import { interpret } from "./interpret";
+import { modulesForPain } from "./modules";
+import type { Context, Pain, Segment, StepId, Tool } from "./types";
 
-export type { StepId } from "@/lib/midas/types.ts";
+export type { StepId } from "./types";
 
 export interface MidasState {
   step: StepId;
@@ -70,10 +70,10 @@ function nextOpen(ctx: Context): StepId {
 }
 
 function moveTo(state: MidasState, step: StepId, ctx: Context): MidasState {
-  const next: MidasState = { ...state, step, ctx: { ...ctx }, history: [...state.history, state.step], overview: undefined };
+  const next: MidasState = { ...state, step, ctx: { ...ctx }, history: [...state.history, state.step] };
+  delete next.overview;
   delete next.ctx.retry;
   if (step === "modules") next.ctx.interestedModules = ctx.pain ? modulesForPain(ctx.pain) : [];
-  if (next.overview === undefined) delete next.overview;
   return next;
 }
 
@@ -85,8 +85,13 @@ function stay(state: MidasState, ctx: Context = state.ctx, retry = false): Midas
   return next;
 }
 
-/** Preenche os slots que o texto/chip revelar, sem sobrescrever a etapa de nome. */
-function fillSlots(ctx: Context, chip: string | undefined, text: string): { ctx: Context; found: boolean } {
+/**
+ * Preenche slots a partir do chip ou do texto livre. Texto livre só preenche slots VAZIOS;
+ * a pergunta em andamento (`own`) pode ser (re)definida por um chip ou por um acerto explícito.
+ */
+function fillSlots(
+  ctx: Context, chip: string | undefined, text: string, own?: "segment" | "pain" | "tool",
+): { ctx: Context; found: boolean } {
   const out: Context = { ...ctx };
   let found = false;
   if (chip) {
@@ -96,10 +101,10 @@ function fillSlots(ctx: Context, chip: string | undefined, text: string): { ctx:
     return { ctx: out, found };
   }
   const r = interpret(text);
-  if (r.segment) { out.segment = r.segment; found = true; }
-  if (r.pain) { out.pain = r.pain; found = true; }
-  if (r.tool) { out.tool = r.tool; found = true; }
-  if (r.visibilityGap) { out.visibilityGap = true; found = true; }
+  if (r.segment && (!out.segment || own === "segment")) { out.segment = r.segment; found = true; }
+  if (r.pain && (!out.pain || own === "pain")) { out.pain = r.pain; found = true; }
+  if (r.tool && (!out.tool || own === "tool")) { out.tool = r.tool; found = true; }
+  if (r.visibilityGap && !out.visibilityGap) { out.visibilityGap = true; found = true; }
   return { ctx: out, found };
 }
 
@@ -125,7 +130,7 @@ export function applyAnswer(state: MidasState, answer: Answer): MidasState {
     case "segment":
     case "pain":
     case "tool": {
-      const { ctx, found } = fillSlots(state.ctx, chip, text);
+      const { ctx, found } = fillSlots(state.ctx, chip, text, state.step as "segment" | "pain" | "tool");
       const target = nextOpen(ctx);
       const slot = state.step as "segment" | "pain" | "tool";
       // Só avança se a pergunta atual foi respondida (nunca pula segment/pain).
@@ -144,8 +149,9 @@ export function applyAnswer(state: MidasState, answer: Answer): MidasState {
     case "doubts": {
       if (chip === "yes" || r?.yes) return moveTo({ ...state, step: "confirm" }, "cta", state.ctx);
       if (chip === "more") return moveTo({ ...state, step: "confirm" }, "modules", state.ctx);
-      if (chip === "doubts" || r?.no) return stay({ ...state, step: "confirm" });
-      const doubts = [...state.ctx.doubts, text.trim().slice(0, MAX_TEXT)].slice(0, MAX_DOUBTS);
+      const doubt = text.trim().slice(0, MAX_TEXT);
+      if (chip || r?.no || !doubt) return stay({ ...state, step: "confirm" });
+      const doubts = [...state.ctx.doubts, doubt].slice(-MAX_DOUBTS);
       return stay({ ...state, step: "confirm" }, { ...state.ctx, doubts });
     }
     default:
@@ -162,6 +168,7 @@ function clearFrom(ctx: Context, step: StepId): Context {
   if (i <= MAIN.indexOf("segment")) delete out.segment;
   if (i <= MAIN.indexOf("pain")) { delete out.pain; delete out.visibilityGap; }
   if (i <= MAIN.indexOf("tool")) delete out.tool;
+  if (i <= MAIN.indexOf("deepen")) delete out.visibilityGap;
   if (i <= MAIN.indexOf("modules")) out.interestedModules = [];
   if (i <= MAIN.indexOf("confirm")) out.doubts = [];
   return out;
@@ -171,7 +178,9 @@ export function goBack(state: MidasState): MidasState {
   if (!state.history.length) return state;
   const history = state.history.slice(0, -1);
   const step = state.history[state.history.length - 1];
-  return { step, ctx: clearFrom(state.ctx, step), history, consented: state.consented };
+  const ctx = clearFrom(state.ctx, step);
+  if (step === "modules") ctx.interestedModules = ctx.pain ? modulesForPain(ctx.pain) : [];
+  return { step, ctx, history, consented: state.consented };
 }
 
 export function serialize(state: MidasState): string {

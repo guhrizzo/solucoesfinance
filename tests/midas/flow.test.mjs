@@ -169,3 +169,48 @@ test("8 dores x 6 segmentos nunca chegam a diagnosis sem segment e pain", () => 
     }
   }
 });
+
+const toConfirm = () => {
+  let s = initialState();
+  for (const c of ["start", "skip", "loja", "financeiro", "planilha", "continue", "continue", "continue"]) s = chip(s, c);
+  return s;
+};
+
+test("goBack de confirm para modules mantém módulos", () => {
+  const s = goBack(toConfirm());
+  assert.equal(s.step, "modules");
+  assert.deepEqual(s.ctx.interestedModules, modulesForPain("financeiro"));
+});
+
+test("texto livre não sobrescreve slots já preenchidos", () => {
+  let s = chip(chip(chip(chip(chip(initialState(), "start"), "skip"), "loja"), "financeiro"), "planilha");
+  s = applyAnswer(s, { text: "vendo no mercado livre" });
+  assert.equal(s.ctx.tool, "planilha");
+  assert.equal(s.step, "diagnosis");
+  let t = chip(chip(chip(chip(initialState(), "start"), "skip"), "loja"), "financeiro");
+  t = applyAnswer(t, { text: "uso Excel pra controlar estoque" });
+  assert.equal(t.ctx.pain, "financeiro");
+  assert.equal(t.ctx.tool, "planilha");
+});
+
+test("chip desconhecido em confirm é no-op; dúvidas vazias não entram; fica com as 10 mais novas", () => {
+  let s = toConfirm();
+  s = chip(s, "continue");
+  assert.equal(s.step, "confirm");
+  assert.deepEqual(s.ctx.doubts, []);
+  s = applyAnswer(s, { text: "   " });
+  assert.deepEqual(s.ctx.doubts, []);
+  for (let i = 0; i < 12; i++) s = applyAnswer(s, { text: "duvida numero " + i });
+  assert.equal(s.ctx.doubts.length, 10);
+  assert.equal(s.ctx.doubts[0], "duvida numero 2");
+  assert.equal(s.ctx.doubts[9], "duvida numero 11");
+});
+
+test("goBack para deepen limpa visibilityGap", () => {
+  let s = chip(chip(chip(chip(chip(initialState(), "start"), "skip"), "loja"), "financeiro"), "planilha");
+  s = applyAnswer(s, { text: "nem sei quanto ganho" });
+  assert.equal(s.ctx.visibilityGap, true);
+  s = goBack(s);
+  assert.equal(s.step, "deepen");
+  assert.equal(s.ctx.visibilityGap, undefined);
+});
