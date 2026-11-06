@@ -48,3 +48,8 @@ export function notifyLeadConverted(user: { getIdToken: () => Promise<string> })
     }
   })();
 }
+
+/** Google no login pode criar conta nova (e-mail inédito): só nesse caso o lead converte. */
+export function shouldConvertAfterGoogle(info: { isNewUser?: boolean } | null | undefined): boolean {
+  return info?.isNewUser === true;
+}

@@ -83,7 +83,7 @@ export default function RegisterPage() {
   const loginQuery = new URLSearchParams();
   if (planoParam) loginQuery.set("plano", planoParam);
   if (leadParam) loginQuery.set("lead", leadParam);
-  const loginHref = loginQuery.size ? `/login?${loginQuery.toString()}` : "/login";
+  const loginHref = loginQuery.toString() ? `/login?${loginQuery.toString()}` : "/login";
 
   const passOk = passwordRules.every((r) => r.test(password));
   const confirmOk = password === confirm && confirm.length > 0;

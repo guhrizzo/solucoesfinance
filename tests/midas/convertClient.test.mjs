@@ -50,3 +50,13 @@ test("resposta não-ok mantém a chave no storage", async () => {
   await flush();
   assert.equal(store.get("midas-lead"), SID);
 });
+
+import { shouldConvertAfterGoogle } from "../../lib/midas/convertClient.ts";
+
+test("shouldConvertAfterGoogle só para isNewUser === true", () => {
+  assert.equal(shouldConvertAfterGoogle({ isNewUser: true }), true);
+  assert.equal(shouldConvertAfterGoogle({ isNewUser: false }), false);
+  assert.equal(shouldConvertAfterGoogle({}), false);
+  assert.equal(shouldConvertAfterGoogle(null), false);
+  assert.equal(shouldConvertAfterGoogle(undefined), false);
+});

@@ -13,7 +13,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink, completeGoogleLink, type PendingGoogleLink } from "@/lib/authLink";
 import { canLoginWithSystemBrowser, loginWithSystemBrowser } from "@/lib/desktopBridge";
-import { readLeadParam } from "@/lib/midas/leadParam";
+import { notifyLeadConverted, rememberLead, shouldConvertAfterGoogle } from "@/lib/midas/convertClient";
 
 // Códigos de erro Firebase reconhecidos → chave em auth.errors.
 const KNOWN_ERROR_CODES = new Set([
@@ -40,9 +40,10 @@ async function loginWithEmail(email: string, password: string) {
 
 async function loginWithGoogle() {
   const { getFirebase } = await import("@/lib/firebase");
-  const { signInWithPopup } = await import("firebase/auth");
+  const { signInWithPopup, getAdditionalUserInfo } = await import("firebase/auth");
   const { auth, googleProvider } = await getFirebase();
-  return signInWithPopup(auth, googleProvider);
+  const cred = await signInWithPopup(auth, googleProvider);
+  return { cred, isNewUser: shouldConvertAfterGoogle(getAdditionalUserInfo(cred)) };
 }
 
 async function resetPassword(email: string) {
@@ -95,12 +96,12 @@ export default function LoginPage() {
   const [leadParam, setLeadParam] = useState("");
   useEffect(() => {
     setPlanoParam(new URLSearchParams(window.location.search).get("plano") || "");
-    setLeadParam(readLeadParam(window.location.search, null) ?? "");
+    setLeadParam(rememberLead() ?? "");
   }, []);
   const registerQuery = new URLSearchParams();
   if (planoParam) registerQuery.set("plano", planoParam);
   if (leadParam) registerQuery.set("lead", leadParam);
-  const registerHref = registerQuery.size ? `/register?${registerQuery.toString()}` : "/register";
+  const registerHref = registerQuery.toString() ? `/register?${registerQuery.toString()}` : "/register";
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -156,7 +157,9 @@ export default function LoginPage() {
         await loginWithSystemBrowser();
         return;
       }
-      await loginWithGoogle();
+      const { cred, isNewUser } = await loginWithGoogle();
+      // Google pode criar conta nova aqui: nesse caso o lead da demo converte.
+      if (isNewUser) notifyLeadConverted(cred.user);
       goAfterLogin();
     } catch (err: any) {
       const pending = await extractPendingGoogleLink(err);
