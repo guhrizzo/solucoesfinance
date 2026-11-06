@@ -112,7 +112,9 @@
     "reconnect": "Reconectar",
     "reconnectTitle": "Rehacer la autorización OAuth de esta cuenta",
     "disconnect": "Desconectar",
-    "connectedOn": " · conectada el {date}"
+    "connectedOn": " · conectada el {date}",
+    "loadError": "No se pudieron cargar tus integraciones. Actualiza la página.",
+    "loading": "Cargando integraciones…"
   },
   "tokenStatus": {
     "simMode": "Modo simulado",

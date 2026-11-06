@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { RETURN_COOKIE, RETURN_COOKIE_OPTS, parseReturnTo } from "@/lib/oauthReturn";
 import { randomBytes } from "crypto";
 import { sheinCredentials, buildSheinAuthUrl } from "@/lib/shein";
 import { requireScope, isScopeError } from "@/lib/apiScope";
@@ -20,6 +21,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: scope.error }, { status: scope.status });
   }
   const userId = scope.ownerUid;
+  // Página de volta (lista permitida); o callback lê do cookie.
+  const returnBase = parseReturnTo(new URL(request.url).searchParams.get("returnTo"));
 
   const { redirectUri, configured } = sheinCredentials();
 
@@ -43,7 +46,9 @@ export async function POST(request: Request) {
     callbackUrl.searchParams.set("tempToken", "mock_temp_token_shein_123456");
     callbackUrl.searchParams.set("state", userId);
     callbackUrl.searchParams.set("mock", "true");
-    return NextResponse.json({ authUrl: callbackUrl.toString() });
+    const mockRes = NextResponse.json({ authUrl: callbackUrl.toString() });
+    mockRes.cookies.set(RETURN_COOKIE, returnBase, RETURN_COOKIE_OPTS);
+    return mockRes;
   }
 
   const state = randomBytes(16).toString("hex");
@@ -57,5 +62,6 @@ export async function POST(request: Request) {
     path: "/",
     maxAge: 600, // o tempToken da Shein só vale 10 min — não precisa mais que isso
   });
+  res.cookies.set(RETURN_COOKIE, returnBase, RETURN_COOKIE_OPTS);
   return res;
 }

@@ -68,9 +68,21 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // profile/interStatus — resumo da integração Banco Inter (conectado,
+      // conta mascarada, último sync/erro, validade do certificado). NUNCA
+      // contém segredo. A conta LÊ (tela de Integrações) mas NUNCA escreve
+      // pelo client — só o Admin SDK (rotas /api/inter/* e o cron).
+      match /profile/interStatus {
+        allow read: if inAccount(userId);
+        allow write: if false;
+      }
+
       // profile/pin, profile/onboarding — dono e membros da conta.
+      // `interStatus` fica de fora: senão este bloco somaria escrita ao de cima
+      // (regras do Firestore são OR entre os matches que casam).
       match /profile/{doc} {
-        allow read, write: if doc != 'access' && doc != 'billing' && inAccount(userId);
+        allow read, write: if doc != 'access' && doc != 'billing'
+          && doc != 'interStatus' && inAccount(userId);
       }
 
       // contracts — contrato de prestação de serviços aceito no checkout.
@@ -121,6 +133,21 @@ service cloud.firestore {
       // são só do servidor: caem no "allow ... if false" implícito, já que o
       // bloco genérico abaixo os exclui.
 
+      // ── Banco Inter: extrato a conciliar (lib/interTypes.ts) ───────────
+      // Os itens são CRIADOS só pelo servidor (/api/inter/sincronizar e o
+      // cron, Admin SDK). A conta LÊ e concilia no client: o update só pode
+      // mexer em status/cashflowId/resolvedAt/resolvedBy/suggestion — nunca
+      // em valor, data, descrição ou txKey. Criar e excluir: negado.
+      // O bloco genérico abaixo exclui `interPendentes`, senão somaria
+      // create/delete/update livre a esta regra.
+      match /interPendentes/{pendenteId} {
+        allow read: if inAccount(userId);
+        allow update: if inAccount(userId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'cashflowId', 'resolvedAt', 'resolvedBy', 'suggestion']);
+        allow create, delete: if false;
+      }
+
       // ── RH (rhColaboradores, rhVigencias, rhCompetencias, rhCustos,
       // rhVariaveis, rhLog, ...) — salários, CPF e dados bancários (LGPD).
       // NENHUM acesso pelo client, nem leitura: tudo passa pelas rotas
@@ -140,6 +167,7 @@ service cloud.firestore {
           && collection != 'purchaseOrders'
           && collection != 'comprasNotifications'
           && collection != 'counters'
+          && collection != 'interPendentes'
           && inAccount(userId);
       }
     }
@@ -174,6 +202,22 @@ service cloud.firestore {
     // Bugs & sugestões (tela de Configurações) — lidos/escritos SOMENTE pelo
     // Admin SDK (rotas app/api/feedback/*). O client nunca acessa direto.
     match /feedback/{id} {
+      allow read, write: if false;
+    }
+
+    // integracoesBanco/{ownerUid} — credenciais do Banco Inter (client id,
+    // secret, certificado e chave, todos cifrados com INTER_ENC_KEY). Lidos e
+    // escritos SOMENTE pelo Admin SDK (rotas /api/inter/* e o cron). Regra
+    // explícita (além do fallback) pra deixar claro que é proposital.
+    match /integracoesBanco/{id} {
+      allow read, write: if false;
+    }
+
+    // auditoriaIntegracoes/{id} — trilha de quem (adm supremo) conectou, testou
+    // ou desconectou um banco de qual cliente. Gravada SOMENTE pelo Admin SDK
+    // (rotas /api/admin/inter/*); o client nunca lê nem escreve. Regra
+    // explícita (além do fallback) pra deixar claro que é proposital.
+    match /auditoriaIntegracoes/{id} {
       allow read, write: if false;
     }
 

@@ -112,7 +112,9 @@
     "reconnect": "Reconnect",
     "reconnectTitle": "Redo the OAuth authorization for this account",
     "disconnect": "Disconnect",
-    "connectedOn": " · connected on {date}"
+    "connectedOn": " · connected on {date}",
+    "loadError": "Could not load your integrations. Refresh the page.",
+    "loading": "Loading integrations…"
   },
   "tokenStatus": {
     "simMode": "Simulated mode",
