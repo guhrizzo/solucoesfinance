@@ -35,6 +35,8 @@ export async function POST(request: Request) {
         if (!isWhatsAppConfigured() || !phone) {
           result = "not_configured";
         } else {
+          // Sem formatação do WhatsApp (*, _, ~) nem separadores de linha Unicode.
+          const clean = (v: string) => v.replace(/[*_~\u2028\u2029]/g, "");
           const text = [
             "Novo lead concluiu a demo do Midas",
             input.segment ? `segmento: ${input.segment}` : null,
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
             input.currentTools.length ? `usa: ${input.currentTools.slice(0, 3).join(", ")}` : null,
           ]
             .filter(Boolean)
+            .map((l) => clean(String(l)))
             .join(" | ");
           const r = await sendWhatsAppAlert({ phone, name: "equipe", companyName: "NexusFi", text });
           result = r.ok ? "sent" : r.reason === "not_configured" ? "not_configured" : "failed";

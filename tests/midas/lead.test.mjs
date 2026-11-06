@@ -2,9 +2,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createFakeFirestore } from "../support/fakeFirestore.mjs";
-import { sanitizeLeadInput, upsertLead, markConverted, LEAD_RETENTION_MS } from "../../lib/midas/leadServer.ts";
+import { sanitizeLeadInput, upsertLead, markConverted, LEAD_RETENTION_MS, MIN_SESSION_MS } from "../../lib/midas/leadServer.ts";
 
 const SID = "3f2b8c1e-5a4d-4e7b-9c1a-0d2e4f6a8b1c";
+const convo = Array.from({ length: 4 }, (_, i) => ({ role: i % 2 ? "bot" : "user", text: `m${i}`, ts: i }));
 const base = (over = {}) => ({ sessionId: SID, consent: { accepted: true, version: "v1" }, ...over });
 
 test("sanitize rejeita sessionId inválido e não-objeto", () => {
@@ -54,6 +55,7 @@ test("cliente não consegue injetar converted/expiresAt/whatsapp", async () => {
   const db = createFakeFirestore();
   await upsertLead(db, out, 1000);
   const d = db.store.get(`demoLeads/${SID}`);
+  assert.equal(d.status, "in_progress"); // novo nunca nasce completed
   assert.equal(d.startedTrial, false);
   assert.equal(d.convertedUid, undefined);
   assert.equal(d.expiresAt, 1000 + LEAD_RETENTION_MS);
@@ -70,29 +72,72 @@ test("expiresAt = startedAt + 12 meses, definido uma vez", async () => {
   assert.equal(d.updatedAt, 9000);
 });
 
-test("upsert 2x não duplica e não regride status; justCompleted só na 1ª transição", async () => {
+test("novo lead em 'completed' vira in_progress e não avisa", async () => {
   const db = createFakeFirestore();
-  const r1 = await upsertLead(db, sanitizeLeadInput(base({ status: "in_progress" })), 1000);
-  assert.deepEqual(r1, { status: "in_progress", justCompleted: false });
-  const r2 = await upsertLead(db, sanitizeLeadInput(base({ status: "completed" })), 2000);
-  assert.deepEqual(r2, { status: "completed", justCompleted: true });
-  const r3 = await upsertLead(db, sanitizeLeadInput(base({ status: "completed" })), 3000);
-  assert.deepEqual(r3, { status: "completed", justCompleted: false });
-  const r4 = await upsertLead(db, sanitizeLeadInput(base({ status: "started" })), 4000);
-  assert.deepEqual(r4, { status: "completed", justCompleted: false });
-  assert.equal([...db.store.keys()].filter((k) => k.startsWith("demoLeads/")).length, 1);
-  assert.equal(db.store.get(`demoLeads/${SID}`).completedAt, 2000);
+  const r = await upsertLead(db, sanitizeLeadInput(base({ status: "completed", transcript: convo })), 1000);
+  assert.deepEqual(r, { status: "in_progress", justCompleted: false });
+  assert.equal(db.store.get(`demoLeads/${SID}`).completedAt, undefined);
 });
 
-test("lead convertido continua convertido", async () => {
+test("transcript curto ou sessão rápida não gera aviso", async () => {
   const db = createFakeFirestore();
-  await upsertLead(db, sanitizeLeadInput(base({ status: "completed" })), 1000);
+  await upsertLead(db, sanitizeLeadInput(base({ status: "in_progress" })), 0);
+  const short = await upsertLead(db, sanitizeLeadInput(base({ status: "completed", transcript: convo.slice(0, 3) })), MIN_SESSION_MS + 1);
+  assert.deepEqual(short, { status: "in_progress", justCompleted: false });
+  const fast = await upsertLead(db, sanitizeLeadInput(base({ status: "completed", transcript: convo })), MIN_SESSION_MS - 1);
+  assert.deepEqual(fast, { status: "in_progress", justCompleted: false });
+  const onlyBot = convo.map((m) => ({ ...m, role: "bot" }));
+  const db2 = createFakeFirestore();
+  await upsertLead(db2, sanitizeLeadInput(base({ status: "in_progress" })), 0);
+  const bots = await upsertLead(db2, sanitizeLeadInput(base({ status: "completed", transcript: onlyBot })), MIN_SESSION_MS + 1);
+  assert.equal(bots.justCompleted, false);
+});
+
+test("started→in_progress→completed legítimo avisa exatamente uma vez e não regride", async () => {
+  const db = createFakeFirestore();
+  const r0 = await upsertLead(db, sanitizeLeadInput(base()), 1000);
+  assert.deepEqual(r0, { status: "started", justCompleted: false });
+  const r1 = await upsertLead(db, sanitizeLeadInput(base({ status: "in_progress" })), 2000);
+  assert.deepEqual(r1, { status: "in_progress", justCompleted: false });
+  const t = 1000 + MIN_SESSION_MS;
+  const r2 = await upsertLead(db, sanitizeLeadInput(base({ status: "completed", transcript: convo })), t);
+  assert.deepEqual(r2, { status: "completed", justCompleted: true });
+  const r3 = await upsertLead(db, sanitizeLeadInput(base({ status: "completed", transcript: convo })), t + 1);
+  assert.deepEqual(r3, { status: "completed", justCompleted: false });
+  const r4 = await upsertLead(db, sanitizeLeadInput(base({ status: "started" })), t + 2);
+  assert.deepEqual(r4, { status: "completed", justCompleted: false });
+  assert.equal([...db.store.keys()].filter((k) => k.startsWith("demoLeads/")).length, 1);
+  assert.equal(db.store.get(`demoLeads/${SID}`).completedAt, t);
+});
+
+test("lead convertido fica intocado (só updatedAt) e 2º uid não sobrescreve", async () => {
+  const db = createFakeFirestore();
+  await upsertLead(db, sanitizeLeadInput(base({ status: "in_progress", transcript: convo })), 1000);
   assert.equal(await markConverted(db, SID, "uid1"), true);
-  const r = await upsertLead(db, sanitizeLeadInput(base({ status: "in_progress" })), 2000);
+  const r = await upsertLead(db, sanitizeLeadInput(base({ status: "in_progress", name: "Novo", transcript: [] })), 2000);
   assert.deepEqual(r, { status: "converted", justCompleted: false });
-  const d = db.store.get(`demoLeads/${SID}`);
+  let d = db.store.get(`demoLeads/${SID}`);
+  assert.equal(d.name, undefined);
+  assert.equal(d.transcript.length, 4);
+  assert.equal(d.updatedAt, 2000);
+  assert.equal(await markConverted(db, SID, "uid2"), true);
+  d = db.store.get(`demoLeads/${SID}`);
   assert.equal(d.convertedUid, "uid1");
   assert.equal(d.startedTrial, true);
+});
+
+test("transcript mantém as ÚLTIMAS 40 mensagens", () => {
+  const t = Array.from({ length: 60 }, (_, i) => ({ role: "user", text: `m${i}`, ts: i }));
+  const out = sanitizeLeadInput(base({ transcript: t }));
+  assert.equal(out.transcript.length, 40);
+  assert.equal(out.transcript[0].text, "m20");
+  assert.equal(out.transcript[39].text, "m59");
+});
+
+test("sem consentimento aceito, nada é aceito", () => {
+  assert.equal(sanitizeLeadInput(base({ consent: { accepted: false, version: "v1" } })), null);
+  assert.equal(sanitizeLeadInput(base({ consent: undefined })), null);
+  assert.equal(sanitizeLeadInput(base({ consent: { accepted: "true", version: "v1" } })), null);
 });
 
 test("markConverted com id inexistente ou inválido → false sem lançar", async () => {

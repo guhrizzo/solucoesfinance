@@ -9,6 +9,16 @@ export const LEAD_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const LEAD_COLLECTION = "demoLeads";
 
+/** Tempo mínimo entre o início da sessão e a conclusão pra disparar o aviso (anti-spam). */
+export const MIN_SESSION_MS = 20_000;
+/** Mensagens mínimas (e quantas do usuário) pra a conversa contar como real. */
+const MIN_TRANSCRIPT_MSGS = 4;
+const MIN_USER_MSGS = 2;
+
+function hasRealConversation(t: Lead["transcript"] | undefined): boolean {
+  return Array.isArray(t) && t.length >= MIN_TRANSCRIPT_MSGS && t.filter((m) => m.role === "user").length >= MIN_USER_MSGS;
+}
+
 type ClientStatus = "started" | "in_progress" | "completed";
 
 /** O que o cliente pode enviar — nunca converted/convertedUid/startedTrial/expiresAt/whatsapp. */
@@ -52,19 +62,20 @@ export function sanitizeLeadInput(raw: unknown): LeadInput | null {
   const locale = (LOCALES as readonly string[]).includes(raw.locale as string) ? (raw.locale as LeadInput["locale"]) : "pt-BR";
   const status = STATUSES.includes(raw.status as ClientStatus) ? (raw.status as ClientStatus) : "started";
 
-  const transcript: LeadInput["transcript"] = [];
+  let transcript: LeadInput["transcript"] = [];
   if (Array.isArray(raw.transcript)) {
     for (const m of raw.transcript) {
-      if (transcript.length >= 40) break;
       if (!isRecord(m) || (m.role !== "user" && m.role !== "bot")) continue;
       const text = str(m.text, 800);
       if (!text) continue;
       const ts = typeof m.ts === "number" && Number.isFinite(m.ts) ? m.ts : 0;
       transcript.push({ role: m.role, text, ts });
     }
+    transcript = transcript.slice(-40); // fica com as 40 mais recentes
   }
 
   const c = isRecord(raw.consent) ? raw.consent : {};
+  if (c.accepted !== true) return null; // sem consentimento, nada é gravado
   const out: LeadInput = {
     sessionId: raw.sessionId,
     locale,
@@ -73,7 +84,7 @@ export function sanitizeLeadInput(raw: unknown): LeadInput | null {
     interestedModules: strList(raw.interestedModules, 80),
     transcript,
     status,
-    consent: { accepted: c.accepted === true, version: str(c.version, 20) ?? "" },
+    consent: { accepted: true, version: str(c.version, 20) ?? "" },
   };
   const name = str(raw.name, 60);
   if (name) out.name = name;
@@ -98,19 +109,32 @@ export async function upsertLead(
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) {
+      // Nunca nasce "completed": só uma sessão já existente pode concluir.
+      const status: Lead["status"] = input.status === "completed" ? "in_progress" : input.status;
       const doc: Record<string, unknown> = {
         ...input,
+        status,
         startedAt: now,
         updatedAt: now,
         expiresAt: now + LEAD_RETENTION_MS,
         startedTrial: false,
       };
-      if (input.status === "completed") doc.completedAt = now;
       tx.set(ref, doc);
-      return { status: input.status as Lead["status"], justCompleted: input.status === "completed" };
+      return { status, justCompleted: false };
     }
     const cur = snap.data() as Lead;
-    const status = RANK[input.status] > RANK[cur.status] ? input.status : cur.status;
+    if (cur.status === "converted") {
+      // Convertido é terminal: só renova updatedAt.
+      tx.set(ref, { updatedAt: now }, { merge: true });
+      return { status: "converted" as const, justCompleted: false };
+    }
+    let status: Lead["status"] = RANK[input.status] > RANK[cur.status] ? input.status : cur.status;
+    if (status === "completed" && cur.status !== "completed") {
+      const eligible =
+        (hasRealConversation(input.transcript) || hasRealConversation(cur.transcript)) &&
+        now - cur.startedAt >= MIN_SESSION_MS;
+      if (!eligible) status = "in_progress";
+    }
     const justCompleted = status === "completed" && cur.status !== "completed";
     // Campos do servidor (startedAt, expiresAt, convertedUid, startedTrial, whatsapp) ficam de fora.
     const patch: Record<string, unknown> = {
@@ -139,6 +163,7 @@ export async function markConverted(db: DbLike, sessionId: string, uid: string):
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return false;
+    if ((snap.data() as Lead).status === "converted") return true; // idempotente: não troca o convertedUid
     tx.set(ref, { status: "converted", convertedUid: uid, startedTrial: true, updatedAt: Date.now() }, { merge: true });
     return true;
   });
