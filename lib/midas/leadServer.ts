@@ -177,3 +177,27 @@ export async function setWhatsAppResult(db: DbLike, sessionId: string, result: "
     /* ignore */
   }
 }
+
+const CLEANUP_BATCH = 400;
+const CLEANUP_MAX_LOOPS = 50;
+
+// Subconjunto de Firestore usado na limpeza (o fake dos testes implementa o mesmo).
+interface CleanupDb {
+  collection(path: string): { where(f: string, op: string, v: unknown): any };
+  batch(): { delete(ref: any): unknown; commit(): Promise<unknown> };
+}
+
+/** Apaga leads com expiresAt < now, em lotes de 400 (teto de 50 voltas). Devolve quantos apagou. */
+export async function deleteExpiredLeads(db: CleanupDb, now: number): Promise<number> {
+  let deleted = 0;
+  for (let i = 0; i < CLEANUP_MAX_LOOPS; i++) {
+    const snap = await db.collection(LEAD_COLLECTION).where("expiresAt", "<", now).limit(CLEANUP_BATCH).get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    for (const d of snap.docs) batch.delete(d.ref);
+    await batch.commit();
+    deleted += snap.docs.length;
+    if (snap.docs.length < CLEANUP_BATCH) break;
+  }
+  return deleted;
+}
