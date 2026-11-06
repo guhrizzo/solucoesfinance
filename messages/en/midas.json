@@ -6,7 +6,7 @@
   "privacy": {
     "notice": "This conversation is a demo. We keep your answers only to personalize what I show you and to improve NexusFi.",
     "link": "Privacy Policy",
-    "retention": "Answers are kept for up to 90 days."
+    "retention": "Answers are kept for 12 months and then deleted."
   },
   "common": {
     "back": "Back",
@@ -49,7 +49,10 @@
         "industria": "Manufacturing",
         "distribuidora": "Distribution",
         "outro": "Other"
-      }
+      },
+      "botNoName": [
+        "Nice to meet you! To begin: what kind of business do you have?"
+      ]
     },
     "pain": {
       "bot": [
@@ -117,7 +120,7 @@
     },
     "doubts": {
       "bot": [
-        "Go ahead and send your question. I'll note it down and, if needed, someone from the team will answer."
+        "Go ahead and send your question. I'll note it down and answer what I can. If you'd rather talk to a person, use the WhatsApp button."
       ],
       "chips": {
         "yes": "Makes sense",
@@ -129,7 +132,10 @@
       "bot": [
         "Deal, {name}! If you'd like to try it hands-on, just create your account. No rush."
       ],
-      "chips": {}
+      "chips": {},
+      "botNoName": [
+        "Deal! If you'd like to try it hands-on, just create your account. No rush."
+      ]
     }
   },
   "diagnosis": {
@@ -152,7 +158,7 @@
     "contasPagar": {
       "name": "Accounts payable",
       "description": "Records commitments with due dates and shows what is pending and what has been paid.",
-      "benefit": "Fewer delays, fines and interest, with a clear view of what must be paid."
+      "benefit": "Helps avoid delays, fines and interest, with a clear view of what must be paid."
     },
     "contasReceber": {
       "name": "Accounts receivable",
@@ -176,8 +182,8 @@
     },
     "integracoes": {
       "name": "Marketplace integrations",
-      "description": "Connects NexusFi to marketplaces such as Mercado Livre, TikTok Shop and Shein to bring in products and orders. You authorize the connection in the Inventory tab.",
-      "benefit": "Less typing and less checking between panels."
+      "description": "Connects NexusFi to marketplaces such as Mercado Livre and TikTok Shop to bring in products and orders. You authorize the connection in the Inventory tab.",
+      "benefit": "Helps reduce typing and checking between panels."
     },
     "impostos": {
       "name": "Taxes",
@@ -192,17 +198,17 @@
     "dashboard": {
       "name": "Dashboard",
       "description": "Gathers the main indicators in one place: period result, comparison with the previous period, cash projection, due dates and alerts.",
-      "benefit": "You see the overall situation in seconds and act before a problem happens."
+      "benefit": "Helps you see the overall situation in seconds and act before a problem shows up."
     },
     "cobrancaEmail": {
       "name": "Email billing",
       "description": "Sends billing emails from accounts receivable, with Pix copy-and-paste and due-date reminders. Part of the Pro plan.",
-      "benefit": "Collecting payments gets simpler and more timely."
+      "benefit": "Helps make collecting payments simpler and more timely."
     },
     "leitorNf": {
       "name": "Invoice reader",
       "description": "Uses artificial intelligence to identify withholdings on invoices and create the entries. Part of the Pro plan.",
-      "benefit": "Less typing and fewer tax errors."
+      "benefit": "Helps reduce typing and the risk of tax errors."
     },
     "rh": {
       "name": "HR",

@@ -50,3 +50,38 @@ test("en e es tem as mesmas chaves que pt-BR", () => {
   assert.deepEqual(keys("en"), keys("pt-BR"));
   assert.deepEqual(keys("es"), keys("pt-BR"));
 });
+
+import { TRIAL_DAYS } from "@/lib/billingPlans.ts";
+
+test("nenhum texto cita Shein (oculta por flag)", () => {
+  for (const l of LOCALES) for (const [k, v] of flat(M[l])) assert.ok(!/shein/i.test(String(v)), `${l} ${k}`);
+});
+
+test("retencao de 12 meses nos tres idiomas", () => {
+  assert.match(M["pt-BR"].privacy.retention, /12 meses/);
+  assert.match(M.en.privacy.retention, /12 months/);
+  assert.match(M.es.privacy.retention, /12 meses/);
+});
+
+test("todo bot com {name} tem botNoName sem placeholder, igual em todos os idiomas", () => {
+  const withName = (l) => Object.entries(M[l].steps).filter(([, s]) => s.bot.some((b) => b.includes("{name}"))).map(([id]) => id).sort();
+  const base = withName("pt-BR");
+  assert.ok(base.length > 0);
+  for (const l of LOCALES) {
+    assert.deepEqual(withName(l), base, l);
+    for (const id of base) {
+      const s = M[l].steps[id];
+      assert.ok(Array.isArray(s.botNoName) && s.botNoName.length > 0, `${l} ${id}.botNoName`);
+      assert.ok(s.botNoName.every((b) => !b.includes("{")), `${l} ${id}.botNoName placeholder`);
+    }
+  }
+});
+
+test("en/es sem palavras so do portugues", () => {
+  const re = / (você|não|para o|seu|sua) |ção\b|ções\b/i;
+  for (const l of ["en", "es"]) for (const [k, v] of flat(M[l])) assert.ok(!re.test(String(v)), `${l} ${k}: ${v}`);
+});
+
+test("cta.subtext contem TRIAL_DAYS", () => {
+  for (const l of LOCALES) assert.ok(M[l].cta.subtext.includes(String(TRIAL_DAYS)), l);
+});

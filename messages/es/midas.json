@@ -6,7 +6,7 @@
   "privacy": {
     "notice": "Esta conversación es una demostración. Guardamos tus respuestas solo para personalizar lo que te muestro y mejorar NexusFi.",
     "link": "Política de Privacidad",
-    "retention": "Las respuestas se guardan hasta 90 días."
+    "retention": "Las respuestas se guardan por 12 meses y luego se eliminan."
   },
   "common": {
     "back": "Volver",
@@ -49,7 +49,10 @@
         "industria": "Industria",
         "distribuidora": "Distribuidora",
         "outro": "Otro"
-      }
+      },
+      "botNoName": [
+        "¡Mucho gusto! Para empezar: ¿qué tipo de negocio tienes?"
+      ]
     },
     "pain": {
       "bot": [
@@ -117,7 +120,7 @@
     },
     "doubts": {
       "bot": [
-        "Envía tu duda. La anoto y, si hace falta, alguien del equipo te responde."
+        "Envía tu duda. La anoto y respondo lo que pueda. Si prefieres hablar con una persona, usa el botón de WhatsApp."
       ],
       "chips": {
         "yes": "Tiene sentido",
@@ -129,7 +132,10 @@
       "bot": [
         "¡Hecho, {name}! Si quieres conocerlo en la práctica, solo crea tu cuenta. Sin prisa."
       ],
-      "chips": {}
+      "chips": {},
+      "botNoName": [
+        "¡Hecho! Si quieres conocerlo en la práctica, solo crea tu cuenta. Sin prisa."
+      ]
     }
   },
   "diagnosis": {
@@ -152,7 +158,7 @@
     "contasPagar": {
       "name": "Cuentas por pagar",
       "description": "Registra los compromisos con fecha de vencimiento y muestra lo pendiente y lo ya pagado.",
-      "benefit": "Menos atrasos, multas e intereses, con una visión clara de lo que hay que pagar."
+      "benefit": "Ayuda a evitar atrasos, multas e intereses, con una visión clara de lo que hay que pagar."
     },
     "contasReceber": {
       "name": "Cuentas por cobrar",
@@ -176,8 +182,8 @@
     },
     "integracoes": {
       "name": "Integraciones con marketplaces",
-      "description": "Conecta NexusFi con marketplaces como Mercado Livre, TikTok Shop y Shein para traer productos y pedidos. Tú autorizas la conexión en la pestaña Inventario.",
-      "benefit": "Menos digitación y menos revisión entre paneles."
+      "description": "Conecta NexusFi con marketplaces como Mercado Livre y TikTok Shop para traer productos y pedidos. Tú autorizas la conexión en la pestaña Inventario.",
+      "benefit": "Ayuda a reducir la digitación y la revisión entre paneles."
     },
     "impostos": {
       "name": "Impuestos",
@@ -192,17 +198,17 @@
     "dashboard": {
       "name": "Dashboard",
       "description": "Reúne los principales indicadores en un solo lugar: resultado del período, comparación con el período anterior, proyección de caja, vencimientos y alertas.",
-      "benefit": "Ves la situación general en segundos y actúas antes de que ocurra el problema."
+      "benefit": "Te ayuda a ver la situación general en segundos y a actuar antes de que aparezca el problema."
     },
     "cobrancaEmail": {
       "name": "Cobro por correo",
       "description": "Envía cobros por correo desde las cuentas por cobrar, con Pix copia y pega y recordatorios de vencimiento. Forma parte del plan Pro.",
-      "benefit": "Cobrar se vuelve más simple y puntual."
+      "benefit": "Ayuda a que cobrar sea más simple y puntual."
     },
     "leitorNf": {
       "name": "Lector de facturas",
       "description": "Usa inteligencia artificial para identificar retenciones en facturas y crear los registros. Forma parte del plan Pro.",
-      "benefit": "Menos digitación y menos errores en los impuestos."
+      "benefit": "Ayuda a reducir la digitación y el riesgo de errores en los impuestos."
     },
     "rh": {
       "name": "RR. HH.",

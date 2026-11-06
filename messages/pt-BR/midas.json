@@ -1,12 +1,12 @@
 {
   "header": {
     "title": "Midas",
-    "subtitle": "Sua guia na NexusFi"
+    "subtitle": "Sua guia no NexusFi"
   },
   "privacy": {
-    "notice": "Esta conversa é uma demonstração. Guardamos suas respostas só para personalizar o que mostro e melhorar a NexusFi.",
+    "notice": "Esta conversa é uma demonstração. Guardamos suas respostas só para personalizar o que mostro e melhorar o NexusFi.",
     "link": "Política de Privacidade",
-    "retention": "As respostas ficam guardadas por até 90 dias."
+    "retention": "As respostas ficam guardadas por 12 meses e depois são apagadas."
   },
   "common": {
     "back": "Voltar",
@@ -22,7 +22,7 @@
   "steps": {
     "welcome": {
       "bot": [
-        "Oi! Eu sou a Midas, guia da NexusFi. Posso te mostrar, em poucos minutos, como a plataforma ajudaria o seu negócio.",
+        "Oi! Eu sou a Midas, guia do NexusFi. Posso te mostrar, em poucos minutos, como a plataforma ajudaria o seu negócio.",
         "Vamos começar? Eu faço algumas perguntas rápidas e você responde do seu jeito."
       ],
       "chips": {
@@ -49,7 +49,10 @@
         "industria": "Indústria",
         "distribuidora": "Distribuidora",
         "outro": "Outro"
-      }
+      },
+      "botNoName": [
+        "Prazer! Para começar: qual é o tipo do seu negócio?"
+      ]
     },
     "pain": {
       "bot": [
@@ -99,7 +102,7 @@
     },
     "modules": {
       "bot": [
-        "Estes são os módulos da NexusFi que mais combinam com o que você descreveu:"
+        "Estes são os módulos do NexusFi que mais combinam com o que você descreveu:"
       ],
       "chips": {
         "continue": "Continuar"
@@ -117,7 +120,7 @@
     },
     "doubts": {
       "bot": [
-        "Pode mandar sua dúvida. Eu anoto e, se precisar, uma pessoa da equipe responde."
+        "Pode mandar sua dúvida. Eu anoto e respondo o que eu souber. Se preferir falar com uma pessoa, use o botão do WhatsApp."
       ],
       "chips": {
         "yes": "Faz sentido",
@@ -129,7 +132,10 @@
       "bot": [
         "Combinado, {name}! Se quiser conhecer na prática, é só criar sua conta. Sem pressa."
       ],
-      "chips": {}
+      "chips": {},
+      "botNoName": [
+        "Combinado! Se quiser conhecer na prática, é só criar sua conta. Sem pressa."
+      ]
     }
   },
   "diagnosis": {
@@ -152,7 +158,7 @@
     "contasPagar": {
       "name": "Contas a pagar",
       "description": "Registra os compromissos com data de vencimento e mostra o que está pendente e o que já foi pago.",
-      "benefit": "Menos atrasos, multas e juros, com uma visão clara do que precisa ser pago."
+      "benefit": "Ajuda a evitar atrasos, multas e juros, com uma visão clara do que precisa ser pago."
     },
     "contasReceber": {
       "name": "Contas a receber",
@@ -176,8 +182,8 @@
     },
     "integracoes": {
       "name": "Integrações com marketplaces",
-      "description": "Conecta a NexusFi a marketplaces como Mercado Livre, TikTok Shop e Shein para trazer produtos e pedidos. Você autoriza a conexão na aba Estoque.",
-      "benefit": "Menos digitação e menos conferência entre painéis."
+      "description": "Conecta o NexusFi a marketplaces como Mercado Livre e TikTok Shop para trazer produtos e pedidos. Você autoriza a conexão na aba Estoque.",
+      "benefit": "Ajuda a reduzir a digitação e a conferência entre painéis."
     },
     "impostos": {
       "name": "Impostos",
@@ -192,17 +198,17 @@
     "dashboard": {
       "name": "Dashboard",
       "description": "Reúne os principais indicadores num só lugar: resultado do período, comparação com o período anterior, projeção de caixa, vencimentos e alertas.",
-      "benefit": "Você enxerga a situação geral em segundos e age antes de o problema acontecer."
+      "benefit": "Ajuda você a enxergar a situação geral em segundos e a agir antes de o problema aparecer."
     },
     "cobrancaEmail": {
       "name": "Cobrança por e-mail",
       "description": "Envia cobranças por e-mail a partir das contas a receber, com Pix copia e cola e lembretes de vencimento. Faz parte do plano Pro.",
-      "benefit": "Cobrar fica mais simples e mais pontual."
+      "benefit": "Ajuda a deixar a cobrança mais simples e pontual."
     },
     "leitorNf": {
       "name": "Leitor de notas fiscais",
       "description": "Usa inteligência artificial para identificar retenções em notas fiscais e criar os lançamentos. Faz parte do plano Pro.",
-      "benefit": "Menos digitação e menos chance de erro nos impostos."
+      "benefit": "Ajuda a reduzir a digitação e o risco de erro nos impostos."
     },
     "rh": {
       "name": "RH",
@@ -229,5 +235,5 @@
     "retry": "Tentar novamente",
     "empty": "Escreva ou escolha uma opção para continuar."
   },
-  "overview": "A NexusFi reúne fluxo de caixa, contas a pagar e a receber, estoque, vendas, impostos e relatórios num só lugar. Quando quiser, me conte sobre o seu negócio e eu mostro o que combina com você."
+  "overview": "O NexusFi reúne fluxo de caixa, contas a pagar e a receber, estoque, vendas, impostos e relatórios num só lugar. Quando quiser, me conte sobre o seu negócio e eu mostro o que combina com você."
 }
