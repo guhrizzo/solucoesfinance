@@ -1,0 +1,233 @@
+{
+  "header": {
+    "title": "Midas",
+    "subtitle": "Sua guia na NexusFi"
+  },
+  "privacy": {
+    "notice": "Esta conversa é uma demonstração. Guardamos suas respostas só para personalizar o que mostro e melhorar a NexusFi.",
+    "link": "Política de Privacidade",
+    "retention": "As respostas ficam guardadas por até 90 dias."
+  },
+  "common": {
+    "back": "Voltar",
+    "send": "Enviar",
+    "inputPlaceholder": "Ou responda diretamente…",
+    "typing": "Midas está digitando…",
+    "proBadge": "recurso do plano Pro",
+    "preview": "ver prévia",
+    "humanWhatsapp": "Falar com uma pessoa no WhatsApp",
+    "progress": "Progresso da conversa",
+    "didntUnderstand": "Hum, não entendi bem. Pode escolher uma opção ou me contar de outro jeito?"
+  },
+  "steps": {
+    "welcome": {
+      "bot": [
+        "Oi! Eu sou a Midas, guia da NexusFi. Posso te mostrar, em poucos minutos, como a plataforma ajudaria o seu negócio.",
+        "Vamos começar? Eu faço algumas perguntas rápidas e você responde do seu jeito."
+      ],
+      "chips": {
+        "start": "Vamos lá",
+        "overview": "Quero ver uma visão geral"
+      }
+    },
+    "name": {
+      "bot": [
+        "Que bom ter você aqui! Como posso te chamar?"
+      ],
+      "chips": {
+        "skip": "Prefiro não dizer"
+      }
+    },
+    "segment": {
+      "bot": [
+        "Prazer, {name}! Para começar: qual é o tipo do seu negócio?"
+      ],
+      "chips": {
+        "loja": "Loja física",
+        "ecommerce": "E-commerce",
+        "servicos": "Prestação de serviços",
+        "industria": "Indústria",
+        "distribuidora": "Distribuidora",
+        "outro": "Outro"
+      }
+    },
+    "pain": {
+      "bot": [
+        "Entendi. E o que mais pesa na sua rotina hoje?"
+      ],
+      "chips": {
+        "financeiro": "Controle financeiro",
+        "contas": "Contas a pagar e receber",
+        "estoque": "Estoque",
+        "vendas": "Vendas",
+        "impostos": "Impostos",
+        "relatorios": "Relatórios",
+        "canais": "Vários canais de venda",
+        "tudo": "Um pouco de tudo"
+      }
+    },
+    "tool": {
+      "bot": [
+        "Faz sentido. E como você cuida disso hoje?"
+      ],
+      "chips": {
+        "planilha": "Planilhas",
+        "caderno": "Caderno ou papel",
+        "sistema": "Outro sistema",
+        "app_banco": "App do banco",
+        "memoria": "De cabeça",
+        "contagem": "Contagem manual",
+        "marketplace": "Painel de cada marketplace",
+        "nenhum": "Ainda não faço"
+      }
+    },
+    "deepen": {
+      "bot": [
+        "Obrigada por contar. Se quiser, me diga em uma frase o que mais te incomoda nisso. Se preferir, seguimos."
+      ],
+      "chips": {
+        "continue": "Seguir"
+      }
+    },
+    "diagnosis": {
+      "bot": [
+        "Pelo que você me contou, já dá para ver por onde começar."
+      ],
+      "chips": {
+        "continue": "Ver o que ajudaria"
+      }
+    },
+    "modules": {
+      "bot": [
+        "Estes são os módulos da NexusFi que mais combinam com o que você descreveu:"
+      ],
+      "chips": {
+        "continue": "Continuar"
+      }
+    },
+    "confirm": {
+      "bot": [
+        "Isso faz sentido para o seu negócio? Fique à vontade para perguntar qualquer coisa."
+      ],
+      "chips": {
+        "yes": "Faz sentido",
+        "more": "Ver mais módulos",
+        "doubts": "Tenho uma dúvida"
+      }
+    },
+    "doubts": {
+      "bot": [
+        "Pode mandar sua dúvida. Eu anoto e, se precisar, uma pessoa da equipe responde."
+      ],
+      "chips": {
+        "yes": "Faz sentido",
+        "more": "Ver mais módulos",
+        "doubts": "Tenho outra dúvida"
+      }
+    },
+    "cta": {
+      "bot": [
+        "Combinado, {name}! Se quiser conhecer na prática, é só criar sua conta. Sem pressa."
+      ],
+      "chips": {}
+    }
+  },
+  "diagnosis": {
+    "financeiro": "Ter o dinheiro que entra e sai num só lugar costuma ser o primeiro passo para decidir com mais segurança.",
+    "contas": "Organizar vencimentos e recebimentos ajuda a evitar atrasos e a saber o que ainda vai entrar.",
+    "estoque": "Com as quantidades registradas, fica mais fácil saber o que tem, o que está acabando e o que saiu.",
+    "vendas": "Reunir as vendas num painel único mostra o que está funcionando em cada canal.",
+    "impostos": "Registrar impostos e vencimentos num só lugar ajuda a não ser pego de surpresa.",
+    "relatorios": "Transformar seus lançamentos em relatórios poupa o trabalho de montar tudo na mão.",
+    "canais": "Conectar os canais de venda evita conferir cada painel separadamente.",
+    "tudo": "Quando tudo fica junto, você enxerga o negócio inteiro de uma vez e escolhe por onde começar.",
+    "visibilityGap": "Parece que falta uma visão clara de como o negócio está. É justamente isso que um painel único resolve."
+  },
+  "modules": {
+    "fluxoCaixa": {
+      "name": "Fluxo de caixa",
+      "description": "Mostra as entradas e saídas de dinheiro ao longo do tempo, com saldo e movimentações por categoria.",
+      "benefit": "Você vê como cada movimentação afeta o caixa e planeja melhor os compromissos."
+    },
+    "contasPagar": {
+      "name": "Contas a pagar",
+      "description": "Registra os compromissos com data de vencimento e mostra o que está pendente e o que já foi pago.",
+      "benefit": "Menos atrasos, multas e juros, com uma visão clara do que precisa ser pago."
+    },
+    "contasReceber": {
+      "name": "Contas a receber",
+      "description": "Acompanha o que seus clientes ainda vão pagar, o que já foi recebido e o que está em aberto ou atrasado.",
+      "benefit": "Você sabe quem deve, quanto e quando, sem depender de anotações soltas."
+    },
+    "relatorios": {
+      "name": "Relatórios",
+      "description": "Transforma seus lançamentos em análises como Fluxo de Caixa, Faturamento, Gastos, DRE e Vendas.",
+      "benefit": "Você entende o desempenho do negócio sem montar planilhas na mão."
+    },
+    "estoque": {
+      "name": "Estoque",
+      "description": "Cadastra produtos e acompanha as quantidades disponíveis, com entradas e saídas.",
+      "benefit": "Você sabe o que tem em mãos e o que está acabando."
+    },
+    "vendas": {
+      "name": "Painel de vendas",
+      "description": "Reúne as vendas dos canais conectados e as vendas manuais, com indicadores de desempenho.",
+      "benefit": "Uma visão única do que vende e por onde."
+    },
+    "integracoes": {
+      "name": "Integrações com marketplaces",
+      "description": "Conecta a NexusFi a marketplaces como Mercado Livre, TikTok Shop e Shein para trazer produtos e pedidos. Você autoriza a conexão na aba Estoque.",
+      "benefit": "Menos digitação e menos conferência entre painéis."
+    },
+    "impostos": {
+      "name": "Impostos",
+      "description": "Registra e acompanha os impostos da empresa e seus vencimentos.",
+      "benefit": "Você acompanha as obrigações e se organiza antes do vencimento."
+    },
+    "centroCustos": {
+      "name": "Centros de custo",
+      "description": "Organiza as despesas por área, projeto ou finalidade da empresa.",
+      "benefit": "Você entende para onde vai o dinheiro de cada parte do negócio."
+    },
+    "dashboard": {
+      "name": "Dashboard",
+      "description": "Reúne os principais indicadores num só lugar: resultado do período, comparação com o período anterior, projeção de caixa, vencimentos e alertas.",
+      "benefit": "Você enxerga a situação geral em segundos e age antes de o problema acontecer."
+    },
+    "cobrancaEmail": {
+      "name": "Cobrança por e-mail",
+      "description": "Envia cobranças por e-mail a partir das contas a receber, com Pix copia e cola e lembretes de vencimento. Faz parte do plano Pro.",
+      "benefit": "Cobrar fica mais simples e mais pontual."
+    },
+    "leitorNf": {
+      "name": "Leitor de notas fiscais",
+      "description": "Usa inteligência artificial para identificar retenções em notas fiscais e criar os lançamentos. Faz parte do plano Pro.",
+      "benefit": "Menos digitação e menos chance de erro nos impostos."
+    },
+    "rh": {
+      "name": "RH",
+      "description": "Cadastro de pessoas, custo da equipe, comissões e folha com holerite. Faz parte do plano Pro.",
+      "benefit": "Você acompanha o custo de pessoal junto com o restante do financeiro."
+    },
+    "pdv": {
+      "name": "PDV (frente de caixa)",
+      "description": "Frente de caixa com abertura e fechamento de caixa por turno. Faz parte do plano Pro.",
+      "benefit": "As vendas do balcão entram direto no seu controle."
+    },
+    "alertasWhatsapp": {
+      "name": "Avisos por WhatsApp",
+      "description": "Envia ao dono avisos sobre caixa, estoque e contas pelo WhatsApp. Faz parte do plano Pro.",
+      "benefit": "Você é avisado sem precisar abrir o sistema."
+    }
+  },
+  "cta": {
+    "button": "COMEÇAR MEU TESTE GRATUITO",
+    "subtext": "7 dias para conhecer o NexusFi. Sem compromisso."
+  },
+  "errors": {
+    "network": "Tive um problema de conexão. Suas respostas continuam aqui.",
+    "retry": "Tentar novamente",
+    "empty": "Escreva ou escolha uma opção para continuar."
+  },
+  "overview": "A NexusFi reúne fluxo de caixa, contas a pagar e a receber, estoque, vendas, impostos e relatórios num só lugar. Quando quiser, me conte sobre o seu negócio e eu mostro o que combina com você."
+}
