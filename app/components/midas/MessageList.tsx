@@ -19,6 +19,7 @@ export function MessageList({ items, typing, sessionId, onRetry, retryDisabled }
   const t = useTranslations("midas");
 
   return (
+    <>
     <div className="midas-log" role="log" aria-live="polite" aria-relevant="additions">
       {items.map((item, i) => {
         const prev = items[i - 1];
@@ -71,23 +72,26 @@ export function MessageList({ items, typing, sessionId, onRetry, retryDisabled }
         );
       })}
 
-      {typing && (
-        <div className="midas-msg midas-msg--bot">
-          {(!items.length || items[items.length - 1].role !== "bot") && (
-            <p className="midas-msg__name">
-              <span className="midas-avatar midas-avatar--sm" aria-hidden="true">
-                <Sparkles size={12} />
-              </span>
-              {t("header.title")}
-            </p>
-          )}
-          <div className="midas-typing" role="status" aria-label={t("common.typing")}>
-            <span />
-            <span />
-            <span />
-          </div>
-        </div>
-      )}
     </div>
+    {/* Fora da região aria-live: os pontos são decorativos e o rótulo sr-only não é re-anunciado. */}
+    {typing && (
+      <div className="midas-msg midas-msg--bot midas-msg--typing">
+        {(!items.length || items[items.length - 1].role !== "bot") && (
+          <p className="midas-msg__name" aria-hidden="true">
+            <span className="midas-avatar midas-avatar--sm">
+              <Sparkles size={12} />
+            </span>
+            {t("header.title")}
+          </p>
+        )}
+        <span className="sr-only">{t("common.typing")}</span>
+        <div className="midas-typing" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    )}
+    </>
   );
 }

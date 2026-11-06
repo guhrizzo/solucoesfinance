@@ -191,8 +191,8 @@ export function buildLeadPayload(
   return out;
 }
 
-/** Fire-and-forget com no máximo uma nova tentativa. Nunca lança. */
-export function syncLead(payload: LeadPayload): void {
+/** Fire-and-forget com no máximo uma nova tentativa. Nunca rejeita: resolve false se as duas falharem. */
+export function syncLead(payload: LeadPayload): Promise<boolean> {
   const send = () =>
     fetch("/api/midas/lead", {
       method: "POST",
@@ -201,12 +201,16 @@ export function syncLead(payload: LeadPayload): void {
       keepalive: true,
     }).then((r) => {
       if (!r.ok) throw new Error("lead");
+      return true;
     });
-  send().catch(() => {
-    setTimeout(() => {
-      send().catch(() => undefined);
-    }, 1500);
-  });
+  return send().catch(
+    () =>
+      new Promise<boolean>((resolve) => {
+        setTimeout(() => {
+          send().then(resolve, () => resolve(false));
+        }, 1500);
+      }),
+  );
 }
 
 export function whatsappHref(message: string): string {

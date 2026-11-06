@@ -42,6 +42,8 @@ type SlotStep = (typeof SLOT_STEPS)[number];
 const isSlotStep = (s: string): s is SlotStep => (SLOT_STEPS as readonly string[]).includes(s);
 
 const MORE_PAGE = 3;
+const TURN_TIMEOUT_MS = 15_000;
+const NEAR_BOTTOM_PX = 120;
 
 function readTopic(): Pain | null {
   try {
@@ -125,6 +127,8 @@ function MidasDemoInner() {
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState("");
   const [topic, setTopic] = useState<Pain | null>(boot.topic);
+  /** Visão geral vista na tela inicial, ANTES do aceite (sem rede, sem lead). */
+  const [introOverview, setIntroOverview] = useState(false);
 
   const leadStartedRef = useRef(boot.leadStarted);
   const lastSyncedRef = useRef(boot.state.consented ? serialize(boot.state) : "");
@@ -132,10 +136,33 @@ function MidasDemoInner() {
   const stateRef = useRef(state);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const introRef = useRef<HTMLElement>(null);
+  /** Token de requisição: restart/voltar incrementam e resultados antigos de /turn são descartados. */
+  const reqTokenRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  /** Onde pôr o foco depois do próximo render. */
+  const focusNextRef = useRef<"input" | "intro" | "overview" | null>(null);
+  /** Rolagem: segue o fim só se o visitante já está perto dele (ou acabou de enviar). */
+  const nearBottomRef = useRef(true);
+  const forceScrollRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Foco pendente (aceite, chip, reinício): aplicado depois que o alvo existe no DOM.
+  useEffect(() => {
+    const target = focusNextRef.current;
+    if (!target) return;
+    focusNextRef.current = null;
+    if (target === "input" && inputRef.current) inputRef.current.focus();
+    else if (target === "intro") introRef.current?.focus();
+    else if (target === "overview") document.getElementById("midas-overview")?.focus();
+    else logRef.current?.focus();
+  });
+
+  // Cancela /turn pendente ao desmontar.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const typing = queue.length > 0;
   const locked = typing || busy;
@@ -153,10 +180,14 @@ function MidasDemoInner() {
     return () => window.clearTimeout(id);
   }, [queue]);
 
-  // Rolagem automática até a última mensagem.
+  // Rolagem automática até a última mensagem (sem arrancar quem está lendo lá em cima).
   useEffect(() => {
     const el = logRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    if (!el) return;
+    if (nearBottomRef.current || forceScrollRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+    forceScrollRef.current = false;
   }, [items.length, queue.length, busy]);
 
   // Persistência local (retomada da sessão).
@@ -171,24 +202,32 @@ function MidasDemoInner() {
     if (key === lastSyncedRef.current) return;
     lastSyncedRef.current = key;
     const status = state.step === "cta" ? "completed" : leadStartedRef.current ? "in_progress" : "started";
-    leadStartedRef.current = true;
     const all = [...items, ...queue];
-    syncLead(buildLeadPayload(sessionId, locale, state, all, shownFrom(all), status));
+    if (!leadStartedRef.current) {
+      leadStartedRef.current = true;
+      // Grava já, no mesmo passe: recarregar logo após o 1º POST não reenvia "started".
+      saveSession({ sessionId, state, items: all, shownModules: shownFrom(all), leadStarted: true });
+    }
+    const token = reqTokenRef.current;
+    void syncLead(buildLeadPayload(sessionId, locale, state, all, shownFrom(all), status)).then((ok) => {
+      // Falhou duas vezes: o próximo passe reenvia (desde que a sessão ainda seja a mesma).
+      if (!ok && token === reqTokenRef.current && lastSyncedRef.current === key) lastSyncedRef.current = "";
+    });
   }, [state, items, queue, sessionId, locale]);
 
-  const focusInput = useCallback((fromText: boolean) => {
-    let fine = true;
-    try {
-      fine = window.matchMedia("(pointer: fine)").matches;
-    } catch {
-      /* ignore */
-    }
-    if (fromText || fine) inputRef.current?.focus();
+  const focusInput = useCallback(() => {
+    focusNextRef.current = "input";
   }, []);
 
   /** Chama a IA opcional. kind "doubt": dúvida livre; "slot": texto que o dicionário não entendeu. */
   const askAi = useCallback(
     async (message: string, kind: "doubt" | "slot", historyItems: ChatItem[], turn: number) => {
+      if (!stateRef.current.consented) return; // nunca antes do aceite
+      const token = reqTokenRef.current;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const timer = window.setTimeout(() => controller.abort(), TURN_TIMEOUT_MS);
       setBusy(true);
       retryRef.current = null;
       const history = historyItems
@@ -202,12 +241,17 @@ function MidasDemoInner() {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ message, history, locale, consented: true }),
+          signal: controller.signal,
         });
         if (!res.ok) throw new Error("turn");
         const data = (await res.json()) as { reply?: unknown; slots?: unknown };
         reply = typeof data.reply === "string" && data.reply.trim() ? data.reply.trim() : null;
         slots = data.slots && typeof data.slots === "object" ? (data.slots as Record<string, unknown>) : {};
       } catch {
+        window.clearTimeout(timer);
+        if (abortRef.current === controller) abortRef.current = null;
+        // Resultado de uma sessão/etapa que já mudou (restart/voltar): descarta tudo.
+        if (token !== reqTokenRef.current) return;
         retryRef.current = () => {
           setItems((prev) => prev.filter((i) => i.kind !== "error"));
           void askAi(message, kind, historyItems, turn);
@@ -216,6 +260,9 @@ function MidasDemoInner() {
         setBusy(false);
         return;
       }
+      window.clearTimeout(timer);
+      if (abortRef.current === controller) abortRef.current = null;
+      if (token !== reqTokenRef.current) return;
 
       const out: ChatItem[] = [];
       if (kind === "doubt") {
@@ -291,43 +338,57 @@ function MidasDemoInner() {
       setQueue(out);
       setState(next);
       setInput("");
+      forceScrollRef.current = true;
       if (ai) void askAi(text, ai, history, turn);
-      focusInput(!ans.chip);
+      focusInput();
     },
     [askAi, focusInput, items, locked, queue, state, t],
   );
 
-  const consent = (chip: "start" | "overview") => {
-    const consented: MidasState = { ...state, consented: true };
-    let next = applyAnswer(consented, { chip });
+  /** Único ponto de aceite: "Ok, vamos lá" (= chip "start" do motor). A visão geral NÃO consente. */
+  const consent = () => {
+    let next = applyAnswer(state, { chip: "start" });
     next = { ...next, consented: true };
     if (topic) {
       next = applyTopic(next, topic);
       setTopic(null);
     }
-    const out = enteringItems(t, consented, [], false);
-    if (chip === "overview") out.push(botItem(t("overview"), 0, { aux: true }));
-    else out.push(...enteringItems(t, next, [], false));
+    const out = [...enteringItems(t, { ...state, consented: true }, [], false), ...enteringItems(t, next, [], false)];
     setItems([]);
     setQueue(out);
     setState(next);
+    setIntroOverview(false);
+    nearBottomRef.current = true;
+    focusInput();
+  };
+
+  /** Cancela qualquer /turn em andamento e invalida resultados que ainda cheguem. */
+  const cancelPending = () => {
+    reqTokenRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    retryRef.current = null;
+    setBusy(false);
   };
 
   const back = () => {
     if (locked) return;
     const next = goBack(state);
     if (next === state) return;
+    cancelPending();
     const h = next.history.length;
-    retryRef.current = null;
     setItems([...items, ...queue].filter((i) => i.turn < h || (i.turn === h && i.role === "bot" && !i.aux && i.kind !== "error")));
     setQueue([]);
     setState(next);
-    focusInput(false);
+    focusInput();
   };
 
   const restart = () => {
+    cancelPending();
     clearSession();
-    retryRef.current = null;
+    setIntroOverview(false);
+    setTopic(null);
+    focusNextRef.current = "intro";
     leadStartedRef.current = false;
     lastSyncedRef.current = "";
     setSessionId(newSessionId());
@@ -354,12 +415,17 @@ function MidasDemoInner() {
       />
 
       {!state.consented ? (
-        <main className="midas-intro">
+        <main className="midas-intro" ref={introRef} tabIndex={-1}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/nexus_fi_logo_preto.png" alt="NexusFi" className="midas-logo" />
           <h1 className="midas-intro__hello">{t("common.introHello")}</h1>
           <p className="midas-intro__line">{t("common.introLine")}</p>
           <p className="midas-intro__welcome">{t("common.introWelcome")}</p>
+          {introOverview && (
+            <p className="midas-intro__overview" id="midas-overview" tabIndex={-1}>
+              {t("overview")}
+            </p>
+          )}
           <div className="midas-privacy">
             <p>{t("privacy.notice")}</p>
             <p>{t("privacy.retention")}</p>
@@ -369,17 +435,36 @@ function MidasDemoInner() {
             </Link>
           </div>
           <div className="midas-intro__actions">
-            <Button size="lg" onClick={() => consent("start")} autoFocus>
+            <Button size="lg" onClick={consent} autoFocus>
               {t("common.introStart")}
             </Button>
-            <Button size="lg" variant="secondary" onClick={() => consent("overview")}>
-              {t("steps.welcome.chips.overview")}
-            </Button>
+            {!introOverview && (
+              <Button
+                size="lg"
+                variant="secondary"
+                aria-controls="midas-overview"
+                onClick={() => {
+                  // Só mostra o texto: nenhum aceite, nenhuma chamada de rede.
+                  setIntroOverview(true);
+                  focusNextRef.current = "overview";
+                }}
+              >
+                {t("steps.welcome.chips.overview")}
+              </Button>
+            )}
           </div>
         </main>
       ) : (
         <>
-          <main className="midas-scroll" ref={logRef}>
+          <main
+            className="midas-scroll"
+            ref={logRef}
+            tabIndex={-1}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= NEAR_BOTTOM_PX;
+            }}
+          >
             <div className="midas-column">
               <MessageList
                 items={items}
