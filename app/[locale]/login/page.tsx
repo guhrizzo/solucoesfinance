@@ -13,6 +13,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink, completeGoogleLink, type PendingGoogleLink } from "@/lib/authLink";
 import { canLoginWithSystemBrowser, loginWithSystemBrowser } from "@/lib/desktopBridge";
+import { readLeadParam } from "@/lib/midas/leadParam";
 
 // Códigos de erro Firebase reconhecidos → chave em auth.errors.
 const KNOWN_ERROR_CODES = new Set([
@@ -90,10 +91,16 @@ export default function LoginPage() {
   const [pendingGoogleLink, setPendingGoogleLink] = useState<PendingGoogleLink | null>(null);
   // ?plano= (veio da landing) — propaga pro link de cadastro.
   const [planoParam, setPlanoParam] = useState("");
+  // ?lead= (demo do Midas) — só preservado pro link de cadastro.
+  const [leadParam, setLeadParam] = useState("");
   useEffect(() => {
     setPlanoParam(new URLSearchParams(window.location.search).get("plano") || "");
+    setLeadParam(readLeadParam(window.location.search, null) ?? "");
   }, []);
-  const registerHref = planoParam ? `/register?plano=${encodeURIComponent(planoParam)}` : "/register";
+  const registerQuery = new URLSearchParams();
+  if (planoParam) registerQuery.set("plano", planoParam);
+  if (leadParam) registerQuery.set("lead", leadParam);
+  const registerHref = registerQuery.size ? `/register?${registerQuery.toString()}` : "/register";
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
