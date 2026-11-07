@@ -1,0 +1,900 @@
+{
+  "version": 1,
+  "historyId": "021f5b6e-3c58-43ec-a0e2-8f248e0ed881",
+  "currentRevision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+  "pendingChanges": false,
+  "files": {
+    "assets/fonts/hanken-grotesk.woff2": {
+      "hash": "e9201eddf1d41d0b62253295d869ce3cf65768f7102b797f02c7f8c876b4a9d5",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\e9\\e9201eddf1d41d0b62253295d869ce3cf65768f7102b797f02c7f8c876b4a9d5"
+    },
+    "assets/fonts/jetbrains-mono.woff2": {
+      "hash": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\83\\83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be"
+    },
+    "assets/fonts/sora.woff2": {
+      "hash": "fa26406eeda9a3c6ec3d9ea8813c3045d6dc755e30c716d5c094e8ef43be5a7f",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\fa\\fa26406eeda9a3c6ec3d9ea8813c3045d6dc755e30c716d5c094e8ef43be5a7f"
+    },
+    "assets/img/mauricio.png": {
+      "hash": "2b1c234cfab0a42065175d78666110abb211e8d28068ce8e27c144b99bcea09c",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\2b\\2b1c234cfab0a42065175d78666110abb211e8d28068ce8e27c144b99bcea09c"
+    },
+    "assets/img/nexus_fi_logo_branco.png": {
+      "hash": "5905cbdf3a0c3ea42ed1ded1b8c857c4ad877d76f912a4622b3a3aa1f8ebfb8b",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\59\\5905cbdf3a0c3ea42ed1ded1b8c857c4ad877d76f912a4622b3a3aa1f8ebfb8b"
+    },
+    "assets/img/nexus_fi_logo_colorido.png": {
+      "hash": "831fedd5cd179219bf25abadf6462dcaee555df47f8070a2079fa9adb8864ad7",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\83\\831fedd5cd179219bf25abadf6462dcaee555df47f8070a2079fa9adb8864ad7"
+    },
+    "assets/screens/fluxo-caixa.png": {
+      "hash": "3040d2123cf508459549f011e9330f67690602a66629519cfc81086eed49d6b9",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\30\\3040d2123cf508459549f011e9330f67690602a66629519cfc81086eed49d6b9"
+    },
+    "compositions/a.html": {
+      "hash": "83efa0f6b72b7300ede55df064d823b7de142cd08f135745ca4ad5478f190c46",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\83\\83efa0f6b72b7300ede55df064d823b7de142cd08f135745ca4ad5478f190c46"
+    },
+    "compositions/b.html": {
+      "hash": "83edf3135d9a75fe871bb066583dd2cefdc11d1d7f9774432a4cee368592307b",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\83\\83edf3135d9a75fe871bb066583dd2cefdc11d1d7f9774432a4cee368592307b"
+    },
+    "compositions/bg.html": {
+      "hash": "eca119f562ab4752c7b8404198b65be04d2a3749d9714de9da870f8a86931ae5",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\ec\\eca119f562ab4752c7b8404198b65be04d2a3749d9714de9da870f8a86931ae5"
+    },
+    "compositions/c.html": {
+      "hash": "828e06e95d5dc79e2f0414cf5045097b612cad42638b46afdc46cfe143927883",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\82\\828e06e95d5dc79e2f0414cf5045097b612cad42638b46afdc46cfe143927883"
+    },
+    "compositions/d.html": {
+      "hash": "bd4bfa161b7ae882cf29c347e2f54091510c81466e0b0f7873b13f6720729e40",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\bd\\bd4bfa161b7ae882cf29c347e2f54091510c81466e0b0f7873b13f6720729e40"
+    },
+    "hyperframes.json": {
+      "hash": "35a6d4ea79ebe911f0d81705f7aace5d8ff0316b745b0311d56af50c9c237cb7",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\35\\35a6d4ea79ebe911f0d81705f7aace5d8ff0316b745b0311d56af50c9c237cb7"
+    },
+    "index.html": {
+      "hash": "7ea00be677da9690ca144f1318ed8cbadb33b52eab2eac88e2bbdeccf30e9dfb",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\7e\\7ea00be677da9690ca144f1318ed8cbadb33b52eab2eac88e2bbdeccf30e9dfb"
+    },
+    "package.json": {
+      "hash": "b16f9388a655c2f081b0f312a067454256302e99b743e22b3bbfda6fe40f0c8b",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\b1\\b16f9388a655c2f081b0f312a067454256302e99b743e22b3bbfda6fe40f0c8b"
+    },
+    "voice/narr.mp3": {
+      "hash": "720e0f2ac40d77a788d1838dc4c859940199e8865365a416ab27b6a193c2547f",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\72\\720e0f2ac40d77a788d1838dc4c859940199e8865365a416ab27b6a193c2547f"
+    },
+    "voice/narr.words.json": {
+      "hash": "752359bb558de7aed478929e6d8e55cc92872422234aa7c4f0522788fc90e3e6",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\75\\752359bb558de7aed478929e6d8e55cc92872422234aa7c4f0522788fc90e3e6"
+    },
+    "assets/audio/mix.wav": {
+      "hash": "5d2779165f0227705ae1afd0f433a83cc89aeb696a9a8fb67ec67b6510eba00c",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\5d\\5d2779165f0227705ae1afd0f433a83cc89aeb696a9a8fb67ec67b6510eba00c"
+    },
+    "voice/edge-backup/narr.mp3": {
+      "hash": "e35540662a377dde0f7674166ef5d609eff0c6e137aec999b000bb8c4c5fb953",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\e3\\e35540662a377dde0f7674166ef5d609eff0c6e137aec999b000bb8c4c5fb953"
+    },
+    "voice/edge-backup/narr.words.json": {
+      "hash": "71636f7aa04377109331fff75f3e7b4beb61b1004c5fbc4c854bfa921aa64a5e",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\71\\71636f7aa04377109331fff75f3e7b4beb61b1004c5fbc4c854bfa921aa64a5e"
+    },
+    "assets/img/mauricio-v1.png": {
+      "hash": "f206f9c98983f8c2138fb46b34f25903d98ad2120144b9e98e847d37996bed0e",
+      "content": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\f2\\f206f9c98983f8c2138fb46b34f25903d98ad2120144b9e98e847d37996bed0e"
+    }
+  },
+  "revisions": {
+    "4029ffb4-9f7f-41e5-983f-d2bf17eca388": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793926883125,
+      "endedAt": 1793926883217,
+      "files": {
+        "compositions/a.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\c6\\c64224a184feeacb6aad48a7ec9cd137533bd8664b491dafb283eea59c2a2cd3",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\0b\\0bf8d426fffa064fee7ce72ffa49721d5461c0b94140405ce016acbba2f3ffe2"
+        },
+        "compositions/c.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\5c\\5cf3aeed953e2bbcbf5da8b992461f929651de7fec096f8f1d0bd187af5fbcfc",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\19\\19949da344abf6099964b4ee2e3ed230c2a92ae024127165554757c66fdd066e"
+        },
+        "compositions/d.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\48\\48dfd055cb01fa769ecede20e6780a00aa6b239d1f1c4bba412543b9184bdd5e",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\93\\93469ccc7a65e7be2fedc4c2d8d3633ac0d0beba0c8d5b9b8f251ce223bb23a5"
+        }
+      }
+    },
+    "6771076b-fdc8-4c8c-b602-83daa78777cb": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793928691052,
+      "endedAt": 1793928692375,
+      "files": {
+        "assets/audio/mix.wav": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\54\\546deacc652fb9603553fbf1eb02e0b5da7638fd9d50692c0d60634f0252a868",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\5d\\5d2779165f0227705ae1afd0f433a83cc89aeb696a9a8fb67ec67b6510eba00c"
+        },
+        "compositions/a.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\0b\\0bf8d426fffa064fee7ce72ffa49721d5461c0b94140405ce016acbba2f3ffe2",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\83\\83efa0f6b72b7300ede55df064d823b7de142cd08f135745ca4ad5478f190c46"
+        },
+        "compositions/b.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\30\\302c3d9b8b71ee3d452c106c1c55f69ddbcc48229dacf2f648c87481317bb920",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\83\\83edf3135d9a75fe871bb066583dd2cefdc11d1d7f9774432a4cee368592307b"
+        },
+        "compositions/bg.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\08\\086ee5c1861a25742c6cc7e991023d9f66eb0cf104170f927572af4d4a3cd5e9",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\ec\\eca119f562ab4752c7b8404198b65be04d2a3749d9714de9da870f8a86931ae5"
+        },
+        "compositions/c.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\19\\19949da344abf6099964b4ee2e3ed230c2a92ae024127165554757c66fdd066e",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\82\\828e06e95d5dc79e2f0414cf5045097b612cad42638b46afdc46cfe143927883"
+        },
+        "compositions/d.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\93\\93469ccc7a65e7be2fedc4c2d8d3633ac0d0beba0c8d5b9b8f251ce223bb23a5",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\9f\\9f9f7b0d63d1562a2baa82157f5cd902d4762d2915412ff11ea41f80a497e1f5"
+        },
+        "index.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\7e\\7ecea580f0931916d40da0d9b09134d2f99997193dba19471296b03ccdac4f6a",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\7e\\7ea00be677da9690ca144f1318ed8cbadb33b52eab2eac88e2bbdeccf30e9dfb"
+        },
+        "voice/edge-backup/narr.mp3": {
+          "before": null,
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\e3\\e35540662a377dde0f7674166ef5d609eff0c6e137aec999b000bb8c4c5fb953"
+        },
+        "voice/edge-backup/narr.words.json": {
+          "before": null,
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\71\\71636f7aa04377109331fff75f3e7b4beb61b1004c5fbc4c854bfa921aa64a5e"
+        },
+        "voice/narr.mp3": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\e3\\e35540662a377dde0f7674166ef5d609eff0c6e137aec999b000bb8c4c5fb953",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\72\\720e0f2ac40d77a788d1838dc4c859940199e8865365a416ab27b6a193c2547f"
+        },
+        "voice/narr.words.json": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\71\\71636f7aa04377109331fff75f3e7b4beb61b1004c5fbc4c854bfa921aa64a5e",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\75\\752359bb558de7aed478929e6d8e55cc92872422234aa7c4f0522788fc90e3e6"
+        }
+      }
+    },
+    "c9a57f13-3ddf-4c70-8756-66339302c944": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793928892718,
+      "endedAt": 1793928893533,
+      "files": {
+        "assets/img/mauricio-v1.png": {
+          "before": null,
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\f2\\f206f9c98983f8c2138fb46b34f25903d98ad2120144b9e98e847d37996bed0e"
+        },
+        "assets/img/mauricio.png": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\f2\\f206f9c98983f8c2138fb46b34f25903d98ad2120144b9e98e847d37996bed0e",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\2b\\2b1c234cfab0a42065175d78666110abb211e8d28068ce8e27c144b99bcea09c"
+        },
+        "compositions/d.html": {
+          "before": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\9f\\9f9f7b0d63d1562a2baa82157f5cd902d4762d2915412ff11ea41f80a497e1f5",
+          "after": "C:\\Users\\Gustavo\\.cache\\hyperframes\\history\\021f5b6e-3c58-43ec-a0e2-8f248e0ed881\\blobs\\bd\\bd4bfa161b7ae882cf29c347e2f54091510c81466e0b0f7873b13f6720729e40"
+        }
+      }
+    }
+  },
+  "checks": {
+    "latest": {
+      "revision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+      "id": "a8f8ffcd-27d1-4e5a-a580-334f9a1a857a"
+    },
+    "revisions": {
+      "4029ffb4-9f7f-41e5-983f-d2bf17eca388": [
+        {
+          "id": "04231a0e-141f-4da3-97e1-826c4939a203",
+          "scope": "project",
+          "metadata": {
+            "ok": true,
+            "browserSkipped": false,
+            "options": {
+              "samples": 9,
+              "atTransitions": false,
+              "maxIssues": 80,
+              "collapseStatic": true,
+              "tolerance": 2,
+              "timeout": 10000,
+              "contrast": true,
+              "strict": false,
+              "snapshots": false,
+              "browserGpuMode": "auto"
+            }
+          },
+          "createdAt": 1793926889671,
+          "contentHash": "e4633ff9838b68acbdb2553d9a3f047b91bcec9ca220e4e7542cfa750a607c32",
+          "revision": "4029ffb4-9f7f-41e5-983f-d2bf17eca388",
+          "inputFingerprint": "39a634ec8532b4e1a86b131cb7b1efbe84b368eee9d7d9e64123f01a663f9fdd",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision",
+          "status": "cleaned",
+          "cleanedAfterRender": "1d9a7d48-1472-4ae1-8105-f9423ddc19f5"
+        }
+      ],
+      "6771076b-fdc8-4c8c-b602-83daa78777cb": [
+        {
+          "id": "09810ec3-d95c-43d4-a316-24870c258bca",
+          "scope": "project",
+          "report": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\checks\\09810ec3-d95c-43d4-a316-24870c258bca.json",
+          "metadata": {
+            "ok": true,
+            "browserSkipped": false,
+            "options": {
+              "samples": 9,
+              "atTransitions": false,
+              "maxIssues": 80,
+              "collapseStatic": true,
+              "tolerance": 2,
+              "timeout": 10000,
+              "contrast": true,
+              "strict": false,
+              "snapshots": false,
+              "browserGpuMode": "auto"
+            }
+          },
+          "createdAt": 1793928698617,
+          "contentHash": "0450819229d893e89ce258a49212ad8e08c2f5319ed38a3d40cb2c82ec6cad9e",
+          "revision": "6771076b-fdc8-4c8c-b602-83daa78777cb",
+          "inputFingerprint": "7c0b4e80fa717b68f5e484352faa9f877ee55e69c18dbe8fa2132eb7c4ca1989",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ],
+      "c9a57f13-3ddf-4c70-8756-66339302c944": [
+        {
+          "id": "a8f8ffcd-27d1-4e5a-a580-334f9a1a857a",
+          "scope": "project",
+          "report": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\checks\\a8f8ffcd-27d1-4e5a-a580-334f9a1a857a.json",
+          "metadata": {
+            "ok": true,
+            "browserSkipped": false,
+            "options": {
+              "samples": 9,
+              "atTransitions": false,
+              "maxIssues": 80,
+              "collapseStatic": true,
+              "tolerance": 2,
+              "timeout": 10000,
+              "contrast": true,
+              "strict": false,
+              "snapshots": false,
+              "browserGpuMode": "auto"
+            }
+          },
+          "createdAt": 1793928899370,
+          "contentHash": "42ee6cdbf68c80a05356ae34e4a3b7497631c712d5527739c41a6255d67aaf26",
+          "revision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+          "inputFingerprint": "94c578957fcc5ff566c7e07e64f9552f88f6c6209e24bd9d19a80a4dc298f851",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ]
+    },
+    "unversioned": [
+      {
+        "id": "2a0a9a22-b5cc-4582-8152-2eb16c9b95a2",
+        "scope": "project",
+        "report": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\checks\\2a0a9a22-b5cc-4582-8152-2eb16c9b95a2.json",
+        "metadata": {
+          "ok": true,
+          "browserSkipped": false,
+          "options": {
+            "samples": 9,
+            "atTransitions": false,
+            "maxIssues": 80,
+            "collapseStatic": true,
+            "tolerance": 2,
+            "timeout": 10000,
+            "contrast": true,
+            "strict": false,
+            "snapshots": false,
+            "browserGpuMode": "auto"
+          }
+        },
+        "createdAt": 1793926836134,
+        "contentHash": "d3dca6acd42ba867325828247f09b2b6c8323a0820d8677b785bb926f7a9d7f2",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "id": "f5e5642b-f4ca-44b3-884b-ee98a0d6fde9",
+        "scope": "project",
+        "report": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\checks\\f5e5642b-f4ca-44b3-884b-ee98a0d6fde9.json",
+        "metadata": {
+          "ok": true,
+          "browserSkipped": false,
+          "options": {
+            "samples": 9,
+            "atTransitions": false,
+            "maxIssues": 80,
+            "collapseStatic": true,
+            "tolerance": 2,
+            "timeout": 10000,
+            "contrast": true,
+            "strict": false,
+            "snapshots": false,
+            "browserGpuMode": "auto"
+          }
+        },
+        "createdAt": 1793926851001,
+        "contentHash": "d3dca6acd42ba867325828247f09b2b6c8323a0820d8677b785bb926f7a9d7f2",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      }
+    ]
+  },
+  "snapshots": {
+    "latest": {
+      "revision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+      "id": "71b45960-9a6c-4841-863a-085f1e1257c2-3"
+    },
+    "revisions": {
+      "4029ffb4-9f7f-41e5-983f-d2bf17eca388": [
+        {
+          "scope": "full",
+          "id": "bd8c41d2-1642-421b-ae6c-4d6670958102-0",
+          "time": 0,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793926896474,
+          "contentHash": "dbbe916f9bf889ab892dfdd256470733031ca9ad1660c8502f42aeb2395b3435",
+          "revision": "4029ffb4-9f7f-41e5-983f-d2bf17eca388",
+          "inputFingerprint": "39a634ec8532b4e1a86b131cb7b1efbe84b368eee9d7d9e64123f01a663f9fdd",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision",
+          "status": "cleaned",
+          "cleanedAfterRender": "1d9a7d48-1472-4ae1-8105-f9423ddc19f5"
+        },
+        {
+          "scope": "full",
+          "id": "bd8c41d2-1642-421b-ae6c-4d6670958102-1",
+          "time": 24.5,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793926896476,
+          "contentHash": "454a17255bc9048d3e5165c71ac4c059fd0d9b138f328c1fc499e49ea7ed23ba",
+          "revision": "4029ffb4-9f7f-41e5-983f-d2bf17eca388",
+          "inputFingerprint": "39a634ec8532b4e1a86b131cb7b1efbe84b368eee9d7d9e64123f01a663f9fdd",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision",
+          "status": "cleaned",
+          "cleanedAfterRender": "1d9a7d48-1472-4ae1-8105-f9423ddc19f5"
+        },
+        {
+          "scope": "full",
+          "id": "bd8c41d2-1642-421b-ae6c-4d6670958102-2",
+          "time": 25.05,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793926896477,
+          "contentHash": "3f042df7c5237a4362bbfa4b525c1cbc42006013c2fa327c235d537a6f838a74",
+          "revision": "4029ffb4-9f7f-41e5-983f-d2bf17eca388",
+          "inputFingerprint": "39a634ec8532b4e1a86b131cb7b1efbe84b368eee9d7d9e64123f01a663f9fdd",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision",
+          "status": "cleaned",
+          "cleanedAfterRender": "1d9a7d48-1472-4ae1-8105-f9423ddc19f5"
+        }
+      ],
+      "6771076b-fdc8-4c8c-b602-83daa78777cb": [
+        {
+          "scope": "full",
+          "id": "3a817c47-54fd-4fc1-93f9-742eefbdc9a3-0",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\4b9739ea-783e-4f12-bcf1-ba5aa5b01fdd\\frame-00-at-1.5s.png",
+          "time": 1.5,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928744758,
+          "contentHash": "5fb1535615d6abe9c98d9ef1b6f4735d9a6ff98932c2268ec06af4d79ad422c3",
+          "revision": "6771076b-fdc8-4c8c-b602-83daa78777cb",
+          "inputFingerprint": "7c0b4e80fa717b68f5e484352faa9f877ee55e69c18dbe8fa2132eb7c4ca1989",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "3a817c47-54fd-4fc1-93f9-742eefbdc9a3-1",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\4b9739ea-783e-4f12-bcf1-ba5aa5b01fdd\\frame-01-at-4.8s.png",
+          "time": 4.8,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928744760,
+          "contentHash": "64f37b3882b1c6f7586e3d495217dce9795f9cc0e7210e91e3eeca603e18d327",
+          "revision": "6771076b-fdc8-4c8c-b602-83daa78777cb",
+          "inputFingerprint": "7c0b4e80fa717b68f5e484352faa9f877ee55e69c18dbe8fa2132eb7c4ca1989",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "3a817c47-54fd-4fc1-93f9-742eefbdc9a3-2",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\4b9739ea-783e-4f12-bcf1-ba5aa5b01fdd\\frame-02-at-9.5s.png",
+          "time": 9.5,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928744761,
+          "contentHash": "6e55b020e57dc2e30dd14146c04b24004547ffca35776fdc1d3f7b45ef047b8c",
+          "revision": "6771076b-fdc8-4c8c-b602-83daa78777cb",
+          "inputFingerprint": "7c0b4e80fa717b68f5e484352faa9f877ee55e69c18dbe8fa2132eb7c4ca1989",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "3a817c47-54fd-4fc1-93f9-742eefbdc9a3-3",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\4b9739ea-783e-4f12-bcf1-ba5aa5b01fdd\\frame-03-at-15.5s.png",
+          "time": 15.5,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928744763,
+          "contentHash": "076d7f3855723f0cb77a42b1ee1e0057a1ecd0a947e262a6b78920a7d41508a7",
+          "revision": "6771076b-fdc8-4c8c-b602-83daa78777cb",
+          "inputFingerprint": "7c0b4e80fa717b68f5e484352faa9f877ee55e69c18dbe8fa2132eb7c4ca1989",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "3a817c47-54fd-4fc1-93f9-742eefbdc9a3-4",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\4b9739ea-783e-4f12-bcf1-ba5aa5b01fdd\\frame-04-at-23.5s.png",
+          "time": 23.5,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928744764,
+          "contentHash": "29a099b4c8b49d360b23d3de9d81ec003512c1a55efc900b15ce4ae5cb8eabd6",
+          "revision": "6771076b-fdc8-4c8c-b602-83daa78777cb",
+          "inputFingerprint": "7c0b4e80fa717b68f5e484352faa9f877ee55e69c18dbe8fa2132eb7c4ca1989",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "3a817c47-54fd-4fc1-93f9-742eefbdc9a3-5",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\4b9739ea-783e-4f12-bcf1-ba5aa5b01fdd\\frame-05-at-26.1s.png",
+          "time": 26.1,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928744766,
+          "contentHash": "3f042df7c5237a4362bbfa4b525c1cbc42006013c2fa327c235d537a6f838a74",
+          "revision": "6771076b-fdc8-4c8c-b602-83daa78777cb",
+          "inputFingerprint": "7c0b4e80fa717b68f5e484352faa9f877ee55e69c18dbe8fa2132eb7c4ca1989",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ],
+      "c9a57f13-3ddf-4c70-8756-66339302c944": [
+        {
+          "scope": "full",
+          "id": "71b45960-9a6c-4841-863a-085f1e1257c2-0",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\c267bc67-7fa9-4ed7-b37b-39b9e97f5400\\frame-00-at-8.5s.png",
+          "time": 8.5,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928944928,
+          "contentHash": "287eef80ce0bf0f97f50dbb17e6a560c7a95e72b658689084426d58549eab51d",
+          "revision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+          "inputFingerprint": "94c578957fcc5ff566c7e07e64f9552f88f6c6209e24bd9d19a80a4dc298f851",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "71b45960-9a6c-4841-863a-085f1e1257c2-1",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\c267bc67-7fa9-4ed7-b37b-39b9e97f5400\\frame-01-at-9.5s.png",
+          "time": 9.5,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928944930,
+          "contentHash": "a1cbeaa96c5fd57059d6e8eca7dfe173e14c57786b4d0d503acb25cf79324ebc",
+          "revision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+          "inputFingerprint": "94c578957fcc5ff566c7e07e64f9552f88f6c6209e24bd9d19a80a4dc298f851",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "71b45960-9a6c-4841-863a-085f1e1257c2-2",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\c267bc67-7fa9-4ed7-b37b-39b9e97f5400\\frame-02-at-21s.png",
+          "time": 21,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928944932,
+          "contentHash": "a6c326beef848f62cb39aacfd61fa85219cc3279e38652738b5fc5b2bcdb3e7f",
+          "revision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+          "inputFingerprint": "94c578957fcc5ff566c7e07e64f9552f88f6c6209e24bd9d19a80a4dc298f851",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "71b45960-9a6c-4841-863a-085f1e1257c2-3",
+          "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\c267bc67-7fa9-4ed7-b37b-39b9e97f5400\\frame-03-at-26.1s.png",
+          "time": 26.1,
+          "metadata": {
+            "width": 1080,
+            "height": 1920,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793928944934,
+          "contentHash": "ce7431aa25ebde83f8d374ee163b8934bf0ae9c3c7b73b74cb0a225c5a6c604b",
+          "revision": "c9a57f13-3ddf-4c70-8756-66339302c944",
+          "inputFingerprint": "94c578957fcc5ff566c7e07e64f9552f88f6c6209e24bd9d19a80a4dc298f851",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ]
+    },
+    "unversioned": [
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-0",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-00-at-0.3s.png",
+        "time": 0.3,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860478,
+        "contentHash": "f94216cc702e4ee3140d572346690596b39880a8a6b8fa636af9c13b20952842",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-1",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-01-at-2.2s.png",
+        "time": 2.2,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860478,
+        "contentHash": "2f284c39ce367f79b50d9a9515f85830bb9bb6346381079ceed84d01f227ac67",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-2",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-02-at-4s.png",
+        "time": 4,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860478,
+        "contentHash": "132409562f21153fb5bbe70a07950819746f86e29930f8a096f6e47267b069dd",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-3",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-03-at-5.8s.png",
+        "time": 5.8,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860478,
+        "contentHash": "6de4907ccaac00a60f9785b32e075ae9777fffadbb40e5fc1d08cf46189dace9",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-4",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-04-at-8.2s.png",
+        "time": 8.2,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860478,
+        "contentHash": "a883497c4e7464050031602aabf3b240eb951de4cddf46e48441dd3031f8631a",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-5",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-05-at-10.5s.png",
+        "time": 10.5,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860479,
+        "contentHash": "4bceb3f59472e7ad6a334f9da55cc0382d22e6d3589f8deaa57707255da64142",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-6",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-06-at-12.4s.png",
+        "time": 12.4,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860479,
+        "contentHash": "0416b978d042f25a5e64a6b2f240a997f8f0dee9609815a2c22a0e05ed785e7e",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-7",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-07-at-14.5s.png",
+        "time": 14.5,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860480,
+        "contentHash": "04e70a1874830357023caa800db3a58376abd049db2b0435e05472ef747769cf",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-8",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-08-at-16.8s.png",
+        "time": 16.8,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860480,
+        "contentHash": "f0fb341d26a5d0d1c4e1c587c723c55b6c932cfab2fca180a7ba3eab718e8b0d",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-9",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-09-at-18.4s.png",
+        "time": 18.4,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860481,
+        "contentHash": "d321b562ff0c9dfb17147aa2531df8f2c40de1cdc2316ffd33120bf6b277b80a",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-10",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-10-at-20.5s.png",
+        "time": 20.5,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860482,
+        "contentHash": "a5154d9ec1252ea7c32c9391543cf77b6f8e5b6ad3c99009b3895ad000d1d9b4",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-11",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-11-at-24s.png",
+        "time": 24,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860483,
+        "contentHash": "60a945376424cac4537a4847b0cda9000bad05523fd5fc15a63885b37c0bb003",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      },
+      {
+        "scope": "full",
+        "id": "ce8caf65-102e-4c56-ae83-4dcda8c45a5d-12",
+        "image": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\.hyperframes\\artifacts\\snapshots\\f5aa07a6-242e-46f4-b47c-6011154231a6\\frame-12-at-25.05s.png",
+        "time": 25.05,
+        "metadata": {
+          "width": 1080,
+          "height": 1920,
+          "zoomScale": 1,
+          "browserGpuMode": "auto",
+          "warnings": [],
+          "partial": false
+        },
+        "createdAt": 1793926860483,
+        "contentHash": "7d54e7f6291be56ac252b0a1f6de2235e0a22a28c43215cb9e13f052566afd87",
+        "revision": null,
+        "inputFingerprint": "758b890ca85309570acf51fe92e62c6fd03b8c4aa58f4ae600c9ae241640ce28",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      }
+    ]
+  },
+  "renders": {
+    "latest": {
+      "id": "1d9a7d48-1472-4ae1-8105-f9423ddc19f5",
+      "completedAt": 1793928938009,
+      "output": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-021\\renders\\nexusfi-021-clube-v3-eleven.mp4",
+      "status": "completed",
+      "revision": "c9a57f13-3ddf-4c70-8756-66339302c944"
+    },
+    "retainedRevisions": [
+      "c9a57f13-3ddf-4c70-8756-66339302c944",
+      "6771076b-fdc8-4c8c-b602-83daa78777cb"
+    ]
+  },
+  "pendingArtifactCleanup": []
+}

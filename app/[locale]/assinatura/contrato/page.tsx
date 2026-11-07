@@ -10,6 +10,7 @@ import { Loader2, ShieldCheck, FileText, ArrowRight, ArrowLeft } from "lucide-re
 import { useAuth } from "@/app/hooks/useAuth";
 import { useSubscription } from "@/app/hooks/useSubscription";
 import { PageLoader } from "@/app/components/ui";
+import SecurePaymentSeal from "@/app/components/SecurePaymentSeal";
 import { getPlan, formatBRLFromCents } from "@/lib/billingPlans";
 import { isPlanId, startCheckout, type CheckoutMethod } from "@/lib/startCheckout";
 import {
@@ -429,6 +430,8 @@ function Contrato() {
                   </>
                 )}
               </button>
+
+              <SecurePaymentSeal />
 
               <p
                 className="flex items-center gap-1.5 text-xs"

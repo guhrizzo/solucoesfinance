@@ -1,0 +1,255 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 2,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"proxy (unresolved DOM association)\" for v between 1.50s and 1.60s.",
+        "selector": "proxy (unresolved DOM association)",
+        "dataAttributes": {},
+        "sourceFile": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-a-hyperframes\\compositions\\s2.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      },
+      {
+        "code": "overlapping_gsap_tweens",
+        "severity": "warning",
+        "message": "GSAP tweens overlap on \"proxy (unresolved DOM association)\" for v between 1.80s and 1.90s.",
+        "selector": "proxy (unresolved DOM association)",
+        "dataAttributes": {},
+        "sourceFile": "C:\\Users\\Gustavo\\Desktop\\solucoesfinance\\video-ads\\reel-a-hyperframes\\compositions\\s2.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Shorten the earlier tween, move the later tween, or add `overwrite: \"auto\"`."
+      }
+    ],
+    "filesScanned": 7
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "container_overflow",
+        "severity": "warning",
+        "time": 20.222,
+        "selector": "#s4-wrap",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": -176,
+          "top": 213,
+          "right": 960.7,
+          "bottom": 1118.85,
+          "width": 1136.7,
+          "height": 905.85
+        },
+        "containerSelector": "#s4-screen",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 119,
+          "top": 260,
+          "right": 961,
+          "bottom": 931,
+          "width": 842,
+          "height": 671
+        },
+        "overflow": {
+          "left": 295,
+          "top": 47,
+          "bottom": 187.85
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/s4.html",
+        "bbox": {
+          "x": -176,
+          "y": 213,
+          "width": 1136.7,
+          "height": 905.85
+        },
+        "firstSeen": 20.222,
+        "lastSeen": 23.333,
+        "occurrences": 2,
+        "heldMs": 0,
+        "times": [
+          20.222,
+          23.333
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 14,
+        "selector": "#s3-wrap",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 79,
+          "top": 140,
+          "right": 1072.56,
+          "bottom": 931.78,
+          "width": 993.56,
+          "height": 791.78
+        },
+        "containerSelector": "#s3-screen",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 119,
+          "top": 260,
+          "right": 961,
+          "bottom": 931,
+          "width": 842,
+          "height": 671
+        },
+        "overflow": {
+          "left": 40,
+          "right": 111.56,
+          "top": 120
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/s3.html",
+        "bbox": {
+          "x": 79,
+          "y": 140,
+          "width": 993.56,
+          "height": 791.78
+        },
+        "firstSeen": 14,
+        "lastSeen": 17.111,
+        "occurrences": 2,
+        "heldMs": 0,
+        "times": [
+          14,
+          17.111
+        ]
+      }
+    ],
+    "duration": 28,
+    "samples": [
+      1.556,
+      4.667,
+      7.778,
+      10.889,
+      14,
+      17.111,
+      20.222,
+      23.333,
+      26.444
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 2,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.556,
+      7.778,
+      14,
+      20.222,
+      26.444
+    ],
+    "checked": 18,
+    "passed": 18
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "film_silent",
+        "severity": "warning",
+        "message": "This 28 s film has no sound source (no <audio>, no <video> with sound): add a music bed and sounds on the visible actions unless the person asked for silence; see references/sound.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 224
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "audio_none",
+        "severity": "info",
+        "message": "The film has no sound: no clip in it plays audio.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ]
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

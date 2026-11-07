@@ -1,0 +1,52 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+
+    #c-card { position: absolute; left: 90px; top: 200px; width: 900px; height: 480px; border-radius: 34px; overflow: hidden; border: 2px solid #22345a; box-shadow: 0 30px 90px #1f6feb44; background: #0b1220; }
+    #c-vid { position: absolute; left: 0; top: 0; width: 900px; height: 480px; object-fit: cover; }
+    .pill { position: absolute; left: 90px; width: 900px; height: 118px; padding: 0 30px; display: flex; align-items: center; gap: 26px; }
+    #c-p1 { top: 715px; } #c-p2 { top: 850px; } #c-p3 { top: 985px; }
+    .ic { width: 74px; height: 74px; border-radius: 50%; background: linear-gradient(135deg, #2f80ff, #1451b8); display: grid; place-items: center; flex: none; box-shadow: 0 8px 30px #1f6feb88; }
+    .pt { font-size: 46px; line-height: 1.1; } .ps { font-size: 28px; color: #8aa0c4; font-weight: 600; }
+    #c-link { position: absolute; left: 126px; top: 800px; width: 4px; height: 240px; background: #2a4f94; border-radius: 2px; transform-origin: 0 0; }
+    #c-t { position: absolute; left: 0; right: 0; top: 1150px; text-align: center; }
+    #c-t1 { font-family: "Sora", sans-serif; font-weight: 700; font-size: 62px; } #c-t2 { font-family: "Sora", sans-serif; font-weight: 800; font-size: 108px; line-height: 1.05; color: #5aa2ff; letter-spacing: -0.03em; }
+    
+  </style>
+  <div id="root" data-composition-id="c" data-width="1080" data-height="1920">
+    <div id="c-card" data-layout-allow-overflow><video id="c-vid" class="clip" src="assets/video/clip2.mp4" muted playsinline data-start="0" data-duration="5.34" data-track-index="0"></video></div>
+    <div id="c-link"></div>
+    <div id="c-p1" class="card pill"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg></div><div><div class="pt h">Estratégia</div><div class="ps">para onde ir</div></div></div><div id="c-p2" class="card pill"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></div><div><div class="pt h">Gestão</div><div class="ps">como chegar lá</div></div></div><div id="c-p3" class="card pill"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></div><div><div class="pt h">Finanças</div><div class="ps">o que sustenta tudo</div></div></div>
+    <div id="c-t"><div id="c-t1">devem caminhar</div><div id="c-t2">juntos.</div></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    tl.fromTo("#c-card", { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.7, ease: "power3.out" }, 0.3);
+    pop("#c-p1", 0.66 - 0.1, 0.5);
+    pop("#c-p2", 1.65 - 0.1, 0.5);
+    pop("#c-p3", 2.44 - 0.1, 0.5);
+    tl.fromTo("#c-link", { scaleY: 0 }, { scaleY: 1, duration: 0.8, ease: "power2.inOut" }, 2.44);
+    up("#c-t1", 3.33 - 0.1, 0.5);
+    tl.fromTo("#c-t2", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.7)" }, 4.53 - 0.1);
+    tl.fromTo(["#c-p1", "#c-p2", "#c-p3"], { scale: 1 }, { scale: 1.03, duration: 0.25, ease: "power2.out", immediateRender: false }, 4.53);
+    tl.to(["#c-p1", "#c-p2", "#c-p3"], { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.5)" }, 4.53 + 0.25);
+    
+    tl.fromTo("#root", { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 0);
+    tl.to("#root", { x: -1080, duration: 0.5, ease: "power3.inOut" }, 5.34 - 0.5);
+    window.__timelines["c"] = tl;
+  </script>
+</template>

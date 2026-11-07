@@ -9,7 +9,22 @@
     "title": "Política de Privacidad",
     "lastUpdated": "Última actualización: {date}",
     "lastUpdatedValue": "3 de septiembre de 2026",
-    "ptOnlyNotice": "El texto completo de esta Política se mantiene en portugués porque cita disposiciones de la legislación brasileña (la LGPD). Más adelante se publicará una versión revisada en otros idiomas."
+    "ptOnlyNotice": "El texto completo de esta Política se mantiene en portugués porque cita disposiciones de la legislación brasileña (la LGPD). Más adelante se publicará una versión revisada en otros idiomas.",
+    "midas": {
+      "title": "Demostración guiada (Midas)",
+      "intro": "En la demostración guiada de la página de inicio, la asistente Midas conversa contigo antes de cualquier registro. La conversación solo se guarda después de que haces clic en \"Ok, vamos\" y aceptas el aviso de privacidad de la demostración.",
+      "dataTitle": "Datos recopilados:",
+      "data": "tus respuestas (segmento del negocio, principal dificultad y herramientas que usas hoy), el primer nombre si decides indicarlo, un identificador anónimo de sesión y el texto de la conversación.",
+      "purposesTitle": "Finalidades:",
+      "purposes": "personalizar la demostración, mejorar NexusFi y permitir que el equipo de NexusFi te contacte, con fines comerciales, sobre la demostración y la prueba de la plataforma.",
+      "aiTitle": "Proveedor de inteligencia artificial:",
+      "ai": "solo si lo consientes, el texto que escribas libremente se envía a Anthropic, que lo procesa para generar las respuestas de Midas. Este procesamiento puede implicar transferencia internacional de datos (sección 6).",
+      "retentionTitle": "Por cuánto tiempo:",
+      "retention": "las respuestas se guardan por 12 meses y luego se eliminan automáticamente.",
+      "linkTitle": "Vínculo con la cuenta:",
+      "link": "si te registras después, la conversación se vincula a tu cuenta para dar seguimiento al inicio de tu prueba.",
+      "contact": "Para solicitar la eliminación de estos datos o ejercer cualquier derecho de la sección 8, escribe al Encargado (DPO): <mail></mail>."
+    }
   },
   "accessibility": {
     "meta": {

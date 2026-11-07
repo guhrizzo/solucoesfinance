@@ -1,0 +1,181 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 7
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 2,
+    "findings": [
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 3.808,
+        "selector": "#a-l2",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 119.7,
+          "top": 307.15,
+          "right": 960.28,
+          "bottom": 428.15,
+          "width": 840.58,
+          "height": 121
+        },
+        "containerSelector": "#a-m1",
+        "text": "que estão sempre",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/a.html",
+        "bbox": {
+          "x": 119.7,
+          "y": 307.15,
+          "width": 840.58,
+          "height": 121
+        },
+        "firstSeen": 3.808,
+        "lastSeen": 3.808,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          3.808
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 7.283,
+        "selector": "#b-vid",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 89.8,
+          "top": 200.29,
+          "right": 994.21,
+          "bottom": 903.72,
+          "width": 904.41,
+          "height": 703.43
+        },
+        "containerSelector": "#b-card",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 87.8,
+          "top": 198.29,
+          "right": 992.2,
+          "bottom": 901.71,
+          "width": 904.41,
+          "height": 703.43
+        },
+        "overflow": {
+          "right": 2.01,
+          "bottom": 2.01
+        },
+        "dataAttributes": {
+          "data-hf-render-id": "b-vid",
+          "data-start": "0",
+          "data-duration": "4.71",
+          "data-track-index": "0",
+          "data-hf-authored-opacity": ""
+        },
+        "sourceFile": "compositions/b.html",
+        "bbox": {
+          "x": 89.8,
+          "y": 200.29,
+          "width": 904.41,
+          "height": 703.43
+        },
+        "firstSeen": 7.283,
+        "lastSeen": 7.283,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          7.283
+        ]
+      }
+    ],
+    "duration": 26.22,
+    "samples": [
+      1.457,
+      4.37,
+      7.283,
+      10.197,
+      13.11,
+      16.023,
+      18.937,
+      21.85,
+      24.763
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 2,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.457,
+      7.283,
+      13.11,
+      18.937,
+      24.763
+    ],
+    "checked": 18,
+    "passed": 18
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 210
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

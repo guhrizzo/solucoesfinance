@@ -1,0 +1,3606 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-resolution="portrait">
+  <head>
+<meta name="hf-scene-parts" content="{&quot;shared&quot;:&quot;df8f708bfbd37b47&quot;,&quot;scenes&quot;:{&quot;bg&quot;:&quot;9466b3495e3279be&quot;,&quot;a&quot;:&quot;12b90aab04ea3966&quot;,&quot;b&quot;:&quot;bf6d56b2ff2a9e5e&quot;,&quot;c&quot;:&quot;4e692d489162d5ab&quot;,&quot;d&quot;:&quot;c2e476f7703b5fbf&quot;,&quot;e&quot;:&quot;efbb6c59c354f99d&quot;}}"><script data-hf-gsap-fallback>
+(function(){
+  var cdnBase="/api/vendor/npm/gsap@3.15.0/dist/";
+  var loaded={};
+  function loadFallback(file){
+    if(loaded[file])return loaded[file];
+    return loaded[file]=new Promise(function(ok,fail){
+      var s=document.createElement("script");
+      s.src=cdnBase+file;s.hfGsapFallback=true;s.onload=ok;s.onerror=fail;
+      document.head.appendChild(s);
+    });
+  }
+  document.addEventListener("error",function(e){
+    var t=e.target;
+    if(!t||t.tagName!=="SCRIPT"||!t.src||t.hfGsapFallback)return;
+    var m=t.src.match(/gsap[^/]*\/dist\/(.+\.js)/);
+    if(m)loadFallback(m[1]).catch(function(){
+      reportError(new Error("GSAP could not load from "+t.src+" or "+cdnBase+m[1]+", so this preview's animations will not play."));
+    });
+  },true);
+})();
+</script>
+<meta name="hyperframes-gsap-base-url" content="/api/vendor/npm">
+<meta name="hyperframes-studio-preview"><script>(function(){var seen=window.__hfPreviewErrors=[];
+addEventListener("error",function(e){seen.push(e.message||String(e))});})();</script>
+<base href="/api/projects/reel-a-hyperframes/preview/">
+<script type="importmap">{"imports":{"/":"/api/projects/reel-a-hyperframes/preview/","/api/projects/reel-a-hyperframes/preview/":"/api/projects/reel-a-hyperframes/preview/"}}</script><style data-hf-scene-fonts="">@font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }</style><style data-hyperframes-text-rendering="true">html,body,*{text-rendering:geometricPrecision}</style><script data-hf-after-fonts-fallback="">document.addEventListener("DOMContentLoaded", function () {
+  if (window.__hfAfterFontsClaimed) return;
+  var T = "text/hf-after-fonts";
+  var all = [].slice.call(document.querySelectorAll('script[type="text/hf-after-fonts"], script[type="text/hf-after-fonts+module"]'));
+  if (!all.length) return;
+  console.warn("[hyperframes] the runtime has no web-font gate; composition scripts run without waiting for fonts");
+  var late = function (el) { return el.type !== T || el.matches('[defer][src], [defer][data-hf-inlined-src]'); };
+  var queue = all.filter(function (el) { return !late(el); }).concat(all.filter(late));
+  (function next() {
+    var el = queue.shift();
+    if (!el) return;
+    var s = document.createElement("script");
+    for (var i = 0; i < el.attributes.length; i++) s.setAttribute(el.attributes[i].name, el.attributes[i].value);
+    if (el.type === T) s.removeAttribute("type"); else s.type = "module";
+    s.async = el.hasAttribute("async");
+    s.text = el.text;
+    var waits = s.type !== "module" && s.hasAttribute("src") && !s.async && !s.noModule;
+    if (waits) { s.addEventListener("load", next); s.addEventListener("error", next); }
+    el.replaceWith(s);
+    if (!waits) next();
+  })();
+});
+//# sourceURL=hyperframes://after-fonts-fallback</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>* { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #070b14; }</style><style data-hf-scene="bg">[data-composition-id="bg"] [data-hf-authored-id="root"] { position: absolute; inset: 0; background: radial-gradient(1200px 900px at 50% -10%, #14305f 0%, #070b14 65%); }
+    [data-composition-id="bg"] .gl { position: absolute; border-radius: 50%; }
+    [data-composition-id="bg"] #bg-g1 { left: 90px; top: 480px; width: 900px; height: 900px; background: radial-gradient(#1f6feb55, transparent 65%); }
+    [data-composition-id="bg"] #bg-g2 { left: -60px; top: -260px; width: 1200px; height: 800px; background: radial-gradient(#2f80ff33, transparent 65%); }
+    [data-composition-id="bg"] #bg-grid { position: absolute; left: -300px; right: -300px; bottom: 0; height: 520px; transform-origin: 50% 100%; transform: perspective(520px) rotateX(64deg);
+      background: repeating-linear-gradient(90deg, #2a4f9455 0 2px, transparent 2px 100px), repeating-linear-gradient(0deg, #2a4f9455 0 2px, transparent 2px 80px);
+      -webkit-mask-image: linear-gradient(transparent 0%, #000 70%); mask-image: linear-gradient(transparent 0%, #000 70%); }</style><style data-hf-scene="a">[data-composition-id="a"] [data-hf-authored-id="root"] { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    [data-composition-id="a"] .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    [data-composition-id="a"] .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    [data-composition-id="a"] .b { color: #5aa2ff; }
+    [data-composition-id="a"] .g { color: #4ade80; }
+    [data-composition-id="a"] .r { color: #ff7b7b; }
+    [data-composition-id="a"] .w { display: inline-block; }
+    [data-composition-id="a"] .mono { font-family: "JetBrains Mono", monospace; }
+
+    [data-composition-id="a"] #a-card { position: absolute; left: 90px; top: 250px; width: 900px; padding: 44px; }
+    [data-composition-id="a"] #a-row { display: flex; align-items: center; gap: 24px; }
+    [data-composition-id="a"] #a-chip { background: #ffffff; border-radius: 20px; padding: 12px 22px; display: flex; }
+    [data-composition-id="a"] #a-chip img { height: 56px; width: auto; }
+    [data-composition-id="a"] #a-t { flex: 1; font-size: 48px; font-weight: 700; }
+    [data-composition-id="a"] #a-ck { width: 64px; height: 64px; border-radius: 50%; background: #16a34a; display: grid; place-items: center; box-shadow: 0 10px 40px #16a34a88; }
+    [data-composition-id="a"] #a-amt { font-family: "Sora", sans-serif; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 132px; line-height: 1.05; margin-top: 26px; letter-spacing: -0.03em; white-space: nowrap; }
+    [data-composition-id="a"] #a-note { font-size: 30px; color: #8aa0c4; margin-top: 6px; }
+    [data-composition-id="a"] #a-cap { position: absolute; left: 90px; top: 720px; width: 900px; text-align: center; font-family: "Sora", sans-serif; font-weight: 700; font-size: 68px; line-height: 1.25; }
+    [data-composition-id="a"] #a-q { position: absolute; left: 60px; top: 990px; width: 960px; text-align: center; font-family: "Sora", sans-serif; font-weight: 800; font-size: 124px; line-height: 1.1; letter-spacing: -0.02em; }
+    [data-composition-id="a"] #a-qm { display: inline-block; }</style><style data-hf-scene="b">[data-composition-id="b"] [data-hf-authored-id="root"] { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    [data-composition-id="b"] .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    [data-composition-id="b"] .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    [data-composition-id="b"] .b { color: #5aa2ff; }
+    [data-composition-id="b"] .g { color: #4ade80; }
+    [data-composition-id="b"] .r { color: #ff7b7b; }
+    [data-composition-id="b"] .w { display: inline-block; }
+    [data-composition-id="b"] .mono { font-family: "JetBrains Mono", monospace; }
+
+    [data-composition-id="b"] #b-top { position: absolute; left: 90px; top: 230px; width: 900px; padding: 30px 40px 36px; text-align: center; }
+    [data-composition-id="b"] #b-lbl { font-size: 36px; color: #8aa0c4; font-weight: 600; }
+    [data-composition-id="b"] #b-amt { font-family: "Sora", sans-serif; font-weight: 800; font-size: 130px; line-height: 1.1; letter-spacing: -0.03em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    [data-composition-id="b"] .fee { position: absolute; left: 90px; width: 900px; height: 160px; padding: 0 36px; display: flex; align-items: center; gap: 28px; }
+    [data-composition-id="b"] #b-f1 { top: 580px; } [data-composition-id="b"] #b-f2 { top: 770px; } [data-composition-id="b"] #b-f3 { top: 960px; }
+    [data-composition-id="b"] .ico { width: 96px; height: 96px; border-radius: 26px; background: #1a2a4a; display: grid; place-items: center; flex: none; }
+    [data-composition-id="b"] .mid { flex: 1; }
+    [data-composition-id="b"] .nm { font-size: 54px; line-height: 1.1; }
+    [data-composition-id="b"] .tg { font-size: 30px; color: #8aa0c4; margin-top: 4px; opacity: 0; }
+    [data-composition-id="b"] .vl { font-size: 50px; font-weight: 800; }
+    [data-composition-id="b"] #b-cap { position: absolute; left: 90px; top: 1170px; width: 900px; text-align: center; font-family: "Sora", sans-serif; font-weight: 700; font-size: 64px; line-height: 1.2; }
+    [data-composition-id="b"] #b-glow { position: absolute; left: 90px; top: 480px; width: 900px; height: 900px; border-radius: 50%; background: radial-gradient(#e5484d44, transparent 65%); opacity: 0; }</style><style data-hf-scene="c">[data-composition-id="c"] [data-hf-authored-id="root"] { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    [data-composition-id="c"] .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    [data-composition-id="c"] .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    [data-composition-id="c"] .b { color: #5aa2ff; }
+    [data-composition-id="c"] .g { color: #4ade80; }
+    [data-composition-id="c"] .r { color: #ff7b7b; }
+    [data-composition-id="c"] .w { display: inline-block; }
+    [data-composition-id="c"] .mono { font-family: "JetBrains Mono", monospace; }
+
+    [data-composition-id="c"] #c-head { position: absolute; left: 0; right: 0; top: 220px; display: flex; align-items: center; justify-content: center; gap: 22px; }
+    [data-composition-id="c"] #c-na { font-family: "Sora", sans-serif; font-weight: 700; font-size: 64px; color: #9db6dc; }
+    [data-composition-id="c"] #c-logo { height: 120px; width: auto; }
+    [data-composition-id="c"] #c-frame { position: absolute; left: 109px; top: 420px; width: 862px; height: 691px; background: #0b1220; border: 2px solid #2a4f94; border-radius: 56px; box-shadow: 0 30px 90px #1f6feb55; }
+    [data-composition-id="c"] #c-screen { position: absolute; inset: 10px; border-radius: 46px; overflow: hidden; }
+    [data-composition-id="c"] #c-wrap { position: absolute; left: 0; top: 0; width: 842px; height: 671px; transform-origin: 0 0; }
+    [data-composition-id="c"] #c-img { position: absolute; left: 0; top: 0; width: 842px; height: 671px; }
+    [data-composition-id="c"] #c-ul { position: absolute; left: 126px; top: 556px; width: 394px; height: 8px; border-radius: 4px; background: #5aa2ff; box-shadow: 0 0 24px #5aa2ff; }
+    [data-composition-id="c"] .rg { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border: 5px solid #5aa2ff; border-radius: 50%; opacity: 0; }
+    [data-composition-id="c"] .cur { position: absolute; left: 0; top: 0; width: 56px; height: 56px; }
+    [data-composition-id="c"] .chip { position: absolute; top: 1170px; width: 430px; height: 120px; padding: 0 30px; display: flex; flex-direction: column; justify-content: center; gap: 4px; border-radius: 28px; }
+    [data-composition-id="c"] #c-chip1 { left: 109px; } [data-composition-id="c"] #c-chip2 { left: 541px; }
+    [data-composition-id="c"] .chip b { font-family: "JetBrains Mono", monospace; font-size: 46px; font-weight: 800; }
+    [data-composition-id="c"] .chip span { font-size: 28px; color: #8aa0c4; font-weight: 600; }</style><style data-hf-scene="d">[data-composition-id="d"] [data-hf-authored-id="root"] { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    [data-composition-id="d"] .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    [data-composition-id="d"] .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    [data-composition-id="d"] .b { color: #5aa2ff; }
+    [data-composition-id="d"] .g { color: #4ade80; }
+    [data-composition-id="d"] .r { color: #ff7b7b; }
+    [data-composition-id="d"] .w { display: inline-block; }
+    [data-composition-id="d"] .mono { font-family: "JetBrains Mono", monospace; }
+
+    [data-composition-id="d"] #d-saldo { position: absolute; left: 90px; top: 230px; width: 900px; height: 560px; padding: 36px 44px; box-shadow: 0 30px 90px #16a34a33; }
+    [data-composition-id="d"] #d-lbl { font-size: 36px; color: #8aa0c4; font-weight: 600; }
+    [data-composition-id="d"] #d-amt { font-family: "Sora", sans-serif; font-weight: 800; font-size: 136px; line-height: 1.1; letter-spacing: -0.03em; color: #4ade80; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    [data-composition-id="d"] #d-bars { position: absolute; left: 44px; right: 44px; bottom: 36px; height: 200px; display: flex; align-items: flex-end; gap: 18px; }
+    [data-composition-id="d"] #d-bars i { flex: 1; background: linear-gradient(#5aa2ff, #1f6feb); border-radius: 12px 12px 4px 4px; transform-origin: bottom; display: block; }
+    [data-composition-id="d"] #d-bars i:last-child { background: linear-gradient(#7dffb0, #16a34a); }
+    [data-composition-id="d"] .row { position: absolute; left: 90px; width: 900px; height: 170px; padding: 0 40px; display: flex; align-items: center; gap: 36px; }
+    [data-composition-id="d"] #d-r1 { top: 860px; } [data-composition-id="d"] #d-r2 { top: 1060px; }
+    [data-composition-id="d"] .row .tx { font-family: "Sora", sans-serif; font-weight: 700; font-size: 54px; line-height: 1.15; }</style><style data-hf-scene="e">[data-composition-id="e"] [data-hf-authored-id="root"] { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    [data-composition-id="e"] .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    [data-composition-id="e"] .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    [data-composition-id="e"] .b { color: #5aa2ff; }
+    [data-composition-id="e"] .g { color: #4ade80; }
+    [data-composition-id="e"] .r { color: #ff7b7b; }
+    [data-composition-id="e"] .w { display: inline-block; }
+    [data-composition-id="e"] .mono { font-family: "JetBrains Mono", monospace; }
+
+    [data-composition-id="e"] #e-logo { position: absolute; left: 220px; top: 250px; width: 640px; height: auto; }
+    [data-composition-id="e"] #e-h1 { position: absolute; left: 0; right: 0; top: 560px; text-align: center; font-size: 150px; line-height: 1.05; }
+    [data-composition-id="e"] #e-pill { position: absolute; left: 290px; top: 960px; width: 500px; height: 110px; border-radius: 55px; background: #16a34a22; border: 2px solid #16a34a; color: #4ade80; font-size: 50px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 16px; }
+    [data-composition-id="e"] #e-btn { position: absolute; left: 190px; top: 1120px; width: 700px; height: 150px; border-radius: 75px; background: linear-gradient(135deg, #2f80ff, #1451b8); box-shadow: 0 25px 80px #1f6feb99; font-family: "Sora", sans-serif; font-weight: 800; font-size: 58px; display: flex; align-items: center; justify-content: center; }
+    [data-composition-id="e"] #e-ring { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border: 6px solid #ffffff; border-radius: 50%; opacity: 0; }
+    [data-composition-id="e"] .cur { position: absolute; left: 0; top: 0; width: 64px; height: 64px; }
+    [data-composition-id="e"] #e-glow { position: absolute; left: -160px; top: 330px; width: 1400px; height: 1400px; border-radius: 50%; background: radial-gradient(#1f6feb55, transparent 62%); opacity: 0; }</style>
+  
+<script data-hyperframes-preview-runtime="1" src="/api/runtime.js"></script>
+<meta name="hyperframes-project-signature" content="0b5e5cecd952cdd937820691">
+</head>
+  <body>
+    <div data-hf-id="hf-fdee" id="root" data-composition-id="main" data-start="0" data-duration="23.72" data-width="1080" data-height="1920">
+      <div data-composition-file="compositions/bg.html" data-hf-scene="bg" data-hf-id="hf-p989" id="bg" data-composition-id="bg" data-start="0" data-duration="23.72" data-track-index="0" data-track-kind="graphics" data-width="1080" data-height="1920"><div style="width:1080px;height:1920px" data-hf-inner-root="true" data-hf-authored-id="root" data-hf-id="hf-dzqo" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-m9yk" id="bg-g2" class="gl"></div>
+    <div data-hf-id="hf-uxuf" id="bg-g1" class="gl"></div>
+    <div data-hf-id="hf-r3kh" id="bg-grid"></div>
+  </div></div>
+      <div data-composition-file="compositions/a.html" data-hf-scene="a" data-hf-id="hf-llyb" id="a" data-composition-id="a" data-start="0.00" data-duration="4.65" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"><div style="width:1080px;height:1920px" data-hf-inner-root="true" data-hf-authored-id="root" data-hf-id="hf-in2m" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-cjvc" id="a-card" class="card">
+      <div data-hf-id="hf-1pjd" id="a-row">
+        <div data-hf-id="hf-8qrp" id="a-chip"><img data-hf-render-id="hf-media-0" data-hf-id="hf-0iy3" src="assets/img/Logotipo_MercadoLivre.png" alt="Mercado Livre"></div>
+        <div data-hf-id="hf-2agv" id="a-t">Venda aprovada</div>
+        <div data-hf-id="hf-whi9" id="a-ck"><svg data-hf-id="hf-m4a3" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-ai7r" d="M5 12.5l4.5 4.5L19 7" /></svg></div>
+      </div>
+      <div data-hf-id="hf-n92e" id="a-amt">R$ 30.000</div>
+      <div data-hf-id="hf-2hf2" id="a-note">valores de exemplo</div>
+    </div>
+    <div data-hf-id="hf-a9ix" id="a-cap"><span data-hf-id="hf-nv7b" id="a-w0" class="w">Você</span> <span data-hf-id="hf-xrih" id="a-w1" class="w">vendeu</span> <span data-hf-id="hf-9uon" id="a-w2" class="w b">trinta</span> <span data-hf-id="hf-doly" id="a-w3" class="w b">mil</span> <span data-hf-id="hf-aap5" id="a-w4" class="w b">reais</span> <span data-hf-id="hf-6rpn" id="a-w5" class="w">no</span> <span data-hf-id="hf-wcl8" id="a-w6" class="w">Mercado</span> <span data-hf-id="hf-r7sm" id="a-w7" class="w">Livre.</span></div>
+    <div data-hf-id="hf-nigk" id="a-q"><span data-hf-id="hf-1i8x" id="a-q1" class="w">Mas sobrou</span><br data-hf-id="hf-x5px"><span data-hf-id="hf-p307" id="a-q2" class="w b">quanto<span data-hf-id="hf-bz3b" id="a-qm">?</span></span></div>
+    
+  </div></div>
+      <div data-composition-file="compositions/b.html" data-hf-scene="b" data-hf-id="hf-28c0" id="b" data-composition-id="b" data-start="4.15" data-duration="4.42" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"><div style="width:1080px;height:1920px" data-hf-inner-root="true" data-hf-authored-id="root" data-hf-id="hf-zbu7" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-mgvl" id="b-glow"></div>
+    <div data-hf-id="hf-q5mg" id="b-top" class="card"><div data-hf-id="hf-5f6u" id="b-lbl">Valor da venda · exemplo</div><div data-hf-id="hf-c69f" id="b-amt">R$ 30.000</div></div>
+    <div data-hf-id="hf-el08" id="b-f1" class="card fee"><div data-hf-id="hf-5hk7" class="ico"><svg data-hf-id="hf-a4st" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-na51" d="M19 5L5 19" /><circle data-hf-id="hf-nz7l" cx="7" cy="7" r="2.3" /><circle data-hf-id="hf-2b5d" cx="17" cy="17" r="2.3" /></svg></div><div data-hf-id="hf-wgyu" class="mid"><div data-hf-id="hf-5sev" class="nm h">Comissão</div><div data-hf-id="hf-eoa6" id="b-f1-g" class="tg">painel do Mercado Livre</div></div><div data-hf-id="hf-8hvz" class="vl mono r">− R$ 4.800</div></div><div data-hf-id="hf-n8w3" id="b-f2" class="card fee"><div data-hf-id="hf-xvbb" class="ico"><svg data-hf-id="hf-xzi9" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-8a60" d="M3 12V4h8l9 9-8 8z" /><circle data-hf-id="hf-157w" cx="7.5" cy="8.5" r="1.4" /></svg></div><div data-hf-id="hf-dkru" class="mid"><div data-hf-id="hf-u2p4" class="nm h">Tarifa</div><div data-hf-id="hf-zwln" id="b-f2-g" class="tg">extrato da conta</div></div><div data-hf-id="hf-wb8i" class="vl mono r">− R$ 1.200</div></div><div data-hf-id="hf-jas2" id="b-f3" class="card fee"><div data-hf-id="hf-xh0a" class="ico"><svg data-hf-id="hf-z6fc" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-moqg" d="M2 6h11v10H2zM13 9h4l3 3v4h-7" /><circle data-hf-id="hf-rj9b" cx="6.5" cy="17.5" r="1.8" /><circle data-hf-id="hf-sxbk" cx="16.5" cy="17.5" r="1.8" /></svg></div><div data-hf-id="hf-dz2v" class="mid"><div data-hf-id="hf-wi1h" class="nm h">Frete</div><div data-hf-id="hf-p43y" id="b-f3-g" class="tg">planilha</div></div><div data-hf-id="hf-nzfq" class="vl mono r">− R$ 2.100</div></div>
+    <div data-hf-id="hf-z5ua" id="b-cap"><span data-hf-id="hf-9vzr" id="b-w0" class="w">cada</span> <span data-hf-id="hf-xqxh" id="b-w1" class="w">taxa</span> <span data-hf-id="hf-ugey" id="b-w2" class="w">num</span> <span data-hf-id="hf-dgvo" id="b-w3" class="w b">lugar</span> <span data-hf-id="hf-7h3k" id="b-w4" class="w b">diferente.</span></div>
+    
+  </div></div>
+      <div data-composition-file="compositions/c.html" data-hf-scene="c" data-hf-id="hf-p01w" id="c" data-composition-id="c" data-start="8.07" data-duration="4.89" data-track-index="3" data-track-kind="graphics" data-width="1080" data-height="1920"><div style="width:1080px;height:1920px" data-hf-inner-root="true" data-hf-authored-id="root" data-hf-id="hf-zcmc" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-jog3" id="c-head"><span data-hf-id="hf-0bzc" id="c-na">Na</span><img loading="lazy" data-hf-preview-lazy data-hf-render-id="c-logo" data-hf-id="hf-36f1" id="c-logo" src="assets/img/nexus_fi_logo_branco.png" alt="NexusFi"></div>
+    <div data-hf-id="hf-ul7k" id="c-frame">
+      <div data-hf-id="hf-mpd1" id="c-screen">
+        <div data-hf-id="hf-1vew" id="c-wrap" data-layout-allow-overflow="">
+          <img loading="lazy" data-hf-preview-lazy data-hf-render-id="c-img" data-hf-id="hf-j4av" id="c-img" src="assets/screens/fluxo-caixa.png" alt="Fluxo de caixa da NexusFi">
+          <div data-hf-id="hf-ty5i" id="c-ul"></div>
+        </div>
+        <div data-hf-id="hf-2v9s" id="c-r1" class="rg"></div>
+        <div data-hf-id="hf-bj5n" id="c-r2" class="rg"></div>
+        <svg data-hf-id="hf-tu50" class="cur" viewBox="0 0 24 24"><path data-hf-id="hf-pg9z" d="M5 3l14 8-6 1.5L10 19z" fill="#ffffff" stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round" /></svg>
+      </div>
+    </div>
+    <div data-hf-id="hf-81o9" id="c-chip1" class="card chip"><b data-hf-id="hf-iw2m" class="g">+ R$ 30.000</b><span data-hf-id="hf-zy2n">entrou no caixa</span></div>
+    <div data-hf-id="hf-bzsa" id="c-chip2" class="card chip"><b data-hf-id="hf-wbhc" class="r">− R$ 8.100</b><span data-hf-id="hf-n2v0">taxas, separadas</span></div>
+    
+  </div></div>
+      <div data-composition-file="compositions/d.html" data-hf-scene="d" data-hf-id="hf-207f" id="d" data-composition-id="d" data-start="12.46" data-duration="5.03" data-track-index="4" data-track-kind="graphics" data-width="1080" data-height="1920"><div style="width:1080px;height:1920px" data-hf-inner-root="true" data-hf-authored-id="root" data-hf-id="hf-yc1p" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-vjqs" id="d-saldo" class="card"><div data-hf-id="hf-oilh" id="d-lbl">Saldo do mês · exemplo</div><div data-hf-id="hf-yhvo" id="d-amt">R$ 0</div><div data-hf-id="hf-r6hu" id="d-bars"><i data-hf-id="hf-n6g6" id="d-bar0" style="height:30%"></i><i data-hf-id="hf-z63h" id="d-bar1" style="height:38%"></i><i data-hf-id="hf-ecvk" id="d-bar2" style="height:34%"></i><i data-hf-id="hf-obd9" id="d-bar3" style="height:50%"></i><i data-hf-id="hf-pwgn" id="d-bar4" style="height:46%"></i><i data-hf-id="hf-9rg8" id="d-bar5" style="height:64%"></i><i data-hf-id="hf-c7la" id="d-bar6" style="height:58%"></i><i data-hf-id="hf-odv1" id="d-bar7" style="height:100%"></i></div></div>
+    <div data-hf-id="hf-egay" id="d-r1" class="card row"><svg data-hf-id="hf-bxku" width="120" height="120" viewBox="0 0 120 120" fill="none"><rect data-hf-id="hf-sfsc" x="8" y="8" width="104" height="104" rx="18" stroke="#5aa2ff" stroke-width="7" /><path data-hf-id="hf-uced" d="M8 44h104M8 78h104M44 8v104M78 8v104" stroke="#5aa2ff" stroke-width="6" /><path data-hf-id="hf-asa6" id="d-s1h" d="M14 106L106 14" stroke="#101a2e" stroke-width="22" stroke-linecap="round" /><path data-hf-id="hf-abfv" id="d-s1" d="M14 106L106 14" stroke="#ff6b6b" stroke-width="10" stroke-linecap="round" /></svg><div data-hf-id="hf-n8o4" class="tx">Sem planilha</div></div>
+    <div data-hf-id="hf-ai6x" id="d-r2" class="card row"><svg data-hf-id="hf-t602" width="120" height="120" viewBox="0 0 120 120" fill="none"><rect data-hf-id="hf-k77o" x="8" y="8" width="104" height="104" rx="18" stroke="#5aa2ff" stroke-width="7" /><path data-hf-id="hf-wul8" d="M28 40h14M54 40h40M28 62h14M54 62h40M28 84h14M54 84h40" stroke="#5aa2ff" stroke-width="7" stroke-linecap="round" /><path data-hf-id="hf-evs3" id="d-s2h" d="M14 106L106 14" stroke="#101a2e" stroke-width="22" stroke-linecap="round" /><path data-hf-id="hf-xkjc" id="d-s2" d="M14 106L106 14" stroke="#ff6b6b" stroke-width="10" stroke-linecap="round" /></svg><div data-hf-id="hf-hhwa" class="tx">Sem conferir<br data-hf-id="hf-x5px">repasse na mão</div></div>
+    
+  </div></div>
+      <div data-composition-file="compositions/e.html" data-hf-scene="e" data-hf-id="hf-li2n" id="e" data-composition-id="e" data-start="16.99" data-duration="6.73" data-track-index="5" data-track-kind="graphics" data-width="1080" data-height="1920"><div style="width:1080px;height:1920px" data-hf-inner-root="true" data-hf-authored-id="root" data-hf-id="hf-aboa" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-h4i0" id="e-glow"></div>
+    <img loading="lazy" data-hf-preview-lazy data-hf-render-id="e-logo" data-hf-id="hf-1abn" id="e-logo" src="assets/img/nexus_fi_logo_branco.png" alt="NexusFi">
+    <div data-hf-id="hf-4rg9" id="e-h1" class="h"><div data-hf-id="hf-heov" id="e-l1">Grátis por</div><div data-hf-id="hf-d8fo" id="e-l2" class="b">7 dias</div></div>
+    <div data-hf-id="hf-l3gy" id="e-pill"><span data-hf-id="hf-ls52">✓</span><span data-hf-id="hf-1hkc">sem cartão</span></div>
+    <div data-hf-id="hf-vywq" id="e-btn">Link na bio →</div>
+    <div data-hf-id="hf-ivp9" id="e-ring"></div>
+    <svg data-hf-id="hf-tu50" class="cur" viewBox="0 0 24 24"><path data-hf-id="hf-pg9z" d="M5 3l14 8-6 1.5L10 19z" fill="#ffffff" stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round" /></svg>
+    
+  </div></div>
+      <audio data-hf-render-id="mix" data-hf-id="hf-63iw" id="mix" class="clip" src="assets/audio/mix.wav" data-start="0" data-duration="23.72" data-track-index="8" data-volume="1" data-end="23.72"></audio>
+    </div>
+    
+  <script type="text/hf-after-fonts">const tl = gsap.timeline({ paused: true });
+window.__timelines["main"] = tl;
+tl.seek(0);</script><script type="text/hf-after-fonts" data-hf-scene="bg">(function() {
+  (function() {
+    "use strict";
+    (() => {
+      function I(e) {
+        return e ? /[\w-]/.test(e) || e.charCodeAt(0) >= 128 : false;
+      }
+      function _(e) {
+        return e === " " || e === "	" || e === `
+` || e === "\r" || e === "\f";
+      }
+      var j = /^[0-9a-fA-F]{1,6}/;
+      function G(e) {
+        let n = e >= 55296 && e <= 57343;
+        return e === 0 || e > 1114111 || n ? 65533 : e;
+      }
+      function $(e, n) {
+        return e[n] === "\r" && e[n + 1] === `
+` ? n + 2 : _(e[n]) ? n + 1 : n;
+      }
+      function R(e, n) {
+        let t = e[n + 1];
+        if (t === void 0 || /[\n\r\f]/.test(t)) return null;
+        let i = j.exec(e.slice(n + 1, n + 7));
+        if (!i) return { value: t, end: n + 2 };
+        let o = G(Number.parseInt(i[0], 16));
+        return { value: String.fromCodePoint(o), end: $(e, n + 1 + i[0].length) };
+      }
+      function H(e, n) {
+        let t = (o) => I(o) && !/[0-9-]/.test(o), i = (o) => e[o] === "\\" && R(e, o) !== null;
+        return e[n] === "-" ? e[n + 1] === "-" || t(e[n + 1]) || i(n + 1) : t(e[n]) || i(n);
+      }
+      function y(e, n) {
+        let t = n;
+        for (; e.startsWith("/*", t); ) {
+          let i = e.indexOf("*/", t + 2);
+          t = i < 0 ? e.length : i + 2;
+        }
+        return t;
+      }
+      function A(e, n) {
+        let t = y(e, n);
+        for (; _(e[t]); ) t = y(e, t + 1);
+        return t;
+      }
+      function h(e, n) {
+        if (!H(e, n)) return null;
+        let t = n, i = "";
+        for (; t < e.length; ) {
+          let o = e[t];
+          if (o === "\\") {
+            let a = R(e, t);
+            if (!a) break;
+            i += a.value, t = a.end;
+            continue;
+          }
+          if (!I(o)) break;
+          i += o, t += 1;
+        }
+        return t === n ? null : { value: i, end: t };
+      }
+      var C = 45;
+      function T(e) {
+        return e >= 48 && e <= 57;
+      }
+      function z(e) {
+        return e >= 128 || e === C || e === 95 || T(e) || e >= 65 && e <= 90 || e >= 97 && e <= 122;
+      }
+      function J(e, n) {
+        let t = e.charCodeAt(n);
+        return t >= 1 && t <= 31 || t === 127 ? true : T(t) ? n === 0 || n === 1 && e.charCodeAt(0) === C : false;
+      }
+      function k(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          let i = e.charCodeAt(t), o = e[t];
+          i === 0 ? n += "\uFFFD" : J(e, t) ? n += `\\${i.toString(16)} ` : t === 0 && e.length === 1 && i === C ? n += `\\${o}` : z(i) ? n += o : n += `\\${o}`;
+        }
+        return n;
+      }
+      var W = /\/\*(?:[^*]|\*(?!\/))*\*\/|\\(?:[0-9a-fA-F]{1,6}(?:\r\n|[ \t\r\n\f])?|[\s\S])|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\[(?:\/\*(?:[^*]|\*(?!\/))*\*\/|\\[\s\S]|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|[^\]"'\\/]|\/(?!\*))*\]/g;
+      function Q(e) {
+        let n = new Array(e.length).fill(true);
+        for (let t of e.matchAll(W)) {
+          let i = t.index;
+          n.fill(false, i, i + t[0].length);
+        }
+        return n;
+      }
+      function q(e, n, t) {
+        if (n.length === 0 || !e.includes("#")) return e;
+        let i = new Set(n), o = Q(e), a = "", u = 0;
+        for (; u < e.length; ) {
+          let d = o[u] && e[u] === "#" ? h(e, u + 1) : null;
+          d && i.has(d.value) ? (a += t(d.value), u = d.end) : (a += e[u], u += 1);
+        }
+        return a;
+      }
+      function X(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          if (e[t] === "\\") {
+            let i = e[t + 1];
+            if (i !== void 0 && /[\n\r\f]/.test(i)) {
+              t = $(e, t + 1) - 1;
+              continue;
+            }
+            let o = R(e, t);
+            if (o) {
+              n += o.value, t = o.end - 1;
+              continue;
+            }
+          }
+          n += e[t];
+        }
+        return n;
+      }
+      function N(e) {
+        return Array.from(e, (n) => {
+          let t = n.charCodeAt(0);
+          return t === 0 ? "\uFFFD" : t < 32 || t === 127 ? `\\${t.toString(16)} ` : n === '"' || n === "\\" ? `\\${n}` : n;
+        }).join("");
+      }
+      function Y(e, n) {
+        return e ? { kind: "any" } : n === void 0 ? { kind: "none" } : { kind: "named", prefix: n };
+      }
+      function Z(e, n) {
+        return e[n] === "|" && e[n + 1] !== "=";
+      }
+      function B(e, n) {
+        let t = e[n] === "*", i = t ? { value: "*", end: n + 1 } : h(e, n), o = y(e, i?.end ?? n);
+        if (!Z(e, o)) return t ? null : i ? { token: i, namespace: { kind: "none" } } : null;
+        let a = h(e, y(e, o + 1));
+        return a ? { token: a, namespace: Y(t, i?.value) } : null;
+      }
+      function K(e) {
+        if (e[0] !== "[") return null;
+        let n = A(e, 1), t = B(e, n);
+        if (!t) return null;
+        let { token: i, namespace: o } = t;
+        return { name: i.value, rawName: e.slice(n, i.end), namespace: o, end: i.end };
+      }
+      function ee(e, n) {
+        let t = /^(?:"((?:\\[\s\S]|[^"\\])*)"|'((?:\\[\s\S]|[^'\\])*)')/.exec(e.slice(n));
+        return t ? { value: X(t[1] ?? t[2]), end: n + t[0].length } : h(e, n);
+      }
+      function ne(e, n) {
+        let t = A(e, n), i = h(e, t);
+        if (i) {
+          if (!/^[is]$/i.test(i.value)) return null;
+          t = A(e, i.end);
+        }
+        return e[t] !== "]" || t !== e.length - 1 ? null : { flag: i?.value };
+      }
+      function F(e) {
+        let n = K(e);
+        if (!n) return null;
+        let t = A(e, n.end), o = ["=", "~=", "|=", "^=", "$=", "*="].find((d) => e.startsWith(d, t));
+        if (!o) return null;
+        let a = ee(e, A(e, t + o.length));
+        if (!a) return null;
+        let u = ne(e, a.end);
+        return u ? { name: n.name, rawName: n.rawName, namespace: n.namespace, operator: o, value: a.value, flag: u.flag } : null;
+      }
+      function E(e, n) {
+        return e.replace(W, (t) => t.startsWith("[") ? n(t) : t);
+      }
+      var re = "data-hf-svg-reference-aliases";
+      function O(e, n, t, i) {
+        let o = { "=": (s, r) => s === r, "~=": (s, r) => s.split(/[ \t\r\n\f]+/).includes(r), "|=": (s, r) => s === r || s.startsWith(r + "-"), "^=": (s, r) => s.startsWith(r), "$=": (s, r) => s.endsWith(r), "*=": (s, r) => s.includes(r) }, a = (s, r, l) => !r && l !== "=" && l !== "|=" ? false : o[l](s, r), u = (s) => s.replace(/[A-Z]/g, (r) => r.toLowerCase()), d = (s) => {
+          let r = F(s);
+          if (!r) return s;
+          let { name: l, rawName: g, namespace: m, operator: b, value: D, flag: w } = r;
+          if (m.kind === "named" != (i !== void 0)) return s;
+          let x = w?.toLowerCase() === "i" ? u : (S) => S, L = u(l), P = t.filter((S) => {
+            let V = m.kind === "none" ? S.name : S.localName, U = m.kind === "named" ? i.get(m.prefix) : null;
+            return (m.kind === "any" || S.namespaceURI === U) && u(V) === L;
+          }), v = /* @__PURE__ */ new Set([s]);
+          for (let S of P) a(x(S.before), x(D), b) && v.add(`[${g}="${N(S.after)}"${w ? ` ${w}` : ""}]`);
+          return v.size === 1 ? s : `:is(${[...v].join(", ")})`;
+        };
+        if (i) return E(e, d);
+        let p = new Map(n.map(({ id: s, replacement: r }) => [s, r])), f = /* @__PURE__ */ new Map();
+        for (let s of t) {
+          if (s.name !== "id" || s.before === s.after || p.has(s.before)) continue;
+          let r = f.get(s.before);
+          r || (r = /* @__PURE__ */ new Set([`#${k(s.before)}`]), f.set(s.before, r)), r.add(`#${k(s.after)}`);
+        }
+        for (let [s, r] of f) p.set(s, `:is(${[...r].join(", ")})`);
+        let c = q(e, [...p.keys()], (s) => p.get(s));
+        return E(c, d);
+      }
+      function se(e, n, t = true) {
+        let i = [], a = (t ? [...e.querySelectorAll(`[${n}]`)] : []).map((d) => d.getAttribute(n)), u = e.getAttribute?.(n);
+        u && a.unshift(u);
+        for (let d of a) {
+          let p;
+          try {
+            p = JSON.parse(d);
+          } catch {
+            continue;
+          }
+          if (!Array.isArray(p)) continue;
+          let f = p;
+          for (let c of f) {
+            if (!ie(c)) continue;
+            let { name: s, localName: r, namespaceURI: l, before: g, after: m } = c;
+            i.push({ name: s, localName: r, namespaceURI: l, before: g, after: m });
+          }
+        }
+        return i;
+      }
+      function ie(e) {
+        if (!e || typeof e != "object") return false;
+        let { name: n, localName: t, namespaceURI: i, before: o, after: a } = e;
+        return typeof n == "string" && typeof t == "string" && (i === null || typeof i == "string") && typeof o == "string" && typeof a == "string";
+      }
+      function oe(e) {
+        let n = [], t = [], i = false, o, a = /* @__PURE__ */ new WeakMap(), u = (f, c) => {
+          for (let s of f) {
+            if ("selectorText" in s) {
+              let r = s, l = a.get(r), g = r.selectorText, m = l?.applied === g ? l.authored : g, b = O(m, [], t, c);
+              b !== g && (r.selectorText = b), b === m ? a.delete(r) : a.set(r, { authored: m, applied: r.selectorText });
+            }
+            "cssRules" in s && u(s.cssRules, c);
+          }
+        }, d = () => {
+          if (t.length) for (let f of e.document.styleSheets) {
+            let c;
+            try {
+              c = f.cssRules;
+            } catch {
+              continue;
+            }
+            let s = /* @__PURE__ */ new Map();
+            for (let r of c) {
+              if (!("namespaceURI" in r)) continue;
+              let { prefix: l, namespaceURI: g } = r;
+              l && s.set(l, g || null);
+            }
+            s.size && u(c, s);
+          }
+        }, p = { rewrite: (f, c = []) => {
+          if (typeof f != "string" || !f.includes("#") && !f.includes("[")) return f;
+          let s = O(f, c.length ? [...c, ...n] : n, t);
+          if (s !== f) {
+            if (!o) {
+              let r = e.document.createElement("div");
+              o = r.matches.bind(r);
+            }
+            o(f);
+          }
+          return s;
+        }, refresh() {
+          t = se(e.document, re).filter((r) => r.before !== r.after);
+          let f = new Set(t.filter((r) => r.name === "id").map((r) => r.before)), c = /* @__PURE__ */ new Set();
+          n = [];
+          for (let r of e.document.querySelectorAll("[data-hf-authored-id][id]")) {
+            let l = r.getAttribute("data-hf-authored-id");
+            if (!l || l === r.id || c.has(l) || f.has(l)) continue;
+            c.add(l);
+            let g = N(l);
+            n.push({ id: l, replacement: `:is(#${k(l)}, [data-hf-authored-id="${g}"])` });
+          }
+          if (d(), i || !n.length && !t.length) return;
+          let s = e.Element.prototype;
+          s.querySelector = new Proxy(s.querySelector, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), s.querySelectorAll = new Proxy(s.querySelectorAll, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), i = true;
+        } };
+        e.__hfSvgSelectorAliases = p, p.refresh();
+      }
+      function M() {
+        let e = window;
+        e.__hfSvgSelectorAliases || oe(e);
+      }
+      M();
+    })();
+  })();
+  var __hfCompId = "bg";
+  var __hfTimelineCompId = "bg";
+  var __hfErrorLabel = "[HyperFrames] composition script error:";
+  var __hfAuthoredRootId = "root";
+  var __hfCompositionSrc = "compositions/bg.html";
+  var __hfAuthoredRootAttr = "data-hf-authored-id";
+  var __hfEscapeAttr = function(value) {
+    return (value + "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  };
+  var __hfRootSelector = '[data-composition-id="bg"]';
+  var __hfRoot = null;
+  var __hfRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"bg"|'bg')\\s*\\]`;
+  var __hfTimelineRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"bg"|'bg')\\s*\\]`;
+  var __hfTimingSelectorPattern = `\\s*\\[\\s*data-(?:start|duration)\\s*=\\s*(?:"[^"]*"|'[^']*')\\s*\\]`;
+  var __hfAuthoredRootSelector = __hfAuthoredRootId ? "[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(__hfAuthoredRootId) + '"]' : "";
+  var __hfAuthoredRootEntries = __hfAuthoredRootSelector ? [{ id: __hfAuthoredRootId, replacement: __hfAuthoredRootSelector }] : [];
+  var __hfNormalizeSelector = function(selector) {
+    if (!__hfCompId || typeof selector !== "string") return selector;
+    var normalized = selector.replace(new RegExp(__hfRootSelectorPattern + "(?:" + __hfTimingSelectorPattern + ")+", "g"), __hfRootSelector).replace(new RegExp("(?:" + __hfTimingSelectorPattern + ")+" + __hfRootSelectorPattern, "g"), __hfRootSelector).replace(new RegExp(__hfRootSelectorPattern, "g"), __hfRootSelector);
+    if (__hfTimelineCompId !== __hfCompId) {
+      normalized = normalized.replace(new RegExp(__hfTimelineRootSelectorPattern, "g"), __hfRootSelector);
+    }
+    return window.__hfSvgSelectorAliases.rewrite(normalized, __hfAuthoredRootEntries);
+  };
+  var __hfFindRoot = function() {
+    if (!__hfRoot && __hfRootSelector) {
+      __hfRoot = window.document.querySelector(__hfRootSelector);
+    }
+    return __hfRoot;
+  };
+  var __hfContains = function(node) {
+    var root = __hfFindRoot();
+    return !root || node === root || root.contains(node);
+  };
+  var __hfQueryAll = function(selector) {
+    var root = __hfFindRoot();
+    if (!root || typeof selector !== "string") {
+      return window.document.querySelectorAll(selector);
+    }
+    return Array.prototype.filter.call(window.document.querySelectorAll(__hfNormalizeSelector(selector)), function(node) {
+      return __hfContains(node);
+    });
+  };
+  var __hfQueryOne = function(selector) {
+    var matches = __hfQueryAll(selector);
+    return matches[0] || null;
+  };
+  var __hfGetElementById = function(id) {
+    var found = window.document.getElementById(id);
+    if (found && __hfContains(found)) return found;
+    var root = __hfFindRoot();
+    if (!root) return found || null;
+    var idValue = id + "";
+    if (__hfAuthoredRootId && __hfAuthoredRootId === idValue && root.getAttribute && root.getAttribute(__hfAuthoredRootAttr) === idValue) {
+      return root;
+    }
+    if (root.id === idValue) return root;
+    if (typeof root.querySelector !== "function") return null;
+    try {
+      var authoredRootMatch = root.querySelector("[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(idValue) + '"]');
+      if (authoredRootMatch) return authoredRootMatch;
+    } catch {
+    }
+    if (typeof CSS !== "undefined" && CSS && typeof CSS.escape === "function") {
+      try {
+        return root.querySelector("#" + CSS.escape(idValue)) || null;
+      } catch {
+      }
+    }
+    try {
+      return root.querySelector('[id="' + __hfEscapeAttr(idValue) + '"]') || null;
+    } catch {
+    }
+    return null;
+  };
+  var __hfScopedDocument = typeof Proxy === "function" ? new Proxy(window.document, {
+    get: function(target, prop, receiver) {
+      if (prop === "querySelector") return __hfQueryOne;
+      if (prop === "querySelectorAll") return __hfQueryAll;
+      if (prop === "getElementById") return __hfGetElementById;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  }) : window.document;
+  var __hfTimelineRegistryProxy = null;
+  var __hfGetTimelineRegistry = function() {
+    window.__timelines = window.__timelines || {};
+    if (!__hfCompId || __hfCompId === __hfTimelineCompId || typeof Proxy !== "function") {
+      return window.__timelines;
+    }
+    if (!__hfTimelineRegistryProxy) {
+      __hfTimelineRegistryProxy = new Proxy(window.__timelines, {
+        get: function(target, prop, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.get(target, prop, target);
+          }
+          var runtimeValue = Reflect.get(target, __hfTimelineCompId, target);
+          return runtimeValue === void 0 ? Reflect.get(target, prop, target) : runtimeValue;
+        },
+        set: function(target, prop, value, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.set(target, prop, value, target);
+          }
+          var authoredValue = Reflect.get(target, __hfCompId, target);
+          var ownsAuthored = authoredValue === void 0 || authoredValue === Reflect.get(target, __hfTimelineCompId, target);
+          var runtimeSet = Reflect.set(target, __hfTimelineCompId, value, target);
+          if (!ownsAuthored) return runtimeSet;
+          return Reflect.set(target, __hfCompId, value, target) && runtimeSet;
+        }
+      });
+    }
+    return __hfTimelineRegistryProxy;
+  };
+  var __hfScopedWindow = typeof Proxy === "function" ? new Proxy(window, {
+    get: function(target, prop, receiver) {
+      if (prop === "__timelines") return __hfGetTimelineRegistry();
+      if (prop === "__hyperframes") return __hfScopedHyperframes;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" && value.prototype === void 0 ? value.bind(target) : value;
+    },
+    set: function(target, prop, value, receiver) {
+      if (prop === "__timelines") {
+        if (value === __hfTimelineRegistryProxy) return true;
+        target.__timelines = value || {};
+        __hfTimelineRegistryProxy = null;
+        return true;
+      }
+      return Reflect.set(target, prop, value, target);
+    }
+  }) : window;
+  var __hfResolveGsapTarget = function(target) {
+    if (typeof target !== "string" && !Array.isArray(target)) return target;
+    var resolved = typeof target === "string" ? __hfQueryAll(target) : target.reduce(function(resolved2, item) {
+      if (typeof item === "string") {
+        return resolved2.concat(Array.prototype.slice.call(__hfQueryAll(item)));
+      }
+      resolved2.push(item);
+      return resolved2;
+    }, []);
+    if (!resolved.length) {
+      var originalTarget = String(target);
+      resolved = [];
+      resolved.toString = function() {
+        return originalTarget;
+      };
+    }
+    return resolved;
+  };
+  var __hfScopeTimeline = function(timeline) {
+    if (!timeline || timeline.__hfScopedCompositionRoot === __hfFindRoot()) return timeline;
+    ["to", "from", "fromTo", "set"].forEach(function(method) {
+      var original = timeline[method];
+      if (typeof original !== "function") return;
+      timeline[method] = function(target) {
+        var args = Array.prototype.slice.call(arguments);
+        args[0] = __hfResolveGsapTarget(target);
+        return original.apply(timeline, args);
+      };
+    });
+    try {
+      Object.defineProperty(timeline, "__hfScopedCompositionRoot", {
+        value: __hfFindRoot(),
+        configurable: true
+      });
+    } catch {
+    }
+    return timeline;
+  };
+  var __hfBaseGsap = typeof gsap === "undefined" ? window.gsap : gsap;
+  var __hfScopedGsap = !__hfBaseGsap || typeof Proxy !== "function" ? __hfBaseGsap : new Proxy(__hfBaseGsap, {
+    get: function(target, prop, receiver) {
+      if (prop === "timeline") {
+        return function() {
+          return __hfScopeTimeline(target.timeline.apply(target, arguments));
+        };
+      }
+      if (prop === "to" || prop === "from" || prop === "fromTo" || prop === "set") {
+        return function(firstArg) {
+          var args = Array.prototype.slice.call(arguments);
+          args[0] = __hfResolveGsapTarget(firstArg);
+          return target[prop].apply(target, args);
+        };
+      }
+      if (prop === "utils" && target.utils && typeof Proxy === "function") {
+        return new Proxy(target.utils, {
+          get: function(utilsTarget, utilsProp, utilsReceiver) {
+            if (utilsProp === "toArray") {
+              return function(firstArg) {
+                var args = Array.prototype.slice.call(arguments);
+                args[0] = __hfResolveGsapTarget(firstArg);
+                return utilsTarget.toArray.apply(utilsTarget, args);
+              };
+            }
+            if (utilsProp === "selector") {
+              return function(base) {
+                var baseEl = typeof base === "string" ? __hfQueryOne(base) : base;
+                var root = baseEl || __hfFindRoot();
+                return function(selector) {
+                  if (!root || typeof selector !== "string") return [];
+                  return Array.prototype.filter.call(
+                    window.document.querySelectorAll(__hfNormalizeSelector(selector)),
+                    function(node) {
+                      return node === root || typeof root.contains === "function" && root.contains(node);
+                    }
+                  );
+                };
+              };
+            }
+            var value2 = Reflect.get(utilsTarget, utilsProp, utilsTarget);
+            return typeof value2 === "function" ? value2.bind(utilsTarget) : value2;
+          }
+        });
+      }
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  var __hfBaseHyperframes = window.__hyperframes;
+  var __hfScopedHyperframes = !__hfBaseHyperframes ? __hfBaseHyperframes : Object.assign({}, __hfBaseHyperframes, {
+    assetUrl: function(path) {
+      var page = window.document.baseURI;
+      return new URL(path, __hfCompositionSrc ? new URL(__hfCompositionSrc, page) : page).href;
+    },
+    getVariables: function() {
+      var byComp = window.__hfVariablesByComp;
+      var scoped = byComp && __hfTimelineCompId ? byComp[__hfTimelineCompId] : null;
+      return scoped ? Object.assign({}, scoped) : {};
+    }
+  });
+  var __hfRun = function() {
+    var report = window.__hfScriptState;
+    if (typeof report === "function") report("start", __hfCompositionSrc || "index.html");
+    try {
+      (function(document, gsap2, window2, __hyperframes) {
+        const tl = gsap2.timeline({ paused: true });
+        tl.fromTo("#bg-g1", { scale: 1 }, { scale: 1.14, duration: 11.86, ease: "sine.inOut" }, 0);
+        tl.to("#bg-g1", { scale: 1, duration: 11.86, ease: "sine.inOut" }, 11.86);
+        tl.fromTo("#bg-g2", { opacity: 0.7 }, { opacity: 1, duration: 11.86, ease: "sine.inOut" }, 0);
+        tl.to("#bg-g2", { opacity: 0.7, duration: 11.86, ease: "sine.inOut" }, 11.86);
+        window2.__timelines["bg"] = tl;
+      }).call(window, __hfScopedDocument, __hfScopedGsap, __hfScopedWindow, __hfScopedHyperframes);
+    } catch (_err) {
+      console.error(__hfErrorLabel, __hfCompId, _err);
+    } finally {
+      if (typeof report === "function") report("finish", __hfCompositionSrc || "index.html");
+    }
+  };
+  var __hfRecordAnimations = function(run) {
+    if (window.__hfSceneAnimations === void 0) {
+      window.__hfSceneAnimations = window.document.querySelector('meta[name="hf-scene-parts"]') ? {} : null;
+    }
+    var byComp = window.__hfSceneAnimations;
+    var globalTimeline = __hfBaseGsap && __hfBaseGsap.globalTimeline;
+    if (!byComp || !globalTimeline || !__hfTimelineCompId) return run();
+    var before = globalTimeline.getChildren(false);
+    var autoRemove = globalTimeline.autoRemoveChildren;
+    globalTimeline.autoRemoveChildren = false;
+    run();
+    globalTimeline.autoRemoveChildren = autoRemove;
+    var recorded = byComp[__hfTimelineCompId] = byComp[__hfTimelineCompId] || [];
+    globalTimeline.getChildren(false).forEach(function(animation) {
+      if (before.indexOf(animation) >= 0) return;
+      recorded.push(animation);
+      if (autoRemove && !animation.getChildren && animation.totalProgress() === 1) globalTimeline.remove(animation);
+    });
+  };
+  __hfFindRoot();
+  __hfRecordAnimations(__hfRun);
+})();</script><script type="text/hf-after-fonts" data-hf-scene="a">(function() {
+  (function() {
+    "use strict";
+    (() => {
+      function I(e) {
+        return e ? /[\w-]/.test(e) || e.charCodeAt(0) >= 128 : false;
+      }
+      function _(e) {
+        return e === " " || e === "	" || e === `
+` || e === "\r" || e === "\f";
+      }
+      var j = /^[0-9a-fA-F]{1,6}/;
+      function G(e) {
+        let n = e >= 55296 && e <= 57343;
+        return e === 0 || e > 1114111 || n ? 65533 : e;
+      }
+      function $(e, n) {
+        return e[n] === "\r" && e[n + 1] === `
+` ? n + 2 : _(e[n]) ? n + 1 : n;
+      }
+      function R(e, n) {
+        let t = e[n + 1];
+        if (t === void 0 || /[\n\r\f]/.test(t)) return null;
+        let i = j.exec(e.slice(n + 1, n + 7));
+        if (!i) return { value: t, end: n + 2 };
+        let o = G(Number.parseInt(i[0], 16));
+        return { value: String.fromCodePoint(o), end: $(e, n + 1 + i[0].length) };
+      }
+      function H(e, n) {
+        let t = (o) => I(o) && !/[0-9-]/.test(o), i = (o) => e[o] === "\\" && R(e, o) !== null;
+        return e[n] === "-" ? e[n + 1] === "-" || t(e[n + 1]) || i(n + 1) : t(e[n]) || i(n);
+      }
+      function y(e, n) {
+        let t = n;
+        for (; e.startsWith("/*", t); ) {
+          let i = e.indexOf("*/", t + 2);
+          t = i < 0 ? e.length : i + 2;
+        }
+        return t;
+      }
+      function A(e, n) {
+        let t = y(e, n);
+        for (; _(e[t]); ) t = y(e, t + 1);
+        return t;
+      }
+      function h(e, n) {
+        if (!H(e, n)) return null;
+        let t = n, i = "";
+        for (; t < e.length; ) {
+          let o = e[t];
+          if (o === "\\") {
+            let a = R(e, t);
+            if (!a) break;
+            i += a.value, t = a.end;
+            continue;
+          }
+          if (!I(o)) break;
+          i += o, t += 1;
+        }
+        return t === n ? null : { value: i, end: t };
+      }
+      var C = 45;
+      function T(e) {
+        return e >= 48 && e <= 57;
+      }
+      function z(e) {
+        return e >= 128 || e === C || e === 95 || T(e) || e >= 65 && e <= 90 || e >= 97 && e <= 122;
+      }
+      function J(e, n) {
+        let t = e.charCodeAt(n);
+        return t >= 1 && t <= 31 || t === 127 ? true : T(t) ? n === 0 || n === 1 && e.charCodeAt(0) === C : false;
+      }
+      function k(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          let i = e.charCodeAt(t), o = e[t];
+          i === 0 ? n += "\uFFFD" : J(e, t) ? n += `\\${i.toString(16)} ` : t === 0 && e.length === 1 && i === C ? n += `\\${o}` : z(i) ? n += o : n += `\\${o}`;
+        }
+        return n;
+      }
+      var W = /\/\*(?:[^*]|\*(?!\/))*\*\/|\\(?:[0-9a-fA-F]{1,6}(?:\r\n|[ \t\r\n\f])?|[\s\S])|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\[(?:\/\*(?:[^*]|\*(?!\/))*\*\/|\\[\s\S]|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|[^\]"'\\/]|\/(?!\*))*\]/g;
+      function Q(e) {
+        let n = new Array(e.length).fill(true);
+        for (let t of e.matchAll(W)) {
+          let i = t.index;
+          n.fill(false, i, i + t[0].length);
+        }
+        return n;
+      }
+      function q(e, n, t) {
+        if (n.length === 0 || !e.includes("#")) return e;
+        let i = new Set(n), o = Q(e), a = "", u = 0;
+        for (; u < e.length; ) {
+          let d = o[u] && e[u] === "#" ? h(e, u + 1) : null;
+          d && i.has(d.value) ? (a += t(d.value), u = d.end) : (a += e[u], u += 1);
+        }
+        return a;
+      }
+      function X(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          if (e[t] === "\\") {
+            let i = e[t + 1];
+            if (i !== void 0 && /[\n\r\f]/.test(i)) {
+              t = $(e, t + 1) - 1;
+              continue;
+            }
+            let o = R(e, t);
+            if (o) {
+              n += o.value, t = o.end - 1;
+              continue;
+            }
+          }
+          n += e[t];
+        }
+        return n;
+      }
+      function N(e) {
+        return Array.from(e, (n) => {
+          let t = n.charCodeAt(0);
+          return t === 0 ? "\uFFFD" : t < 32 || t === 127 ? `\\${t.toString(16)} ` : n === '"' || n === "\\" ? `\\${n}` : n;
+        }).join("");
+      }
+      function Y(e, n) {
+        return e ? { kind: "any" } : n === void 0 ? { kind: "none" } : { kind: "named", prefix: n };
+      }
+      function Z(e, n) {
+        return e[n] === "|" && e[n + 1] !== "=";
+      }
+      function B(e, n) {
+        let t = e[n] === "*", i = t ? { value: "*", end: n + 1 } : h(e, n), o = y(e, i?.end ?? n);
+        if (!Z(e, o)) return t ? null : i ? { token: i, namespace: { kind: "none" } } : null;
+        let a = h(e, y(e, o + 1));
+        return a ? { token: a, namespace: Y(t, i?.value) } : null;
+      }
+      function K(e) {
+        if (e[0] !== "[") return null;
+        let n = A(e, 1), t = B(e, n);
+        if (!t) return null;
+        let { token: i, namespace: o } = t;
+        return { name: i.value, rawName: e.slice(n, i.end), namespace: o, end: i.end };
+      }
+      function ee(e, n) {
+        let t = /^(?:"((?:\\[\s\S]|[^"\\])*)"|'((?:\\[\s\S]|[^'\\])*)')/.exec(e.slice(n));
+        return t ? { value: X(t[1] ?? t[2]), end: n + t[0].length } : h(e, n);
+      }
+      function ne(e, n) {
+        let t = A(e, n), i = h(e, t);
+        if (i) {
+          if (!/^[is]$/i.test(i.value)) return null;
+          t = A(e, i.end);
+        }
+        return e[t] !== "]" || t !== e.length - 1 ? null : { flag: i?.value };
+      }
+      function F(e) {
+        let n = K(e);
+        if (!n) return null;
+        let t = A(e, n.end), o = ["=", "~=", "|=", "^=", "$=", "*="].find((d) => e.startsWith(d, t));
+        if (!o) return null;
+        let a = ee(e, A(e, t + o.length));
+        if (!a) return null;
+        let u = ne(e, a.end);
+        return u ? { name: n.name, rawName: n.rawName, namespace: n.namespace, operator: o, value: a.value, flag: u.flag } : null;
+      }
+      function E(e, n) {
+        return e.replace(W, (t) => t.startsWith("[") ? n(t) : t);
+      }
+      var re = "data-hf-svg-reference-aliases";
+      function O(e, n, t, i) {
+        let o = { "=": (s, r) => s === r, "~=": (s, r) => s.split(/[ \t\r\n\f]+/).includes(r), "|=": (s, r) => s === r || s.startsWith(r + "-"), "^=": (s, r) => s.startsWith(r), "$=": (s, r) => s.endsWith(r), "*=": (s, r) => s.includes(r) }, a = (s, r, l) => !r && l !== "=" && l !== "|=" ? false : o[l](s, r), u = (s) => s.replace(/[A-Z]/g, (r) => r.toLowerCase()), d = (s) => {
+          let r = F(s);
+          if (!r) return s;
+          let { name: l, rawName: g, namespace: m, operator: b, value: D, flag: w } = r;
+          if (m.kind === "named" != (i !== void 0)) return s;
+          let x = w?.toLowerCase() === "i" ? u : (S) => S, L = u(l), P = t.filter((S) => {
+            let V = m.kind === "none" ? S.name : S.localName, U = m.kind === "named" ? i.get(m.prefix) : null;
+            return (m.kind === "any" || S.namespaceURI === U) && u(V) === L;
+          }), v = /* @__PURE__ */ new Set([s]);
+          for (let S of P) a(x(S.before), x(D), b) && v.add(`[${g}="${N(S.after)}"${w ? ` ${w}` : ""}]`);
+          return v.size === 1 ? s : `:is(${[...v].join(", ")})`;
+        };
+        if (i) return E(e, d);
+        let p = new Map(n.map(({ id: s, replacement: r }) => [s, r])), f = /* @__PURE__ */ new Map();
+        for (let s of t) {
+          if (s.name !== "id" || s.before === s.after || p.has(s.before)) continue;
+          let r = f.get(s.before);
+          r || (r = /* @__PURE__ */ new Set([`#${k(s.before)}`]), f.set(s.before, r)), r.add(`#${k(s.after)}`);
+        }
+        for (let [s, r] of f) p.set(s, `:is(${[...r].join(", ")})`);
+        let c = q(e, [...p.keys()], (s) => p.get(s));
+        return E(c, d);
+      }
+      function se(e, n, t = true) {
+        let i = [], a = (t ? [...e.querySelectorAll(`[${n}]`)] : []).map((d) => d.getAttribute(n)), u = e.getAttribute?.(n);
+        u && a.unshift(u);
+        for (let d of a) {
+          let p;
+          try {
+            p = JSON.parse(d);
+          } catch {
+            continue;
+          }
+          if (!Array.isArray(p)) continue;
+          let f = p;
+          for (let c of f) {
+            if (!ie(c)) continue;
+            let { name: s, localName: r, namespaceURI: l, before: g, after: m } = c;
+            i.push({ name: s, localName: r, namespaceURI: l, before: g, after: m });
+          }
+        }
+        return i;
+      }
+      function ie(e) {
+        if (!e || typeof e != "object") return false;
+        let { name: n, localName: t, namespaceURI: i, before: o, after: a } = e;
+        return typeof n == "string" && typeof t == "string" && (i === null || typeof i == "string") && typeof o == "string" && typeof a == "string";
+      }
+      function oe(e) {
+        let n = [], t = [], i = false, o, a = /* @__PURE__ */ new WeakMap(), u = (f, c) => {
+          for (let s of f) {
+            if ("selectorText" in s) {
+              let r = s, l = a.get(r), g = r.selectorText, m = l?.applied === g ? l.authored : g, b = O(m, [], t, c);
+              b !== g && (r.selectorText = b), b === m ? a.delete(r) : a.set(r, { authored: m, applied: r.selectorText });
+            }
+            "cssRules" in s && u(s.cssRules, c);
+          }
+        }, d = () => {
+          if (t.length) for (let f of e.document.styleSheets) {
+            let c;
+            try {
+              c = f.cssRules;
+            } catch {
+              continue;
+            }
+            let s = /* @__PURE__ */ new Map();
+            for (let r of c) {
+              if (!("namespaceURI" in r)) continue;
+              let { prefix: l, namespaceURI: g } = r;
+              l && s.set(l, g || null);
+            }
+            s.size && u(c, s);
+          }
+        }, p = { rewrite: (f, c = []) => {
+          if (typeof f != "string" || !f.includes("#") && !f.includes("[")) return f;
+          let s = O(f, c.length ? [...c, ...n] : n, t);
+          if (s !== f) {
+            if (!o) {
+              let r = e.document.createElement("div");
+              o = r.matches.bind(r);
+            }
+            o(f);
+          }
+          return s;
+        }, refresh() {
+          t = se(e.document, re).filter((r) => r.before !== r.after);
+          let f = new Set(t.filter((r) => r.name === "id").map((r) => r.before)), c = /* @__PURE__ */ new Set();
+          n = [];
+          for (let r of e.document.querySelectorAll("[data-hf-authored-id][id]")) {
+            let l = r.getAttribute("data-hf-authored-id");
+            if (!l || l === r.id || c.has(l) || f.has(l)) continue;
+            c.add(l);
+            let g = N(l);
+            n.push({ id: l, replacement: `:is(#${k(l)}, [data-hf-authored-id="${g}"])` });
+          }
+          if (d(), i || !n.length && !t.length) return;
+          let s = e.Element.prototype;
+          s.querySelector = new Proxy(s.querySelector, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), s.querySelectorAll = new Proxy(s.querySelectorAll, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), i = true;
+        } };
+        e.__hfSvgSelectorAliases = p, p.refresh();
+      }
+      function M() {
+        let e = window;
+        e.__hfSvgSelectorAliases || oe(e);
+      }
+      M();
+    })();
+  })();
+  var __hfCompId = "a";
+  var __hfTimelineCompId = "a";
+  var __hfErrorLabel = "[HyperFrames] composition script error:";
+  var __hfAuthoredRootId = "root";
+  var __hfCompositionSrc = "compositions/a.html";
+  var __hfAuthoredRootAttr = "data-hf-authored-id";
+  var __hfEscapeAttr = function(value) {
+    return (value + "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  };
+  var __hfRootSelector = '[data-composition-id="a"]';
+  var __hfRoot = null;
+  var __hfRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"a"|'a')\\s*\\]`;
+  var __hfTimelineRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"a"|'a')\\s*\\]`;
+  var __hfTimingSelectorPattern = `\\s*\\[\\s*data-(?:start|duration)\\s*=\\s*(?:"[^"]*"|'[^']*')\\s*\\]`;
+  var __hfAuthoredRootSelector = __hfAuthoredRootId ? "[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(__hfAuthoredRootId) + '"]' : "";
+  var __hfAuthoredRootEntries = __hfAuthoredRootSelector ? [{ id: __hfAuthoredRootId, replacement: __hfAuthoredRootSelector }] : [];
+  var __hfNormalizeSelector = function(selector) {
+    if (!__hfCompId || typeof selector !== "string") return selector;
+    var normalized = selector.replace(new RegExp(__hfRootSelectorPattern + "(?:" + __hfTimingSelectorPattern + ")+", "g"), __hfRootSelector).replace(new RegExp("(?:" + __hfTimingSelectorPattern + ")+" + __hfRootSelectorPattern, "g"), __hfRootSelector).replace(new RegExp(__hfRootSelectorPattern, "g"), __hfRootSelector);
+    if (__hfTimelineCompId !== __hfCompId) {
+      normalized = normalized.replace(new RegExp(__hfTimelineRootSelectorPattern, "g"), __hfRootSelector);
+    }
+    return window.__hfSvgSelectorAliases.rewrite(normalized, __hfAuthoredRootEntries);
+  };
+  var __hfFindRoot = function() {
+    if (!__hfRoot && __hfRootSelector) {
+      __hfRoot = window.document.querySelector(__hfRootSelector);
+    }
+    return __hfRoot;
+  };
+  var __hfContains = function(node) {
+    var root = __hfFindRoot();
+    return !root || node === root || root.contains(node);
+  };
+  var __hfQueryAll = function(selector) {
+    var root = __hfFindRoot();
+    if (!root || typeof selector !== "string") {
+      return window.document.querySelectorAll(selector);
+    }
+    return Array.prototype.filter.call(window.document.querySelectorAll(__hfNormalizeSelector(selector)), function(node) {
+      return __hfContains(node);
+    });
+  };
+  var __hfQueryOne = function(selector) {
+    var matches = __hfQueryAll(selector);
+    return matches[0] || null;
+  };
+  var __hfGetElementById = function(id) {
+    var found = window.document.getElementById(id);
+    if (found && __hfContains(found)) return found;
+    var root = __hfFindRoot();
+    if (!root) return found || null;
+    var idValue = id + "";
+    if (__hfAuthoredRootId && __hfAuthoredRootId === idValue && root.getAttribute && root.getAttribute(__hfAuthoredRootAttr) === idValue) {
+      return root;
+    }
+    if (root.id === idValue) return root;
+    if (typeof root.querySelector !== "function") return null;
+    try {
+      var authoredRootMatch = root.querySelector("[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(idValue) + '"]');
+      if (authoredRootMatch) return authoredRootMatch;
+    } catch {
+    }
+    if (typeof CSS !== "undefined" && CSS && typeof CSS.escape === "function") {
+      try {
+        return root.querySelector("#" + CSS.escape(idValue)) || null;
+      } catch {
+      }
+    }
+    try {
+      return root.querySelector('[id="' + __hfEscapeAttr(idValue) + '"]') || null;
+    } catch {
+    }
+    return null;
+  };
+  var __hfScopedDocument = typeof Proxy === "function" ? new Proxy(window.document, {
+    get: function(target, prop, receiver) {
+      if (prop === "querySelector") return __hfQueryOne;
+      if (prop === "querySelectorAll") return __hfQueryAll;
+      if (prop === "getElementById") return __hfGetElementById;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  }) : window.document;
+  var __hfTimelineRegistryProxy = null;
+  var __hfGetTimelineRegistry = function() {
+    window.__timelines = window.__timelines || {};
+    if (!__hfCompId || __hfCompId === __hfTimelineCompId || typeof Proxy !== "function") {
+      return window.__timelines;
+    }
+    if (!__hfTimelineRegistryProxy) {
+      __hfTimelineRegistryProxy = new Proxy(window.__timelines, {
+        get: function(target, prop, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.get(target, prop, target);
+          }
+          var runtimeValue = Reflect.get(target, __hfTimelineCompId, target);
+          return runtimeValue === void 0 ? Reflect.get(target, prop, target) : runtimeValue;
+        },
+        set: function(target, prop, value, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.set(target, prop, value, target);
+          }
+          var authoredValue = Reflect.get(target, __hfCompId, target);
+          var ownsAuthored = authoredValue === void 0 || authoredValue === Reflect.get(target, __hfTimelineCompId, target);
+          var runtimeSet = Reflect.set(target, __hfTimelineCompId, value, target);
+          if (!ownsAuthored) return runtimeSet;
+          return Reflect.set(target, __hfCompId, value, target) && runtimeSet;
+        }
+      });
+    }
+    return __hfTimelineRegistryProxy;
+  };
+  var __hfScopedWindow = typeof Proxy === "function" ? new Proxy(window, {
+    get: function(target, prop, receiver) {
+      if (prop === "__timelines") return __hfGetTimelineRegistry();
+      if (prop === "__hyperframes") return __hfScopedHyperframes;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" && value.prototype === void 0 ? value.bind(target) : value;
+    },
+    set: function(target, prop, value, receiver) {
+      if (prop === "__timelines") {
+        if (value === __hfTimelineRegistryProxy) return true;
+        target.__timelines = value || {};
+        __hfTimelineRegistryProxy = null;
+        return true;
+      }
+      return Reflect.set(target, prop, value, target);
+    }
+  }) : window;
+  var __hfResolveGsapTarget = function(target) {
+    if (typeof target !== "string" && !Array.isArray(target)) return target;
+    var resolved = typeof target === "string" ? __hfQueryAll(target) : target.reduce(function(resolved2, item) {
+      if (typeof item === "string") {
+        return resolved2.concat(Array.prototype.slice.call(__hfQueryAll(item)));
+      }
+      resolved2.push(item);
+      return resolved2;
+    }, []);
+    if (!resolved.length) {
+      var originalTarget = String(target);
+      resolved = [];
+      resolved.toString = function() {
+        return originalTarget;
+      };
+    }
+    return resolved;
+  };
+  var __hfScopeTimeline = function(timeline) {
+    if (!timeline || timeline.__hfScopedCompositionRoot === __hfFindRoot()) return timeline;
+    ["to", "from", "fromTo", "set"].forEach(function(method) {
+      var original = timeline[method];
+      if (typeof original !== "function") return;
+      timeline[method] = function(target) {
+        var args = Array.prototype.slice.call(arguments);
+        args[0] = __hfResolveGsapTarget(target);
+        return original.apply(timeline, args);
+      };
+    });
+    try {
+      Object.defineProperty(timeline, "__hfScopedCompositionRoot", {
+        value: __hfFindRoot(),
+        configurable: true
+      });
+    } catch {
+    }
+    return timeline;
+  };
+  var __hfBaseGsap = typeof gsap === "undefined" ? window.gsap : gsap;
+  var __hfScopedGsap = !__hfBaseGsap || typeof Proxy !== "function" ? __hfBaseGsap : new Proxy(__hfBaseGsap, {
+    get: function(target, prop, receiver) {
+      if (prop === "timeline") {
+        return function() {
+          return __hfScopeTimeline(target.timeline.apply(target, arguments));
+        };
+      }
+      if (prop === "to" || prop === "from" || prop === "fromTo" || prop === "set") {
+        return function(firstArg) {
+          var args = Array.prototype.slice.call(arguments);
+          args[0] = __hfResolveGsapTarget(firstArg);
+          return target[prop].apply(target, args);
+        };
+      }
+      if (prop === "utils" && target.utils && typeof Proxy === "function") {
+        return new Proxy(target.utils, {
+          get: function(utilsTarget, utilsProp, utilsReceiver) {
+            if (utilsProp === "toArray") {
+              return function(firstArg) {
+                var args = Array.prototype.slice.call(arguments);
+                args[0] = __hfResolveGsapTarget(firstArg);
+                return utilsTarget.toArray.apply(utilsTarget, args);
+              };
+            }
+            if (utilsProp === "selector") {
+              return function(base) {
+                var baseEl = typeof base === "string" ? __hfQueryOne(base) : base;
+                var root = baseEl || __hfFindRoot();
+                return function(selector) {
+                  if (!root || typeof selector !== "string") return [];
+                  return Array.prototype.filter.call(
+                    window.document.querySelectorAll(__hfNormalizeSelector(selector)),
+                    function(node) {
+                      return node === root || typeof root.contains === "function" && root.contains(node);
+                    }
+                  );
+                };
+              };
+            }
+            var value2 = Reflect.get(utilsTarget, utilsProp, utilsTarget);
+            return typeof value2 === "function" ? value2.bind(utilsTarget) : value2;
+          }
+        });
+      }
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  var __hfBaseHyperframes = window.__hyperframes;
+  var __hfScopedHyperframes = !__hfBaseHyperframes ? __hfBaseHyperframes : Object.assign({}, __hfBaseHyperframes, {
+    assetUrl: function(path) {
+      var page = window.document.baseURI;
+      return new URL(path, __hfCompositionSrc ? new URL(__hfCompositionSrc, page) : page).href;
+    },
+    getVariables: function() {
+      var byComp = window.__hfVariablesByComp;
+      var scoped = byComp && __hfTimelineCompId ? byComp[__hfTimelineCompId] : null;
+      return scoped ? Object.assign({}, scoped) : {};
+    }
+  });
+  var __hfRun = function() {
+    var report = window.__hfScriptState;
+    if (typeof report === "function") report("start", __hfCompositionSrc || "index.html");
+    try {
+      (function(document, gsap2, window2, __hyperframes) {
+        const tl = gsap2.timeline({ paused: true });
+        const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+        const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+        const ring = (s, x, y, at) => tl.fromTo(s, { x, y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+        tl.fromTo("#a-ck", { scale: 0 }, { scale: 1, duration: 0.45, ease: "back.out(2)" }, 0.35);
+        tl.fromTo("#a-w2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 1.2);
+        tl.fromTo("#a-w3", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 1.55);
+        tl.fromTo("#a-w4", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 1.72);
+        tl.fromTo("#a-w5", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.18);
+        tl.fromTo("#a-w6", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.27);
+        tl.fromTo("#a-w7", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.73);
+        tl.fromTo("#a-card", { scale: 1 }, { scale: 1.04, duration: 0.2, ease: "power2.out" }, 1.2);
+        tl.to("#a-card", { scale: 1, duration: 0.4, ease: "power2.out" }, 1.2 + 0.2);
+        tl.to("#a-card", { opacity: 0.35, scale: 0.94, duration: 0.4, ease: "power2.inOut" }, 3.41 - 0.1);
+        tl.to("#a-cap", { opacity: 0.25, duration: 0.4, ease: "power2.inOut" }, 3.41 - 0.1);
+        up("#a-q1", 3.41, 0.5);
+        up("#a-q2", 3.99 - 0.1, 0.5);
+        tl.fromTo("#a-qm", { scale: 1 }, { scale: 1.5, duration: 0.14, ease: "power3.out" }, 3.99 + 0.35);
+        tl.to("#a-qm", { scale: 1, duration: 0.55, ease: "elastic.out(1, 0.55)" }, 3.99 + 0.49);
+        tl.to("#root", { y: -1920, duration: 0.5, ease: "power3.inOut" }, 4.65 - 0.5);
+        window2.__timelines["a"] = tl;
+      }).call(window, __hfScopedDocument, __hfScopedGsap, __hfScopedWindow, __hfScopedHyperframes);
+    } catch (_err) {
+      console.error(__hfErrorLabel, __hfCompId, _err);
+    } finally {
+      if (typeof report === "function") report("finish", __hfCompositionSrc || "index.html");
+    }
+  };
+  var __hfRecordAnimations = function(run) {
+    if (window.__hfSceneAnimations === void 0) {
+      window.__hfSceneAnimations = window.document.querySelector('meta[name="hf-scene-parts"]') ? {} : null;
+    }
+    var byComp = window.__hfSceneAnimations;
+    var globalTimeline = __hfBaseGsap && __hfBaseGsap.globalTimeline;
+    if (!byComp || !globalTimeline || !__hfTimelineCompId) return run();
+    var before = globalTimeline.getChildren(false);
+    var autoRemove = globalTimeline.autoRemoveChildren;
+    globalTimeline.autoRemoveChildren = false;
+    run();
+    globalTimeline.autoRemoveChildren = autoRemove;
+    var recorded = byComp[__hfTimelineCompId] = byComp[__hfTimelineCompId] || [];
+    globalTimeline.getChildren(false).forEach(function(animation) {
+      if (before.indexOf(animation) >= 0) return;
+      recorded.push(animation);
+      if (autoRemove && !animation.getChildren && animation.totalProgress() === 1) globalTimeline.remove(animation);
+    });
+  };
+  __hfFindRoot();
+  __hfRecordAnimations(__hfRun);
+})();</script><script type="text/hf-after-fonts" data-hf-scene="b">(function() {
+  (function() {
+    "use strict";
+    (() => {
+      function I(e) {
+        return e ? /[\w-]/.test(e) || e.charCodeAt(0) >= 128 : false;
+      }
+      function _(e) {
+        return e === " " || e === "	" || e === `
+` || e === "\r" || e === "\f";
+      }
+      var j = /^[0-9a-fA-F]{1,6}/;
+      function G(e) {
+        let n = e >= 55296 && e <= 57343;
+        return e === 0 || e > 1114111 || n ? 65533 : e;
+      }
+      function $(e, n) {
+        return e[n] === "\r" && e[n + 1] === `
+` ? n + 2 : _(e[n]) ? n + 1 : n;
+      }
+      function R(e, n) {
+        let t = e[n + 1];
+        if (t === void 0 || /[\n\r\f]/.test(t)) return null;
+        let i = j.exec(e.slice(n + 1, n + 7));
+        if (!i) return { value: t, end: n + 2 };
+        let o = G(Number.parseInt(i[0], 16));
+        return { value: String.fromCodePoint(o), end: $(e, n + 1 + i[0].length) };
+      }
+      function H(e, n) {
+        let t = (o) => I(o) && !/[0-9-]/.test(o), i = (o) => e[o] === "\\" && R(e, o) !== null;
+        return e[n] === "-" ? e[n + 1] === "-" || t(e[n + 1]) || i(n + 1) : t(e[n]) || i(n);
+      }
+      function y(e, n) {
+        let t = n;
+        for (; e.startsWith("/*", t); ) {
+          let i = e.indexOf("*/", t + 2);
+          t = i < 0 ? e.length : i + 2;
+        }
+        return t;
+      }
+      function A(e, n) {
+        let t = y(e, n);
+        for (; _(e[t]); ) t = y(e, t + 1);
+        return t;
+      }
+      function h(e, n) {
+        if (!H(e, n)) return null;
+        let t = n, i = "";
+        for (; t < e.length; ) {
+          let o = e[t];
+          if (o === "\\") {
+            let a = R(e, t);
+            if (!a) break;
+            i += a.value, t = a.end;
+            continue;
+          }
+          if (!I(o)) break;
+          i += o, t += 1;
+        }
+        return t === n ? null : { value: i, end: t };
+      }
+      var C = 45;
+      function T(e) {
+        return e >= 48 && e <= 57;
+      }
+      function z(e) {
+        return e >= 128 || e === C || e === 95 || T(e) || e >= 65 && e <= 90 || e >= 97 && e <= 122;
+      }
+      function J(e, n) {
+        let t = e.charCodeAt(n);
+        return t >= 1 && t <= 31 || t === 127 ? true : T(t) ? n === 0 || n === 1 && e.charCodeAt(0) === C : false;
+      }
+      function k(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          let i = e.charCodeAt(t), o = e[t];
+          i === 0 ? n += "\uFFFD" : J(e, t) ? n += `\\${i.toString(16)} ` : t === 0 && e.length === 1 && i === C ? n += `\\${o}` : z(i) ? n += o : n += `\\${o}`;
+        }
+        return n;
+      }
+      var W = /\/\*(?:[^*]|\*(?!\/))*\*\/|\\(?:[0-9a-fA-F]{1,6}(?:\r\n|[ \t\r\n\f])?|[\s\S])|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\[(?:\/\*(?:[^*]|\*(?!\/))*\*\/|\\[\s\S]|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|[^\]"'\\/]|\/(?!\*))*\]/g;
+      function Q(e) {
+        let n = new Array(e.length).fill(true);
+        for (let t of e.matchAll(W)) {
+          let i = t.index;
+          n.fill(false, i, i + t[0].length);
+        }
+        return n;
+      }
+      function q(e, n, t) {
+        if (n.length === 0 || !e.includes("#")) return e;
+        let i = new Set(n), o = Q(e), a = "", u = 0;
+        for (; u < e.length; ) {
+          let d = o[u] && e[u] === "#" ? h(e, u + 1) : null;
+          d && i.has(d.value) ? (a += t(d.value), u = d.end) : (a += e[u], u += 1);
+        }
+        return a;
+      }
+      function X(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          if (e[t] === "\\") {
+            let i = e[t + 1];
+            if (i !== void 0 && /[\n\r\f]/.test(i)) {
+              t = $(e, t + 1) - 1;
+              continue;
+            }
+            let o = R(e, t);
+            if (o) {
+              n += o.value, t = o.end - 1;
+              continue;
+            }
+          }
+          n += e[t];
+        }
+        return n;
+      }
+      function N(e) {
+        return Array.from(e, (n) => {
+          let t = n.charCodeAt(0);
+          return t === 0 ? "\uFFFD" : t < 32 || t === 127 ? `\\${t.toString(16)} ` : n === '"' || n === "\\" ? `\\${n}` : n;
+        }).join("");
+      }
+      function Y(e, n) {
+        return e ? { kind: "any" } : n === void 0 ? { kind: "none" } : { kind: "named", prefix: n };
+      }
+      function Z(e, n) {
+        return e[n] === "|" && e[n + 1] !== "=";
+      }
+      function B(e, n) {
+        let t = e[n] === "*", i = t ? { value: "*", end: n + 1 } : h(e, n), o = y(e, i?.end ?? n);
+        if (!Z(e, o)) return t ? null : i ? { token: i, namespace: { kind: "none" } } : null;
+        let a = h(e, y(e, o + 1));
+        return a ? { token: a, namespace: Y(t, i?.value) } : null;
+      }
+      function K(e) {
+        if (e[0] !== "[") return null;
+        let n = A(e, 1), t = B(e, n);
+        if (!t) return null;
+        let { token: i, namespace: o } = t;
+        return { name: i.value, rawName: e.slice(n, i.end), namespace: o, end: i.end };
+      }
+      function ee(e, n) {
+        let t = /^(?:"((?:\\[\s\S]|[^"\\])*)"|'((?:\\[\s\S]|[^'\\])*)')/.exec(e.slice(n));
+        return t ? { value: X(t[1] ?? t[2]), end: n + t[0].length } : h(e, n);
+      }
+      function ne(e, n) {
+        let t = A(e, n), i = h(e, t);
+        if (i) {
+          if (!/^[is]$/i.test(i.value)) return null;
+          t = A(e, i.end);
+        }
+        return e[t] !== "]" || t !== e.length - 1 ? null : { flag: i?.value };
+      }
+      function F(e) {
+        let n = K(e);
+        if (!n) return null;
+        let t = A(e, n.end), o = ["=", "~=", "|=", "^=", "$=", "*="].find((d) => e.startsWith(d, t));
+        if (!o) return null;
+        let a = ee(e, A(e, t + o.length));
+        if (!a) return null;
+        let u = ne(e, a.end);
+        return u ? { name: n.name, rawName: n.rawName, namespace: n.namespace, operator: o, value: a.value, flag: u.flag } : null;
+      }
+      function E(e, n) {
+        return e.replace(W, (t) => t.startsWith("[") ? n(t) : t);
+      }
+      var re = "data-hf-svg-reference-aliases";
+      function O(e, n, t, i) {
+        let o = { "=": (s, r) => s === r, "~=": (s, r) => s.split(/[ \t\r\n\f]+/).includes(r), "|=": (s, r) => s === r || s.startsWith(r + "-"), "^=": (s, r) => s.startsWith(r), "$=": (s, r) => s.endsWith(r), "*=": (s, r) => s.includes(r) }, a = (s, r, l) => !r && l !== "=" && l !== "|=" ? false : o[l](s, r), u = (s) => s.replace(/[A-Z]/g, (r) => r.toLowerCase()), d = (s) => {
+          let r = F(s);
+          if (!r) return s;
+          let { name: l, rawName: g, namespace: m, operator: b, value: D, flag: w } = r;
+          if (m.kind === "named" != (i !== void 0)) return s;
+          let x = w?.toLowerCase() === "i" ? u : (S) => S, L = u(l), P = t.filter((S) => {
+            let V = m.kind === "none" ? S.name : S.localName, U = m.kind === "named" ? i.get(m.prefix) : null;
+            return (m.kind === "any" || S.namespaceURI === U) && u(V) === L;
+          }), v = /* @__PURE__ */ new Set([s]);
+          for (let S of P) a(x(S.before), x(D), b) && v.add(`[${g}="${N(S.after)}"${w ? ` ${w}` : ""}]`);
+          return v.size === 1 ? s : `:is(${[...v].join(", ")})`;
+        };
+        if (i) return E(e, d);
+        let p = new Map(n.map(({ id: s, replacement: r }) => [s, r])), f = /* @__PURE__ */ new Map();
+        for (let s of t) {
+          if (s.name !== "id" || s.before === s.after || p.has(s.before)) continue;
+          let r = f.get(s.before);
+          r || (r = /* @__PURE__ */ new Set([`#${k(s.before)}`]), f.set(s.before, r)), r.add(`#${k(s.after)}`);
+        }
+        for (let [s, r] of f) p.set(s, `:is(${[...r].join(", ")})`);
+        let c = q(e, [...p.keys()], (s) => p.get(s));
+        return E(c, d);
+      }
+      function se(e, n, t = true) {
+        let i = [], a = (t ? [...e.querySelectorAll(`[${n}]`)] : []).map((d) => d.getAttribute(n)), u = e.getAttribute?.(n);
+        u && a.unshift(u);
+        for (let d of a) {
+          let p;
+          try {
+            p = JSON.parse(d);
+          } catch {
+            continue;
+          }
+          if (!Array.isArray(p)) continue;
+          let f = p;
+          for (let c of f) {
+            if (!ie(c)) continue;
+            let { name: s, localName: r, namespaceURI: l, before: g, after: m } = c;
+            i.push({ name: s, localName: r, namespaceURI: l, before: g, after: m });
+          }
+        }
+        return i;
+      }
+      function ie(e) {
+        if (!e || typeof e != "object") return false;
+        let { name: n, localName: t, namespaceURI: i, before: o, after: a } = e;
+        return typeof n == "string" && typeof t == "string" && (i === null || typeof i == "string") && typeof o == "string" && typeof a == "string";
+      }
+      function oe(e) {
+        let n = [], t = [], i = false, o, a = /* @__PURE__ */ new WeakMap(), u = (f, c) => {
+          for (let s of f) {
+            if ("selectorText" in s) {
+              let r = s, l = a.get(r), g = r.selectorText, m = l?.applied === g ? l.authored : g, b = O(m, [], t, c);
+              b !== g && (r.selectorText = b), b === m ? a.delete(r) : a.set(r, { authored: m, applied: r.selectorText });
+            }
+            "cssRules" in s && u(s.cssRules, c);
+          }
+        }, d = () => {
+          if (t.length) for (let f of e.document.styleSheets) {
+            let c;
+            try {
+              c = f.cssRules;
+            } catch {
+              continue;
+            }
+            let s = /* @__PURE__ */ new Map();
+            for (let r of c) {
+              if (!("namespaceURI" in r)) continue;
+              let { prefix: l, namespaceURI: g } = r;
+              l && s.set(l, g || null);
+            }
+            s.size && u(c, s);
+          }
+        }, p = { rewrite: (f, c = []) => {
+          if (typeof f != "string" || !f.includes("#") && !f.includes("[")) return f;
+          let s = O(f, c.length ? [...c, ...n] : n, t);
+          if (s !== f) {
+            if (!o) {
+              let r = e.document.createElement("div");
+              o = r.matches.bind(r);
+            }
+            o(f);
+          }
+          return s;
+        }, refresh() {
+          t = se(e.document, re).filter((r) => r.before !== r.after);
+          let f = new Set(t.filter((r) => r.name === "id").map((r) => r.before)), c = /* @__PURE__ */ new Set();
+          n = [];
+          for (let r of e.document.querySelectorAll("[data-hf-authored-id][id]")) {
+            let l = r.getAttribute("data-hf-authored-id");
+            if (!l || l === r.id || c.has(l) || f.has(l)) continue;
+            c.add(l);
+            let g = N(l);
+            n.push({ id: l, replacement: `:is(#${k(l)}, [data-hf-authored-id="${g}"])` });
+          }
+          if (d(), i || !n.length && !t.length) return;
+          let s = e.Element.prototype;
+          s.querySelector = new Proxy(s.querySelector, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), s.querySelectorAll = new Proxy(s.querySelectorAll, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), i = true;
+        } };
+        e.__hfSvgSelectorAliases = p, p.refresh();
+      }
+      function M() {
+        let e = window;
+        e.__hfSvgSelectorAliases || oe(e);
+      }
+      M();
+    })();
+  })();
+  var __hfCompId = "b";
+  var __hfTimelineCompId = "b";
+  var __hfErrorLabel = "[HyperFrames] composition script error:";
+  var __hfAuthoredRootId = "root";
+  var __hfCompositionSrc = "compositions/b.html";
+  var __hfAuthoredRootAttr = "data-hf-authored-id";
+  var __hfEscapeAttr = function(value) {
+    return (value + "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  };
+  var __hfRootSelector = '[data-composition-id="b"]';
+  var __hfRoot = null;
+  var __hfRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"b"|'b')\\s*\\]`;
+  var __hfTimelineRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"b"|'b')\\s*\\]`;
+  var __hfTimingSelectorPattern = `\\s*\\[\\s*data-(?:start|duration)\\s*=\\s*(?:"[^"]*"|'[^']*')\\s*\\]`;
+  var __hfAuthoredRootSelector = __hfAuthoredRootId ? "[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(__hfAuthoredRootId) + '"]' : "";
+  var __hfAuthoredRootEntries = __hfAuthoredRootSelector ? [{ id: __hfAuthoredRootId, replacement: __hfAuthoredRootSelector }] : [];
+  var __hfNormalizeSelector = function(selector) {
+    if (!__hfCompId || typeof selector !== "string") return selector;
+    var normalized = selector.replace(new RegExp(__hfRootSelectorPattern + "(?:" + __hfTimingSelectorPattern + ")+", "g"), __hfRootSelector).replace(new RegExp("(?:" + __hfTimingSelectorPattern + ")+" + __hfRootSelectorPattern, "g"), __hfRootSelector).replace(new RegExp(__hfRootSelectorPattern, "g"), __hfRootSelector);
+    if (__hfTimelineCompId !== __hfCompId) {
+      normalized = normalized.replace(new RegExp(__hfTimelineRootSelectorPattern, "g"), __hfRootSelector);
+    }
+    return window.__hfSvgSelectorAliases.rewrite(normalized, __hfAuthoredRootEntries);
+  };
+  var __hfFindRoot = function() {
+    if (!__hfRoot && __hfRootSelector) {
+      __hfRoot = window.document.querySelector(__hfRootSelector);
+    }
+    return __hfRoot;
+  };
+  var __hfContains = function(node) {
+    var root = __hfFindRoot();
+    return !root || node === root || root.contains(node);
+  };
+  var __hfQueryAll = function(selector) {
+    var root = __hfFindRoot();
+    if (!root || typeof selector !== "string") {
+      return window.document.querySelectorAll(selector);
+    }
+    return Array.prototype.filter.call(window.document.querySelectorAll(__hfNormalizeSelector(selector)), function(node) {
+      return __hfContains(node);
+    });
+  };
+  var __hfQueryOne = function(selector) {
+    var matches = __hfQueryAll(selector);
+    return matches[0] || null;
+  };
+  var __hfGetElementById = function(id) {
+    var found = window.document.getElementById(id);
+    if (found && __hfContains(found)) return found;
+    var root = __hfFindRoot();
+    if (!root) return found || null;
+    var idValue = id + "";
+    if (__hfAuthoredRootId && __hfAuthoredRootId === idValue && root.getAttribute && root.getAttribute(__hfAuthoredRootAttr) === idValue) {
+      return root;
+    }
+    if (root.id === idValue) return root;
+    if (typeof root.querySelector !== "function") return null;
+    try {
+      var authoredRootMatch = root.querySelector("[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(idValue) + '"]');
+      if (authoredRootMatch) return authoredRootMatch;
+    } catch {
+    }
+    if (typeof CSS !== "undefined" && CSS && typeof CSS.escape === "function") {
+      try {
+        return root.querySelector("#" + CSS.escape(idValue)) || null;
+      } catch {
+      }
+    }
+    try {
+      return root.querySelector('[id="' + __hfEscapeAttr(idValue) + '"]') || null;
+    } catch {
+    }
+    return null;
+  };
+  var __hfScopedDocument = typeof Proxy === "function" ? new Proxy(window.document, {
+    get: function(target, prop, receiver) {
+      if (prop === "querySelector") return __hfQueryOne;
+      if (prop === "querySelectorAll") return __hfQueryAll;
+      if (prop === "getElementById") return __hfGetElementById;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  }) : window.document;
+  var __hfTimelineRegistryProxy = null;
+  var __hfGetTimelineRegistry = function() {
+    window.__timelines = window.__timelines || {};
+    if (!__hfCompId || __hfCompId === __hfTimelineCompId || typeof Proxy !== "function") {
+      return window.__timelines;
+    }
+    if (!__hfTimelineRegistryProxy) {
+      __hfTimelineRegistryProxy = new Proxy(window.__timelines, {
+        get: function(target, prop, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.get(target, prop, target);
+          }
+          var runtimeValue = Reflect.get(target, __hfTimelineCompId, target);
+          return runtimeValue === void 0 ? Reflect.get(target, prop, target) : runtimeValue;
+        },
+        set: function(target, prop, value, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.set(target, prop, value, target);
+          }
+          var authoredValue = Reflect.get(target, __hfCompId, target);
+          var ownsAuthored = authoredValue === void 0 || authoredValue === Reflect.get(target, __hfTimelineCompId, target);
+          var runtimeSet = Reflect.set(target, __hfTimelineCompId, value, target);
+          if (!ownsAuthored) return runtimeSet;
+          return Reflect.set(target, __hfCompId, value, target) && runtimeSet;
+        }
+      });
+    }
+    return __hfTimelineRegistryProxy;
+  };
+  var __hfScopedWindow = typeof Proxy === "function" ? new Proxy(window, {
+    get: function(target, prop, receiver) {
+      if (prop === "__timelines") return __hfGetTimelineRegistry();
+      if (prop === "__hyperframes") return __hfScopedHyperframes;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" && value.prototype === void 0 ? value.bind(target) : value;
+    },
+    set: function(target, prop, value, receiver) {
+      if (prop === "__timelines") {
+        if (value === __hfTimelineRegistryProxy) return true;
+        target.__timelines = value || {};
+        __hfTimelineRegistryProxy = null;
+        return true;
+      }
+      return Reflect.set(target, prop, value, target);
+    }
+  }) : window;
+  var __hfResolveGsapTarget = function(target) {
+    if (typeof target !== "string" && !Array.isArray(target)) return target;
+    var resolved = typeof target === "string" ? __hfQueryAll(target) : target.reduce(function(resolved2, item) {
+      if (typeof item === "string") {
+        return resolved2.concat(Array.prototype.slice.call(__hfQueryAll(item)));
+      }
+      resolved2.push(item);
+      return resolved2;
+    }, []);
+    if (!resolved.length) {
+      var originalTarget = String(target);
+      resolved = [];
+      resolved.toString = function() {
+        return originalTarget;
+      };
+    }
+    return resolved;
+  };
+  var __hfScopeTimeline = function(timeline) {
+    if (!timeline || timeline.__hfScopedCompositionRoot === __hfFindRoot()) return timeline;
+    ["to", "from", "fromTo", "set"].forEach(function(method) {
+      var original = timeline[method];
+      if (typeof original !== "function") return;
+      timeline[method] = function(target) {
+        var args = Array.prototype.slice.call(arguments);
+        args[0] = __hfResolveGsapTarget(target);
+        return original.apply(timeline, args);
+      };
+    });
+    try {
+      Object.defineProperty(timeline, "__hfScopedCompositionRoot", {
+        value: __hfFindRoot(),
+        configurable: true
+      });
+    } catch {
+    }
+    return timeline;
+  };
+  var __hfBaseGsap = typeof gsap === "undefined" ? window.gsap : gsap;
+  var __hfScopedGsap = !__hfBaseGsap || typeof Proxy !== "function" ? __hfBaseGsap : new Proxy(__hfBaseGsap, {
+    get: function(target, prop, receiver) {
+      if (prop === "timeline") {
+        return function() {
+          return __hfScopeTimeline(target.timeline.apply(target, arguments));
+        };
+      }
+      if (prop === "to" || prop === "from" || prop === "fromTo" || prop === "set") {
+        return function(firstArg) {
+          var args = Array.prototype.slice.call(arguments);
+          args[0] = __hfResolveGsapTarget(firstArg);
+          return target[prop].apply(target, args);
+        };
+      }
+      if (prop === "utils" && target.utils && typeof Proxy === "function") {
+        return new Proxy(target.utils, {
+          get: function(utilsTarget, utilsProp, utilsReceiver) {
+            if (utilsProp === "toArray") {
+              return function(firstArg) {
+                var args = Array.prototype.slice.call(arguments);
+                args[0] = __hfResolveGsapTarget(firstArg);
+                return utilsTarget.toArray.apply(utilsTarget, args);
+              };
+            }
+            if (utilsProp === "selector") {
+              return function(base) {
+                var baseEl = typeof base === "string" ? __hfQueryOne(base) : base;
+                var root = baseEl || __hfFindRoot();
+                return function(selector) {
+                  if (!root || typeof selector !== "string") return [];
+                  return Array.prototype.filter.call(
+                    window.document.querySelectorAll(__hfNormalizeSelector(selector)),
+                    function(node) {
+                      return node === root || typeof root.contains === "function" && root.contains(node);
+                    }
+                  );
+                };
+              };
+            }
+            var value2 = Reflect.get(utilsTarget, utilsProp, utilsTarget);
+            return typeof value2 === "function" ? value2.bind(utilsTarget) : value2;
+          }
+        });
+      }
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  var __hfBaseHyperframes = window.__hyperframes;
+  var __hfScopedHyperframes = !__hfBaseHyperframes ? __hfBaseHyperframes : Object.assign({}, __hfBaseHyperframes, {
+    assetUrl: function(path) {
+      var page = window.document.baseURI;
+      return new URL(path, __hfCompositionSrc ? new URL(__hfCompositionSrc, page) : page).href;
+    },
+    getVariables: function() {
+      var byComp = window.__hfVariablesByComp;
+      var scoped = byComp && __hfTimelineCompId ? byComp[__hfTimelineCompId] : null;
+      return scoped ? Object.assign({}, scoped) : {};
+    }
+  });
+  var __hfRun = function() {
+    var report = window.__hfScriptState;
+    if (typeof report === "function") report("start", __hfCompositionSrc || "index.html");
+    try {
+      (function(document, gsap2, window2, __hyperframes) {
+        const tl = gsap2.timeline({ paused: true });
+        const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+        const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+        const ring = (s, x, y, at) => tl.fromTo(s, { x, y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+        const st = { v: 3e4 };
+        const amt = document.querySelector("#b-amt");
+        const render = () => {
+          amt.textContent = fmt(st.v);
+        };
+        tl.to("#b-glow", { opacity: 1, duration: 0.8 }, 1.16);
+        tl.fromTo("#b-f1", { opacity: 0, x: -520 }, { opacity: 1, x: 0, duration: 0.55, ease: "power3.out" }, 0.6 - 0.1);
+        tl.fromTo("#b-f2", { opacity: 0, x: 520 }, { opacity: 1, x: 0, duration: 0.55, ease: "power3.out" }, 1.16 - 0.1);
+        tl.fromTo("#b-f3", { opacity: 0, x: -520 }, { opacity: 1, x: 0, duration: 0.55, ease: "power3.out" }, 1.67 - 0.1);
+        tl.fromTo(st, { v: 3e4 }, { v: 25200, duration: 0.4, ease: "power2.inOut", onUpdate: render, immediateRender: false }, 0.6);
+        tl.fromTo(st, { v: 25200 }, { v: 24e3, duration: 0.4, ease: "power2.inOut", onUpdate: render, immediateRender: false }, 1.16);
+        tl.fromTo(st, { v: 24e3 }, { v: 21900, duration: 0.4, ease: "power2.inOut", onUpdate: render, immediateRender: false }, 1.67);
+        tl.fromTo("#b-w0", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.4);
+        tl.fromTo("#b-w1", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.69);
+        tl.fromTo("#b-w2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 3.06);
+        tl.fromTo("#b-w3", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 3.2);
+        tl.fromTo("#b-w4", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 3.5);
+        tl.to("#b-f1", { x: -36, rotation: -1.6, duration: 0.6, ease: "power2.inOut" }, 3.06);
+        tl.fromTo("#b-f1-g", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 3.06 - 0.3);
+        tl.to("#b-f2", { x: 36, rotation: 1.6, duration: 0.6, ease: "power2.inOut" }, 3.06);
+        tl.fromTo("#b-f2-g", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 3.2 - 0.3);
+        tl.to("#b-f3", { x: -36, rotation: -1.6, duration: 0.6, ease: "power2.inOut" }, 3.06);
+        tl.fromTo("#b-f3-g", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 3.5 - 0.3);
+        tl.to("#b-amt", { color: "#ff9b9b", duration: 0.3 }, 1.67 + 0.3);
+        tl.fromTo("#root", { y: 1920 }, { y: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+        tl.to("#root", { scale: 1.35, opacity: 0, duration: 0.5, ease: "power3.in" }, 4.42 - 0.5);
+        window2.__timelines["b"] = tl;
+      }).call(window, __hfScopedDocument, __hfScopedGsap, __hfScopedWindow, __hfScopedHyperframes);
+    } catch (_err) {
+      console.error(__hfErrorLabel, __hfCompId, _err);
+    } finally {
+      if (typeof report === "function") report("finish", __hfCompositionSrc || "index.html");
+    }
+  };
+  var __hfRecordAnimations = function(run) {
+    if (window.__hfSceneAnimations === void 0) {
+      window.__hfSceneAnimations = window.document.querySelector('meta[name="hf-scene-parts"]') ? {} : null;
+    }
+    var byComp = window.__hfSceneAnimations;
+    var globalTimeline = __hfBaseGsap && __hfBaseGsap.globalTimeline;
+    if (!byComp || !globalTimeline || !__hfTimelineCompId) return run();
+    var before = globalTimeline.getChildren(false);
+    var autoRemove = globalTimeline.autoRemoveChildren;
+    globalTimeline.autoRemoveChildren = false;
+    run();
+    globalTimeline.autoRemoveChildren = autoRemove;
+    var recorded = byComp[__hfTimelineCompId] = byComp[__hfTimelineCompId] || [];
+    globalTimeline.getChildren(false).forEach(function(animation) {
+      if (before.indexOf(animation) >= 0) return;
+      recorded.push(animation);
+      if (autoRemove && !animation.getChildren && animation.totalProgress() === 1) globalTimeline.remove(animation);
+    });
+  };
+  __hfFindRoot();
+  __hfRecordAnimations(__hfRun);
+})();</script><script type="text/hf-after-fonts" data-hf-scene="c">(function() {
+  (function() {
+    "use strict";
+    (() => {
+      function I(e) {
+        return e ? /[\w-]/.test(e) || e.charCodeAt(0) >= 128 : false;
+      }
+      function _(e) {
+        return e === " " || e === "	" || e === `
+` || e === "\r" || e === "\f";
+      }
+      var j = /^[0-9a-fA-F]{1,6}/;
+      function G(e) {
+        let n = e >= 55296 && e <= 57343;
+        return e === 0 || e > 1114111 || n ? 65533 : e;
+      }
+      function $(e, n) {
+        return e[n] === "\r" && e[n + 1] === `
+` ? n + 2 : _(e[n]) ? n + 1 : n;
+      }
+      function R(e, n) {
+        let t = e[n + 1];
+        if (t === void 0 || /[\n\r\f]/.test(t)) return null;
+        let i = j.exec(e.slice(n + 1, n + 7));
+        if (!i) return { value: t, end: n + 2 };
+        let o = G(Number.parseInt(i[0], 16));
+        return { value: String.fromCodePoint(o), end: $(e, n + 1 + i[0].length) };
+      }
+      function H(e, n) {
+        let t = (o) => I(o) && !/[0-9-]/.test(o), i = (o) => e[o] === "\\" && R(e, o) !== null;
+        return e[n] === "-" ? e[n + 1] === "-" || t(e[n + 1]) || i(n + 1) : t(e[n]) || i(n);
+      }
+      function y(e, n) {
+        let t = n;
+        for (; e.startsWith("/*", t); ) {
+          let i = e.indexOf("*/", t + 2);
+          t = i < 0 ? e.length : i + 2;
+        }
+        return t;
+      }
+      function A(e, n) {
+        let t = y(e, n);
+        for (; _(e[t]); ) t = y(e, t + 1);
+        return t;
+      }
+      function h(e, n) {
+        if (!H(e, n)) return null;
+        let t = n, i = "";
+        for (; t < e.length; ) {
+          let o = e[t];
+          if (o === "\\") {
+            let a = R(e, t);
+            if (!a) break;
+            i += a.value, t = a.end;
+            continue;
+          }
+          if (!I(o)) break;
+          i += o, t += 1;
+        }
+        return t === n ? null : { value: i, end: t };
+      }
+      var C = 45;
+      function T(e) {
+        return e >= 48 && e <= 57;
+      }
+      function z(e) {
+        return e >= 128 || e === C || e === 95 || T(e) || e >= 65 && e <= 90 || e >= 97 && e <= 122;
+      }
+      function J(e, n) {
+        let t = e.charCodeAt(n);
+        return t >= 1 && t <= 31 || t === 127 ? true : T(t) ? n === 0 || n === 1 && e.charCodeAt(0) === C : false;
+      }
+      function k(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          let i = e.charCodeAt(t), o = e[t];
+          i === 0 ? n += "\uFFFD" : J(e, t) ? n += `\\${i.toString(16)} ` : t === 0 && e.length === 1 && i === C ? n += `\\${o}` : z(i) ? n += o : n += `\\${o}`;
+        }
+        return n;
+      }
+      var W = /\/\*(?:[^*]|\*(?!\/))*\*\/|\\(?:[0-9a-fA-F]{1,6}(?:\r\n|[ \t\r\n\f])?|[\s\S])|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\[(?:\/\*(?:[^*]|\*(?!\/))*\*\/|\\[\s\S]|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|[^\]"'\\/]|\/(?!\*))*\]/g;
+      function Q(e) {
+        let n = new Array(e.length).fill(true);
+        for (let t of e.matchAll(W)) {
+          let i = t.index;
+          n.fill(false, i, i + t[0].length);
+        }
+        return n;
+      }
+      function q(e, n, t) {
+        if (n.length === 0 || !e.includes("#")) return e;
+        let i = new Set(n), o = Q(e), a = "", u = 0;
+        for (; u < e.length; ) {
+          let d = o[u] && e[u] === "#" ? h(e, u + 1) : null;
+          d && i.has(d.value) ? (a += t(d.value), u = d.end) : (a += e[u], u += 1);
+        }
+        return a;
+      }
+      function X(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          if (e[t] === "\\") {
+            let i = e[t + 1];
+            if (i !== void 0 && /[\n\r\f]/.test(i)) {
+              t = $(e, t + 1) - 1;
+              continue;
+            }
+            let o = R(e, t);
+            if (o) {
+              n += o.value, t = o.end - 1;
+              continue;
+            }
+          }
+          n += e[t];
+        }
+        return n;
+      }
+      function N(e) {
+        return Array.from(e, (n) => {
+          let t = n.charCodeAt(0);
+          return t === 0 ? "\uFFFD" : t < 32 || t === 127 ? `\\${t.toString(16)} ` : n === '"' || n === "\\" ? `\\${n}` : n;
+        }).join("");
+      }
+      function Y(e, n) {
+        return e ? { kind: "any" } : n === void 0 ? { kind: "none" } : { kind: "named", prefix: n };
+      }
+      function Z(e, n) {
+        return e[n] === "|" && e[n + 1] !== "=";
+      }
+      function B(e, n) {
+        let t = e[n] === "*", i = t ? { value: "*", end: n + 1 } : h(e, n), o = y(e, i?.end ?? n);
+        if (!Z(e, o)) return t ? null : i ? { token: i, namespace: { kind: "none" } } : null;
+        let a = h(e, y(e, o + 1));
+        return a ? { token: a, namespace: Y(t, i?.value) } : null;
+      }
+      function K(e) {
+        if (e[0] !== "[") return null;
+        let n = A(e, 1), t = B(e, n);
+        if (!t) return null;
+        let { token: i, namespace: o } = t;
+        return { name: i.value, rawName: e.slice(n, i.end), namespace: o, end: i.end };
+      }
+      function ee(e, n) {
+        let t = /^(?:"((?:\\[\s\S]|[^"\\])*)"|'((?:\\[\s\S]|[^'\\])*)')/.exec(e.slice(n));
+        return t ? { value: X(t[1] ?? t[2]), end: n + t[0].length } : h(e, n);
+      }
+      function ne(e, n) {
+        let t = A(e, n), i = h(e, t);
+        if (i) {
+          if (!/^[is]$/i.test(i.value)) return null;
+          t = A(e, i.end);
+        }
+        return e[t] !== "]" || t !== e.length - 1 ? null : { flag: i?.value };
+      }
+      function F(e) {
+        let n = K(e);
+        if (!n) return null;
+        let t = A(e, n.end), o = ["=", "~=", "|=", "^=", "$=", "*="].find((d) => e.startsWith(d, t));
+        if (!o) return null;
+        let a = ee(e, A(e, t + o.length));
+        if (!a) return null;
+        let u = ne(e, a.end);
+        return u ? { name: n.name, rawName: n.rawName, namespace: n.namespace, operator: o, value: a.value, flag: u.flag } : null;
+      }
+      function E(e, n) {
+        return e.replace(W, (t) => t.startsWith("[") ? n(t) : t);
+      }
+      var re = "data-hf-svg-reference-aliases";
+      function O(e, n, t, i) {
+        let o = { "=": (s, r) => s === r, "~=": (s, r) => s.split(/[ \t\r\n\f]+/).includes(r), "|=": (s, r) => s === r || s.startsWith(r + "-"), "^=": (s, r) => s.startsWith(r), "$=": (s, r) => s.endsWith(r), "*=": (s, r) => s.includes(r) }, a = (s, r, l) => !r && l !== "=" && l !== "|=" ? false : o[l](s, r), u = (s) => s.replace(/[A-Z]/g, (r) => r.toLowerCase()), d = (s) => {
+          let r = F(s);
+          if (!r) return s;
+          let { name: l, rawName: g, namespace: m, operator: b, value: D, flag: w } = r;
+          if (m.kind === "named" != (i !== void 0)) return s;
+          let x = w?.toLowerCase() === "i" ? u : (S) => S, L = u(l), P = t.filter((S) => {
+            let V = m.kind === "none" ? S.name : S.localName, U = m.kind === "named" ? i.get(m.prefix) : null;
+            return (m.kind === "any" || S.namespaceURI === U) && u(V) === L;
+          }), v = /* @__PURE__ */ new Set([s]);
+          for (let S of P) a(x(S.before), x(D), b) && v.add(`[${g}="${N(S.after)}"${w ? ` ${w}` : ""}]`);
+          return v.size === 1 ? s : `:is(${[...v].join(", ")})`;
+        };
+        if (i) return E(e, d);
+        let p = new Map(n.map(({ id: s, replacement: r }) => [s, r])), f = /* @__PURE__ */ new Map();
+        for (let s of t) {
+          if (s.name !== "id" || s.before === s.after || p.has(s.before)) continue;
+          let r = f.get(s.before);
+          r || (r = /* @__PURE__ */ new Set([`#${k(s.before)}`]), f.set(s.before, r)), r.add(`#${k(s.after)}`);
+        }
+        for (let [s, r] of f) p.set(s, `:is(${[...r].join(", ")})`);
+        let c = q(e, [...p.keys()], (s) => p.get(s));
+        return E(c, d);
+      }
+      function se(e, n, t = true) {
+        let i = [], a = (t ? [...e.querySelectorAll(`[${n}]`)] : []).map((d) => d.getAttribute(n)), u = e.getAttribute?.(n);
+        u && a.unshift(u);
+        for (let d of a) {
+          let p;
+          try {
+            p = JSON.parse(d);
+          } catch {
+            continue;
+          }
+          if (!Array.isArray(p)) continue;
+          let f = p;
+          for (let c of f) {
+            if (!ie(c)) continue;
+            let { name: s, localName: r, namespaceURI: l, before: g, after: m } = c;
+            i.push({ name: s, localName: r, namespaceURI: l, before: g, after: m });
+          }
+        }
+        return i;
+      }
+      function ie(e) {
+        if (!e || typeof e != "object") return false;
+        let { name: n, localName: t, namespaceURI: i, before: o, after: a } = e;
+        return typeof n == "string" && typeof t == "string" && (i === null || typeof i == "string") && typeof o == "string" && typeof a == "string";
+      }
+      function oe(e) {
+        let n = [], t = [], i = false, o, a = /* @__PURE__ */ new WeakMap(), u = (f, c) => {
+          for (let s of f) {
+            if ("selectorText" in s) {
+              let r = s, l = a.get(r), g = r.selectorText, m = l?.applied === g ? l.authored : g, b = O(m, [], t, c);
+              b !== g && (r.selectorText = b), b === m ? a.delete(r) : a.set(r, { authored: m, applied: r.selectorText });
+            }
+            "cssRules" in s && u(s.cssRules, c);
+          }
+        }, d = () => {
+          if (t.length) for (let f of e.document.styleSheets) {
+            let c;
+            try {
+              c = f.cssRules;
+            } catch {
+              continue;
+            }
+            let s = /* @__PURE__ */ new Map();
+            for (let r of c) {
+              if (!("namespaceURI" in r)) continue;
+              let { prefix: l, namespaceURI: g } = r;
+              l && s.set(l, g || null);
+            }
+            s.size && u(c, s);
+          }
+        }, p = { rewrite: (f, c = []) => {
+          if (typeof f != "string" || !f.includes("#") && !f.includes("[")) return f;
+          let s = O(f, c.length ? [...c, ...n] : n, t);
+          if (s !== f) {
+            if (!o) {
+              let r = e.document.createElement("div");
+              o = r.matches.bind(r);
+            }
+            o(f);
+          }
+          return s;
+        }, refresh() {
+          t = se(e.document, re).filter((r) => r.before !== r.after);
+          let f = new Set(t.filter((r) => r.name === "id").map((r) => r.before)), c = /* @__PURE__ */ new Set();
+          n = [];
+          for (let r of e.document.querySelectorAll("[data-hf-authored-id][id]")) {
+            let l = r.getAttribute("data-hf-authored-id");
+            if (!l || l === r.id || c.has(l) || f.has(l)) continue;
+            c.add(l);
+            let g = N(l);
+            n.push({ id: l, replacement: `:is(#${k(l)}, [data-hf-authored-id="${g}"])` });
+          }
+          if (d(), i || !n.length && !t.length) return;
+          let s = e.Element.prototype;
+          s.querySelector = new Proxy(s.querySelector, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), s.querySelectorAll = new Proxy(s.querySelectorAll, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), i = true;
+        } };
+        e.__hfSvgSelectorAliases = p, p.refresh();
+      }
+      function M() {
+        let e = window;
+        e.__hfSvgSelectorAliases || oe(e);
+      }
+      M();
+    })();
+  })();
+  var __hfCompId = "c";
+  var __hfTimelineCompId = "c";
+  var __hfErrorLabel = "[HyperFrames] composition script error:";
+  var __hfAuthoredRootId = "root";
+  var __hfCompositionSrc = "compositions/c.html";
+  var __hfAuthoredRootAttr = "data-hf-authored-id";
+  var __hfEscapeAttr = function(value) {
+    return (value + "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  };
+  var __hfRootSelector = '[data-composition-id="c"]';
+  var __hfRoot = null;
+  var __hfRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"c"|'c')\\s*\\]`;
+  var __hfTimelineRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"c"|'c')\\s*\\]`;
+  var __hfTimingSelectorPattern = `\\s*\\[\\s*data-(?:start|duration)\\s*=\\s*(?:"[^"]*"|'[^']*')\\s*\\]`;
+  var __hfAuthoredRootSelector = __hfAuthoredRootId ? "[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(__hfAuthoredRootId) + '"]' : "";
+  var __hfAuthoredRootEntries = __hfAuthoredRootSelector ? [{ id: __hfAuthoredRootId, replacement: __hfAuthoredRootSelector }] : [];
+  var __hfNormalizeSelector = function(selector) {
+    if (!__hfCompId || typeof selector !== "string") return selector;
+    var normalized = selector.replace(new RegExp(__hfRootSelectorPattern + "(?:" + __hfTimingSelectorPattern + ")+", "g"), __hfRootSelector).replace(new RegExp("(?:" + __hfTimingSelectorPattern + ")+" + __hfRootSelectorPattern, "g"), __hfRootSelector).replace(new RegExp(__hfRootSelectorPattern, "g"), __hfRootSelector);
+    if (__hfTimelineCompId !== __hfCompId) {
+      normalized = normalized.replace(new RegExp(__hfTimelineRootSelectorPattern, "g"), __hfRootSelector);
+    }
+    return window.__hfSvgSelectorAliases.rewrite(normalized, __hfAuthoredRootEntries);
+  };
+  var __hfFindRoot = function() {
+    if (!__hfRoot && __hfRootSelector) {
+      __hfRoot = window.document.querySelector(__hfRootSelector);
+    }
+    return __hfRoot;
+  };
+  var __hfContains = function(node) {
+    var root = __hfFindRoot();
+    return !root || node === root || root.contains(node);
+  };
+  var __hfQueryAll = function(selector) {
+    var root = __hfFindRoot();
+    if (!root || typeof selector !== "string") {
+      return window.document.querySelectorAll(selector);
+    }
+    return Array.prototype.filter.call(window.document.querySelectorAll(__hfNormalizeSelector(selector)), function(node) {
+      return __hfContains(node);
+    });
+  };
+  var __hfQueryOne = function(selector) {
+    var matches = __hfQueryAll(selector);
+    return matches[0] || null;
+  };
+  var __hfGetElementById = function(id) {
+    var found = window.document.getElementById(id);
+    if (found && __hfContains(found)) return found;
+    var root = __hfFindRoot();
+    if (!root) return found || null;
+    var idValue = id + "";
+    if (__hfAuthoredRootId && __hfAuthoredRootId === idValue && root.getAttribute && root.getAttribute(__hfAuthoredRootAttr) === idValue) {
+      return root;
+    }
+    if (root.id === idValue) return root;
+    if (typeof root.querySelector !== "function") return null;
+    try {
+      var authoredRootMatch = root.querySelector("[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(idValue) + '"]');
+      if (authoredRootMatch) return authoredRootMatch;
+    } catch {
+    }
+    if (typeof CSS !== "undefined" && CSS && typeof CSS.escape === "function") {
+      try {
+        return root.querySelector("#" + CSS.escape(idValue)) || null;
+      } catch {
+      }
+    }
+    try {
+      return root.querySelector('[id="' + __hfEscapeAttr(idValue) + '"]') || null;
+    } catch {
+    }
+    return null;
+  };
+  var __hfScopedDocument = typeof Proxy === "function" ? new Proxy(window.document, {
+    get: function(target, prop, receiver) {
+      if (prop === "querySelector") return __hfQueryOne;
+      if (prop === "querySelectorAll") return __hfQueryAll;
+      if (prop === "getElementById") return __hfGetElementById;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  }) : window.document;
+  var __hfTimelineRegistryProxy = null;
+  var __hfGetTimelineRegistry = function() {
+    window.__timelines = window.__timelines || {};
+    if (!__hfCompId || __hfCompId === __hfTimelineCompId || typeof Proxy !== "function") {
+      return window.__timelines;
+    }
+    if (!__hfTimelineRegistryProxy) {
+      __hfTimelineRegistryProxy = new Proxy(window.__timelines, {
+        get: function(target, prop, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.get(target, prop, target);
+          }
+          var runtimeValue = Reflect.get(target, __hfTimelineCompId, target);
+          return runtimeValue === void 0 ? Reflect.get(target, prop, target) : runtimeValue;
+        },
+        set: function(target, prop, value, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.set(target, prop, value, target);
+          }
+          var authoredValue = Reflect.get(target, __hfCompId, target);
+          var ownsAuthored = authoredValue === void 0 || authoredValue === Reflect.get(target, __hfTimelineCompId, target);
+          var runtimeSet = Reflect.set(target, __hfTimelineCompId, value, target);
+          if (!ownsAuthored) return runtimeSet;
+          return Reflect.set(target, __hfCompId, value, target) && runtimeSet;
+        }
+      });
+    }
+    return __hfTimelineRegistryProxy;
+  };
+  var __hfScopedWindow = typeof Proxy === "function" ? new Proxy(window, {
+    get: function(target, prop, receiver) {
+      if (prop === "__timelines") return __hfGetTimelineRegistry();
+      if (prop === "__hyperframes") return __hfScopedHyperframes;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" && value.prototype === void 0 ? value.bind(target) : value;
+    },
+    set: function(target, prop, value, receiver) {
+      if (prop === "__timelines") {
+        if (value === __hfTimelineRegistryProxy) return true;
+        target.__timelines = value || {};
+        __hfTimelineRegistryProxy = null;
+        return true;
+      }
+      return Reflect.set(target, prop, value, target);
+    }
+  }) : window;
+  var __hfResolveGsapTarget = function(target) {
+    if (typeof target !== "string" && !Array.isArray(target)) return target;
+    var resolved = typeof target === "string" ? __hfQueryAll(target) : target.reduce(function(resolved2, item) {
+      if (typeof item === "string") {
+        return resolved2.concat(Array.prototype.slice.call(__hfQueryAll(item)));
+      }
+      resolved2.push(item);
+      return resolved2;
+    }, []);
+    if (!resolved.length) {
+      var originalTarget = String(target);
+      resolved = [];
+      resolved.toString = function() {
+        return originalTarget;
+      };
+    }
+    return resolved;
+  };
+  var __hfScopeTimeline = function(timeline) {
+    if (!timeline || timeline.__hfScopedCompositionRoot === __hfFindRoot()) return timeline;
+    ["to", "from", "fromTo", "set"].forEach(function(method) {
+      var original = timeline[method];
+      if (typeof original !== "function") return;
+      timeline[method] = function(target) {
+        var args = Array.prototype.slice.call(arguments);
+        args[0] = __hfResolveGsapTarget(target);
+        return original.apply(timeline, args);
+      };
+    });
+    try {
+      Object.defineProperty(timeline, "__hfScopedCompositionRoot", {
+        value: __hfFindRoot(),
+        configurable: true
+      });
+    } catch {
+    }
+    return timeline;
+  };
+  var __hfBaseGsap = typeof gsap === "undefined" ? window.gsap : gsap;
+  var __hfScopedGsap = !__hfBaseGsap || typeof Proxy !== "function" ? __hfBaseGsap : new Proxy(__hfBaseGsap, {
+    get: function(target, prop, receiver) {
+      if (prop === "timeline") {
+        return function() {
+          return __hfScopeTimeline(target.timeline.apply(target, arguments));
+        };
+      }
+      if (prop === "to" || prop === "from" || prop === "fromTo" || prop === "set") {
+        return function(firstArg) {
+          var args = Array.prototype.slice.call(arguments);
+          args[0] = __hfResolveGsapTarget(firstArg);
+          return target[prop].apply(target, args);
+        };
+      }
+      if (prop === "utils" && target.utils && typeof Proxy === "function") {
+        return new Proxy(target.utils, {
+          get: function(utilsTarget, utilsProp, utilsReceiver) {
+            if (utilsProp === "toArray") {
+              return function(firstArg) {
+                var args = Array.prototype.slice.call(arguments);
+                args[0] = __hfResolveGsapTarget(firstArg);
+                return utilsTarget.toArray.apply(utilsTarget, args);
+              };
+            }
+            if (utilsProp === "selector") {
+              return function(base) {
+                var baseEl = typeof base === "string" ? __hfQueryOne(base) : base;
+                var root = baseEl || __hfFindRoot();
+                return function(selector) {
+                  if (!root || typeof selector !== "string") return [];
+                  return Array.prototype.filter.call(
+                    window.document.querySelectorAll(__hfNormalizeSelector(selector)),
+                    function(node) {
+                      return node === root || typeof root.contains === "function" && root.contains(node);
+                    }
+                  );
+                };
+              };
+            }
+            var value2 = Reflect.get(utilsTarget, utilsProp, utilsTarget);
+            return typeof value2 === "function" ? value2.bind(utilsTarget) : value2;
+          }
+        });
+      }
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  var __hfBaseHyperframes = window.__hyperframes;
+  var __hfScopedHyperframes = !__hfBaseHyperframes ? __hfBaseHyperframes : Object.assign({}, __hfBaseHyperframes, {
+    assetUrl: function(path) {
+      var page = window.document.baseURI;
+      return new URL(path, __hfCompositionSrc ? new URL(__hfCompositionSrc, page) : page).href;
+    },
+    getVariables: function() {
+      var byComp = window.__hfVariablesByComp;
+      var scoped = byComp && __hfTimelineCompId ? byComp[__hfTimelineCompId] : null;
+      return scoped ? Object.assign({}, scoped) : {};
+    }
+  });
+  var __hfRun = function() {
+    var report = window.__hfScriptState;
+    if (typeof report === "function") report("start", __hfCompositionSrc || "index.html");
+    try {
+      (function(document, gsap2, window2, __hyperframes) {
+        const tl = gsap2.timeline({ paused: true });
+        const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+        const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+        const ring = (s, x, y, at) => tl.fromTo(s, { x, y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+        tl.fromTo("#c-wrap", { scale: 1, x: 0, y: 0 }, { scale: 1.18, x: -40, y: -120, duration: 1.4, ease: "sine.inOut" }, 1.53);
+        tl.fromTo(".cur", { x: 760, y: 560, opacity: 0 }, { x: 343, y: 610, opacity: 1, duration: 1, ease: "power2.inOut" }, 1.53 + 0.2);
+        ring("#c-r1", 355, 617, 2.4);
+        pop("#c-chip1", 2.4, 0.5);
+        tl.to(".cur", { x: 680, y: 480, duration: 0.7, ease: "power2.inOut" }, 2.93 + 0.2);
+        tl.fromTo("#c-ul", { scaleX: 0, transformOrigin: "0 50%" }, { scaleX: 1, duration: 0.7, ease: "power2.inOut" }, 3.15);
+        ring("#c-r2", 692, 485, 3.84 - 0.1);
+        pop("#c-chip2", 3.84 - 0.1, 0.5);
+        tl.fromTo("#root", { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 0);
+        tl.to("#root", { x: -1080, duration: 0.5, ease: "power3.inOut" }, 4.89 - 0.5);
+        window2.__timelines["c"] = tl;
+      }).call(window, __hfScopedDocument, __hfScopedGsap, __hfScopedWindow, __hfScopedHyperframes);
+    } catch (_err) {
+      console.error(__hfErrorLabel, __hfCompId, _err);
+    } finally {
+      if (typeof report === "function") report("finish", __hfCompositionSrc || "index.html");
+    }
+  };
+  var __hfRecordAnimations = function(run) {
+    if (window.__hfSceneAnimations === void 0) {
+      window.__hfSceneAnimations = window.document.querySelector('meta[name="hf-scene-parts"]') ? {} : null;
+    }
+    var byComp = window.__hfSceneAnimations;
+    var globalTimeline = __hfBaseGsap && __hfBaseGsap.globalTimeline;
+    if (!byComp || !globalTimeline || !__hfTimelineCompId) return run();
+    var before = globalTimeline.getChildren(false);
+    var autoRemove = globalTimeline.autoRemoveChildren;
+    globalTimeline.autoRemoveChildren = false;
+    run();
+    globalTimeline.autoRemoveChildren = autoRemove;
+    var recorded = byComp[__hfTimelineCompId] = byComp[__hfTimelineCompId] || [];
+    globalTimeline.getChildren(false).forEach(function(animation) {
+      if (before.indexOf(animation) >= 0) return;
+      recorded.push(animation);
+      if (autoRemove && !animation.getChildren && animation.totalProgress() === 1) globalTimeline.remove(animation);
+    });
+  };
+  __hfFindRoot();
+  __hfRecordAnimations(__hfRun);
+})();</script><script type="text/hf-after-fonts" data-hf-scene="d">(function() {
+  (function() {
+    "use strict";
+    (() => {
+      function I(e) {
+        return e ? /[\w-]/.test(e) || e.charCodeAt(0) >= 128 : false;
+      }
+      function _(e) {
+        return e === " " || e === "	" || e === `
+` || e === "\r" || e === "\f";
+      }
+      var j = /^[0-9a-fA-F]{1,6}/;
+      function G(e) {
+        let n = e >= 55296 && e <= 57343;
+        return e === 0 || e > 1114111 || n ? 65533 : e;
+      }
+      function $(e, n) {
+        return e[n] === "\r" && e[n + 1] === `
+` ? n + 2 : _(e[n]) ? n + 1 : n;
+      }
+      function R(e, n) {
+        let t = e[n + 1];
+        if (t === void 0 || /[\n\r\f]/.test(t)) return null;
+        let i = j.exec(e.slice(n + 1, n + 7));
+        if (!i) return { value: t, end: n + 2 };
+        let o = G(Number.parseInt(i[0], 16));
+        return { value: String.fromCodePoint(o), end: $(e, n + 1 + i[0].length) };
+      }
+      function H(e, n) {
+        let t = (o) => I(o) && !/[0-9-]/.test(o), i = (o) => e[o] === "\\" && R(e, o) !== null;
+        return e[n] === "-" ? e[n + 1] === "-" || t(e[n + 1]) || i(n + 1) : t(e[n]) || i(n);
+      }
+      function y(e, n) {
+        let t = n;
+        for (; e.startsWith("/*", t); ) {
+          let i = e.indexOf("*/", t + 2);
+          t = i < 0 ? e.length : i + 2;
+        }
+        return t;
+      }
+      function A(e, n) {
+        let t = y(e, n);
+        for (; _(e[t]); ) t = y(e, t + 1);
+        return t;
+      }
+      function h(e, n) {
+        if (!H(e, n)) return null;
+        let t = n, i = "";
+        for (; t < e.length; ) {
+          let o = e[t];
+          if (o === "\\") {
+            let a = R(e, t);
+            if (!a) break;
+            i += a.value, t = a.end;
+            continue;
+          }
+          if (!I(o)) break;
+          i += o, t += 1;
+        }
+        return t === n ? null : { value: i, end: t };
+      }
+      var C = 45;
+      function T(e) {
+        return e >= 48 && e <= 57;
+      }
+      function z(e) {
+        return e >= 128 || e === C || e === 95 || T(e) || e >= 65 && e <= 90 || e >= 97 && e <= 122;
+      }
+      function J(e, n) {
+        let t = e.charCodeAt(n);
+        return t >= 1 && t <= 31 || t === 127 ? true : T(t) ? n === 0 || n === 1 && e.charCodeAt(0) === C : false;
+      }
+      function k(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          let i = e.charCodeAt(t), o = e[t];
+          i === 0 ? n += "\uFFFD" : J(e, t) ? n += `\\${i.toString(16)} ` : t === 0 && e.length === 1 && i === C ? n += `\\${o}` : z(i) ? n += o : n += `\\${o}`;
+        }
+        return n;
+      }
+      var W = /\/\*(?:[^*]|\*(?!\/))*\*\/|\\(?:[0-9a-fA-F]{1,6}(?:\r\n|[ \t\r\n\f])?|[\s\S])|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\[(?:\/\*(?:[^*]|\*(?!\/))*\*\/|\\[\s\S]|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|[^\]"'\\/]|\/(?!\*))*\]/g;
+      function Q(e) {
+        let n = new Array(e.length).fill(true);
+        for (let t of e.matchAll(W)) {
+          let i = t.index;
+          n.fill(false, i, i + t[0].length);
+        }
+        return n;
+      }
+      function q(e, n, t) {
+        if (n.length === 0 || !e.includes("#")) return e;
+        let i = new Set(n), o = Q(e), a = "", u = 0;
+        for (; u < e.length; ) {
+          let d = o[u] && e[u] === "#" ? h(e, u + 1) : null;
+          d && i.has(d.value) ? (a += t(d.value), u = d.end) : (a += e[u], u += 1);
+        }
+        return a;
+      }
+      function X(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          if (e[t] === "\\") {
+            let i = e[t + 1];
+            if (i !== void 0 && /[\n\r\f]/.test(i)) {
+              t = $(e, t + 1) - 1;
+              continue;
+            }
+            let o = R(e, t);
+            if (o) {
+              n += o.value, t = o.end - 1;
+              continue;
+            }
+          }
+          n += e[t];
+        }
+        return n;
+      }
+      function N(e) {
+        return Array.from(e, (n) => {
+          let t = n.charCodeAt(0);
+          return t === 0 ? "\uFFFD" : t < 32 || t === 127 ? `\\${t.toString(16)} ` : n === '"' || n === "\\" ? `\\${n}` : n;
+        }).join("");
+      }
+      function Y(e, n) {
+        return e ? { kind: "any" } : n === void 0 ? { kind: "none" } : { kind: "named", prefix: n };
+      }
+      function Z(e, n) {
+        return e[n] === "|" && e[n + 1] !== "=";
+      }
+      function B(e, n) {
+        let t = e[n] === "*", i = t ? { value: "*", end: n + 1 } : h(e, n), o = y(e, i?.end ?? n);
+        if (!Z(e, o)) return t ? null : i ? { token: i, namespace: { kind: "none" } } : null;
+        let a = h(e, y(e, o + 1));
+        return a ? { token: a, namespace: Y(t, i?.value) } : null;
+      }
+      function K(e) {
+        if (e[0] !== "[") return null;
+        let n = A(e, 1), t = B(e, n);
+        if (!t) return null;
+        let { token: i, namespace: o } = t;
+        return { name: i.value, rawName: e.slice(n, i.end), namespace: o, end: i.end };
+      }
+      function ee(e, n) {
+        let t = /^(?:"((?:\\[\s\S]|[^"\\])*)"|'((?:\\[\s\S]|[^'\\])*)')/.exec(e.slice(n));
+        return t ? { value: X(t[1] ?? t[2]), end: n + t[0].length } : h(e, n);
+      }
+      function ne(e, n) {
+        let t = A(e, n), i = h(e, t);
+        if (i) {
+          if (!/^[is]$/i.test(i.value)) return null;
+          t = A(e, i.end);
+        }
+        return e[t] !== "]" || t !== e.length - 1 ? null : { flag: i?.value };
+      }
+      function F(e) {
+        let n = K(e);
+        if (!n) return null;
+        let t = A(e, n.end), o = ["=", "~=", "|=", "^=", "$=", "*="].find((d) => e.startsWith(d, t));
+        if (!o) return null;
+        let a = ee(e, A(e, t + o.length));
+        if (!a) return null;
+        let u = ne(e, a.end);
+        return u ? { name: n.name, rawName: n.rawName, namespace: n.namespace, operator: o, value: a.value, flag: u.flag } : null;
+      }
+      function E(e, n) {
+        return e.replace(W, (t) => t.startsWith("[") ? n(t) : t);
+      }
+      var re = "data-hf-svg-reference-aliases";
+      function O(e, n, t, i) {
+        let o = { "=": (s, r) => s === r, "~=": (s, r) => s.split(/[ \t\r\n\f]+/).includes(r), "|=": (s, r) => s === r || s.startsWith(r + "-"), "^=": (s, r) => s.startsWith(r), "$=": (s, r) => s.endsWith(r), "*=": (s, r) => s.includes(r) }, a = (s, r, l) => !r && l !== "=" && l !== "|=" ? false : o[l](s, r), u = (s) => s.replace(/[A-Z]/g, (r) => r.toLowerCase()), d = (s) => {
+          let r = F(s);
+          if (!r) return s;
+          let { name: l, rawName: g, namespace: m, operator: b, value: D, flag: w } = r;
+          if (m.kind === "named" != (i !== void 0)) return s;
+          let x = w?.toLowerCase() === "i" ? u : (S) => S, L = u(l), P = t.filter((S) => {
+            let V = m.kind === "none" ? S.name : S.localName, U = m.kind === "named" ? i.get(m.prefix) : null;
+            return (m.kind === "any" || S.namespaceURI === U) && u(V) === L;
+          }), v = /* @__PURE__ */ new Set([s]);
+          for (let S of P) a(x(S.before), x(D), b) && v.add(`[${g}="${N(S.after)}"${w ? ` ${w}` : ""}]`);
+          return v.size === 1 ? s : `:is(${[...v].join(", ")})`;
+        };
+        if (i) return E(e, d);
+        let p = new Map(n.map(({ id: s, replacement: r }) => [s, r])), f = /* @__PURE__ */ new Map();
+        for (let s of t) {
+          if (s.name !== "id" || s.before === s.after || p.has(s.before)) continue;
+          let r = f.get(s.before);
+          r || (r = /* @__PURE__ */ new Set([`#${k(s.before)}`]), f.set(s.before, r)), r.add(`#${k(s.after)}`);
+        }
+        for (let [s, r] of f) p.set(s, `:is(${[...r].join(", ")})`);
+        let c = q(e, [...p.keys()], (s) => p.get(s));
+        return E(c, d);
+      }
+      function se(e, n, t = true) {
+        let i = [], a = (t ? [...e.querySelectorAll(`[${n}]`)] : []).map((d) => d.getAttribute(n)), u = e.getAttribute?.(n);
+        u && a.unshift(u);
+        for (let d of a) {
+          let p;
+          try {
+            p = JSON.parse(d);
+          } catch {
+            continue;
+          }
+          if (!Array.isArray(p)) continue;
+          let f = p;
+          for (let c of f) {
+            if (!ie(c)) continue;
+            let { name: s, localName: r, namespaceURI: l, before: g, after: m } = c;
+            i.push({ name: s, localName: r, namespaceURI: l, before: g, after: m });
+          }
+        }
+        return i;
+      }
+      function ie(e) {
+        if (!e || typeof e != "object") return false;
+        let { name: n, localName: t, namespaceURI: i, before: o, after: a } = e;
+        return typeof n == "string" && typeof t == "string" && (i === null || typeof i == "string") && typeof o == "string" && typeof a == "string";
+      }
+      function oe(e) {
+        let n = [], t = [], i = false, o, a = /* @__PURE__ */ new WeakMap(), u = (f, c) => {
+          for (let s of f) {
+            if ("selectorText" in s) {
+              let r = s, l = a.get(r), g = r.selectorText, m = l?.applied === g ? l.authored : g, b = O(m, [], t, c);
+              b !== g && (r.selectorText = b), b === m ? a.delete(r) : a.set(r, { authored: m, applied: r.selectorText });
+            }
+            "cssRules" in s && u(s.cssRules, c);
+          }
+        }, d = () => {
+          if (t.length) for (let f of e.document.styleSheets) {
+            let c;
+            try {
+              c = f.cssRules;
+            } catch {
+              continue;
+            }
+            let s = /* @__PURE__ */ new Map();
+            for (let r of c) {
+              if (!("namespaceURI" in r)) continue;
+              let { prefix: l, namespaceURI: g } = r;
+              l && s.set(l, g || null);
+            }
+            s.size && u(c, s);
+          }
+        }, p = { rewrite: (f, c = []) => {
+          if (typeof f != "string" || !f.includes("#") && !f.includes("[")) return f;
+          let s = O(f, c.length ? [...c, ...n] : n, t);
+          if (s !== f) {
+            if (!o) {
+              let r = e.document.createElement("div");
+              o = r.matches.bind(r);
+            }
+            o(f);
+          }
+          return s;
+        }, refresh() {
+          t = se(e.document, re).filter((r) => r.before !== r.after);
+          let f = new Set(t.filter((r) => r.name === "id").map((r) => r.before)), c = /* @__PURE__ */ new Set();
+          n = [];
+          for (let r of e.document.querySelectorAll("[data-hf-authored-id][id]")) {
+            let l = r.getAttribute("data-hf-authored-id");
+            if (!l || l === r.id || c.has(l) || f.has(l)) continue;
+            c.add(l);
+            let g = N(l);
+            n.push({ id: l, replacement: `:is(#${k(l)}, [data-hf-authored-id="${g}"])` });
+          }
+          if (d(), i || !n.length && !t.length) return;
+          let s = e.Element.prototype;
+          s.querySelector = new Proxy(s.querySelector, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), s.querySelectorAll = new Proxy(s.querySelectorAll, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), i = true;
+        } };
+        e.__hfSvgSelectorAliases = p, p.refresh();
+      }
+      function M() {
+        let e = window;
+        e.__hfSvgSelectorAliases || oe(e);
+      }
+      M();
+    })();
+  })();
+  var __hfCompId = "d";
+  var __hfTimelineCompId = "d";
+  var __hfErrorLabel = "[HyperFrames] composition script error:";
+  var __hfAuthoredRootId = "root";
+  var __hfCompositionSrc = "compositions/d.html";
+  var __hfAuthoredRootAttr = "data-hf-authored-id";
+  var __hfEscapeAttr = function(value) {
+    return (value + "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  };
+  var __hfRootSelector = '[data-composition-id="d"]';
+  var __hfRoot = null;
+  var __hfRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"d"|'d')\\s*\\]`;
+  var __hfTimelineRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"d"|'d')\\s*\\]`;
+  var __hfTimingSelectorPattern = `\\s*\\[\\s*data-(?:start|duration)\\s*=\\s*(?:"[^"]*"|'[^']*')\\s*\\]`;
+  var __hfAuthoredRootSelector = __hfAuthoredRootId ? "[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(__hfAuthoredRootId) + '"]' : "";
+  var __hfAuthoredRootEntries = __hfAuthoredRootSelector ? [{ id: __hfAuthoredRootId, replacement: __hfAuthoredRootSelector }] : [];
+  var __hfNormalizeSelector = function(selector) {
+    if (!__hfCompId || typeof selector !== "string") return selector;
+    var normalized = selector.replace(new RegExp(__hfRootSelectorPattern + "(?:" + __hfTimingSelectorPattern + ")+", "g"), __hfRootSelector).replace(new RegExp("(?:" + __hfTimingSelectorPattern + ")+" + __hfRootSelectorPattern, "g"), __hfRootSelector).replace(new RegExp(__hfRootSelectorPattern, "g"), __hfRootSelector);
+    if (__hfTimelineCompId !== __hfCompId) {
+      normalized = normalized.replace(new RegExp(__hfTimelineRootSelectorPattern, "g"), __hfRootSelector);
+    }
+    return window.__hfSvgSelectorAliases.rewrite(normalized, __hfAuthoredRootEntries);
+  };
+  var __hfFindRoot = function() {
+    if (!__hfRoot && __hfRootSelector) {
+      __hfRoot = window.document.querySelector(__hfRootSelector);
+    }
+    return __hfRoot;
+  };
+  var __hfContains = function(node) {
+    var root = __hfFindRoot();
+    return !root || node === root || root.contains(node);
+  };
+  var __hfQueryAll = function(selector) {
+    var root = __hfFindRoot();
+    if (!root || typeof selector !== "string") {
+      return window.document.querySelectorAll(selector);
+    }
+    return Array.prototype.filter.call(window.document.querySelectorAll(__hfNormalizeSelector(selector)), function(node) {
+      return __hfContains(node);
+    });
+  };
+  var __hfQueryOne = function(selector) {
+    var matches = __hfQueryAll(selector);
+    return matches[0] || null;
+  };
+  var __hfGetElementById = function(id) {
+    var found = window.document.getElementById(id);
+    if (found && __hfContains(found)) return found;
+    var root = __hfFindRoot();
+    if (!root) return found || null;
+    var idValue = id + "";
+    if (__hfAuthoredRootId && __hfAuthoredRootId === idValue && root.getAttribute && root.getAttribute(__hfAuthoredRootAttr) === idValue) {
+      return root;
+    }
+    if (root.id === idValue) return root;
+    if (typeof root.querySelector !== "function") return null;
+    try {
+      var authoredRootMatch = root.querySelector("[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(idValue) + '"]');
+      if (authoredRootMatch) return authoredRootMatch;
+    } catch {
+    }
+    if (typeof CSS !== "undefined" && CSS && typeof CSS.escape === "function") {
+      try {
+        return root.querySelector("#" + CSS.escape(idValue)) || null;
+      } catch {
+      }
+    }
+    try {
+      return root.querySelector('[id="' + __hfEscapeAttr(idValue) + '"]') || null;
+    } catch {
+    }
+    return null;
+  };
+  var __hfScopedDocument = typeof Proxy === "function" ? new Proxy(window.document, {
+    get: function(target, prop, receiver) {
+      if (prop === "querySelector") return __hfQueryOne;
+      if (prop === "querySelectorAll") return __hfQueryAll;
+      if (prop === "getElementById") return __hfGetElementById;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  }) : window.document;
+  var __hfTimelineRegistryProxy = null;
+  var __hfGetTimelineRegistry = function() {
+    window.__timelines = window.__timelines || {};
+    if (!__hfCompId || __hfCompId === __hfTimelineCompId || typeof Proxy !== "function") {
+      return window.__timelines;
+    }
+    if (!__hfTimelineRegistryProxy) {
+      __hfTimelineRegistryProxy = new Proxy(window.__timelines, {
+        get: function(target, prop, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.get(target, prop, target);
+          }
+          var runtimeValue = Reflect.get(target, __hfTimelineCompId, target);
+          return runtimeValue === void 0 ? Reflect.get(target, prop, target) : runtimeValue;
+        },
+        set: function(target, prop, value, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.set(target, prop, value, target);
+          }
+          var authoredValue = Reflect.get(target, __hfCompId, target);
+          var ownsAuthored = authoredValue === void 0 || authoredValue === Reflect.get(target, __hfTimelineCompId, target);
+          var runtimeSet = Reflect.set(target, __hfTimelineCompId, value, target);
+          if (!ownsAuthored) return runtimeSet;
+          return Reflect.set(target, __hfCompId, value, target) && runtimeSet;
+        }
+      });
+    }
+    return __hfTimelineRegistryProxy;
+  };
+  var __hfScopedWindow = typeof Proxy === "function" ? new Proxy(window, {
+    get: function(target, prop, receiver) {
+      if (prop === "__timelines") return __hfGetTimelineRegistry();
+      if (prop === "__hyperframes") return __hfScopedHyperframes;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" && value.prototype === void 0 ? value.bind(target) : value;
+    },
+    set: function(target, prop, value, receiver) {
+      if (prop === "__timelines") {
+        if (value === __hfTimelineRegistryProxy) return true;
+        target.__timelines = value || {};
+        __hfTimelineRegistryProxy = null;
+        return true;
+      }
+      return Reflect.set(target, prop, value, target);
+    }
+  }) : window;
+  var __hfResolveGsapTarget = function(target) {
+    if (typeof target !== "string" && !Array.isArray(target)) return target;
+    var resolved = typeof target === "string" ? __hfQueryAll(target) : target.reduce(function(resolved2, item) {
+      if (typeof item === "string") {
+        return resolved2.concat(Array.prototype.slice.call(__hfQueryAll(item)));
+      }
+      resolved2.push(item);
+      return resolved2;
+    }, []);
+    if (!resolved.length) {
+      var originalTarget = String(target);
+      resolved = [];
+      resolved.toString = function() {
+        return originalTarget;
+      };
+    }
+    return resolved;
+  };
+  var __hfScopeTimeline = function(timeline) {
+    if (!timeline || timeline.__hfScopedCompositionRoot === __hfFindRoot()) return timeline;
+    ["to", "from", "fromTo", "set"].forEach(function(method) {
+      var original = timeline[method];
+      if (typeof original !== "function") return;
+      timeline[method] = function(target) {
+        var args = Array.prototype.slice.call(arguments);
+        args[0] = __hfResolveGsapTarget(target);
+        return original.apply(timeline, args);
+      };
+    });
+    try {
+      Object.defineProperty(timeline, "__hfScopedCompositionRoot", {
+        value: __hfFindRoot(),
+        configurable: true
+      });
+    } catch {
+    }
+    return timeline;
+  };
+  var __hfBaseGsap = typeof gsap === "undefined" ? window.gsap : gsap;
+  var __hfScopedGsap = !__hfBaseGsap || typeof Proxy !== "function" ? __hfBaseGsap : new Proxy(__hfBaseGsap, {
+    get: function(target, prop, receiver) {
+      if (prop === "timeline") {
+        return function() {
+          return __hfScopeTimeline(target.timeline.apply(target, arguments));
+        };
+      }
+      if (prop === "to" || prop === "from" || prop === "fromTo" || prop === "set") {
+        return function(firstArg) {
+          var args = Array.prototype.slice.call(arguments);
+          args[0] = __hfResolveGsapTarget(firstArg);
+          return target[prop].apply(target, args);
+        };
+      }
+      if (prop === "utils" && target.utils && typeof Proxy === "function") {
+        return new Proxy(target.utils, {
+          get: function(utilsTarget, utilsProp, utilsReceiver) {
+            if (utilsProp === "toArray") {
+              return function(firstArg) {
+                var args = Array.prototype.slice.call(arguments);
+                args[0] = __hfResolveGsapTarget(firstArg);
+                return utilsTarget.toArray.apply(utilsTarget, args);
+              };
+            }
+            if (utilsProp === "selector") {
+              return function(base) {
+                var baseEl = typeof base === "string" ? __hfQueryOne(base) : base;
+                var root = baseEl || __hfFindRoot();
+                return function(selector) {
+                  if (!root || typeof selector !== "string") return [];
+                  return Array.prototype.filter.call(
+                    window.document.querySelectorAll(__hfNormalizeSelector(selector)),
+                    function(node) {
+                      return node === root || typeof root.contains === "function" && root.contains(node);
+                    }
+                  );
+                };
+              };
+            }
+            var value2 = Reflect.get(utilsTarget, utilsProp, utilsTarget);
+            return typeof value2 === "function" ? value2.bind(utilsTarget) : value2;
+          }
+        });
+      }
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  var __hfBaseHyperframes = window.__hyperframes;
+  var __hfScopedHyperframes = !__hfBaseHyperframes ? __hfBaseHyperframes : Object.assign({}, __hfBaseHyperframes, {
+    assetUrl: function(path) {
+      var page = window.document.baseURI;
+      return new URL(path, __hfCompositionSrc ? new URL(__hfCompositionSrc, page) : page).href;
+    },
+    getVariables: function() {
+      var byComp = window.__hfVariablesByComp;
+      var scoped = byComp && __hfTimelineCompId ? byComp[__hfTimelineCompId] : null;
+      return scoped ? Object.assign({}, scoped) : {};
+    }
+  });
+  var __hfRun = function() {
+    var report = window.__hfScriptState;
+    if (typeof report === "function") report("start", __hfCompositionSrc || "index.html");
+    try {
+      (function(document, gsap2, window2, __hyperframes) {
+        const tl = gsap2.timeline({ paused: true });
+        const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+        const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+        const ring = (s, x, y, at) => tl.fromTo(s, { x, y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+        const st = { v: 0 };
+        const amt = document.querySelector("#d-amt");
+        tl.fromTo(st, { v: 0 }, { v: 21900, duration: 1.1, ease: "power2.out", onUpdate: () => {
+          amt.textContent = fmt(st.v);
+        } }, 0.6);
+        tl.fromTo("#d-bar0", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0);
+        tl.fromTo("#d-bar1", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.07);
+        tl.fromTo("#d-bar2", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.14);
+        tl.fromTo("#d-bar3", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.21);
+        tl.fromTo("#d-bar4", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.28);
+        tl.fromTo("#d-bar5", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.35);
+        tl.fromTo("#d-bar6", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.42);
+        tl.fromTo("#d-bar7", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.49);
+        ["#d-s1h", "#d-s1", "#d-s2h", "#d-s2"].forEach((s) => tl.set(s, { attr: { "stroke-dasharray": 140, "stroke-dashoffset": 140 } }, 0));
+        pop("#d-r1", 2.24 - 0.1, 0.5);
+        tl.to(["#d-s1h", "#d-s1"], { attr: { "stroke-dashoffset": 0 }, duration: 0.35, ease: "power2.out" }, 2.46);
+        pop("#d-r2", 3.15 - 0.1, 0.5);
+        tl.to(["#d-s2h", "#d-s2"], { attr: { "stroke-dashoffset": 0 }, duration: 0.35, ease: "power2.out" }, 3.86);
+        tl.fromTo("#root", { x: 1080 }, { x: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+        tl.to("#root", { scale: 0.85, opacity: 0, duration: 0.5, ease: "power3.in" }, 5.03 - 0.5);
+        window2.__timelines["d"] = tl;
+      }).call(window, __hfScopedDocument, __hfScopedGsap, __hfScopedWindow, __hfScopedHyperframes);
+    } catch (_err) {
+      console.error(__hfErrorLabel, __hfCompId, _err);
+    } finally {
+      if (typeof report === "function") report("finish", __hfCompositionSrc || "index.html");
+    }
+  };
+  var __hfRecordAnimations = function(run) {
+    if (window.__hfSceneAnimations === void 0) {
+      window.__hfSceneAnimations = window.document.querySelector('meta[name="hf-scene-parts"]') ? {} : null;
+    }
+    var byComp = window.__hfSceneAnimations;
+    var globalTimeline = __hfBaseGsap && __hfBaseGsap.globalTimeline;
+    if (!byComp || !globalTimeline || !__hfTimelineCompId) return run();
+    var before = globalTimeline.getChildren(false);
+    var autoRemove = globalTimeline.autoRemoveChildren;
+    globalTimeline.autoRemoveChildren = false;
+    run();
+    globalTimeline.autoRemoveChildren = autoRemove;
+    var recorded = byComp[__hfTimelineCompId] = byComp[__hfTimelineCompId] || [];
+    globalTimeline.getChildren(false).forEach(function(animation) {
+      if (before.indexOf(animation) >= 0) return;
+      recorded.push(animation);
+      if (autoRemove && !animation.getChildren && animation.totalProgress() === 1) globalTimeline.remove(animation);
+    });
+  };
+  __hfFindRoot();
+  __hfRecordAnimations(__hfRun);
+})();</script><script type="text/hf-after-fonts" data-hf-scene="e">(function() {
+  (function() {
+    "use strict";
+    (() => {
+      function I(e) {
+        return e ? /[\w-]/.test(e) || e.charCodeAt(0) >= 128 : false;
+      }
+      function _(e) {
+        return e === " " || e === "	" || e === `
+` || e === "\r" || e === "\f";
+      }
+      var j = /^[0-9a-fA-F]{1,6}/;
+      function G(e) {
+        let n = e >= 55296 && e <= 57343;
+        return e === 0 || e > 1114111 || n ? 65533 : e;
+      }
+      function $(e, n) {
+        return e[n] === "\r" && e[n + 1] === `
+` ? n + 2 : _(e[n]) ? n + 1 : n;
+      }
+      function R(e, n) {
+        let t = e[n + 1];
+        if (t === void 0 || /[\n\r\f]/.test(t)) return null;
+        let i = j.exec(e.slice(n + 1, n + 7));
+        if (!i) return { value: t, end: n + 2 };
+        let o = G(Number.parseInt(i[0], 16));
+        return { value: String.fromCodePoint(o), end: $(e, n + 1 + i[0].length) };
+      }
+      function H(e, n) {
+        let t = (o) => I(o) && !/[0-9-]/.test(o), i = (o) => e[o] === "\\" && R(e, o) !== null;
+        return e[n] === "-" ? e[n + 1] === "-" || t(e[n + 1]) || i(n + 1) : t(e[n]) || i(n);
+      }
+      function y(e, n) {
+        let t = n;
+        for (; e.startsWith("/*", t); ) {
+          let i = e.indexOf("*/", t + 2);
+          t = i < 0 ? e.length : i + 2;
+        }
+        return t;
+      }
+      function A(e, n) {
+        let t = y(e, n);
+        for (; _(e[t]); ) t = y(e, t + 1);
+        return t;
+      }
+      function h(e, n) {
+        if (!H(e, n)) return null;
+        let t = n, i = "";
+        for (; t < e.length; ) {
+          let o = e[t];
+          if (o === "\\") {
+            let a = R(e, t);
+            if (!a) break;
+            i += a.value, t = a.end;
+            continue;
+          }
+          if (!I(o)) break;
+          i += o, t += 1;
+        }
+        return t === n ? null : { value: i, end: t };
+      }
+      var C = 45;
+      function T(e) {
+        return e >= 48 && e <= 57;
+      }
+      function z(e) {
+        return e >= 128 || e === C || e === 95 || T(e) || e >= 65 && e <= 90 || e >= 97 && e <= 122;
+      }
+      function J(e, n) {
+        let t = e.charCodeAt(n);
+        return t >= 1 && t <= 31 || t === 127 ? true : T(t) ? n === 0 || n === 1 && e.charCodeAt(0) === C : false;
+      }
+      function k(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          let i = e.charCodeAt(t), o = e[t];
+          i === 0 ? n += "\uFFFD" : J(e, t) ? n += `\\${i.toString(16)} ` : t === 0 && e.length === 1 && i === C ? n += `\\${o}` : z(i) ? n += o : n += `\\${o}`;
+        }
+        return n;
+      }
+      var W = /\/\*(?:[^*]|\*(?!\/))*\*\/|\\(?:[0-9a-fA-F]{1,6}(?:\r\n|[ \t\r\n\f])?|[\s\S])|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\[(?:\/\*(?:[^*]|\*(?!\/))*\*\/|\\[\s\S]|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|[^\]"'\\/]|\/(?!\*))*\]/g;
+      function Q(e) {
+        let n = new Array(e.length).fill(true);
+        for (let t of e.matchAll(W)) {
+          let i = t.index;
+          n.fill(false, i, i + t[0].length);
+        }
+        return n;
+      }
+      function q(e, n, t) {
+        if (n.length === 0 || !e.includes("#")) return e;
+        let i = new Set(n), o = Q(e), a = "", u = 0;
+        for (; u < e.length; ) {
+          let d = o[u] && e[u] === "#" ? h(e, u + 1) : null;
+          d && i.has(d.value) ? (a += t(d.value), u = d.end) : (a += e[u], u += 1);
+        }
+        return a;
+      }
+      function X(e) {
+        let n = "";
+        for (let t = 0; t < e.length; t += 1) {
+          if (e[t] === "\\") {
+            let i = e[t + 1];
+            if (i !== void 0 && /[\n\r\f]/.test(i)) {
+              t = $(e, t + 1) - 1;
+              continue;
+            }
+            let o = R(e, t);
+            if (o) {
+              n += o.value, t = o.end - 1;
+              continue;
+            }
+          }
+          n += e[t];
+        }
+        return n;
+      }
+      function N(e) {
+        return Array.from(e, (n) => {
+          let t = n.charCodeAt(0);
+          return t === 0 ? "\uFFFD" : t < 32 || t === 127 ? `\\${t.toString(16)} ` : n === '"' || n === "\\" ? `\\${n}` : n;
+        }).join("");
+      }
+      function Y(e, n) {
+        return e ? { kind: "any" } : n === void 0 ? { kind: "none" } : { kind: "named", prefix: n };
+      }
+      function Z(e, n) {
+        return e[n] === "|" && e[n + 1] !== "=";
+      }
+      function B(e, n) {
+        let t = e[n] === "*", i = t ? { value: "*", end: n + 1 } : h(e, n), o = y(e, i?.end ?? n);
+        if (!Z(e, o)) return t ? null : i ? { token: i, namespace: { kind: "none" } } : null;
+        let a = h(e, y(e, o + 1));
+        return a ? { token: a, namespace: Y(t, i?.value) } : null;
+      }
+      function K(e) {
+        if (e[0] !== "[") return null;
+        let n = A(e, 1), t = B(e, n);
+        if (!t) return null;
+        let { token: i, namespace: o } = t;
+        return { name: i.value, rawName: e.slice(n, i.end), namespace: o, end: i.end };
+      }
+      function ee(e, n) {
+        let t = /^(?:"((?:\\[\s\S]|[^"\\])*)"|'((?:\\[\s\S]|[^'\\])*)')/.exec(e.slice(n));
+        return t ? { value: X(t[1] ?? t[2]), end: n + t[0].length } : h(e, n);
+      }
+      function ne(e, n) {
+        let t = A(e, n), i = h(e, t);
+        if (i) {
+          if (!/^[is]$/i.test(i.value)) return null;
+          t = A(e, i.end);
+        }
+        return e[t] !== "]" || t !== e.length - 1 ? null : { flag: i?.value };
+      }
+      function F(e) {
+        let n = K(e);
+        if (!n) return null;
+        let t = A(e, n.end), o = ["=", "~=", "|=", "^=", "$=", "*="].find((d) => e.startsWith(d, t));
+        if (!o) return null;
+        let a = ee(e, A(e, t + o.length));
+        if (!a) return null;
+        let u = ne(e, a.end);
+        return u ? { name: n.name, rawName: n.rawName, namespace: n.namespace, operator: o, value: a.value, flag: u.flag } : null;
+      }
+      function E(e, n) {
+        return e.replace(W, (t) => t.startsWith("[") ? n(t) : t);
+      }
+      var re = "data-hf-svg-reference-aliases";
+      function O(e, n, t, i) {
+        let o = { "=": (s, r) => s === r, "~=": (s, r) => s.split(/[ \t\r\n\f]+/).includes(r), "|=": (s, r) => s === r || s.startsWith(r + "-"), "^=": (s, r) => s.startsWith(r), "$=": (s, r) => s.endsWith(r), "*=": (s, r) => s.includes(r) }, a = (s, r, l) => !r && l !== "=" && l !== "|=" ? false : o[l](s, r), u = (s) => s.replace(/[A-Z]/g, (r) => r.toLowerCase()), d = (s) => {
+          let r = F(s);
+          if (!r) return s;
+          let { name: l, rawName: g, namespace: m, operator: b, value: D, flag: w } = r;
+          if (m.kind === "named" != (i !== void 0)) return s;
+          let x = w?.toLowerCase() === "i" ? u : (S) => S, L = u(l), P = t.filter((S) => {
+            let V = m.kind === "none" ? S.name : S.localName, U = m.kind === "named" ? i.get(m.prefix) : null;
+            return (m.kind === "any" || S.namespaceURI === U) && u(V) === L;
+          }), v = /* @__PURE__ */ new Set([s]);
+          for (let S of P) a(x(S.before), x(D), b) && v.add(`[${g}="${N(S.after)}"${w ? ` ${w}` : ""}]`);
+          return v.size === 1 ? s : `:is(${[...v].join(", ")})`;
+        };
+        if (i) return E(e, d);
+        let p = new Map(n.map(({ id: s, replacement: r }) => [s, r])), f = /* @__PURE__ */ new Map();
+        for (let s of t) {
+          if (s.name !== "id" || s.before === s.after || p.has(s.before)) continue;
+          let r = f.get(s.before);
+          r || (r = /* @__PURE__ */ new Set([`#${k(s.before)}`]), f.set(s.before, r)), r.add(`#${k(s.after)}`);
+        }
+        for (let [s, r] of f) p.set(s, `:is(${[...r].join(", ")})`);
+        let c = q(e, [...p.keys()], (s) => p.get(s));
+        return E(c, d);
+      }
+      function se(e, n, t = true) {
+        let i = [], a = (t ? [...e.querySelectorAll(`[${n}]`)] : []).map((d) => d.getAttribute(n)), u = e.getAttribute?.(n);
+        u && a.unshift(u);
+        for (let d of a) {
+          let p;
+          try {
+            p = JSON.parse(d);
+          } catch {
+            continue;
+          }
+          if (!Array.isArray(p)) continue;
+          let f = p;
+          for (let c of f) {
+            if (!ie(c)) continue;
+            let { name: s, localName: r, namespaceURI: l, before: g, after: m } = c;
+            i.push({ name: s, localName: r, namespaceURI: l, before: g, after: m });
+          }
+        }
+        return i;
+      }
+      function ie(e) {
+        if (!e || typeof e != "object") return false;
+        let { name: n, localName: t, namespaceURI: i, before: o, after: a } = e;
+        return typeof n == "string" && typeof t == "string" && (i === null || typeof i == "string") && typeof o == "string" && typeof a == "string";
+      }
+      function oe(e) {
+        let n = [], t = [], i = false, o, a = /* @__PURE__ */ new WeakMap(), u = (f, c) => {
+          for (let s of f) {
+            if ("selectorText" in s) {
+              let r = s, l = a.get(r), g = r.selectorText, m = l?.applied === g ? l.authored : g, b = O(m, [], t, c);
+              b !== g && (r.selectorText = b), b === m ? a.delete(r) : a.set(r, { authored: m, applied: r.selectorText });
+            }
+            "cssRules" in s && u(s.cssRules, c);
+          }
+        }, d = () => {
+          if (t.length) for (let f of e.document.styleSheets) {
+            let c;
+            try {
+              c = f.cssRules;
+            } catch {
+              continue;
+            }
+            let s = /* @__PURE__ */ new Map();
+            for (let r of c) {
+              if (!("namespaceURI" in r)) continue;
+              let { prefix: l, namespaceURI: g } = r;
+              l && s.set(l, g || null);
+            }
+            s.size && u(c, s);
+          }
+        }, p = { rewrite: (f, c = []) => {
+          if (typeof f != "string" || !f.includes("#") && !f.includes("[")) return f;
+          let s = O(f, c.length ? [...c, ...n] : n, t);
+          if (s !== f) {
+            if (!o) {
+              let r = e.document.createElement("div");
+              o = r.matches.bind(r);
+            }
+            o(f);
+          }
+          return s;
+        }, refresh() {
+          t = se(e.document, re).filter((r) => r.before !== r.after);
+          let f = new Set(t.filter((r) => r.name === "id").map((r) => r.before)), c = /* @__PURE__ */ new Set();
+          n = [];
+          for (let r of e.document.querySelectorAll("[data-hf-authored-id][id]")) {
+            let l = r.getAttribute("data-hf-authored-id");
+            if (!l || l === r.id || c.has(l) || f.has(l)) continue;
+            c.add(l);
+            let g = N(l);
+            n.push({ id: l, replacement: `:is(#${k(l)}, [data-hf-authored-id="${g}"])` });
+          }
+          if (d(), i || !n.length && !t.length) return;
+          let s = e.Element.prototype;
+          s.querySelector = new Proxy(s.querySelector, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), s.querySelectorAll = new Proxy(s.querySelectorAll, { apply(r, l, g) {
+            return Reflect.apply(r, l, [p.rewrite(g[0])]);
+          } }), i = true;
+        } };
+        e.__hfSvgSelectorAliases = p, p.refresh();
+      }
+      function M() {
+        let e = window;
+        e.__hfSvgSelectorAliases || oe(e);
+      }
+      M();
+    })();
+  })();
+  var __hfCompId = "e";
+  var __hfTimelineCompId = "e";
+  var __hfErrorLabel = "[HyperFrames] composition script error:";
+  var __hfAuthoredRootId = "root";
+  var __hfCompositionSrc = "compositions/e.html";
+  var __hfAuthoredRootAttr = "data-hf-authored-id";
+  var __hfEscapeAttr = function(value) {
+    return (value + "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  };
+  var __hfRootSelector = '[data-composition-id="e"]';
+  var __hfRoot = null;
+  var __hfRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"e"|'e')\\s*\\]`;
+  var __hfTimelineRootSelectorPattern = `\\[\\s*data-composition-id\\s*=\\s*(?:"e"|'e')\\s*\\]`;
+  var __hfTimingSelectorPattern = `\\s*\\[\\s*data-(?:start|duration)\\s*=\\s*(?:"[^"]*"|'[^']*')\\s*\\]`;
+  var __hfAuthoredRootSelector = __hfAuthoredRootId ? "[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(__hfAuthoredRootId) + '"]' : "";
+  var __hfAuthoredRootEntries = __hfAuthoredRootSelector ? [{ id: __hfAuthoredRootId, replacement: __hfAuthoredRootSelector }] : [];
+  var __hfNormalizeSelector = function(selector) {
+    if (!__hfCompId || typeof selector !== "string") return selector;
+    var normalized = selector.replace(new RegExp(__hfRootSelectorPattern + "(?:" + __hfTimingSelectorPattern + ")+", "g"), __hfRootSelector).replace(new RegExp("(?:" + __hfTimingSelectorPattern + ")+" + __hfRootSelectorPattern, "g"), __hfRootSelector).replace(new RegExp(__hfRootSelectorPattern, "g"), __hfRootSelector);
+    if (__hfTimelineCompId !== __hfCompId) {
+      normalized = normalized.replace(new RegExp(__hfTimelineRootSelectorPattern, "g"), __hfRootSelector);
+    }
+    return window.__hfSvgSelectorAliases.rewrite(normalized, __hfAuthoredRootEntries);
+  };
+  var __hfFindRoot = function() {
+    if (!__hfRoot && __hfRootSelector) {
+      __hfRoot = window.document.querySelector(__hfRootSelector);
+    }
+    return __hfRoot;
+  };
+  var __hfContains = function(node) {
+    var root = __hfFindRoot();
+    return !root || node === root || root.contains(node);
+  };
+  var __hfQueryAll = function(selector) {
+    var root = __hfFindRoot();
+    if (!root || typeof selector !== "string") {
+      return window.document.querySelectorAll(selector);
+    }
+    return Array.prototype.filter.call(window.document.querySelectorAll(__hfNormalizeSelector(selector)), function(node) {
+      return __hfContains(node);
+    });
+  };
+  var __hfQueryOne = function(selector) {
+    var matches = __hfQueryAll(selector);
+    return matches[0] || null;
+  };
+  var __hfGetElementById = function(id) {
+    var found = window.document.getElementById(id);
+    if (found && __hfContains(found)) return found;
+    var root = __hfFindRoot();
+    if (!root) return found || null;
+    var idValue = id + "";
+    if (__hfAuthoredRootId && __hfAuthoredRootId === idValue && root.getAttribute && root.getAttribute(__hfAuthoredRootAttr) === idValue) {
+      return root;
+    }
+    if (root.id === idValue) return root;
+    if (typeof root.querySelector !== "function") return null;
+    try {
+      var authoredRootMatch = root.querySelector("[" + __hfAuthoredRootAttr + '="' + __hfEscapeAttr(idValue) + '"]');
+      if (authoredRootMatch) return authoredRootMatch;
+    } catch {
+    }
+    if (typeof CSS !== "undefined" && CSS && typeof CSS.escape === "function") {
+      try {
+        return root.querySelector("#" + CSS.escape(idValue)) || null;
+      } catch {
+      }
+    }
+    try {
+      return root.querySelector('[id="' + __hfEscapeAttr(idValue) + '"]') || null;
+    } catch {
+    }
+    return null;
+  };
+  var __hfScopedDocument = typeof Proxy === "function" ? new Proxy(window.document, {
+    get: function(target, prop, receiver) {
+      if (prop === "querySelector") return __hfQueryOne;
+      if (prop === "querySelectorAll") return __hfQueryAll;
+      if (prop === "getElementById") return __hfGetElementById;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  }) : window.document;
+  var __hfTimelineRegistryProxy = null;
+  var __hfGetTimelineRegistry = function() {
+    window.__timelines = window.__timelines || {};
+    if (!__hfCompId || __hfCompId === __hfTimelineCompId || typeof Proxy !== "function") {
+      return window.__timelines;
+    }
+    if (!__hfTimelineRegistryProxy) {
+      __hfTimelineRegistryProxy = new Proxy(window.__timelines, {
+        get: function(target, prop, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.get(target, prop, target);
+          }
+          var runtimeValue = Reflect.get(target, __hfTimelineCompId, target);
+          return runtimeValue === void 0 ? Reflect.get(target, prop, target) : runtimeValue;
+        },
+        set: function(target, prop, value, receiver) {
+          if (prop !== __hfCompId) {
+            return Reflect.set(target, prop, value, target);
+          }
+          var authoredValue = Reflect.get(target, __hfCompId, target);
+          var ownsAuthored = authoredValue === void 0 || authoredValue === Reflect.get(target, __hfTimelineCompId, target);
+          var runtimeSet = Reflect.set(target, __hfTimelineCompId, value, target);
+          if (!ownsAuthored) return runtimeSet;
+          return Reflect.set(target, __hfCompId, value, target) && runtimeSet;
+        }
+      });
+    }
+    return __hfTimelineRegistryProxy;
+  };
+  var __hfScopedWindow = typeof Proxy === "function" ? new Proxy(window, {
+    get: function(target, prop, receiver) {
+      if (prop === "__timelines") return __hfGetTimelineRegistry();
+      if (prop === "__hyperframes") return __hfScopedHyperframes;
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" && value.prototype === void 0 ? value.bind(target) : value;
+    },
+    set: function(target, prop, value, receiver) {
+      if (prop === "__timelines") {
+        if (value === __hfTimelineRegistryProxy) return true;
+        target.__timelines = value || {};
+        __hfTimelineRegistryProxy = null;
+        return true;
+      }
+      return Reflect.set(target, prop, value, target);
+    }
+  }) : window;
+  var __hfResolveGsapTarget = function(target) {
+    if (typeof target !== "string" && !Array.isArray(target)) return target;
+    var resolved = typeof target === "string" ? __hfQueryAll(target) : target.reduce(function(resolved2, item) {
+      if (typeof item === "string") {
+        return resolved2.concat(Array.prototype.slice.call(__hfQueryAll(item)));
+      }
+      resolved2.push(item);
+      return resolved2;
+    }, []);
+    if (!resolved.length) {
+      var originalTarget = String(target);
+      resolved = [];
+      resolved.toString = function() {
+        return originalTarget;
+      };
+    }
+    return resolved;
+  };
+  var __hfScopeTimeline = function(timeline) {
+    if (!timeline || timeline.__hfScopedCompositionRoot === __hfFindRoot()) return timeline;
+    ["to", "from", "fromTo", "set"].forEach(function(method) {
+      var original = timeline[method];
+      if (typeof original !== "function") return;
+      timeline[method] = function(target) {
+        var args = Array.prototype.slice.call(arguments);
+        args[0] = __hfResolveGsapTarget(target);
+        return original.apply(timeline, args);
+      };
+    });
+    try {
+      Object.defineProperty(timeline, "__hfScopedCompositionRoot", {
+        value: __hfFindRoot(),
+        configurable: true
+      });
+    } catch {
+    }
+    return timeline;
+  };
+  var __hfBaseGsap = typeof gsap === "undefined" ? window.gsap : gsap;
+  var __hfScopedGsap = !__hfBaseGsap || typeof Proxy !== "function" ? __hfBaseGsap : new Proxy(__hfBaseGsap, {
+    get: function(target, prop, receiver) {
+      if (prop === "timeline") {
+        return function() {
+          return __hfScopeTimeline(target.timeline.apply(target, arguments));
+        };
+      }
+      if (prop === "to" || prop === "from" || prop === "fromTo" || prop === "set") {
+        return function(firstArg) {
+          var args = Array.prototype.slice.call(arguments);
+          args[0] = __hfResolveGsapTarget(firstArg);
+          return target[prop].apply(target, args);
+        };
+      }
+      if (prop === "utils" && target.utils && typeof Proxy === "function") {
+        return new Proxy(target.utils, {
+          get: function(utilsTarget, utilsProp, utilsReceiver) {
+            if (utilsProp === "toArray") {
+              return function(firstArg) {
+                var args = Array.prototype.slice.call(arguments);
+                args[0] = __hfResolveGsapTarget(firstArg);
+                return utilsTarget.toArray.apply(utilsTarget, args);
+              };
+            }
+            if (utilsProp === "selector") {
+              return function(base) {
+                var baseEl = typeof base === "string" ? __hfQueryOne(base) : base;
+                var root = baseEl || __hfFindRoot();
+                return function(selector) {
+                  if (!root || typeof selector !== "string") return [];
+                  return Array.prototype.filter.call(
+                    window.document.querySelectorAll(__hfNormalizeSelector(selector)),
+                    function(node) {
+                      return node === root || typeof root.contains === "function" && root.contains(node);
+                    }
+                  );
+                };
+              };
+            }
+            var value2 = Reflect.get(utilsTarget, utilsProp, utilsTarget);
+            return typeof value2 === "function" ? value2.bind(utilsTarget) : value2;
+          }
+        });
+      }
+      var value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+  var __hfBaseHyperframes = window.__hyperframes;
+  var __hfScopedHyperframes = !__hfBaseHyperframes ? __hfBaseHyperframes : Object.assign({}, __hfBaseHyperframes, {
+    assetUrl: function(path) {
+      var page = window.document.baseURI;
+      return new URL(path, __hfCompositionSrc ? new URL(__hfCompositionSrc, page) : page).href;
+    },
+    getVariables: function() {
+      var byComp = window.__hfVariablesByComp;
+      var scoped = byComp && __hfTimelineCompId ? byComp[__hfTimelineCompId] : null;
+      return scoped ? Object.assign({}, scoped) : {};
+    }
+  });
+  var __hfRun = function() {
+    var report = window.__hfScriptState;
+    if (typeof report === "function") report("start", __hfCompositionSrc || "index.html");
+    try {
+      (function(document, gsap2, window2, __hyperframes) {
+        const tl = gsap2.timeline({ paused: true });
+        const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+        const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+        const ring = (s, x, y, at) => tl.fromTo(s, { x, y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+        tl.to("#e-glow", { opacity: 1, duration: 1.2 }, 0.2);
+        up("#e-l1", 1.5 - 0.1, 0.5);
+        up("#e-l2", 2.12 - 0.1, 0.5);
+        pop("#e-pill", 2.96 - 0.1, 0.5);
+        pop("#e-btn", 3.91 - 0.1, 0.5);
+        tl.fromTo(".cur", { x: 800, y: 1400, opacity: 0 }, { x: 560, y: 1200, opacity: 1, duration: 0.7, ease: "power2.inOut" }, 4.27);
+        ring("#e-ring", 572, 1207, 4.41 + 0.25);
+        tl.fromTo("#e-btn", { scale: 1 }, { scale: 0.95, duration: 0.1, ease: "power2.out", immediateRender: false }, 4.41 + 0.25);
+        tl.to("#e-btn", { scale: 1, duration: 0.3, ease: "back.out(2)" }, 4.41 + 0.35);
+        tl.fromTo("#root", { scale: 1.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 0);
+        window2.__timelines["e"] = tl;
+      }).call(window, __hfScopedDocument, __hfScopedGsap, __hfScopedWindow, __hfScopedHyperframes);
+    } catch (_err) {
+      console.error(__hfErrorLabel, __hfCompId, _err);
+    } finally {
+      if (typeof report === "function") report("finish", __hfCompositionSrc || "index.html");
+    }
+  };
+  var __hfRecordAnimations = function(run) {
+    if (window.__hfSceneAnimations === void 0) {
+      window.__hfSceneAnimations = window.document.querySelector('meta[name="hf-scene-parts"]') ? {} : null;
+    }
+    var byComp = window.__hfSceneAnimations;
+    var globalTimeline = __hfBaseGsap && __hfBaseGsap.globalTimeline;
+    if (!byComp || !globalTimeline || !__hfTimelineCompId) return run();
+    var before = globalTimeline.getChildren(false);
+    var autoRemove = globalTimeline.autoRemoveChildren;
+    globalTimeline.autoRemoveChildren = false;
+    run();
+    globalTimeline.autoRemoveChildren = autoRemove;
+    var recorded = byComp[__hfTimelineCompId] = byComp[__hfTimelineCompId] || [];
+    globalTimeline.getChildren(false).forEach(function(animation) {
+      if (before.indexOf(animation) >= 0) return;
+      recorded.push(animation);
+      if (autoRemove && !animation.getChildren && animation.totalProgress() === 1) globalTimeline.remove(animation);
+    });
+  };
+  __hfFindRoot();
+  __hfRecordAnimations(__hfRun);
+})();</script></body>
+</html>

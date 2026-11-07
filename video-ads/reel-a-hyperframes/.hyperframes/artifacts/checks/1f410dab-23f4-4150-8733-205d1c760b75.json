@@ -1,0 +1,273 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 7
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 3,
+    "findings": [
+      {
+        "code": "content_overlap",
+        "severity": "warning",
+        "time": 8.216,
+        "selector": "#b-amt",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 214.09,
+          "top": 296.94,
+          "right": 865.91,
+          "bottom": 461.2,
+          "width": 651.82,
+          "height": 164.26
+        },
+        "containerSelector": "#c-na",
+        "text": "R$ 21.900",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/b.html",
+        "bbox": {
+          "x": 214.09,
+          "y": 296.94,
+          "width": 651.82,
+          "height": 164.26
+        },
+        "firstSeen": 8.216,
+        "lastSeen": 8.481,
+        "occurrences": 3,
+        "heldMs": 265.00000000000057,
+        "times": [
+          8.216,
+          8.348,
+          8.481
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 8.348,
+        "selector": "#b-lbl",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 328.11,
+          "top": 243.22,
+          "right": 751.89,
+          "bottom": 291.49,
+          "width": 423.78,
+          "height": 48.27
+        },
+        "containerSelector": "#c-na",
+        "text": "Valor da venda · exemplo",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/b.html",
+        "bbox": {
+          "x": 328.11,
+          "y": 243.22,
+          "width": 423.78,
+          "height": 48.27
+        },
+        "firstSeen": 8.348,
+        "lastSeen": 8.348,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.348
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 17.131,
+        "selector": "#d-lbl",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 136.16,
+          "top": 268.28,
+          "right": 522.66,
+          "bottom": 315.26,
+          "width": 386.5,
+          "height": 46.98
+        },
+        "containerSelector": "#e-logo",
+        "text": "Saldo do mês · exemplo",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 0.15,
+        "dataAttributes": {},
+        "sourceFile": "compositions/d.html",
+        "bbox": {
+          "x": 136.16,
+          "y": 268.28,
+          "width": 386.5,
+          "height": 46.98
+        },
+        "firstSeen": 17.131,
+        "lastSeen": 17.131,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          17.131
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 17.131,
+        "selector": "#d-amt",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 136.16,
+          "top": 304.26,
+          "right": 816.72,
+          "bottom": 475.19,
+          "width": 680.56,
+          "height": 170.93
+        },
+        "containerSelector": "#e-logo",
+        "text": "R$ 21.900",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 0.41,
+        "dataAttributes": {},
+        "sourceFile": "compositions/d.html",
+        "bbox": {
+          "x": 136.16,
+          "y": 304.26,
+          "width": 680.56,
+          "height": 170.93
+        },
+        "firstSeen": 17.131,
+        "lastSeen": 17.131,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          17.131
+        ]
+      }
+    ],
+    "duration": 23.72,
+    "samples": [
+      1.318,
+      3.953,
+      6.589,
+      9.224,
+      11.86,
+      14.496,
+      17.131,
+      19.767,
+      22.402
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 4,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.318,
+      6.589,
+      11.86,
+      17.131,
+      22.402
+    ],
+    "checked": 29,
+    "passed": 29
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 2,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"Mas sobrou quanto?\" (3 words) is on screen 0.94 s (±0.01 s), under its 1.05 s floor: hold it about 0.5 s + 0.3 s a word (1.40 s here) before it leaves or changes; see references/motion.md.",
+        "text": "Mas sobrou quanto?",
+        "selector": "#a-q",
+        "dataAttributes": {},
+        "sourceFile": "compositions/a.html",
+        "bbox": {
+          "x": 176.67,
+          "y": 987.39,
+          "width": 726.64,
+          "height": 155.9999999999999
+        },
+        "time": 3.504,
+        "words": 3,
+        "seconds": 0.936,
+        "floorSeconds": 1.05
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"− R$ 8.100\" (3 words) is on screen 0.87 s (±0.01 s), under its 1.05 s floor: hold it about 0.5 s + 0.3 s a word (1.40 s here) before it leaves or changes; see references/motion.md.",
+        "text": "− R$ 8.100",
+        "selector": "b.r",
+        "dataAttributes": {},
+        "sourceFile": "compositions/c.html",
+        "bbox": {
+          "x": 578.31,
+          "y": 1180.96,
+          "width": 267.99,
+          "height": 59.24000000000001
+        },
+        "time": 11.907,
+        "words": 3,
+        "seconds": 0.866,
+        "floorSeconds": 1.05
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 190
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

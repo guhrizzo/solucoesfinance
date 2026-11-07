@@ -1,0 +1,68 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+    .mono { font-family: "JetBrains Mono", monospace; }
+
+    #c-head { position: absolute; left: 0; right: 0; top: 220px; display: flex; align-items: center; justify-content: center; gap: 22px; }
+    #c-na { font-family: "Sora", sans-serif; font-weight: 700; font-size: 64px; color: #9db6dc; }
+    #c-logo { height: 120px; width: auto; }
+    #c-frame { position: absolute; left: 109px; top: 420px; width: 862px; height: 691px; background: #0b1220; border: 2px solid #2a4f94; border-radius: 56px; box-shadow: 0 30px 90px #1f6feb55; }
+    #c-screen { position: absolute; inset: 10px; border-radius: 46px; overflow: hidden; }
+    #c-wrap { position: absolute; left: 0; top: 0; width: 842px; height: 671px; transform-origin: 0 0; }
+    #c-img { position: absolute; left: 0; top: 0; width: 842px; height: 671px; }
+    #c-ul { position: absolute; left: 126px; top: 556px; width: 394px; height: 8px; border-radius: 4px; background: #5aa2ff; box-shadow: 0 0 24px #5aa2ff; }
+    .rg { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border: 5px solid #5aa2ff; border-radius: 50%; opacity: 0; }
+    .cur { position: absolute; left: 0; top: 0; width: 56px; height: 56px; }
+    .chip { position: absolute; top: 1170px; width: 430px; height: 120px; padding: 0 30px; display: flex; flex-direction: column; justify-content: center; gap: 4px; border-radius: 28px; }
+    #c-chip1 { left: 109px; } #c-chip2 { left: 541px; }
+    .chip b { font-family: "JetBrains Mono", monospace; font-size: 46px; font-weight: 800; }
+    .chip span { font-size: 28px; color: #8aa0c4; font-weight: 600; }
+    
+  </style>
+  <div id="root" data-composition-id="c" data-width="1080" data-height="1920">
+    <div id="c-head"><span id="c-na">Na</span><img id="c-logo" src="assets/img/nexus_fi_logo_branco.png" alt="NexusFi" /></div>
+    <div id="c-frame">
+      <div id="c-screen">
+        <div id="c-wrap" data-layout-allow-overflow>
+          <img id="c-img" src="assets/screens/fluxo-caixa.png" alt="Fluxo de caixa da NexusFi" />
+          <div id="c-ul"></div>
+        </div>
+        <div id="c-r1" class="rg"></div>
+        <div id="c-r2" class="rg"></div>
+        <svg class="cur" viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z" fill="#ffffff" stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round" /></svg>
+      </div>
+    </div>
+    <div id="c-chip1" class="card chip"><b class="g">+ R$ 30.000</b><span>entrou no caixa</span></div>
+    <div id="c-chip2" class="card chip"><b class="r">− R$ 8.100</b><span>taxas, separadas</span></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    tl.fromTo("#c-wrap", { scale: 1, x: 0, y: 0 }, { scale: 1.18, x: -40, y: -120, duration: 1.4, ease: "sine.inOut" }, 1.53);
+    tl.fromTo(".cur", { x: 760, y: 560, opacity: 0 }, { x: 343, y: 610, opacity: 1, duration: 1.0, ease: "power2.inOut" }, 1.53 + 0.2);
+    ring("#c-r1", 355, 617, 2.40);
+    pop("#c-chip1", 2.40, 0.5);
+    tl.to(".cur", { x: 680, y: 480, duration: 0.7, ease: "power2.inOut" }, 2.93 + 0.2);
+    tl.fromTo("#c-ul", { scaleX: 0, transformOrigin: "0 50%" }, { scaleX: 1, duration: 0.7, ease: "power2.inOut" }, 3.15);
+    ring("#c-r2", 692, 485, 3.84 - 0.1);
+    pop("#c-chip2", 3.84 - 0.1, 0.5);
+    
+    tl.fromTo("#root", { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 0);
+    tl.to("#root", { x: -1080, duration: 0.5, ease: "power3.inOut" }, 4.89 - 0.5);
+    window.__timelines["c"] = tl;
+  </script>
+</template>

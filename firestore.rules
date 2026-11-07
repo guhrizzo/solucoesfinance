@@ -221,6 +221,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Leads da demo guiada do Midas (landing) — lidos/escritos SOMENTE pelo
+    // Admin SDK (rotas app/api/midas/*). O client nunca acessa direto.
+    match /demoLeads/{id} {
+      allow read, write: if false;
+    }
+
     // analytics_daily, analytics_monthly, analytics_page_daily,
     // analytics_download_clickers, analytics_summary (aba
     // "Analytics" de Configurações — métricas da PLATAFORMA, não de uma

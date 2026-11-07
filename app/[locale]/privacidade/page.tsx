@@ -308,7 +308,33 @@ export default async function PrivacidadePage() {
         </p>
       </Section>
 
-      <Section title="10. Alterações nesta Política">
+      <Section title={`10. ${tp("midas.title")}`}>
+        <p>{tp("midas.intro")}</p>
+        <ul className="list-disc space-y-1.5 pl-5">
+          {(["data", "purposes", "ai", "retention", "link"] as const).map((k) => (
+            <li key={k}>
+              <strong className="font-semibold text-[var(--text)]">
+                {tp(`midas.${k}Title`)}
+              </strong>{" "}
+              {tp(`midas.${k}`)}
+            </li>
+          ))}
+        </ul>
+        <p>
+          {tp.rich("midas.contact", {
+            mail: () => (
+              <a
+                href={`mailto:${DPO_EMAIL}`}
+                className="font-semibold text-[var(--brand)] underline underline-offset-2"
+              >
+                {DPO_EMAIL}
+              </a>
+            ),
+          })}
+        </p>
+      </Section>
+
+      <Section title="11. Alterações nesta Política">
         <p>
           Podemos atualizar esta Política. Quando a mudança for relevante,
           avisaremos pela plataforma ou por e-mail e, quando aplicável,

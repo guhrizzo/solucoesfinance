@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 
 import { Loader2, Check, ShieldCheck, LogOut, Sparkles } from "lucide-react";
+import SecurePaymentSeal from "./SecurePaymentSeal";
 import {
   PLAN_TIERS,
   BILLING_PERIODS,
@@ -268,7 +269,11 @@ export default function Paywall({ state, blocking = false, initialError = null }
             </>
           )}
 
-          <p className="flex items-center gap-1.5 mt-6 text-xs" style={{ color: "var(--db-text-4)" }}>
+          <div className="mt-6">
+            <SecurePaymentSeal />
+          </div>
+
+          <p className="flex items-center gap-1.5 mt-3 text-xs" style={{ color: "var(--db-text-4)" }}>
             <ShieldCheck size={12} /> {t("processedBy")}
           </p>
         </div>

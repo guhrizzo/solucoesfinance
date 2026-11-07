@@ -1,0 +1,57 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+
+    .sm { position: absolute; left: 0; right: 0; text-align: center; font-family: "Sora", sans-serif; font-weight: 700; font-size: 62px; color: #c9d6ee; }
+    .bg { position: absolute; left: 0; right: 0; text-align: center; font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.03em; line-height: 1; white-space: nowrap; }
+    #a-s1 { top: 230px; } #a-b1 { top: 310px; font-size: 170px; color: #8aa0c4; }
+    #a-s2 { top: 560px; } #a-b2 { top: 640px; font-size: 138px; color: #5aa2ff; }
+    #a-track { position: absolute; left: 160px; top: 840px; width: 760px; height: 14px; border-radius: 7px; background: #1a2a4a; }
+    #a-fill { position: absolute; left: 0; top: 0; height: 14px; width: 380px; border-radius: 7px; background: #5aa2ff; }
+    #a-knob { position: absolute; left: 140px; top: 818px; width: 58px; height: 58px; border-radius: 50%; background: #ffffff; box-shadow: 0 8px 30px #1f6febaa; border: 6px solid #5aa2ff; }
+    #a-crown { position: absolute; left: 465px; top: 930px; }
+    #a-s3 { top: 1060px; } #a-b3 { top: 1130px; font-size: 190px; color: #ffffff; text-shadow: 0 0 60px #2f80ff99; }
+    
+  </style>
+  <div id="root" data-composition-id="a" data-width="1080" data-height="1920">
+    <div id="a-s1" class="sm">Faturamento é</div><div id="a-b1" class="bg">ego.</div>
+    <div id="a-s2" class="sm">Lucro é</div><div id="a-b2" class="bg">ajustável.</div>
+    <div id="a-track"><div id="a-fill"></div></div><div id="a-knob"></div>
+    <svg id="a-crown" width="150" height="110" viewBox="0 0 150 110" fill="none"><path d="M10 92L22 24l36 34 17-42 17 42 36-34 12 68z" fill="#5aa2ff" stroke="#9cc6ff" stroke-width="5" stroke-linejoin="round"/><rect x="10" y="94" width="130" height="12" rx="6" fill="#2f80ff"/></svg>
+    <div id="a-s3" class="sm">Caixa é</div><div id="a-b3" class="bg">o <span class="b">rei.</span></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    tl.fromTo("#a-b1", { scale: 1 }, { scale: 1.1, duration: 0.18, ease: "power2.out" }, 1.32);
+    tl.to("#a-b1", { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.5)" }, 1.32 + 0.18);
+    tl.to(["#a-s1", "#a-b1"], { opacity: 0.3, duration: 0.5, ease: "power2.inOut" }, 2.19 - 0.1);
+    up("#a-s2", 2.19 - 0.1, 0.45);
+    tl.fromTo("#a-b2", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 2.82 - 0.2);
+    tl.fromTo(["#a-track", "#a-knob"], { opacity: 0 }, { opacity: 1, duration: 0.4 }, 2.82);
+    tl.to("#a-knob", { x: 520, duration: 0.9, ease: "power2.inOut" }, 2.82 + 0.2);
+    tl.to("#a-fill", { width: 640, duration: 0.9, ease: "power2.inOut" }, 2.82 + 0.2);
+    tl.to("#a-knob", { x: 260, duration: 0.7, ease: "power2.inOut" }, 2.82 + 1.2);
+    tl.to("#a-fill", { width: 380, duration: 0.7, ease: "power2.inOut" }, 2.82 + 1.2);
+    tl.to(["#a-s2", "#a-b2", "#a-track", "#a-knob"], { opacity: 0.3, duration: 0.5, ease: "power2.inOut" }, 4.11 - 0.15);
+    up("#a-s3", 4.11 - 0.15, 0.45);
+    tl.fromTo("#a-crown", { opacity: 0, y: -60, scale: 0.6 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "back.out(1.8)" }, 4.92 - 0.2);
+    tl.fromTo("#a-b3", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.6)" }, 4.83 - 0.1);
+    
+    tl.to("#root", { y: -1920, duration: 0.5, ease: "power3.inOut" }, 6.29 - 0.5);
+    window.__timelines["a"] = tl;
+  </script>
+</template>

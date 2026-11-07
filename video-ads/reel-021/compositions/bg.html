@@ -1,0 +1,24 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: radial-gradient(1200px 900px at 50% -10%, #14305f 0%, #070b14 65%); }
+    .gl { position: absolute; border-radius: 50%; }
+    #bg-g1 { left: 90px; top: 480px; width: 900px; height: 900px; background: radial-gradient(#1f6feb55, transparent 65%); }
+    #bg-g2 { left: -60px; top: -260px; width: 1200px; height: 800px; background: radial-gradient(#2f80ff33, transparent 65%); }
+    #bg-grid { position: absolute; left: -300px; right: -300px; bottom: 0; height: 520px; transform-origin: 50% 100%; transform: perspective(520px) rotateX(64deg);
+      background: repeating-linear-gradient(90deg, #2a4f9455 0 2px, transparent 2px 100px), repeating-linear-gradient(0deg, #2a4f9455 0 2px, transparent 2px 80px);
+      -webkit-mask-image: linear-gradient(transparent 0%, #000 70%); mask-image: linear-gradient(transparent 0%, #000 70%); }
+  </style>
+  <div id="root" data-composition-id="bg" data-width="1080" data-height="1920">
+    <div id="bg-g2" class="gl"></div>
+    <div id="bg-g1" class="gl"></div>
+    <div id="bg-grid"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#bg-g1", { scale: 1 }, { scale: 1.14, duration: 13.18, ease: "sine.inOut" }, 0);
+    tl.to("#bg-g1", { scale: 1, duration: 13.18, ease: "sine.inOut" }, 13.18);
+    tl.fromTo("#bg-g2", { opacity: 0.7 }, { opacity: 1, duration: 13.18, ease: "sine.inOut" }, 0);
+    tl.to("#bg-g2", { opacity: 0.7, duration: 13.18, ease: "sine.inOut" }, 13.18);
+    window.__timelines["bg"] = tl;
+  </script>
+</template>

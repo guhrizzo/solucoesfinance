@@ -1,0 +1,68 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+    .mono { font-family: "JetBrains Mono", monospace; }
+
+    #a-card { position: absolute; left: 90px; top: 250px; width: 900px; padding: 44px; }
+    #a-row { display: flex; align-items: center; gap: 24px; }
+    #a-chip { background: #ffffff; border-radius: 20px; padding: 12px 22px; display: flex; }
+    #a-chip img { height: 56px; width: auto; }
+    #a-t { flex: 1; font-size: 48px; font-weight: 700; }
+    #a-ck { width: 64px; height: 64px; border-radius: 50%; background: #16a34a; display: grid; place-items: center; box-shadow: 0 10px 40px #16a34a88; }
+    #a-amt { font-family: "Sora", sans-serif; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 132px; line-height: 1.05; margin-top: 26px; letter-spacing: -0.03em; white-space: nowrap; }
+    #a-note { font-size: 30px; color: #8aa0c4; margin-top: 6px; }
+    #a-cap { position: absolute; left: 90px; top: 720px; width: 900px; text-align: center; font-family: "Sora", sans-serif; font-weight: 700; font-size: 68px; line-height: 1.25; }
+    #a-q { position: absolute; left: 60px; top: 990px; width: 960px; text-align: center; font-family: "Sora", sans-serif; font-weight: 800; font-size: 124px; line-height: 1.1; letter-spacing: -0.02em; }
+    #a-qm { display: inline-block; }
+    
+  </style>
+  <div id="root" data-composition-id="a" data-width="1080" data-height="1920">
+    <div id="a-card" class="card">
+      <div id="a-row">
+        <div id="a-chip"><img src="assets/img/Logotipo_MercadoLivre.png" alt="Mercado Livre" /></div>
+        <div id="a-t">Venda aprovada</div>
+        <div id="a-ck"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+      </div>
+      <div id="a-amt">R$ 30.000</div>
+      <div id="a-note">valores de exemplo</div>
+    </div>
+    <div id="a-cap"><span id="a-w0" class="w">Você</span> <span id="a-w1" class="w">vendeu</span> <span id="a-w2" class="w b">trinta</span> <span id="a-w3" class="w b">mil</span> <span id="a-w4" class="w b">reais</span> <span id="a-w5" class="w">no</span> <span id="a-w6" class="w">Mercado</span> <span id="a-w7" class="w">Livre.</span></div>
+    <div id="a-q"><span id="a-q1" class="w">Mas sobrou</span><br /><span id="a-q2" class="w b">quanto<span id="a-qm">?</span></span></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    tl.fromTo("#a-ck", { scale: 0 }, { scale: 1, duration: 0.45, ease: "back.out(2)" }, 0.35);
+    tl.fromTo("#a-w2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 1.20);
+    tl.fromTo("#a-w3", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 1.55);
+    tl.fromTo("#a-w4", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 1.72);
+    tl.fromTo("#a-w5", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.18);
+    tl.fromTo("#a-w6", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.27);
+    tl.fromTo("#a-w7", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 2.73);
+    tl.fromTo("#a-card", { scale: 1 }, { scale: 1.04, duration: 0.2, ease: "power2.out" }, 1.20);
+    tl.to("#a-card", { scale: 1, duration: 0.4, ease: "power2.out" }, 1.20 + 0.2);
+    tl.to("#a-card", { opacity: 0.35, scale: 0.94, duration: 0.4, ease: "power2.inOut" }, 3.41 - 0.1);
+    tl.to("#a-cap", { opacity: 0.25, duration: 0.4, ease: "power2.inOut" }, 3.41 - 0.1);
+    up("#a-q1", 3.41, 0.5);
+    up("#a-q2", 3.99 - 0.1, 0.5);
+    tl.fromTo("#a-qm", { scale: 1 }, { scale: 1.5, duration: 0.14, ease: "power3.out" }, 3.99 + 0.35);
+    tl.to("#a-qm", { scale: 1, duration: 0.55, ease: "elastic.out(1, 0.55)" }, 3.99 + 0.49);
+    
+    tl.to("#root", { y: -1920, duration: 0.5, ease: "power3.inOut" }, 4.65 - 0.5);
+    window.__timelines["a"] = tl;
+  </script>
+</template>

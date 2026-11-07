@@ -1,0 +1,60 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+    .mono { font-family: "JetBrains Mono", monospace; }
+
+    #d-saldo { position: absolute; left: 90px; top: 230px; width: 900px; height: 560px; padding: 36px 44px; box-shadow: 0 30px 90px #16a34a33; }
+    #d-lbl { font-size: 36px; color: #8aa0c4; font-weight: 600; }
+    #d-amt { font-family: "Sora", sans-serif; font-weight: 800; font-size: 136px; line-height: 1.1; letter-spacing: -0.03em; color: #4ade80; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    #d-bars { position: absolute; left: 44px; right: 44px; bottom: 36px; height: 200px; display: flex; align-items: flex-end; gap: 18px; }
+    #d-bars i { flex: 1; background: linear-gradient(#5aa2ff, #1f6feb); border-radius: 12px 12px 4px 4px; transform-origin: bottom; display: block; }
+    #d-bars i:last-child { background: linear-gradient(#7dffb0, #16a34a); }
+    .row { position: absolute; left: 90px; width: 900px; height: 170px; padding: 0 40px; display: flex; align-items: center; gap: 36px; }
+    #d-r1 { top: 860px; } #d-r2 { top: 1060px; }
+    .row .tx { font-family: "Sora", sans-serif; font-weight: 700; font-size: 54px; line-height: 1.15; }
+    
+  </style>
+  <div id="root" data-composition-id="d" data-width="1080" data-height="1920">
+    <div id="d-saldo" class="card"><div id="d-lbl">Saldo do mês · exemplo</div><div id="d-amt">R$ 0</div><div id="d-bars"><i id="d-bar0" style="height:30%"></i><i id="d-bar1" style="height:38%"></i><i id="d-bar2" style="height:34%"></i><i id="d-bar3" style="height:50%"></i><i id="d-bar4" style="height:46%"></i><i id="d-bar5" style="height:64%"></i><i id="d-bar6" style="height:58%"></i><i id="d-bar7" style="height:100%"></i></div></div>
+    <div id="d-r1" class="card row"><svg width="120" height="120" viewBox="0 0 120 120" fill="none"><rect x="8" y="8" width="104" height="104" rx="18" stroke="#5aa2ff" stroke-width="7"/><path d="M8 44h104M8 78h104M44 8v104M78 8v104" stroke="#5aa2ff" stroke-width="6"/><path id="d-s1h" d="M14 106L106 14" stroke="#101a2e" stroke-width="22" stroke-linecap="round"/><path id="d-s1" d="M14 106L106 14" stroke="#ff6b6b" stroke-width="10" stroke-linecap="round"/></svg><div class="tx">Sem planilha</div></div>
+    <div id="d-r2" class="card row"><svg width="120" height="120" viewBox="0 0 120 120" fill="none"><rect x="8" y="8" width="104" height="104" rx="18" stroke="#5aa2ff" stroke-width="7"/><path d="M28 40h14M54 40h40M28 62h14M54 62h40M28 84h14M54 84h40" stroke="#5aa2ff" stroke-width="7" stroke-linecap="round"/><path id="d-s2h" d="M14 106L106 14" stroke="#101a2e" stroke-width="22" stroke-linecap="round"/><path id="d-s2" d="M14 106L106 14" stroke="#ff6b6b" stroke-width="10" stroke-linecap="round"/></svg><div class="tx">Sem conferir<br />repasse na mão</div></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const fmt = (n) => "R$ " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    const st = { v: 0 };
+    const amt = document.querySelector("#d-amt");
+    tl.fromTo(st, { v: 0 }, { v: 21900, duration: 1.1, ease: "power2.out", onUpdate: () => { amt.textContent = fmt(st.v); } }, 0.60);
+    tl.fromTo("#d-bar0", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.00);
+    tl.fromTo("#d-bar1", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.07);
+    tl.fromTo("#d-bar2", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.14);
+    tl.fromTo("#d-bar3", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.21);
+    tl.fromTo("#d-bar4", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.28);
+    tl.fromTo("#d-bar5", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.35);
+    tl.fromTo("#d-bar6", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.42);
+    tl.fromTo("#d-bar7", { scaleY: 0 }, { scaleY: 1, duration: 0.7, ease: "power3.out" }, 0.99 + 0.49);
+    ["#d-s1h", "#d-s1", "#d-s2h", "#d-s2"].forEach((s) => tl.set(s, { attr: { "stroke-dasharray": 140, "stroke-dashoffset": 140 } }, 0));
+    pop("#d-r1", 2.24 - 0.1, 0.5);
+    tl.to(["#d-s1h", "#d-s1"], { attr: { "stroke-dashoffset": 0 }, duration: 0.35, ease: "power2.out" }, 2.46);
+    pop("#d-r2", 3.15 - 0.1, 0.5);
+    tl.to(["#d-s2h", "#d-s2"], { attr: { "stroke-dashoffset": 0 }, duration: 0.35, ease: "power2.out" }, 3.86);
+    
+    tl.fromTo("#root", { x: 1080 }, { x: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+    tl.to("#root", { scale: 0.85, opacity: 0, duration: 0.5, ease: "power3.in" }, 5.03 - 0.5);
+    window.__timelines["d"] = tl;
+  </script>
+</template>

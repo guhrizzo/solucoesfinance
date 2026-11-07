@@ -2,6 +2,7 @@ import { Shield } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "./LocaleSwitcher";
+import SecurePaymentSeal from "./SecurePaymentSeal";
 
 export default function Footer() {
   const t = useTranslations("landing.footer");
@@ -86,6 +87,9 @@ export default function Footer() {
               <Shield size={12} /> {t("lgpd")}
             </div>
           </div>
+        </div>
+        <div className="border-t border-white/5 mt-8 pt-8 flex justify-center">
+          <SecurePaymentSeal variant="footer" />
         </div>
       </div>
     </footer>

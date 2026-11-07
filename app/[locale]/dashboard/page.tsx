@@ -461,6 +461,19 @@ export default function Dashboard() {
             if (typeof window !== "undefined") {
               localStorage.setItem(`onboarding_ramo_${user.uid}`, JSON.stringify(answers.ramo || []));
             }
+            // "Preciso de ajuda de um mentor financeiro" → avisa a equipe no WhatsApp.
+            if (answers.desafio?.includes("Preciso de ajuda de um mentor financeiro")) {
+              const { authedFetch } = await import("@/lib/authedFetch");
+              authedFetch("/api/onboarding/mentor-lead", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  cargo: answers.cargo?.[0],
+                  faturamento: answers.faturamento?.[0],
+                  ramo: answers.ramo?.[0],
+                }),
+              }).catch(() => {});
+            }
           } catch (err) {
             console.error("Erro ao salvar onboarding:", err);
           }

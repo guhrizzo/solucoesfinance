@@ -1,0 +1,67 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+
+    .t1 { position: absolute; left: 0; right: 0; text-align: center; font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-size: 96px; }
+    #a-l1 { top: 230px; } #a-l2 { top: 335px; } #a-l3 { top: 440px; } #a-l4 { top: 545px; font-size: 118px; }
+    #a-chart { position: absolute; left: 90px; top: 800px; width: 900px; height: 400px; }
+    #a-m1 { top: 280px; } #a-m2 { top: 385px; } #a-m3 { top: 490px; font-size: 128px; }
+    #a-bars { position: absolute; left: 190px; right: 190px; top: 800px; height: 400px; display: flex; align-items: flex-end; gap: 22px; }
+    #a-bars i { flex: 1; display: block; background: linear-gradient(#5aa2ff, #1f6feb); border-radius: 14px 14px 5px 5px; transform-origin: bottom; }
+    #a-bars i:last-child { background: linear-gradient(#8ec1ff, #3a8bff); box-shadow: 0 0 50px #3a8bffaa; }
+    
+  </style>
+  <div id="root" data-composition-id="a" data-width="1080" data-height="1920">
+    <div id="a-l1" class="t1">Tem empresas</div><div id="a-l2" class="t1">que estão sempre</div>
+    <div id="a-l3" class="t1">em constante</div><div id="a-l4" class="t1 b">evolução</div>
+    <svg id="a-chart" viewBox="0 0 900 400" fill="none">
+      <defs><linearGradient id="a-gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a8bff" stop-opacity="0.45"/><stop offset="1" stop-color="#3a8bff" stop-opacity="0"/></linearGradient></defs>
+      <path id="a-area" d="M20 370 C 200 350, 330 300, 470 250 S 740 130, 880 40 L880 400 L20 400 Z" fill="url(#a-gr)" opacity="0"/>
+      <path id="a-line" d="M20 370 C 200 350, 330 300, 470 250 S 740 130, 880 40" stroke="#5aa2ff" stroke-width="9" stroke-linecap="round" pathLength="1"/>
+      <circle id="a-pt" cx="880" cy="40" r="15" fill="#fff"/>
+    </svg>
+    <div id="a-m1" class="t1">mas esse avanço</div><div id="a-m2" class="t1">não acontece</div><div id="a-m3" class="t1 b">por acaso.</div>
+    <div id="a-bars"><i id="a-br0" style="height:22%"></i><i id="a-br1" style="height:34%"></i><i id="a-br2" style="height:30%"></i><i id="a-br3" style="height:48%"></i><i id="a-br4" style="height:44%"></i><i id="a-br5" style="height:66%"></i><i id="a-br6" style="height:100%"></i></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    tl.fromTo("#a-l1", { scale: 1 }, { scale: 1.06, duration: 0.18, ease: "power2.out" }, 0.45);
+    tl.to("#a-l1", { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.5)" }, 0.45 + 0.18);
+    up("#a-l2", 1.03 - 0.1, 0.5);
+    up("#a-l3", 1.76 - 0.1, 0.5);
+    up("#a-l4", 2.34 - 0.1, 0.55);
+    tl.set("#a-line", { attr: { "stroke-dasharray": 1, "stroke-dashoffset": 1 } }, 0);
+    tl.set("#a-pt", { opacity: 0 }, 0);
+    tl.to("#a-line", { attr: { "stroke-dashoffset": 0 }, duration: 2.6, ease: "power1.inOut" }, 1.03);
+    tl.to("#a-area", { opacity: 1, duration: 1.2 }, 1.76);
+    tl.to("#a-pt", { opacity: 1, duration: 0.2 }, 1.03 + 2.4);
+    tl.to(["#a-l1", "#a-l2", "#a-l3", "#a-l4", "#a-chart"], { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, 3.53 - 0.35);
+    up("#a-m1", 3.53 - 0.05, 0.5);
+    up("#a-m2", 4.51 - 0.05, 0.5);
+    tl.fromTo("#a-m3", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.7)" }, 5.21 - 0.05);
+    tl.fromTo("#a-br0", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, 3.95 + 0.00);
+    tl.fromTo("#a-br1", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, 3.95 + 0.12);
+    tl.fromTo("#a-br2", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, 3.95 + 0.24);
+    tl.fromTo("#a-br3", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, 3.95 + 0.36);
+    tl.fromTo("#a-br4", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, 3.95 + 0.48);
+    tl.fromTo("#a-br5", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, 3.95 + 0.60);
+    tl.fromTo("#a-br6", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power3.out" }, 3.95 + 0.72);
+    
+    tl.to("#root", { y: -1920, duration: 0.5, ease: "power3.inOut" }, 6.23 - 0.5);
+    window.__timelines["a"] = tl;
+  </script>
+</template>

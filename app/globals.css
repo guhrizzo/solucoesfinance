@@ -739,303 +739,6 @@ textarea::placeholder {
   }
 }
 
-/* ── Modal do WhatsApp (WhatsAppFab.tsx) — o visitante escolhe o assunto e
-   segue pro WhatsApp com a mensagem pronta. Portal no <body>, acima do FAB
-   (1400) e do widget de acessibilidade (1500). Tema claro/escuro pelos
-   tokens semânticos. ─────────────────────────────────────────────────── */
-.wa-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(6, 10, 16, 0.6);
-  animation: wa-modal-fade 0.18s ease both;
-}
-@keyframes wa-modal-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.wa-modal {
-  width: 100%;
-  max-width: 420px;
-  max-height: 85vh;
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow-pop);
-  animation: wa-modal-pop 0.22s cubic-bezier(0.34, 0.1, 0.64, 1) both;
-}
-@keyframes wa-modal-pop {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
-  to { opacity: 1; transform: none; }
-}
-.wa-modal__head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 18px 18px 12px;
-}
-.wa-modal__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--brand);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.wa-modal__icon svg { width: 22px; height: 22px; }
-.wa-modal__title {
-  font-family: var(--font-display), var(--font-hanken), sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--text);
-}
-.wa-modal__subtitle {
-  font-size: 12.5px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  line-height: 1.4;
-}
-.wa-modal__close {
-  margin-left: auto;
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 0;
-  background: var(--sunken);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.wa-modal__close:hover { color: var(--text); }
-.wa-modal__list {
-  padding: 4px 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.wa-modal__topic {
-  width: 100%;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 12px;
-  border-radius: 11px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-.wa-modal__topic:hover {
-  border-color: var(--brand);
-  background: var(--brand-weak);
-}
-.wa-modal__topic svg {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-  color: var(--text-subtle);
-  margin-left: auto;
-}
-
-/* ── Chat do WhatsAppFab.tsx — o modal de tópicos virou um chat de       */
-/* verdade: histórico de balões, chips de assunto (resposta pronta, sem   */
-/* rede) e um campo de texto livre que chama /api/chat. `.wa-chat` só     */
-/* ajusta o `.wa-modal` pra layout em coluna com só o corpo rolando.      */
-/* ────────────────────────────────────────────────────────────────── */
-.wa-chat {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.wa-chat__body {
-  flex: 1;
-  min-height: 220px;
-  max-height: 340px;
-  overflow-y: auto;
-  padding: 4px 16px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.wa-chat__bubble {
-  max-width: 85%;
-  padding: 9px 12px;
-  border-radius: 14px;
-  font-size: 13.5px;
-  line-height: 1.45;
-}
-.wa-chat__bubble p {
-  margin: 0;
-  white-space: pre-wrap;
-}
-.wa-chat__bubble--bot {
-  align-self: flex-start;
-  background: var(--sunken);
-  color: var(--text);
-  border-bottom-left-radius: 4px;
-}
-.wa-chat__bubble--user {
-  align-self: flex-end;
-  background: var(--brand);
-  color: #fff;
-  border-bottom-right-radius: 4px;
-}
-.wa-chat__wa-inline {
-  margin-top: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--brand);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.wa-chat__wa-inline svg {
-  width: 13px;
-  height: 13px;
-}
-.wa-chat__bubble--typing {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 14px;
-}
-.wa-chat__bubble--typing span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-subtle);
-  animation: wa-chat-typing 1s ease-in-out infinite;
-}
-.wa-chat__bubble--typing span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-.wa-chat__bubble--typing span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-@keyframes wa-chat-typing {
-  0%,
-  60%,
-  100% {
-    opacity: 0.3;
-    transform: translateY(0);
-  }
-  30% {
-    opacity: 1;
-    transform: translateY(-3px);
-  }
-}
-.wa-chat__topics {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding: 8px 14px;
-  border-top: 1px solid var(--border);
-}
-.wa-chat__topic-chip {
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
-}
-.wa-chat__topic-chip:hover {
-  border-color: var(--brand);
-  background: var(--brand-weak);
-}
-.wa-chat__inputbar {
-  display: flex;
-  gap: 8px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--border);
-}
-.wa-chat__inputbar input {
-  flex: 1;
-  min-width: 0;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13.5px;
-}
-.wa-chat__inputbar input:focus {
-  outline: 2px solid var(--brand);
-  outline-offset: 1px;
-}
-.wa-chat__inputbar button {
-  flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  border: 0;
-  background: var(--brand);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.wa-chat__inputbar button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.wa-chat__footer-cta {
-  margin: 0 14px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--sunken);
-  color: var(--text-muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.wa-chat__footer-cta:hover {
-  border-color: var(--brand);
-  color: var(--brand);
-}
-.wa-chat__footer-cta svg {
-  width: 15px;
-  height: 15px;
-}
-@media (max-width: 480px) {
-  .wa-chat__body {
-    max-height: 50vh;
-  }
-}
-
 /* ────────────────────────────────────────────────────────────────── */
 /* PROGRESS BAR */
 /* ────────────────────────────────────────────────────────────────── */
@@ -1455,3 +1158,483 @@ html[data-underline-links="1"] a[href] {
 }
 @keyframes smooth-line-draw { to { stroke-dashoffset: 0; } }
 @keyframes smooth-line-fade { to { opacity: 1; } }
+
+/* ════════════════════════════════════════════════════════════════════ */
+/* MIDAS — demonstração guiada (/[locale]/demo, app/components/midas/)   */
+/* Só tokens semânticos: claro/escuro seguem o [data-theme] do <html>.  */
+/* Movimento forçado como no resto do site (ver ForceMotion.tsx).       */
+/* ════════════════════════════════════════════════════════════════════ */
+.midas-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-hanken), sans-serif;
+}
+
+/* Cabeçalho: voltar, avatar, título, ferramentas e progresso */
+.midas-header {
+  flex: none;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.midas-header__row {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+}
+.midas-header__titles { min-width: 0; }
+.midas-header__title {
+  margin: 0;
+  font-family: var(--font-sora), var(--font-hanken), sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+}
+.midas-header__subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.midas-header__tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.midas-header__locale { color: var(--text-muted); margin-right: 4px; }
+.midas-iconbtn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.midas-iconbtn:hover:not(:disabled) { color: var(--brand); border-color: var(--brand); }
+.midas-iconbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.midas-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-accent);
+  background: linear-gradient(135deg, var(--brand), var(--cat-3));
+}
+.midas-avatar--sm { width: 22px; height: 22px; }
+.midas-progress {
+  height: 3px;
+  background: var(--sunken);
+  overflow: hidden;
+}
+.midas-progress__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--cat-3));
+  transition: width 0.45s ease;
+}
+
+/* Tela inicial (o clique em "Ok, vamos lá" é o aceite do aviso) */
+.midas-intro {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 32px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: midas-in 0.35s ease both;
+}
+.midas-logo { height: 40px; width: auto; margin-bottom: 24px; }
+[data-theme="dark"] .midas-logo { filter: brightness(0) invert(1); }
+.midas-intro__hello {
+  margin: 0;
+  font-family: var(--font-sora), var(--font-hanken), sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+}
+.midas-intro__line {
+  margin: 8px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--brand);
+  line-height: 1.4;
+}
+.midas-intro__welcome {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.midas-intro__overview {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--brand-weak);
+  color: var(--text);
+  font-size: 14.5px;
+  line-height: 1.55;
+  text-align: left;
+  animation: midas-in 0.28s ease both;
+}
+/* Alvos de foco programático (tabIndex -1): sem anel, não são controles. */
+.midas-intro:focus,
+.midas-scroll:focus,
+.midas-intro__overview:focus { outline: none; }
+.midas-msg--typing { margin-top: 10px; }
+.midas-privacy {
+  margin-top: 22px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.midas-privacy p { margin: 0 0 6px; }
+.midas-privacy__link,
+.midas-footnote a {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.midas-intro__actions {
+  margin-top: 22px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.midas-intro__actions > button { justify-content: center; width: 100%; }
+
+/* Conversa */
+.midas-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.midas-column {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 16px 12px;
+}
+.midas-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.midas-msg {
+  max-width: 100%;
+  font-size: 15px;
+  line-height: 1.55;
+  animation: midas-in 0.28s ease both;
+}
+.midas-msg p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.midas-msg--bot { align-self: flex-start; color: var(--text); }
+.midas-msg--bot.midas-msg--text { max-width: 88%; }
+.midas-msg--modules,
+.midas-msg--cta { width: 100%; }
+.midas-msg .midas-msg__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 4px;
+  font-family: var(--font-sora), var(--font-hanken), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.midas-msg--user {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 9px 14px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--brand-weak);
+  color: var(--text);
+}
+/* keyframe herdado do antigo chat do FAB; usado pelo .midas-typing */
+@keyframes wa-chat-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.midas-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+}
+.midas-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-subtle);
+  animation: wa-chat-typing 1s ease-in-out infinite;
+}
+.midas-typing span:nth-child(2) { animation-delay: 0.15s; }
+.midas-typing span:nth-child(3) { animation-delay: 0.3s; }
+.midas-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  border: 1px solid color-mix(in srgb, var(--neg) 35%, transparent);
+  background: var(--neg-weak);
+}
+
+/* Chips de resposta rápida */
+.midas-replies { margin-top: 16px; }
+.midas-replies__caption {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  color: var(--text-subtle);
+}
+.midas-replies__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.midas-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 40%, var(--border));
+  background: var(--surface);
+  color: var(--brand);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  animation: midas-in 0.25s ease both;
+}
+.midas-chip:hover:not(:disabled) { background: var(--brand-weak); border-color: var(--brand); }
+.midas-chip:active:not(:disabled) { transform: scale(0.97); }
+.midas-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Cards de módulo */
+.midas-modules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+.midas-module {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.midas-module__head { display: flex; align-items: flex-start; gap: 10px; }
+.midas-module__icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-weak);
+  color: var(--brand);
+}
+.midas-module__titles { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.midas-module__name {
+  margin: 0;
+  font-family: var(--font-sora), var(--font-hanken), sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.midas-module__pro {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warn-weak);
+  color: var(--warn);
+}
+.midas-msg .midas-module__desc { font-size: 13.5px; color: var(--text-muted); line-height: 1.5; }
+.midas-msg .midas-module__benefit {
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 6px 10px;
+  border-left: 3px solid var(--pos);
+  border-radius: 0 8px 8px 0;
+  background: var(--pos-weak);
+}
+.midas-module__toggle {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.midas-module__toggle svg { transition: transform 0.2s ease; }
+.midas-rot { transform: rotate(180deg); }
+.midas-module__preview:not([hidden]) { animation: midas-in 0.25s ease both; }
+
+/* CTA final */
+.midas-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--border));
+  background: linear-gradient(135deg, var(--brand-weak), var(--surface));
+  text-align: center;
+}
+.midas-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 380px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--brand);
+  color: var(--brand-on);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.midas-cta__btn:hover { background: var(--brand-hover); transform: translateY(-1px); }
+.midas-msg .midas-cta__sub { font-size: 13px; color: var(--text-muted); }
+.midas-wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.midas-wa:hover { border-color: var(--pos); color: var(--pos); }
+.midas-wa--compact { margin-top: 8px; padding: 6px 12px; font-size: 12.5px; }
+
+/* Campo de texto fixo embaixo */
+.midas-composer {
+  flex: none;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 10px 16px calc(8px + env(safe-area-inset-bottom));
+}
+.midas-inputbar {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(90deg, var(--brand), var(--cat-3), var(--cat-2)) border-box;
+}
+.midas-inputbar:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
+.midas-inputbar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  padding: 8px 0;
+}
+.midas-inputbar input::placeholder { color: var(--text-subtle); }
+/* O anel de foco fica no contorno (focus-within); anula o realce global de input:focus. */
+.midas-inputbar input:focus { box-shadow: none !important; }
+.midas-inputbar button {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--brand);
+  color: var(--brand-on);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.midas-inputbar button:disabled { opacity: 0.45; cursor: not-allowed; }
+.midas-footnote {
+  max-width: 760px;
+  margin: 6px auto 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-subtle);
+}
+
+@keyframes midas-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+  .midas-header__subtitle { display: none; }
+  .midas-header__row { gap: 8px; }
+  .midas-modules { grid-template-columns: 1fr; }
+  .midas-msg--bot.midas-msg--text { max-width: 100%; }
+  /* Libera o canto do botão de acessibilidade (fixo à direita, 48px). */
+  html:not([data-a11y-widget="off"]) .midas-composer { padding-right: 72px; }
+}
+@media (min-width: 640px) {
+  .midas-intro__actions { flex-direction: row; justify-content: center; }
+  .midas-intro__actions > button { width: auto; }
+}

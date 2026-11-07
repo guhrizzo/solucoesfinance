@@ -1,0 +1,144 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 7
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "escaped_container",
+        "severity": "info",
+        "time": 15.357,
+        "selector": "#d > div:nth-of-type(1)",
+        "message": "Positioned element renders far outside its offset parent — its coordinates were likely computed in a different frame (canvas/viewport pixels).",
+        "rect": {
+          "left": 1069.51,
+          "top": 0,
+          "right": 2149.51,
+          "bottom": 1920,
+          "width": 1080,
+          "height": 1920
+        },
+        "containerSelector": "#d",
+        "text": "Tudo em um só lugar ● Fluxo de caixa ● Contas a pagar ● Impostos faz toda a diferença.",
+        "fixHint": "Compute left/top in the offset parent's frame (subtract its rect), or mark intentional placement with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 0,
+          "top": 0,
+          "right": 1080,
+          "bottom": 1920,
+          "width": 1080,
+          "height": 1920
+        },
+        "dataAttributes": {
+          "data-hf-inner-root": "true",
+          "data-hf-authored-id": "root",
+          "data-width": "1080",
+          "data-height": "1920"
+        },
+        "sourceFile": "compositions/d.html",
+        "bbox": {
+          "x": 1069.51,
+          "y": 0,
+          "width": 1080,
+          "height": 1920
+        },
+        "firstSeen": 15.357,
+        "lastSeen": 15.357,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.357
+        ]
+      }
+    ],
+    "duration": 25.13,
+    "samples": [
+      1.396,
+      4.188,
+      6.981,
+      9.773,
+      12.565,
+      15.357,
+      18.149,
+      20.942,
+      23.734
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.396,
+      6.981,
+      12.565,
+      18.149,
+      23.734
+    ],
+    "checked": 14,
+    "passed": 14
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "step": 0.12400000000000055,
+    "samples": 202
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

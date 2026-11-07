@@ -1,0 +1,63 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; src: url("assets/fonts/sora.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "Hanken Grotesk"; src: url("assets/fonts/hanken-grotesk.woff2") format("woff2"); font-weight: 100 900; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Hanken Grotesk", sans-serif; color: #ffffff; }
+    .card { background: #101a2e; border: 2px solid #22345a; border-radius: 34px; }
+    .h { font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+    .b { color: #5aa2ff; }
+    .g { color: #4ade80; }
+    .r { color: #ff7b7b; }
+    .w { display: inline-block; }
+
+    #b-photo { position: absolute; left: 90px; top: 210px; width: 900px; height: 589px; border-radius: 34px; overflow: hidden; border: 2px solid #22345a; box-shadow: 0 30px 90px #1f6feb44; }
+    #b-img { position: absolute; left: 0; top: 0; width: 900px; height: 589px; -webkit-mask-image: linear-gradient(#000 78%, transparent 100%); mask-image: linear-gradient(#000 78%, transparent 100%); }
+    #b-bar { position: absolute; left: 90px; top: 835px; width: 64px; height: 7px; border-radius: 4px; background: #5aa2ff; }
+    #b-name { position: absolute; left: 90px; top: 860px; font-size: 104px; line-height: 1.05; }
+    #b-role { position: absolute; left: 90px; top: 985px; font-size: 40px; font-weight: 700; color: #5aa2ff; }
+    .tag { position: absolute; top: 700px; height: 96px; padding: 0 30px; display: flex; align-items: center; gap: 16px; border-radius: 28px; font-size: 38px; font-weight: 800; }
+    #b-t1 { left: 120px; } #b-t2 { right: 120px; border-color: #7a2a2f; }
+    #b-cap { position: absolute; left: 90px; top: 1085px; width: 900px; font-family: "Sora", sans-serif; font-weight: 700; font-size: 62px; line-height: 1.25; }
+    
+  </style>
+  <div id="root" data-composition-id="b" data-width="1080" data-height="1920">
+    <div id="b-photo"><img id="b-img" src="assets/img/mauricio.png" alt="Maurício" /></div>
+    <div id="b-t1" class="card tag"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg><span class="g">faturando bem</span></div>
+    <div id="b-t2" class="card tag"><span class="r">pra onde foi?</span></div>
+    <div id="b-bar"></div>
+    <div id="b-name" class="h">Maurício</div>
+    <div id="b-role">Dono do clube de tiro 021</div>
+    <div id="b-cap"><span id="b-w0" class="w">Faturava</span> <span id="b-w1" class="w">bem,</span> <span id="b-w2" class="w">mas</span> <span id="b-w3" class="w">não</span> <span id="b-w4" class="w">sabia</span> <span id="b-w5" class="w b">pra</span> <span id="b-w6" class="w b">onde</span> <span id="b-w7" class="w b">o</span> <span id="b-w8" class="w b">dinheiro</span> <span id="b-w9" class="w b">ia.</span></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const up = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: d, ease: "power3.out" }, at);
+    const pop = (s, at, d = 0.6) => tl.fromTo(s, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: d, ease: "back.out(1.7)" }, at);
+    const ring = (s, x, y, at) => tl.fromTo(s, { x: x, y: y, scale: 0, opacity: 1 }, { scale: 1.9, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+
+    tl.fromTo("#b-photo", { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.7, ease: "power3.out" }, 0.45);
+    tl.fromTo("#b-bar", { scaleX: 0, transformOrigin: "0 50%" }, { scaleX: 1, duration: 0.4, ease: "power2.out" }, 0.88 - 0.2);
+    up("#b-name", 0.88 - 0.15, 0.5);
+    up("#b-role", 1.66 - 0.1, 0.5);
+    pop("#b-t1", 3.46 - 0.1, 0.5);
+    tl.fromTo("#b-w0", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 3.46);
+    tl.fromTo("#b-w1", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 4.01);
+    tl.fromTo("#b-w2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 4.42);
+    tl.fromTo("#b-w3", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 4.78);
+    tl.fromTo("#b-w4", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 4.95);
+    tl.fromTo("#b-w5", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 5.38);
+    tl.fromTo("#b-w6", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 5.56);
+    tl.fromTo("#b-w7", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 5.80);
+    tl.fromTo("#b-w8", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 5.88);
+    tl.fromTo("#b-w9", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 6.31);
+    pop("#b-t2", 5.56 - 0.1, 0.5);
+    tl.to("#b-t1", { opacity: 0.35, duration: 0.4 }, 5.56);
+    tl.fromTo("#b-t2", { x: 0 }, { x: 10, duration: 0.08, repeat: 3, yoyo: true, ease: "sine.inOut", immediateRender: false }, 5.88);
+    
+    tl.fromTo("#root", { y: 1920 }, { y: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+    tl.to("#root", { scale: 1.35, opacity: 0, duration: 0.5, ease: "power3.in" }, 7.64 - 0.5);
+    window.__timelines["b"] = tl;
+  </script>
+</template>

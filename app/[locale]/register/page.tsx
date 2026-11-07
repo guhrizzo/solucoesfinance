@@ -22,6 +22,7 @@ import { canLoginWithSystemBrowser, loginWithSystemBrowser } from "@/lib/desktop
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink } from "@/lib/authLink";
 import { passwordRules } from "@/lib/passwordRules";
+import { notifyLeadConverted, rememberLead } from "@/lib/midas/convertClient";
 
 const KNOWN_ERROR_CODES = new Set([
   "auth/email-already-in-use",
@@ -73,10 +74,16 @@ export default function RegisterPage() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   // ?plano= escolhido na landing — carregado pro link de login também.
   const [planoParam, setPlanoParam] = useState("");
+  // ?lead= (id da sessão da demo do Midas) — guardado e carregado pro login.
+  const [leadParam, setLeadParam] = useState("");
   useEffect(() => {
     setPlanoParam(new URLSearchParams(window.location.search).get("plano") || "");
+    setLeadParam(rememberLead() ?? "");
   }, []);
-  const loginHref = planoParam ? `/login?plano=${encodeURIComponent(planoParam)}` : "/login";
+  const loginQuery = new URLSearchParams();
+  if (planoParam) loginQuery.set("plano", planoParam);
+  if (leadParam) loginQuery.set("lead", leadParam);
+  const loginHref = loginQuery.toString() ? `/login?${loginQuery.toString()}` : "/login";
 
   const passOk = passwordRules.every((r) => r.test(password));
   const confirmOk = password === confirm && confirm.length > 0;
@@ -101,7 +108,8 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      await registerWithEmail(name.trim(), email, password);
+      const cred = await registerWithEmail(name.trim(), email, password);
+      notifyLeadConverted(cred.user);
       goAfterSignup();
     } catch (err: any) {
       setError(getErrorMessage(err.code));
@@ -119,7 +127,8 @@ export default function RegisterPage() {
         await loginWithSystemBrowser();
         return;
       }
-      await registerWithGoogle();
+      const cred = await registerWithGoogle();
+      notifyLeadConverted(cred.user);
       goAfterSignup();
     } catch (err: any) {
       const pending = await extractPendingGoogleLink(err);

@@ -455,6 +455,12 @@ export default function FinanceHome() {
                     {t("hero.ctaSecondary")}
                   </button>
                 </a>
+                <Link
+                  href="/demo"
+                  className="text-blue-100/80 hover:text-white font-medium px-3 py-3.5 flex items-center gap-2 underline-offset-4 hover:underline transition-colors"
+                >
+                  {t("hero.demoLink")} <ArrowRight size={14} />
+                </Link>
               </div>
 
               <div className="flex items-center gap-6 mt-10 pt-10 border-t border-white/10 fade-in-delay-3">

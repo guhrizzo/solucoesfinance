@@ -41,22 +41,45 @@ export function createFakeFirestore() {
     store.set(path, clone(data));
   }
 
-  const collectionRef = (path) => ({
-    path,
-    doc(id) { return docRef(`${path}/${id ?? nextId()}`); },
+  // Query mínima: where(campo, op, valor) encadeável (ops < <= > >= ==) e limit(n).
+  // Usada por lib/midas/leadServer.ts (deleteExpiredLeads).
+  const OPS = {
+    "<": (a, b) => a < b, "<=": (a, b) => a <= b, ">": (a, b) => a > b, ">=": (a, b) => a >= b, "==": (a, b) => a === b,
+  };
+  const queryRef = (path, filters = [], max = Infinity) => ({
+    where(field, op, value) { return queryRef(path, [...filters, [field, op, value]], max); },
+    limit(n) { return queryRef(path, filters, n); },
     async get() {
       const depth = path.split("/").length + 1;
       const docs = [...store.entries()]
         .filter(([p]) => p.startsWith(path + "/") && p.split("/").length === depth)
+        .filter(([, d]) => filters.every(([f, op, v]) => d[f] !== undefined && OPS[op](d[f], v)))
+        .slice(0, max)
         .map(([p, d]) => snapshot(p, d));
       return { docs, size: docs.length, empty: docs.length === 0 };
     },
+  });
+
+  const collectionRef = (path) => ({
+    ...queryRef(path),
+    path,
+    doc(id) { return docRef(`${path}/${id ?? nextId()}`); },
   });
 
   const db = {
     store,
     doc: docRef,
     collection: collectionRef,
+    // WriteBatch mínimo: delete/set acumulam e commit() aplica (sem limite de 500 — o chamador respeita).
+    batch() {
+      const ops = [];
+      const b = {
+        delete(ref) { ops.push(() => store.delete(ref.path)); return b; },
+        set(ref, data, opts) { ops.push(() => applySet(ref.path, data, opts)); return b; },
+        async commit() { ops.forEach((o) => o()); },
+      };
+      return b;
+    },
     runTransaction(fn) {
       const run = async () => {
         const writes = [];
