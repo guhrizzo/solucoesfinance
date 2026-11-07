@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { X, Send } from "lucide-react";
+import { useRouter } from "@/i18n/navigation";
 import { getConsentSnapshot, subscribeConsent } from "@/lib/consent";
 import { useAccessibilityWidget } from "@/app/hooks/useAccessibilityWidget";
-
-// Número de contato (formato internacional, só dígitos) — +55 11 92619-8042
-const WHATSAPP_NUMBER = "5511926198042";
 
 // true só no client — sem setState em effect (lint: react-hooks/set-state-in-effect).
 // Mesma técnica do useMounted() em app/[locale]/page.tsx.
@@ -21,18 +18,22 @@ function useMounted() {
   );
 }
 
-// Cada tópico vem de landing.whatsapp.topics (nos 3 idiomas): o rótulo do
-// chip, a resposta pronta que o bot mostra na hora (`answer`) e a mensagem
-// já pronta pra escalar pro WhatsApp (`message`).
-type Topic = { label: string; message: string; answer: string };
-
-type ChatMsg = {
-  id: string;
-  role: "user" | "bot";
-  text: string;
-  /** Mostra o botão de escalar pro WhatsApp embaixo desta mensagem específica. */
-  whatsappMessage?: string;
-};
+/**
+ * Índice do tópico (landing.whatsapp.topics, mesma ordem dos cards de
+ * Funcionalidades) → id de dor ou de módulo aceito por `/demo?topic=`.
+ * Sem correspondência (equipe/PIN, planos, outra dúvida) → null = /demo puro.
+ */
+const TOPIC_TO_DEMO: readonly (string | null)[] = [
+  "financeiro", // Fluxo de caixa e dashboard
+  "contas", // Contas a pagar e a receber
+  "impostos", // Impostos (Simples, DAS e afins)
+  "estoque", // Estoque + Mercado Livre
+  "vendas", // Painel de vendas e precificação
+  "centroCustos", // Centro de custos e relatórios
+  null, // Equipe, permissões e PIN de segurança
+  null, // Planos, preços e teste grátis
+  null, // Outra dúvida
+];
 
 function WaGlyph() {
   return (
@@ -44,86 +45,35 @@ function WaGlyph() {
 
 /**
  * Botão flutuante na landing pública — estilo "zap" clássico: bolha verde
- * com anel pulsante, badge de mensagem e tooltip no hover.
+ * com anel pulsante e tooltip no hover.
  *
- * Ao clicar, abre um chat simples ali mesmo na página: chips de assunto
- * (baseados nos módulos do produto) respondem na hora com um texto pronto,
- * e um campo de texto livre chama `/api/chat` (Claude API, quando
- * configurada no servidor) pra perguntas mais abertas. Se a IA não estiver
- * disponível, falhar, ou o visitante preferir, um botão de WhatsApp sempre
- * visível escala pra um humano (`wa.me` com a mensagem já pronta).
+ * Ao clicar, leva pra demonstração guiada do Midas (`/demo`). O evento global
+ * `midas:open-topic` (disparado pelos botões "Saiba mais" dos cards de
+ * Funcionalidades; `detail.index` = índice do tópico) leva pra
+ * `/demo?topic=<id>` com o assunto já escolhido.
  *
  * Canto inferior DIREITO, empilhado ACIMA do widget de acessibilidade
  * (AccessibilityWidget.tsx). Renderizado em portal no <body>: a landing
  * envolve tudo num container com `filter: blur(0px)` (efeito de reveal),
  * que vira bloco de contenção e quebraria o `position: fixed`.
- * Estilos em globals.css (`.wa-fab`, `.wa-modal`, `.wa-chat__*`).
+ * Estilos em globals.css (`.wa-fab`).
  */
 export function WhatsAppFab() {
   const t = useTranslations("landing.whatsapp");
+  const router = useRouter();
   const mounted = useMounted();
   const { enabled: a11yWidgetOn } = useAccessibilityWidget();
   const consent = useSyncExternalStore(subscribeConsent, getConsentSnapshot, () => null);
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const idRef = useRef(0);
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const nextId = () => `msg-${idRef.current++}`;
 
-  // Esc fecha o chat e trava o scroll do fundo enquanto aberto.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.classList.add("modal-open");
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.classList.remove("modal-open");
-    };
-  }, [open]);
-
-  // Saudação inicial, uma vez só, na primeira abertura.
-  useEffect(() => {
-    if (!open || messages.length > 0) return;
-    setMessages([{ id: nextId(), role: "bot", text: t("greeting") }]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // Rola pro fim sempre que a conversa muda.
-  useEffect(() => {
-    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight });
-  }, [messages, sending]);
-
-  const topics = (t.raw("topics") as Topic[]) ?? [];
-  // Ref pra ler os tópicos atuais de dentro do listener sem precisar
-  // re-registrar o evento a cada render (t.raw cria um array novo sempre).
-  const topicsRef = useRef(topics);
-  topicsRef.current = topics;
-
-  // Abre o chat já com a pergunta/resposta de um tópico — disparado pelos
-  // botões "Saiba mais" dos cards de Funcionalidades via evento global
-  // (`window`, não prop/contexto), já que o card e este fab vivem em
-  // subárvores/portais diferentes da página.
   useEffect(() => {
     const onOpenTopic = (e: Event) => {
-      const index = (e as CustomEvent<{ index: number }>).detail?.index;
-      const topic = topicsRef.current[index];
-      if (!topic) return;
-      setOpen(true);
-      setMessages((prev) => [
-        ...(prev.length === 0 ? [{ id: nextId(), role: "bot" as const, text: t("greeting") }] : prev),
-        { id: nextId(), role: "user", text: topic.label },
-        { id: nextId(), role: "bot", text: topic.answer },
-      ]);
+      const index = (e as CustomEvent<{ index?: number }>).detail?.index;
+      const id = typeof index === "number" ? TOPIC_TO_DEMO[index] : null;
+      router.push(id ? `/demo?topic=${encodeURIComponent(id)}` : "/demo");
     };
     window.addEventListener("midas:open-topic", onOpenTopic);
     return () => window.removeEventListener("midas:open-topic", onOpenTopic);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router]);
 
   if (!mounted) return null;
 
@@ -133,159 +83,19 @@ export function WhatsAppFab() {
   const cookieBarOpen = consent === null;
   const bottom = (cookieBarOpen ? 96 : 24) + (a11yWidgetOn ? 60 : 0);
 
-  const lastUserText = [...messages].reverse().find((m) => m.role === "user")?.text;
-
-  const goToWhatsApp = (message: string) => {
-    const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-    window.open(href, "_blank", "noopener,noreferrer");
-  };
-
-  const handleTopic = (topic: Topic) => {
-    setMessages((prev) => [
-      ...prev,
-      { id: nextId(), role: "user", text: topic.label },
-      { id: nextId(), role: "bot", text: topic.answer },
-    ]);
-  };
-
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
-
-    const history = messages.map((m) => ({ role: m.role, text: m.text }));
-    setMessages((prev) => [...prev, { id: nextId(), role: "user", text }]);
-    setInput("");
-    setSending(true);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
-      });
-      const data = await res.json().catch(() => ({ reply: null }));
-      const reply = typeof data?.reply === "string" && data.reply ? data.reply : null;
-      setMessages((prev) => [
-        ...prev,
-        reply
-          ? { id: nextId(), role: "bot", text: reply }
-          : { id: nextId(), role: "bot", text: t("fallback"), whatsappMessage: text },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { id: nextId(), role: "bot", text: t("fallback"), whatsappMessage: text },
-      ]);
-    } finally {
-      setSending(false);
-    }
-  };
-
   return createPortal(
-    <>
-      <button
-        type="button"
-        aria-label={t("aria")}
-        aria-haspopup="dialog"
-        className="wa-fab"
-        style={{ bottom }}
-        onClick={() => setOpen(true)}
-      >
-        <WaGlyph />
-        <span className="wa-fab__tooltip" aria-hidden="true">
-          {t("tooltip")}
-        </span>
-      </button>
-
-      {open && (
-        <div
-          className="wa-modal-overlay"
-          role="presentation"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
-          <div className="wa-modal wa-chat" role="dialog" aria-modal="true" aria-label={t("modalTitle")}>
-            <div className="wa-modal__head">
-              <span className="wa-modal__icon" aria-hidden="true">
-                <WaGlyph />
-              </span>
-              <div>
-                <p className="wa-modal__title">{t("modalTitle")}</p>
-                <p className="wa-modal__subtitle">{t("modalSubtitle")}</p>
-              </div>
-              <button
-                type="button"
-                className="wa-modal__close"
-                aria-label={t("close")}
-                onClick={() => setOpen(false)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="wa-chat__body" ref={bodyRef}>
-              {messages.map((m) => (
-                <div key={m.id} className={`wa-chat__bubble wa-chat__bubble--${m.role}`}>
-                  <p>{m.text}</p>
-                  {m.whatsappMessage !== undefined && (
-                    <button
-                      type="button"
-                      className="wa-chat__wa-inline"
-                      onClick={() => goToWhatsApp(m.whatsappMessage as string)}
-                    >
-                      <WaGlyph aria-hidden="true" />
-                      {t("whatsappCta")}
-                    </button>
-                  )}
-                </div>
-              ))}
-              {sending && (
-                <div className="wa-chat__bubble wa-chat__bubble--bot wa-chat__bubble--typing" aria-label={t("typing")}>
-                  <span />
-                  <span />
-                  <span />
-                </div>
-              )}
-            </div>
-
-            {topics.length > 0 && (
-              <div className="wa-chat__topics">
-                {topics.map((topic, i) => (
-                  <button key={i} type="button" className="wa-chat__topic-chip" onClick={() => handleTopic(topic)}>
-                    {topic.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <form
-              className="wa-chat__inputbar"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void handleSend();
-              }}
-            >
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={t("inputPlaceholder")}
-                maxLength={800}
-              />
-              <button type="submit" aria-label={t("send")} disabled={!input.trim() || sending}>
-                <Send size={16} />
-              </button>
-            </form>
-
-            <button type="button" className="wa-chat__footer-cta" onClick={() => goToWhatsApp(lastUserText ?? t("prefill"))}>
-              <WaGlyph aria-hidden="true" />
-              {t("whatsappCta")}
-            </button>
-          </div>
-        </div>
-      )}
-    </>,
+    <button
+      type="button"
+      aria-label={t("aria")}
+      className="wa-fab"
+      style={{ bottom }}
+      onClick={() => router.push("/demo")}
+    >
+      <WaGlyph />
+      <span className="wa-fab__tooltip" aria-hidden="true">
+        {t("tooltip")}
+      </span>
+    </button>,
     document.body,
   );
 }

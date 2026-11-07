@@ -9,7 +9,22 @@
     "title": "Política de Privacidade",
     "lastUpdated": "Última atualização: {date}",
     "lastUpdatedValue": "3 de setembro de 2026",
-    "ptOnlyNotice": "O texto integral desta Política é mantido em português, por citar dispositivos da legislação brasileira (LGPD). Uma versão revisada em outros idiomas será publicada futuramente."
+    "ptOnlyNotice": "O texto integral desta Política é mantido em português, por citar dispositivos da legislação brasileira (LGPD). Uma versão revisada em outros idiomas será publicada futuramente.",
+    "midas": {
+      "title": "Demonstração guiada (Midas)",
+      "intro": "Na demonstração guiada da página inicial, a assistente Midas conversa com você antes de qualquer cadastro. Essa conversa só é gravada depois que você clica em \"Ok, vamos lá\" e aceita o aviso de privacidade da demonstração.",
+      "dataTitle": "Dados coletados:",
+      "data": "suas respostas (segmento do negócio, principal dificuldade e ferramentas que usa hoje), o primeiro nome, se você quiser informar, um identificador anônimo de sessão e o texto da conversa.",
+      "purposesTitle": "Finalidades:",
+      "purposes": "personalizar a demonstração, melhorar o NexusFi e permitir que a equipe do NexusFi entre em contato com você, de forma comercial, sobre a demonstração e o teste da plataforma.",
+      "aiTitle": "Provedor de inteligência artificial:",
+      "ai": "somente se você consentir, o texto que você digitar livremente é enviado à Anthropic, que o processa para gerar as respostas da Midas. Esse processamento pode envolver transferência internacional de dados (seção 6).",
+      "retentionTitle": "Por quanto tempo:",
+      "retention": "as respostas ficam guardadas por 12 meses e depois são apagadas automaticamente.",
+      "linkTitle": "Vínculo com a conta:",
+      "link": "se você se cadastrar depois, a conversa é vinculada à sua conta para acompanhar o início do seu teste.",
+      "contact": "Para pedir a eliminação desses dados ou exercer qualquer direito da seção 8, escreva ao Encarregado (DPO): <mail></mail>."
+    }
   },
   "accessibility": {
     "meta": {

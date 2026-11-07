@@ -4,7 +4,7 @@ import { SITE_URL, localePath, alternatesFor } from "@/lib/seo";
 
 // Rotas públicas indexáveis (a área logada é noindex). Cada uma gera as 3
 // variantes de idioma com hreflang recíproco.
-const PUBLIC_PATHS = ["", "/login", "/register", "/privacidade", "/acessibilidade"];
+const PUBLIC_PATHS = ["", "/login", "/register", "/privacidade", "/acessibilidade", "/demo"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

@@ -26,6 +26,7 @@ import users from './users.json';
 import compras from './compras.json';
 import tour from './tour.json';
 import rh from './rh.json';
+import midas from './midas.json';
 
 const messages = {
   common,
@@ -53,6 +54,7 @@ const messages = {
   compras,
   tour,
   rh,
+  midas,
 };
 
 export default messages;

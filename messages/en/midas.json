@@ -1,0 +1,254 @@
+{
+  "header": {
+    "title": "Midas",
+    "subtitle": "Your guide to NexusFi"
+  },
+  "privacy": {
+    "notice": "This conversation is a demo. We keep your answers to personalize what I show you, to improve NexusFi, and so the NexusFi team can contact you about the demo and the trial. The text you type is processed by an artificial intelligence provider.",
+    "link": "Privacy Policy",
+    "retention": "Answers are kept for 12 months and then deleted."
+  },
+  "common": {
+    "back": "Back",
+    "send": "Send",
+    "inputPlaceholder": "Or answer directly…",
+    "typing": "Midas is typing…",
+    "proBadge": "Pro plan feature",
+    "preview": "see preview",
+    "humanWhatsapp": "Talk to a person on WhatsApp",
+    "progress": "Conversation progress",
+    "didntUnderstand": "Hmm, I didn't quite get that. Could you pick an option or tell me another way?",
+    "introHello": "Hello!",
+    "introLine": "Midas, your management assistant, shows you NexusFi in practice",
+    "introWelcome": "In a few minutes I get to know how your business works and show you only what makes sense for you.",
+    "introStart": "Ok, let's go",
+    "privacyAi": "If you type freely, the text may be processed by an artificial intelligence provider.",
+    "chipsCaption": "Pick an option or type in the chat below:",
+    "inputLabel": "Your message",
+    "you": "You",
+    "footerNote": "We use your answers only to personalize this demo.",
+    "whatsappPrefill": "Hi! I came from the NexusFi guided demo and would like to talk to a person.",
+    "doubtFallback": "I've noted your question. For an answer right now, talk to a person on WhatsApp.",
+    "hidePreview": "hide preview",
+    "restart": "Start over",
+    "metaTitle": "Midas · NexusFi guided demo",
+    "metaDescription": "Chat with Midas and see in practice how NexusFi could help your business."
+  },
+  "steps": {
+    "welcome": {
+      "bot": [
+        "Hi! I'm Midas, your guide to NexusFi. In a few minutes I can show you how the platform could help your business.",
+        "Shall we start? I'll ask a few quick questions and you answer in your own words."
+      ],
+      "chips": {
+        "start": "Let's go",
+        "overview": "Show me an overview"
+      }
+    },
+    "name": {
+      "bot": [
+        "Great to have you here! What should I call you?"
+      ],
+      "chips": {
+        "skip": "I'd rather not say"
+      }
+    },
+    "segment": {
+      "bot": [
+        "Nice to meet you, {name}! To begin: what kind of business do you have?"
+      ],
+      "chips": {
+        "loja": "Physical store",
+        "ecommerce": "E-commerce",
+        "servicos": "Services",
+        "industria": "Manufacturing",
+        "distribuidora": "Distribution",
+        "outro": "Other"
+      },
+      "botNoName": [
+        "Nice to meet you! To begin: what kind of business do you have?"
+      ]
+    },
+    "pain": {
+      "bot": [
+        "Got it. And what weighs on your routine the most right now?"
+      ],
+      "chips": {
+        "financeiro": "Financial control",
+        "contas": "Payables and receivables",
+        "estoque": "Inventory",
+        "vendas": "Sales",
+        "impostos": "Taxes",
+        "relatorios": "Reports",
+        "canais": "Several sales channels",
+        "tudo": "A bit of everything"
+      }
+    },
+    "tool": {
+      "bot": [
+        "Makes sense. And how do you handle that today?"
+      ],
+      "chips": {
+        "planilha": "Spreadsheets",
+        "caderno": "Notebook or paper",
+        "sistema": "Another system",
+        "app_banco": "Bank app",
+        "memoria": "From memory",
+        "contagem": "Manual counting",
+        "marketplace": "Each marketplace's own panel",
+        "nenhum": "I don't yet"
+      }
+    },
+    "deepen": {
+      "bot": [
+        "Thanks for sharing. If you like, tell me in one sentence what bothers you most about it. Otherwise, we can move on."
+      ],
+      "chips": {
+        "continue": "Move on"
+      }
+    },
+    "diagnosis": {
+      "bot": [
+        "From what you told me, I can already see where to start."
+      ],
+      "chips": {
+        "continue": "See what would help"
+      }
+    },
+    "modules": {
+      "bot": [
+        "These are the NexusFi modules that best match what you described:"
+      ],
+      "chips": {
+        "continue": "Continue"
+      }
+    },
+    "confirm": {
+      "bot": [
+        "Does this make sense for your business? Feel free to ask me anything."
+      ],
+      "chips": {
+        "yes": "Makes sense",
+        "more": "See more modules",
+        "doubts": "I have a question"
+      }
+    },
+    "doubts": {
+      "bot": [
+        "Go ahead and send your question. I'll note it down and answer what I can. If you'd rather talk to a person, use the WhatsApp button."
+      ],
+      "chips": {
+        "yes": "Makes sense",
+        "more": "See more modules",
+        "doubts": "I have another question"
+      }
+    },
+    "cta": {
+      "bot": [
+        "Deal, {name}! If you'd like to try it hands-on, just create your account. No rush."
+      ],
+      "chips": {},
+      "botNoName": [
+        "Deal! If you'd like to try it hands-on, just create your account. No rush."
+      ]
+    }
+  },
+  "diagnosis": {
+    "financeiro": "Having the money coming in and going out in one place is usually the first step to deciding with more confidence.",
+    "contas": "Organizing due dates and incoming payments helps avoid delays and shows what is still coming in.",
+    "estoque": "With quantities recorded, it is easier to know what you have, what is running low and what went out.",
+    "vendas": "Bringing sales into a single panel shows what is working in each channel.",
+    "impostos": "Recording taxes and due dates in one place helps you avoid surprises.",
+    "relatorios": "Turning your entries into reports saves you from building everything by hand.",
+    "canais": "Connecting your sales channels saves you from checking each panel separately.",
+    "tudo": "When everything is together, you see the whole business at once and choose where to start.",
+    "visibilityGap": "It seems you lack a clear view of how the business is doing. That is exactly what a single panel solves."
+  },
+  "modules": {
+    "fluxoCaixa": {
+      "name": "Cash flow",
+      "description": "Shows money coming in and going out over time, with balance and transactions by category.",
+      "benefit": "You see how each transaction affects cash and plan commitments better."
+    },
+    "contasPagar": {
+      "name": "Accounts payable",
+      "description": "Records commitments with due dates and shows what is pending and what has been paid.",
+      "benefit": "Helps avoid delays, fines and interest, with a clear view of what must be paid."
+    },
+    "contasReceber": {
+      "name": "Accounts receivable",
+      "description": "Tracks what your customers still owe, what has been received and what is open or overdue.",
+      "benefit": "You know who owes what and when, without loose notes."
+    },
+    "relatorios": {
+      "name": "Reports",
+      "description": "Turns your entries into analyses such as Cash Flow, Revenue, Expenses, income statement and Sales.",
+      "benefit": "You understand how the business is doing without building spreadsheets by hand."
+    },
+    "estoque": {
+      "name": "Inventory",
+      "description": "Registers products and tracks available quantities, with stock in and out.",
+      "benefit": "You know what you have on hand and what is running out."
+    },
+    "vendas": {
+      "name": "Sales panel",
+      "description": "Brings together sales from connected channels and manual sales, with performance indicators.",
+      "benefit": "A single view of what sells and where."
+    },
+    "integracoes": {
+      "name": "Marketplace integrations",
+      "description": "Connects NexusFi to marketplaces such as Mercado Livre and TikTok Shop to bring in products and orders. You authorize the connection in the Inventory tab.",
+      "benefit": "Helps reduce typing and checking between panels."
+    },
+    "impostos": {
+      "name": "Taxes",
+      "description": "Records and tracks the company's taxes and their due dates.",
+      "benefit": "You follow your obligations and get organized before they are due."
+    },
+    "centroCustos": {
+      "name": "Cost centers",
+      "description": "Organizes expenses by area, project or purpose within the company.",
+      "benefit": "You understand where the money goes in each part of the business."
+    },
+    "dashboard": {
+      "name": "Dashboard",
+      "description": "Gathers the main indicators in one place: period result, comparison with the previous period, cash projection, due dates and alerts.",
+      "benefit": "Helps you see the overall situation in seconds and act before a problem shows up."
+    },
+    "cobrancaEmail": {
+      "name": "Email billing",
+      "description": "Sends billing emails from accounts receivable, with Pix copy-and-paste and due-date reminders. Part of the Pro plan.",
+      "benefit": "Helps make collecting payments simpler and more timely."
+    },
+    "leitorNf": {
+      "name": "Invoice reader",
+      "description": "Uses artificial intelligence to identify withholdings on invoices and create the entries. Part of the Pro plan.",
+      "benefit": "Helps reduce typing and the risk of tax errors."
+    },
+    "rh": {
+      "name": "HR",
+      "description": "Staff records, team cost, commissions and payroll with payslips. Part of the Pro plan.",
+      "benefit": "You track personnel cost alongside the rest of your finances."
+    },
+    "pdv": {
+      "name": "POS (point of sale)",
+      "description": "Point of sale with cash register opening and closing per shift. Part of the Pro plan.",
+      "benefit": "Counter sales go straight into your records."
+    },
+    "alertasWhatsapp": {
+      "name": "WhatsApp alerts",
+      "description": "Sends the owner alerts about cash, inventory and bills through WhatsApp. Part of the Pro plan.",
+      "benefit": "You get notified without opening the system."
+    }
+  },
+  "cta": {
+    "button": "START MY FREE TRIAL",
+    "subtext": "7 days to get to know NexusFi. No commitment."
+  },
+  "errors": {
+    "network": "I had a connection problem. Your answers are still here.",
+    "retry": "Try again",
+    "empty": "Write something or pick an option to continue."
+  },
+  "overview": "NexusFi brings together cash flow, payables and receivables, inventory, sales, taxes and reports in one place. Whenever you like, tell me about your business and I'll show what fits you."
+}
