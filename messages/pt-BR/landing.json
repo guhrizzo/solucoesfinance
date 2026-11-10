@@ -102,6 +102,20 @@
     "onTarget": "dentro da meta",
     "attention": "atenção"
   },
+  "segments": {
+    "title": "Uma solução pensada para o seu segmento",
+    "carouselLabel": "Segmentos atendidos",
+    "pageDot": "Ir para o grupo {n} de segmentos",
+    "cta": "Começar teste grátis — {segment}",
+    "items": [
+      { "title": "Alimentação", "bullets": ["Bares e Pizzarias", "Restaurantes e Lanchonetes", "Padarias e Cafeterias"], "alt": "Dono de pizzaria sorrindo com um tablet na mão" },
+      { "title": "Comércio e Varejo", "bullets": ["Lojas de Roupas e Acessórios", "Mercados e Mercearias", "Vendas em Marketplaces"], "alt": "Lojista sorrindo com um tablet dentro da loja" },
+      { "title": "Serviços e Escritórios", "bullets": ["Contabilidade e Consultoria", "Agências e Estúdios", "Profissionais Autônomos"], "alt": "Consultores analisando gráficos em um notebook" },
+      { "title": "Beleza e Bem-estar", "bullets": ["Salões e Barbearias", "Clínicas de Estética", "Estúdios e Academias"], "alt": "Dona de salão sorrindo com um tablet na recepção" },
+      { "title": "Indústria e Logística", "bullets": ["Pequenas Indústrias", "Transportadoras e Distribuição", "Construção Civil"], "alt": "Gerente de galpão com capacete sorrindo e segurando um tablet" },
+      { "title": "Oficinas e Manutenção", "bullets": ["Oficinas Mecânicas", "Autopeças", "Assistência Técnica"], "alt": "Dono de oficina sorrindo olhando o celular" }
+    ]
+  },
   "integrations": {
     "label": "Nossas integrações",
     "differentialsLabel": "Diferenciais",

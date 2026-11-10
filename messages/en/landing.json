@@ -102,6 +102,20 @@
     "onTarget": "on target",
     "attention": "attention"
   },
+  "segments": {
+    "title": "A solution built for your industry",
+    "carouselLabel": "Industries we serve",
+    "pageDot": "Go to industry group {n}",
+    "cta": "Start free trial — {segment}",
+    "items": [
+      { "title": "Food & Beverage", "bullets": ["Bars and Pizzerias", "Restaurants and Snack Bars", "Bakeries and Cafés"], "alt": "Pizzeria owner smiling while holding a tablet" },
+      { "title": "Retail & Commerce", "bullets": ["Clothing and Accessories Stores", "Grocery and Convenience Stores", "Marketplace Sales"], "alt": "Shop owner smiling with a tablet inside her store" },
+      { "title": "Services & Offices", "bullets": ["Accounting and Consulting", "Agencies and Studios", "Independent Professionals"], "alt": "Consultants reviewing charts on a laptop" },
+      { "title": "Beauty & Wellness", "bullets": ["Salons and Barbershops", "Aesthetic Clinics", "Studios and Gyms"], "alt": "Salon owner smiling with a tablet at the front desk" },
+      { "title": "Industry & Logistics", "bullets": ["Small Manufacturers", "Carriers and Distribution", "Construction"], "alt": "Warehouse manager in a hard hat smiling and holding a tablet" },
+      { "title": "Workshops & Maintenance", "bullets": ["Auto Repair Shops", "Auto Parts Stores", "Technical Support"], "alt": "Workshop owner smiling while looking at a phone" }
+    ]
+  },
   "integrations": {
     "label": "Our integrations",
     "differentialsLabel": "Differentials",

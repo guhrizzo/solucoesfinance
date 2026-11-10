@@ -38,6 +38,7 @@ import {
   Plug,
 } from "lucide-react";
 import Footer from "@/app/components/Footer";
+import SegmentsCarousel from "@/app/components/SegmentsCarousel";
 import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
@@ -643,6 +644,9 @@ export default function FinanceHome() {
           </div>
         </div>
       </section>
+
+      {/* Segmentos atendidos — carrossel de cartões com foto */}
+      <SegmentsCarousel />
 
       {/* Integrações e diferenciais — faixa própria, mesma animação do letreiro do hero */}
       <section aria-label={t("integrations.label")}>
