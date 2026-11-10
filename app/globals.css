@@ -1638,3 +1638,31 @@ html[data-underline-links="1"] a[href] {
   .midas-intro__actions { flex-direction: row; justify-content: center; }
   .midas-intro__actions > button { width: auto; }
 }
+
+/* ── Landing: carrossel de segmentos (SegmentsCarousel.tsx) ───────────────── */
+.seg-sec:not([data-in]) .seg-reveal { opacity: 0; }
+.seg-sec[data-in] .seg-reveal {
+  animation: seg-up 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes seg-up {
+  from { opacity: 0; transform: translateY(32px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.seg-card { transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.seg-card:hover { transform: translateY(-6px); }
+.seg-img { transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.seg-card:hover .seg-img { transform: scale(1.08); }
+.seg-text { transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.seg-card:hover .seg-text { transform: translateY(-4px); }
+.seg-arrow { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s; }
+.seg-card:hover .seg-arrow { transform: translate(3px, -3px) rotate(8deg) scale(1.1); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
+.seg-card:hover { filter: drop-shadow(0 18px 24px rgba(10, 26, 61, 0.28)); }
+.seg-dot { transition: width 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.seg-progress {
+  background: var(--brand-500);
+  transform-origin: left center;
+  animation: seg-progress linear both;
+}
+.seg-progress[data-paused="1"] { animation-play-state: paused; }
+@keyframes seg-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
