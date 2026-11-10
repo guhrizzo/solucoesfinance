@@ -114,7 +114,7 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        className={`w-full ${sizeStyles[size]} overflow-hidden ${mobileSheet ? "rounded-t-3xl sm:rounded-2xl" : "rounded-2xl"}`}
+        className={`w-full ${sizeStyles[size]} overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] ${mobileSheet ? "rounded-t-3xl sm:rounded-2xl" : "rounded-2xl"}`}
         style={{
           background: "var(--surface)",
           border: "1px solid var(--border)",
@@ -130,7 +130,7 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
         )}
         {title && (
           <div
-            className="flex items-center justify-between px-5 py-4 border-b"
+            className="flex items-center justify-between px-5 py-4 border-b shrink-0"
             style={{ borderColor: "var(--border)" }}
           >
             <h2 id={titleId} className="font-display font-bold text-sm md:text-base" style={{ color: "var(--text)" }}>
@@ -147,7 +147,8 @@ export function Modal({ open, onClose, title, size = "md", children, mobileSheet
             </button>
           </div>
         )}
-        {children}
+        {/* Corpo rolável: conteúdo maior que a tela rola aqui dentro em vez de ser cortado. */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">{children}</div>
       </div>
     </div>,
     document.body
