@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { resolveSubscriptionState, type SubscriptionState } from "@/lib/billing";
+import { resolveSubscriptionState, type BillingDoc, type SubscriptionState } from "@/lib/billing";
 import { isCompedEmail } from "@/lib/compAccounts";
 
 // Estado ao vivo da assinatura da CONTA (o dono — membros herdam).
@@ -29,6 +29,7 @@ const INITIAL: State = {
   plan: null,
   inTrial: true,
   comped: false,
+  rhEnabled: false,
   autoRenews: false,
   cancelled: false,
   inGrace: false,
@@ -97,6 +98,7 @@ export function useSubscription(): State {
                   plan: d.plan,
                   inTrial: d.inTrial,
                   comped: !!d.comped,
+                  rhEnabled: d.rhEnabled === true,
                   autoRenews: !!d.autoRenews,
                   cancelled: !!d.cancelled,
                   inGrace: !!d.inGrace,
@@ -132,7 +134,7 @@ export function useSubscription(): State {
             doc(db, "users", ownerUid, "profile", "billing"),
             (snap) => {
               if (cancelled) return;
-              const s = resolveSubscriptionState(snap.exists() ? (snap.data() as any) : null);
+              const s = resolveSubscriptionState(snap.exists() ? (snap.data() as BillingDoc) : null);
               setState({ ...s, loading: false, isOwner, signedOut: false });
             },
             () => {

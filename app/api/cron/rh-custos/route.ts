@@ -13,7 +13,7 @@ export const maxDuration = 300;
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { isCompedEmail } from "@/lib/compAccounts";
-import { isProAccess, resolveSubscriptionState, type BillingDoc } from "@/lib/billing";
+import { canUseRh, resolveSubscriptionState, type BillingDoc } from "@/lib/billing";
 import { sincronizarDesde } from "@/lib/rh/server";
 import { monthOf, todayKey } from "@/lib/rh/datas";
 
@@ -40,12 +40,12 @@ export async function GET(request: Request) {
     try {
       const b = await db.doc(`users/${ownerUid}/profile/billing`).get();
       const doc = (b.exists ? b.data() : null) as BillingDoc | null;
-      let pro = isProAccess(resolveSubscriptionState(doc));
-      if (!pro) {
+      let rhEnabled = canUseRh(resolveSubscriptionState(doc), true);
+      if (!rhEnabled) {
         const email = await getAdminAuth().then((a) => a.getUser(ownerUid)).then((u) => u.email ?? null).catch(() => null);
-        pro = isCompedEmail(email);
+        rhEnabled = isCompedEmail(email);
       }
-      if (!pro) continue;
+      if (!rhEnabled) continue;
       await sincronizarDesde({ db, ownerUid }, desde);
       ok++;
     } catch (e) {

@@ -11,7 +11,7 @@ import { requireScope, isScopeError, type ApiScope } from "@/lib/apiScope";
 import type { PermissionKey } from "@/lib/accountScope";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
-import { isProAccess } from "@/lib/billing";
+import { canUseRh } from "@/lib/billing";
 import { resolveScopeSubscription } from "@/lib/scopeSubscription";
 import { calcularCustoMes, r2, type BeneficioVig, type CustoMes, type Vinculo } from "./custo";
 import { diasAtivos, type Vigencia } from "./vigencia";
@@ -87,7 +87,7 @@ export async function guardRh(
   if (isScopeError(scope)) return NextResponse.json({ error: scope.error }, { status: scope.status });
 
   const db = await getAdminDb();
-  if (!isProAccess(await resolveScopeSubscription(db, scope))) {
+  if (!canUseRh(await resolveScopeSubscription(db, scope), scope.isOwner)) {
     return NextResponse.json({ error: "O módulo de RH é exclusivo do plano Pro." }, { status: 403 });
   }
   const { limited, retryAfterSec } = checkRateLimit(

@@ -28,6 +28,8 @@ export interface BillingDoc {
    * Marcado pelo servidor quando o dono está em lib/compAccounts.
    */
   comped?: boolean;
+  /** Exceção de RH concedida à titular da conta. */
+  rhEnabled?: boolean;
   /** Gateway da última cobrança. Ausente = legado (InfinitePay, avulso). */
   gateway?: "infinitepay" | "mercadopago" | "asaas";
   /** Id da assinatura recorrente no gateway (Mercado Pago: preapproval; Asaas: subscription). */
@@ -81,6 +83,7 @@ export interface SubscriptionState {
   inTrial: boolean;
   /** true = conta cortesia (adm supremo): sempre ativa, nunca cobrada. */
   comped: boolean;
+  rhEnabled: boolean;
   /** true = há assinatura recorrente autorizada (o MP cobra o próximo ciclo sozinho). */
   autoRenews: boolean;
   /** true = o cliente cancelou a renovação; o acesso vale só até `accessUntil`. */
@@ -202,6 +205,7 @@ export function resolveSubscriptionState(
       plan: (doc?.plan as PlanId) || null,
       inTrial: false,
       comped: true,
+      rhEnabled: doc.rhEnabled === true,
       autoRenews: false,
       cancelled: false,
       inGrace: false,
@@ -246,6 +250,7 @@ export function resolveSubscriptionState(
     plan: (doc?.plan as PlanId) || null,
     inTrial,
     comped: false,
+    rhEnabled: doc?.rhEnabled === true,
     autoRenews,
     cancelled,
     inGrace,
@@ -263,4 +268,8 @@ export function isProAccess(state: Pick<SubscriptionState, "plan" | "comped">): 
   if (state.comped) return true;
   if (!state.plan) return false;
   return getPlan(state.plan)?.tier === "pro";
+}
+
+export function canUseRh(state: SubscriptionState, isOwner: boolean): boolean {
+  return isProAccess(state) || (isOwner && state.isActive && state.rhEnabled);
 }

@@ -8,7 +8,7 @@ import { Briefcase } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useSubscription } from "@/app/hooks/useSubscription";
-import { isProAccess } from "@/lib/billing";
+import { canUseRh } from "@/lib/billing";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
 import { Button, EmptyState, PageHeader, PageLoader } from "@/app/components/ui";
@@ -61,7 +61,7 @@ export default function RhPage() {
   if (authLoading || sub.loading || acesso === null) return <PageLoader />;
   if (!user) return null;
 
-  const isPro = isProAccess(sub);
+  const rhEnabled = canUseRh(sub, sub.isOwner);
 
   return (
     <RhPinProvider authUid={user.uid}>
@@ -70,7 +70,7 @@ export default function RhPage() {
       <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 pb-24 sm:px-6">
         <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-        {!isPro ? (
+        {!rhEnabled ? (
           <EmptyState
             icon={Briefcase}
             title={t("lock.title")}
