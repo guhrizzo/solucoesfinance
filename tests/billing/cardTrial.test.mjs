@@ -157,3 +157,15 @@ test("contrato: hash sem teste não muda; com teste inclui trialDays e a cláusu
   assert.ok(!semTeste.includes("teste gratuito"));
   assert.ok(comTeste.includes("2.4.") && comTeste.includes("teste gratuito") && comTeste.includes("cartão"));
 });
+
+test("conta nova nasce SEM acesso até o cartão ser validado (freshBillingDoc)", async () => {
+  const { freshBillingDoc, resolveSubscriptionState, isCardTrialEligible } = await import("@/lib/billing.ts");
+  const now = 1_800_000_000_000;
+  const doc = freshBillingDoc(now);
+  assert.equal(doc.trialKind, "card_required");
+  const s = resolveSubscriptionState(doc, now + 1000);
+  assert.equal(s.isActive, false);
+  assert.equal(s.status, "past_due");
+  assert.equal(s.cardTrialEligible, true);
+  assert.equal(isCardTrialEligible(doc), true);
+});

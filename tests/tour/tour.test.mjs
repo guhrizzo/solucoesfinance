@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { canAccessStep, visibleSteps, stepForPath, TOUR_STEPS, getStep } from "@/lib/tour/catalog.ts";
-import { normalizeTourState, shouldAutoOffer, neighbor, REOFFER_AFTER_MS } from "@/lib/tour/state.ts";
+import { normalizeTourState, neighbor } from "@/lib/tour/state.ts";
 
 const ids = TOUR_STEPS.map((s) => s.id);
 const owner = { isOwner: true, permissions: "all" };
@@ -28,21 +28,6 @@ test("normalizeTourState descarta lixo", () => {
   assert.equal(s.lastStepId, null);
   assert.equal(s.dismissCount, 0);
   assert.equal(normalizeTourState({ status: "in_progress", lastStepId: "estoque" }, ids).lastStepId, "estoque");
-});
-
-test("oferta automática: só nunca-iniciado; dispensado volta 1x após 30 dias", () => {
-  const ctx = { setupDone: true, accessActive: true, cardOnFile: true, now: NOW };
-  const base = normalizeTourState({}, ids);
-  assert.equal(shouldAutoOffer(base, ctx), true);
-  assert.equal(shouldAutoOffer(base, { ...ctx, setupDone: false }), false);
-  assert.equal(shouldAutoOffer(base, { ...ctx, accessActive: false }), false);
-  // sem cartão cadastrado/validado o tour não abre sozinho
-  assert.equal(shouldAutoOffer(base, { ...ctx, cardOnFile: false }), false);
-  for (const status of ["completed", "in_progress"]) assert.equal(shouldAutoOffer({ ...base, status }, ctx), false);
-  const dismissed = { ...base, status: "dismissed", dismissCount: 1, updatedAt: NOW - 1000 };
-  assert.equal(shouldAutoOffer(dismissed, ctx), false);
-  assert.equal(shouldAutoOffer({ ...dismissed, updatedAt: NOW - REOFFER_AFTER_MS }, ctx), true);
-  assert.equal(shouldAutoOffer({ ...dismissed, dismissCount: 2, updatedAt: 0 }, ctx), false);
 });
 
 test("neighbor", () => {

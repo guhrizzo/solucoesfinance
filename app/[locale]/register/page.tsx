@@ -89,33 +89,18 @@ export default function RegisterPage() {
   const confirmOk = password === confirm && confirm.length > 0;
   const formOk = name.trim() && email && passOk && confirmOk && agreed;
 
-  // Se veio da landing com um plano escolhido (?plano=basico-mensal|…), manda
-  // pro aceite do contrato + pagamento logo após criar a conta; senão, direto
-  // pro dashboard (trial).
-  //
-  // ?trial=cartao (CTA do Midas): teste grátis SÓ com cartão validado no Asaas.
-  // A conta nova nasce sem o teste padrão e vai escolher o plano / assinar o
-  // contrato / cadastrar o cartão; os 7 dias começam quando o Asaas validar.
+  // Conta nova NÃO entra no sistema sem cartão: o acesso só é liberado depois
+  // que o Asaas valida o cartão (os 7 dias grátis começam aí). O billing da conta
+  // já nasce travado (lib/billing.freshBillingDoc), então aqui só encaminhamos:
+  // com plano escolhido (?plano=…) vai direto ao contrato; sem plano, à escolha
+  // do plano. Não há mais questionário nem tour de entrada — o Midas apresenta.
   const goAfterSignup = async () => {
     const qs = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const plano = qs?.get("plano") || null;
-    const cardTrial = qs?.get("trial") === "cartao";
-    if (cardTrial) {
-      try {
-        const { authedFetch } = await import("@/lib/authedFetch");
-        await authedFetch("/api/billing/trial-card", { method: "POST" });
-      } catch {
-        /* sem a marcação a conta segue no teste padrão — nunca trava o cadastro */
-      }
-      router.push(
-        plano
-          ? `/assinatura/contrato?plano=${encodeURIComponent(plano)}&trial=cartao`
-          : "/assinatura?trial=cartao",
-      );
-      return;
-    }
     router.push(
-      plano ? `/assinatura/contrato?plano=${encodeURIComponent(plano)}` : "/dashboard",
+      plano
+        ? `/assinatura/contrato?plano=${encodeURIComponent(plano)}&trial=cartao`
+        : "/assinatura?trial=cartao",
     );
   };
 

@@ -160,10 +160,16 @@ function calendarDaysBetween(fromMs: number, toMs: number, timeZone = TRIAL_DISP
   return Math.round((toUTC - fromUTC) / (24 * 60 * 60 * 1000));
 }
 
-/** Doc inicial de uma conta dona nova (trial começa agora). */
+/**
+ * Doc inicial de uma conta dona nova. SEM acesso até o cartão ser cadastrado e
+ * validado pelo Asaas (trialKind "card_required", trialEndsAt = agora): os 7
+ * dias grátis só começam depois da validação (ver billingCardTrial). Contas
+ * antigas já têm doc e não são afetadas.
+ */
 export function freshBillingDoc(nowMs = Date.now()): BillingDoc {
   return {
-    trialEndsAt: trialEndFrom(nowMs),
+    trialEndsAt: nowMs,
+    trialKind: "card_required",
     currentPeriodEnd: null,
     plan: null,
     lastTransactionNsu: null,

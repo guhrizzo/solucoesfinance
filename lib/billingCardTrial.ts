@@ -78,6 +78,11 @@ export async function requireCardTrial(
     const snap = await tx.get(ref);
     const base: BillingDoc = snap.exists ? (snap.data() as BillingDoc) : freshBillingDoc(nowMs);
     if (base.comped) return { ok: false, reason: "conta cortesia" } as RequireResult;
+    // Sem doc ainda: freshBillingDoc já nasce "card_required" — só persiste.
+    if (!snap.exists) {
+      tx.set(ref, base);
+      return { ok: true } as RequireResult;
+    }
     if (base.trialKind === "card_required" || base.trialKind === "card") {
       return { ok: true, already: true } as RequireResult;
     }
