@@ -92,11 +92,28 @@ export default function RegisterPage() {
   // Se veio da landing com um plano escolhido (?plano=basico-mensal|…), manda
   // pro aceite do contrato + pagamento logo após criar a conta; senão, direto
   // pro dashboard (trial).
-  const goAfterSignup = () => {
-    const plano =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("plano")
-        : null;
+  //
+  // ?trial=cartao (CTA do Midas): teste grátis SÓ com cartão validado no Asaas.
+  // A conta nova nasce sem o teste padrão e vai escolher o plano / assinar o
+  // contrato / cadastrar o cartão; os 7 dias começam quando o Asaas validar.
+  const goAfterSignup = async () => {
+    const qs = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const plano = qs?.get("plano") || null;
+    const cardTrial = qs?.get("trial") === "cartao";
+    if (cardTrial) {
+      try {
+        const { authedFetch } = await import("@/lib/authedFetch");
+        await authedFetch("/api/billing/trial-card", { method: "POST" });
+      } catch {
+        /* sem a marcação a conta segue no teste padrão — nunca trava o cadastro */
+      }
+      router.push(
+        plano
+          ? `/assinatura/contrato?plano=${encodeURIComponent(plano)}&trial=cartao`
+          : "/assinatura?trial=cartao",
+      );
+      return;
+    }
     router.push(
       plano ? `/assinatura/contrato?plano=${encodeURIComponent(plano)}` : "/dashboard",
     );
@@ -110,7 +127,7 @@ export default function RegisterPage() {
     try {
       const cred = await registerWithEmail(name.trim(), email, password);
       notifyLeadConverted(cred.user);
-      goAfterSignup();
+      await goAfterSignup();
     } catch (err: any) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -129,7 +146,7 @@ export default function RegisterPage() {
       }
       const cred = await registerWithGoogle();
       notifyLeadConverted(cred.user);
-      goAfterSignup();
+      await goAfterSignup();
     } catch (err: any) {
       const pending = await extractPendingGoogleLink(err);
       if (pending) {

@@ -5,7 +5,9 @@
     "ownerCta": "Subscribe so you don't lose access.",
     "memberNote": "Talk to the account owner.",
     "subscribeNow": "Subscribe now",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "cardTrialNote": "The first charge will be made to your registered card when the trial ends.",
+    "manage": "Manage"
   },
   "paywall": {
     "titleComped": "Complimentary access",
@@ -39,6 +41,10 @@
     "cancelConfirm": "Cancel the renewal? You keep access until {date} and will not be charged again.",
     "cancelling": "Cancelling…",
     "cancelError": "Could not cancel the renewal. Please try again.",
-    "cancelledOk": "Renewal cancelled. Your access continues until {date}."
+    "cancelledOk": "Renewal cancelled. Your access continues until {date}.",
+    "titleCardTrial": "Activate your {days} free days",
+    "subCardTrial": "Choose a plan and register a credit card. The {days}-day trial starts once the card is validated; you're only charged after the trial and can cancel before then at no cost.",
+    "subCardTrialActive": "Free trial active until {date}. After that the chosen plan is charged to the registered card, with automatic renewal — cancel before then if you don't want to continue.",
+    "startCardTrial": "Start free trial"
   }
 }

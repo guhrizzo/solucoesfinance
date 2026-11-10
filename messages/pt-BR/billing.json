@@ -5,7 +5,9 @@
     "ownerCta": "Assine para não perder o acesso.",
     "memberNote": "Fale com o titular da conta.",
     "subscribeNow": "Assinar agora",
-    "dismiss": "Dispensar"
+    "dismiss": "Dispensar",
+    "cardTrialNote": "A 1ª cobrança será feita no cartão cadastrado ao fim do teste.",
+    "manage": "Gerenciar"
   },
   "paywall": {
     "titleComped": "Acesso cortesia",
@@ -39,6 +41,10 @@
     "cancelConfirm": "Cancelar a renovação? Você mantém o acesso até {date} e não será cobrado novamente.",
     "cancelling": "Cancelando…",
     "cancelError": "Não foi possível cancelar a renovação. Tente novamente.",
-    "cancelledOk": "Renovação cancelada. Seu acesso continua até {date}."
+    "cancelledOk": "Renovação cancelada. Seu acesso continua até {date}.",
+    "titleCardTrial": "Ative seus {days} dias grátis",
+    "subCardTrial": "Escolha um plano e cadastre o cartão de crédito. O teste de {days} dias começa quando o cartão for validado; a cobrança só acontece depois do teste e você pode cancelar antes, sem custo.",
+    "subCardTrialActive": "Teste grátis ativo até {date}. Depois disso o plano escolhido é cobrado no cartão cadastrado, com renovação automática — cancele antes se não quiser continuar.",
+    "startCardTrial": "Começar teste grátis"
   }
 }

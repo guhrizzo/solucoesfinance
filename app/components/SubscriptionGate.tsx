@@ -82,14 +82,15 @@ function TrialBanner({ sub }: { sub: ReturnType<typeof useSubscription> }) {
         {sub.daysLeft <= 0
           ? t.rich("endsToday", strong)
           : t.rich("endsIn", { ...strong, days: sub.daysLeft })}{" "}
-        {sub.isOwner ? t("ownerCta") : t("memberNote")}
+        {/* Teste com cartão já validado: a assinatura existe e cobra no fim do teste. */}
+        {sub.autoRenews ? t("cardTrialNote") : sub.isOwner ? t("ownerCta") : t("memberNote")}
       </span>
       {sub.isOwner && (
         <a
           href="/assinatura"
           className="font-semibold underline underline-offset-2 shrink-0"
         >
-          {t("subscribeNow")}
+          {sub.autoRenews ? t("manage") : t("subscribeNow")}
         </a>
       )}
       {!urgente && (

@@ -16,7 +16,10 @@
     "backToSubscription": "Voltar para assinatura",
     "confirmingTitle": "Confirmando pagamento…",
     "confirmingBody": "Isso pode levar alguns segundos. Não feche a página.",
-    "viewReceipt": "Ver comprovante"
+    "viewReceipt": "Ver comprovante",
+    "trialOkTitle": "Cartão validado — teste liberado",
+    "trialOkBody": "Seu teste grátis vai até {date}. A 1ª cobrança acontece no fim do teste; cancele antes em Assinatura se não quiser continuar.",
+    "trialConfirmingTitle": "Validando seu cartão…"
   },
   "contrato": {
     "loading": "Carregando contrato…",
@@ -54,6 +57,11 @@
     "methodCard": "Cartão de crédito",
     "methodCardHint": "Renovação automática no cartão a cada período.",
     "methodBoleto": "Boleto",
-    "methodBoletoHint": "Um boleto novo é enviado por e-mail a cada período."
+    "methodBoletoHint": "Um boleto novo é enviado por e-mail a cada período.",
+    "introTrial": "Plano <b>{plan}</b> · {price} por período, com <b>{days} dias grátis</b>. Preencha os dados da empresa, leia o contrato e assine para cadastrar o cartão.",
+    "trialNotEligible": "O teste grátis com cartão não está disponível para esta conta (já usado ou conta com assinatura). Você pode contratar o plano normalmente.",
+    "trialCardTitle": "{days} dias grátis com cartão de crédito",
+    "trialCardNote": "No próximo passo você cadastra o cartão no ambiente seguro do Asaas. Nada é cobrado agora: o teste começa quando o cartão for validado e a 1ª cobrança de {price} acontece depois de {days} dias, repetindo a cada período. Cancele antes disso e não paga nada.",
+    "submitTrial": "Assinar e cadastrar o cartão"
   }
 }

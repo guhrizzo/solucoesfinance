@@ -16,7 +16,10 @@
     "backToSubscription": "Back to subscription",
     "confirmingTitle": "Confirming payment…",
     "confirmingBody": "This may take a few seconds. Don't close the page.",
-    "viewReceipt": "View receipt"
+    "viewReceipt": "View receipt",
+    "trialOkTitle": "Card validated — trial unlocked",
+    "trialOkBody": "Your free trial runs until {date}. The first charge happens when the trial ends; cancel before then under Subscription if you don't want to continue.",
+    "trialConfirmingTitle": "Validating your card…"
   },
   "contrato": {
     "loading": "Loading contract…",
@@ -54,6 +57,11 @@
     "methodCard": "Credit card",
     "methodCardHint": "Automatic card renewal every period.",
     "methodBoleto": "Boleto (bank slip)",
-    "methodBoletoHint": "A new boleto is emailed to you every period."
+    "methodBoletoHint": "A new boleto is emailed to you every period.",
+    "introTrial": "Plan <b>{plan}</b> · {price} per period, with <b>{days} free days</b>. Fill in your company details, read the contract and sign it to register your card.",
+    "trialNotEligible": "The free trial with a card is not available for this account (already used, or the account has a subscription). You can subscribe to the plan normally.",
+    "trialCardTitle": "{days} free days with a credit card",
+    "trialCardNote": "Next you'll register your card in Asaas's secure environment. Nothing is charged now: the trial starts once the card is validated and the first charge of {price} happens after {days} days, repeating every period. Cancel before then and you pay nothing.",
+    "submitTrial": "Sign and register my card"
   }
 }

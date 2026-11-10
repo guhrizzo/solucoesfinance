@@ -16,7 +16,10 @@
     "backToSubscription": "Volver a suscripción",
     "confirmingTitle": "Confirmando el pago…",
     "confirmingBody": "Esto puede tardar unos segundos. No cierres la página.",
-    "viewReceipt": "Ver comprobante"
+    "viewReceipt": "Ver comprobante",
+    "trialOkTitle": "Tarjeta validada — prueba activada",
+    "trialOkBody": "Tu prueba gratuita dura hasta el {date}. El primer cobro ocurre al terminar la prueba; cancela antes en Suscripción si no quieres continuar.",
+    "trialConfirmingTitle": "Validando tu tarjeta…"
   },
   "contrato": {
     "loading": "Cargando contrato…",
@@ -54,6 +57,11 @@
     "methodCard": "Tarjeta de crédito",
     "methodCardHint": "Renovación automática en la tarjeta cada período.",
     "methodBoleto": "Boleto bancario",
-    "methodBoletoHint": "Se envía un boleto nuevo por correo cada período."
+    "methodBoletoHint": "Se envía un boleto nuevo por correo cada período.",
+    "introTrial": "Plan <b>{plan}</b> · {price} por período, con <b>{days} días gratis</b>. Completa los datos de la empresa, lee el contrato y fírmalo para registrar la tarjeta.",
+    "trialNotEligible": "La prueba gratuita con tarjeta no está disponible para esta cuenta (ya usada o cuenta con suscripción). Puedes contratar el plan normalmente.",
+    "trialCardTitle": "{days} días gratis con tarjeta de crédito",
+    "trialCardNote": "En el siguiente paso registras la tarjeta en el entorno seguro de Asaas. No se cobra nada ahora: la prueba empieza cuando la tarjeta se valida y el primer cobro de {price} ocurre después de {days} días, repitiéndose cada período. Cancela antes y no pagas nada.",
+    "submitTrial": "Firmar y registrar la tarjeta"
   }
 }

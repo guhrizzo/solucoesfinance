@@ -48,6 +48,8 @@ export interface ContractParties {
   planId: PlanId;
   planLabel: string;
   priceCents: number;
+  /** Dias de teste grátis com cartão (caminho do Midas). Ausente = contratação comum. */
+  trialDays?: number | null;
 }
 
 export interface RenderedClause {
@@ -74,6 +76,9 @@ export function renderContractText(p: ContractParties): RenderedContract {
   const dias = prazoDias(p.planId);
   const valor = formatBRLFromCents(p.priceCents);
   const regime = REGIME_LABEL[p.contratante.regimeTributario];
+  const trial = p.trialDays && p.trialDays > 0 ? p.trialDays : 0;
+  const trialExtenso = trial === 7 ? "sete" : String(trial);
+  const trialOrdinal = trial === 7 ? "sétimo" : `${trial}º`;
 
   const preamble = [
     `Pelo presente instrumento particular, de um lado, ${n.razaoSocial}, ` +
@@ -108,10 +113,14 @@ export function renderContractText(p: ContractParties): RenderedContract {
     {
       heading: "Cláusula 2 — Do prazo e da vigência",
       body: [
-        `2.1. Este Contrato entra em vigor na data da confirmação do pagamento e ` +
-          `vigora pelo período correspondente ao Plano contratado: ${dias} (${
-            dias === 365 ? "trezentos e sessenta e cinco" : "trinta"
-          }) dias corridos.`,
+        (trial
+          ? `2.1. Este Contrato entra em vigor na data em que o cartão de crédito ` +
+            `da CONTRATANTE for validado pelo processador, iniciando o período de ` +
+            `teste gratuito previsto na cláusula 2.4; ao término do teste, vigora ` +
+            `pelo período correspondente ao Plano contratado: `
+          : `2.1. Este Contrato entra em vigor na data da confirmação do pagamento e ` +
+            `vigora pelo período correspondente ao Plano contratado: `) +
+          `${dias} (${dias === 365 ? "trezentos e sessenta e cinco" : "trinta"}) dias corridos.`,
         `2.2. O modelo de contratação é de assinatura COM renovação automática e ` +
           `SEM prazo de fidelidade: ao fim de cada período, a contratação é ` +
           `renovada por igual período e o valor do Plano é cobrado novamente, no ` +
@@ -122,6 +131,20 @@ export function renderContractText(p: ContractParties): RenderedContract {
         `2.3. Cancelada a renovação, ou não havendo pagamento de uma cobrança, o ` +
           `acesso é encerrado automaticamente ao fim do período vigente, sem ` +
           `incidência de multa.`,
+        ...(trial
+          ? [
+              `2.4. A CONTRATANTE terá ${trial} (${trialExtenso}) dias corridos de ` +
+                `teste gratuito da Plataforma, condicionados ao cadastro e à validação ` +
+                `de cartão de crédito no ambiente do processador de pagamentos. Nenhum ` +
+                `valor é cobrado no cadastro do cartão. A primeira cobrança do Plano ` +
+                `ocorre no ${trial}º (${trialOrdinal}) dia após o cadastro e, a partir dela, ` +
+                `segue a renovação automática prevista na cláusula 2.2.`,
+              `2.5. A CONTRATANTE pode cancelar a assinatura pela Plataforma a qualquer ` +
+                `momento durante o teste gratuito, sem qualquer cobrança; nesse caso o ` +
+                `acesso é mantido até o fim do teste. O teste gratuito é concedido uma ` +
+                `única vez por CONTRATANTE (CNPJ) e por conta na Plataforma.`,
+            ]
+          : []),
       ],
     },
     {
@@ -133,8 +156,12 @@ export function renderContractText(p: ContractParties): RenderedContract {
           `ou cartão de crédito, e recorrente a cada período do Plano. Ao optar ` +
           `pelo cartão, a CONTRATANTE autoriza a cobrança recorrente do valor do ` +
           `Plano no cartão informado, até o cancelamento da renovação.`,
-        `3.3. O acesso à Plataforma é liberado após a confirmação do pagamento ` +
-          `pelo processador.`,
+        trial
+          ? `3.3. Durante o teste gratuito, o acesso à Plataforma é liberado após a ` +
+            `validação do cartão pelo processador; depois dele, o acesso segue ` +
+            `condicionado à confirmação de cada pagamento.`
+          : `3.3. O acesso à Plataforma é liberado após a confirmação do pagamento ` +
+            `pelo processador.`,
         `3.4. Os valores poderão ser reajustados pela CONTRATADA para contratações ` +
           `futuras, mediante comunicação prévia, não afetando períodos já pagos.`,
       ],
