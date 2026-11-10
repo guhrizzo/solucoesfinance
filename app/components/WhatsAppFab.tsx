@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { getConsentSnapshot, subscribeConsent } from "@/lib/consent";
@@ -34,6 +35,11 @@ const TOPIC_TO_DEMO: readonly (string | null)[] = [
   null, // Planos, preços e teste grátis
   null, // Outra dúvida
 ];
+
+/** Marca que o Midas já cumprimentou este visitante (só na primeira visita). */
+const GREET_KEY = "midas-greeted-v1";
+const GREET_DELAY_MS = 2500;
+const GREET_VISIBLE_MS = 16000;
 
 function WaGlyph() {
   return (
@@ -75,6 +81,32 @@ export function WhatsAppFab() {
     return () => window.removeEventListener("midas:open-topic", onOpenTopic);
   }, [router]);
 
+  // Primeira visita: o Midas aparece sozinho na tela inicial com um convite.
+  const [greet, setGreet] = useState(false);
+  useEffect(() => {
+    let seen = true;
+    try {
+      seen = !!localStorage.getItem(GREET_KEY);
+    } catch {
+      /* sem storage: não insiste */
+    }
+    if (seen) return;
+    const show = window.setTimeout(() => {
+      setGreet(true);
+      try {
+        localStorage.setItem(GREET_KEY, "1");
+      } catch {
+        /* ignora */
+      }
+    }, GREET_DELAY_MS);
+    return () => window.clearTimeout(show);
+  }, []);
+  useEffect(() => {
+    if (!greet) return;
+    const hide = window.setTimeout(() => setGreet(false), GREET_VISIBLE_MS);
+    return () => window.clearTimeout(hide);
+  }, [greet]);
+
   if (!mounted) return null;
 
   // O botão de acessibilidade fica em bottom:20 (ou 88 com o banner de
@@ -84,18 +116,37 @@ export function WhatsAppFab() {
   const bottom = (cookieBarOpen ? 96 : 24) + (a11yWidgetOn ? 60 : 0);
 
   return createPortal(
-    <button
-      type="button"
-      aria-label={t("aria")}
-      className="wa-fab"
-      style={{ bottom }}
-      onClick={() => router.push("/demo")}
-    >
-      <WaGlyph />
-      <span className="wa-fab__tooltip" aria-hidden="true">
-        {t("tooltip")}
-      </span>
-    </button>,
+    <>
+      <button
+        type="button"
+        aria-label={t("aria")}
+        className="wa-fab"
+        style={{ bottom }}
+        onClick={() => router.push("/demo")}
+      >
+        <WaGlyph />
+        <span className="wa-fab__tooltip" aria-hidden="true">
+          {t("tooltip")}
+        </span>
+      </button>
+      {greet && (
+        <div className="wa-greet" role="dialog" aria-label={t("greetTitle")} style={{ bottom: bottom + 74 }}>
+          <button type="button" className="wa-greet__x" aria-label={t("greetClose")} onClick={() => setGreet(false)}>
+            <X size={14} aria-hidden="true" />
+          </button>
+          <p className="wa-greet__title">{t("greetTitle")}</p>
+          <p className="wa-greet__body">{t("greetBody")}</p>
+          <div className="wa-greet__actions">
+            <button type="button" className="wa-greet__cta" onClick={() => router.push("/demo")}>
+              {t("greetCta")}
+            </button>
+            <button type="button" className="wa-greet__later" onClick={() => setGreet(false)}>
+              {t("greetClose")}
+            </button>
+          </div>
+        </div>
+      )}
+    </>,
     document.body,
   );
 }

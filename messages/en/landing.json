@@ -8,6 +8,10 @@
   "whatsapp": {
     "aria": "Chat with Midas, our assistant",
     "tooltip": "Chat with us",
+    "greetTitle": "Hi, I'm Midas 👋",
+    "greetBody": "First time here? I'll show you NexusFi in action, in just a few minutes.",
+    "greetCta": "Show me",
+    "greetClose": "Not now",
     "prefill": "Hi! I came from the NexusFi site and would like to know more.",
     "modalTitle": "Midas",
     "modalSubtitle": "Ask your question here or reach our team on WhatsApp.",

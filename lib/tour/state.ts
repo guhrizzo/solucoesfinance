@@ -46,12 +46,18 @@ export interface OfferContext {
   setupDone: boolean;
   /** Assinatura/trial ativos — não oferece o tour por cima do paywall. */
   accessActive: boolean;
+  /**
+   * Cartão cadastrado e validado (assinatura recorrente autorizada), conta paga
+   * ou cortesia. O tour automático só é liberado depois disso — quem ainda está
+   * antes do cartão fica com o Midas/paywall, não com o tour.
+   */
+  cardOnFile: boolean;
   now: number;
 }
 
 /** Deve a tela de boas-vindas abrir sozinha? */
 export function shouldAutoOffer(state: TourState, ctx: OfferContext): boolean {
-  if (!ctx.setupDone || !ctx.accessActive) return false;
+  if (!ctx.setupDone || !ctx.accessActive || !ctx.cardOnFile) return false;
   switch (state.status) {
     case "never":
       return true;

@@ -31,11 +31,13 @@ test("normalizeTourState descarta lixo", () => {
 });
 
 test("oferta automática: só nunca-iniciado; dispensado volta 1x após 30 dias", () => {
-  const ctx = { setupDone: true, accessActive: true, now: NOW };
+  const ctx = { setupDone: true, accessActive: true, cardOnFile: true, now: NOW };
   const base = normalizeTourState({}, ids);
   assert.equal(shouldAutoOffer(base, ctx), true);
   assert.equal(shouldAutoOffer(base, { ...ctx, setupDone: false }), false);
   assert.equal(shouldAutoOffer(base, { ...ctx, accessActive: false }), false);
+  // sem cartão cadastrado/validado o tour não abre sozinho
+  assert.equal(shouldAutoOffer(base, { ...ctx, cardOnFile: false }), false);
   for (const status of ["completed", "in_progress"]) assert.equal(shouldAutoOffer({ ...base, status }, ctx), false);
   const dismissed = { ...base, status: "dismissed", dismissCount: 1, updatedAt: NOW - 1000 };
   assert.equal(shouldAutoOffer(dismissed, ctx), false);

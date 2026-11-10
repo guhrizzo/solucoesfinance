@@ -93,13 +93,15 @@ export function TourRuntime() {
   useEffect(() => {
     if (view !== "closed" || !state || !ready || sub.loading) return;
     const accessActive = !sub.signedOut && sub.isActive;
-    if (!shouldAutoOffer(state, { setupDone, accessActive, now: Date.now() })) return;
+    // Cartão cadastrado = renovação automática viva (Asaas validou), conta paga ou cortesia.
+    const cardOnFile = sub.comped || sub.autoRenews || sub.status === "active";
+    if (!shouldAutoOffer(state, { setupDone, accessActive, cardOnFile, now: Date.now() })) return;
     try {
       if (sessionStorage.getItem(SESSION_FLAG) === uidRef.current) return;
       sessionStorage.setItem(SESSION_FLAG, uidRef.current);
     } catch { /* sem sessionStorage: a regra do Firestore já evita repetir */ }
     setView("welcome");
-  }, [state, setupDone, ready, sub.loading, sub.signedOut, sub.isActive, view]);
+  }, [state, setupDone, ready, sub.loading, sub.signedOut, sub.isActive, sub.comped, sub.autoRenews, sub.status, view]);
 
   /* ── Abertura manual: botão "Conheça a NexusFi" em Configurações > Aparência ── */
   useEffect(() => {
