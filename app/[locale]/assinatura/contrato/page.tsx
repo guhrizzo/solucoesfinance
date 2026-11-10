@@ -9,7 +9,7 @@ import { useRouter } from "@/i18n/navigation";
 import { Loader2, ShieldCheck, FileText, ArrowRight, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useSubscription } from "@/app/hooks/useSubscription";
-import { PageLoader } from "@/app/components/ui";
+import { PageLoader, Select } from "@/app/components/ui";
 import SecurePaymentSeal from "@/app/components/SecurePaymentSeal";
 import { getPlan, formatBRLFromCents, TRIAL_DAYS } from "@/lib/billingPlans";
 import { isPlanId, startCheckout, type CheckoutMethod } from "@/lib/startCheckout";
@@ -296,19 +296,13 @@ function Contrato() {
                 </div>
                 <div>
                   <label className={labelCls} style={labelStyle}>{t("taxRegime")}</label>
-                  <select
-                    className={fieldCls}
-                    style={fieldStyle}
+                  <Select<TaxRegime>
                     value={regime}
-                    onChange={(e) => setRegime(e.target.value as TaxRegime | "")}
-                  >
-                    <option value="">{t("selectPlaceholder")}</option>
-                    {TAX_REGIMES.map((r) => (
-                      <option key={r} value={r}>
-                        {REGIME_LABEL[r]}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setRegime}
+                    placeholder={t("selectPlaceholder")}
+                    aria-label={t("taxRegime")}
+                    options={TAX_REGIMES.map((r) => ({ value: r, label: REGIME_LABEL[r] }))}
+                  />
                 </div>
               </div>
 

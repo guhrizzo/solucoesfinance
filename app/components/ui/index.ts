@@ -6,6 +6,7 @@ export { Card } from "./Card";
 export { Modal } from "./Modal";
 export { Input, MoneyInput, parseAmount, formatAmount } from "./Input";
 export { Field } from "./Field";
+export { Select, type SelectOption } from "./Select";
 export { Table, type Column } from "./Table";
 export { KpiTile } from "./KpiTile";
 export { PageHeader } from "./PageHeader";
