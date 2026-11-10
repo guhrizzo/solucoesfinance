@@ -32,6 +32,7 @@ const INITIAL: State = {
   autoRenews: false,
   cancelled: false,
   inGrace: false,
+  cardTrialEligible: false,
 };
 
 export function useSubscription(): State {
@@ -99,6 +100,7 @@ export function useSubscription(): State {
                   autoRenews: !!d.autoRenews,
                   cancelled: !!d.cancelled,
                   inGrace: !!d.inGrace,
+                  cardTrialEligible: !!d.cardTrialEligible,
                   loading: false,
                   isOwner,
                   signedOut: false,

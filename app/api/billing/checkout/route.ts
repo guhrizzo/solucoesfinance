@@ -11,16 +11,32 @@ import { isCompedEmail } from "@/lib/compAccounts";
 import type { ContractDoc } from "@/lib/contract";
 import {
   asaasConfigured,
+  cancelCheckout,
   cancelSubscription,
+  checkoutUrl,
   createCustomer,
+  createRecurringCheckout,
   createSubscription,
   listSubscriptionPayments,
   todayBR,
   type AsaasBillingType,
 } from "@/lib/asaas";
-import { freshBillingDoc, type BillingDoc } from "@/lib/billing";
+import { freshBillingDoc, isCardTrialEligible, type BillingDoc } from "@/lib/billing";
+import { TRIAL_DAYS } from "@/lib/billingPlans";
+import {
+  CARD_TRIAL_CHECKOUT_MINUTES,
+  checkoutIndexPath,
+  trialClaimPath,
+  type CheckoutIndexDoc,
+} from "@/lib/billingCardTrial";
 
-// POST /api/billing/checkout   body: { plan, contractId, method?: "card" | "boleto" }
+// POST /api/billing/checkout   body: { plan, contractId, method?: "card" | "boleto", trial?: true }
+//
+// trial:true (CTA do Midas) → Asaas Checkout RECURRENT só com cartão e 1ª
+// cobrança em hoje+7: o cliente cadastra o cartão na página do Asaas, nada é
+// cobrado agora, e o teste só é liberado quando o webhook/retorno confirmar
+// (pela API) que o Asaas validou o cartão e criou a assinatura.
+// Ver lib/billingCardTrial.ts.
 //
 // Autenticado, SÓ O DONO da conta. Com ASAAS_API_KEY configurada, cria uma
 // assinatura recorrente no Asaas (cartão recorrente ou boleto a cada ciclo) e
@@ -67,7 +83,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "NEXT_PUBLIC_APP_URL não configurado." }, { status: 503 });
   }
 
-  const { plan: planId, contractId, method } = await request.json().catch(() => ({}));
+  const { plan: planId, contractId, method, trial } = await request.json().catch(() => ({}));
   const plan = getPlan(String(planId || ""));
   if (!plan) {
     return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
@@ -115,6 +131,123 @@ export async function POST(request: Request) {
     }
   }
 
+  // ── Teste grátis com cartão (caminho do CTA do Midas) ──
+  if (trial === true) {
+    if (!useAsaas) {
+      return NextResponse.json({ error: "Teste com cartão indisponível (Asaas não configurado)." }, { status: 503 });
+    }
+    if (contract.trialDays !== TRIAL_DAYS) {
+      return NextResponse.json(
+        { error: "Este contrato não inclui o teste grátis. Refaça o aceite." },
+        { status: 400 }
+      );
+    }
+    const cnpjDigits = contract.contratante.cnpj.replace(/\D/g, "");
+    if (cnpjDigits.length !== 14) {
+      return NextResponse.json({ error: "CNPJ do contrato inválido. Refaça o aceite." }, { status: 400 });
+    }
+    try {
+      const billingRef = db.doc(`users/${scope.ownerUid}/profile/billing`);
+      const billingSnap = await billingRef.get();
+      const billing = billingSnap.exists ? (billingSnap.data() as BillingDoc) : null;
+      if (!isCardTrialEligible(billing)) {
+        return NextResponse.json(
+          { error: "Esta conta não pode ativar o teste grátis. Escolha um plano para assinar.", notEligible: true },
+          { status: 409 }
+        );
+      }
+      const claim = await db.doc(trialClaimPath(cnpjDigits)).get();
+      if (claim.exists && claim.data()?.ownerUid !== scope.ownerUid) {
+        return NextResponse.json(
+          { error: "Este CNPJ já utilizou o teste grátis. Escolha um plano para assinar.", notEligible: true },
+          { status: 409 }
+        );
+      }
+
+      // Tentativas anteriores nunca concluídas: descarta pra não deixar checkout/cobrança órfã.
+      if (billing!.cardTrial?.checkoutId && !billing!.cardTrial.activatedAt) {
+        await cancelCheckout(billing!.cardTrial.checkoutId).catch(() => undefined);
+      }
+      if (billing!.gateway === "asaas" && billing!.subscriptionId && billing!.subscriptionStatus === "pending") {
+        await cancelSubscription(billing!.subscriptionId).catch(() => undefined);
+      }
+
+      const orderNsu = buildOrderNsu(scope.ownerUid, plan.id, cid);
+      const asaasCustomer = await createCustomer({
+        name: contract.contratante.razaoSocial,
+        email: contract.signatario.email,
+        cpfCnpj: cnpjDigits,
+        externalReference: scope.ownerUid,
+      });
+      const now = Date.now();
+      const firstDueDate = todayBR(now + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+
+      const checkout = await createRecurringCheckout({
+        customerId: asaasCustomer.id,
+        itemName: `NexusFi ${plan.label}`,
+        itemDescription: `Plano ${plan.label}: ${TRIAL_DAYS} dias grátis, 1ª cobrança em ${firstDueDate}.`,
+        priceCents: plan.priceCents,
+        cycle: plan.months === 12 ? "YEARLY" : "MONTHLY",
+        nextDueDate: firstDueDate,
+        externalReference: orderNsu,
+        successUrl: `${base}/assinatura/retorno?gateway=asaas&trial=1`,
+        cancelUrl: `${base}/assinatura?trial=cartao`,
+        expiredUrl: `${base}/assinatura?trial=cartao&expirado=1`,
+        minutesToExpire: CARD_TRIAL_CHECKOUT_MINUTES,
+      });
+
+      // O índice precisa existir ANTES de mandar o cliente pro Asaas: o
+      // webhook pode chegar antes do redirect.
+      const idx: CheckoutIndexDoc = {
+        ownerUid: scope.ownerUid,
+        customerId: asaasCustomer.id,
+        orderNsu,
+        planId: plan.id,
+        contractId: cid,
+        cnpj: cnpjDigits,
+        firstDueDate,
+        kind: "card_trial",
+        status: "pending",
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.doc(checkoutIndexPath(checkout.id)).set(idx);
+      await billingRef.set(
+        {
+          gateway: "asaas",
+          subscriptionId: null,
+          subscriptionStatus: "pending",
+          cancelledAt: null,
+          paymentMethod: "CREDIT_CARD",
+          cardTrial: {
+            checkoutId: checkout.id,
+            customerId: asaasCustomer.id,
+            orderNsu,
+            planId: plan.id,
+            contractId: cid,
+            cnpj: cnpjDigits,
+            firstDueDate,
+            createdAt: now,
+            activatedAt: null,
+            subscriptionId: null,
+            rejectedReason: null,
+          },
+          updatedAt: now,
+        } satisfies Partial<BillingDoc>,
+        { merge: true }
+      );
+      await db
+        .doc(`users/${scope.ownerUid}/contracts/${cid}`)
+        .update({ orderNsu, updatedAt: now })
+        .catch(() => undefined);
+
+      return NextResponse.json({ url: checkoutUrl(checkout), orderNsu, trial: true, firstDueDate });
+    } catch (err: any) {
+      console.error("Erro ao criar checkout de teste Asaas:", err);
+      return NextResponse.json({ error: err?.message || "Falha ao abrir o cadastro do cartão." }, { status: 502 });
+    }
+  }
+
   if (useAsaas) {
     const billingType: AsaasBillingType = method === "boleto" ? "BOLETO" : "CREDIT_CARD";
     const cnpjDigits = contract.contratante.cnpj.replace(/\D/g, "");
@@ -137,6 +270,13 @@ export async function POST(request: Request) {
       // Tentativa anterior nunca paga (pending): descarta pra não deixar cobrança órfã.
       if (billing.gateway === "asaas" && billing.subscriptionId && billing.subscriptionStatus === "pending") {
         await cancelSubscription(billing.subscriptionId).catch(() => undefined);
+      }
+      // Cadastro de cartão do teste em aberto: a pessoa preferiu assinar já.
+      // Cancela o checkout e solta o vínculo — se ele ainda for concluído, a
+      // ativação recusa e cancela a assinatura do teste (sem cobrança dupla).
+      const dropCardTrial = !!(billing.cardTrial?.checkoutId && !billing.cardTrial.activatedAt);
+      if (dropCardTrial) {
+        await cancelCheckout(billing.cardTrial!.checkoutId).catch(() => undefined);
       }
 
       const orderNsu = buildOrderNsu(scope.ownerUid, plan.id, cid);
@@ -182,6 +322,7 @@ export async function POST(request: Request) {
           subscriptionStatus: "pending",
           cancelledAt: null,
           paymentMethod: billingType,
+          ...(dropCardTrial ? { cardTrial: null } : {}),
           updatedAt: now,
         } satisfies BillingDoc,
         { merge: true }

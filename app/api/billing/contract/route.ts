@@ -7,7 +7,7 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { requireScope, isScopeError } from "@/lib/apiScope";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { isCompedEmail } from "@/lib/compAccounts";
-import { getPlan } from "@/lib/billingPlans";
+import { getPlan, TRIAL_DAYS } from "@/lib/billingPlans";
 import { createHash } from "node:crypto";
 import {
   CONTRACT_VERSION,
@@ -28,7 +28,8 @@ function contractHash(input: Parameters<typeof canonicalContractPayload>[0]): st
 }
 
 // POST /api/billing/contract
-//   body: { planId, razaoSocial, cnpj, regimeTributario, endereco, nome, cpf, email }
+//   body: { planId, razaoSocial, cnpj, regimeTributario, endereco, nome, cpf, email, trial? }
+//   (trial: true = contrato com a cláusula do teste grátis com cartão)
 //   → cria users/{ownerUid}/contracts/{id} com status "pending_payment",
 //     carimba aceite eletrônico (data/hora, IP, user-agent, hash) e devolve
 //     { contractId }. A página /assinatura/contrato então chama o checkout.
@@ -124,6 +125,9 @@ export async function POST(request: Request) {
   const now = Date.now();
   const contratante = { razaoSocial, cnpj, regimeTributario, endereco } as const;
   const signatario = { nome, cpf, email } as const;
+  // Caminho do teste grátis com cartão: o contrato aceito traz a cláusula do
+  // teste (2.4/2.5) e o checkout só cria o teste com um contrato desses.
+  const trialDays = body.trial === true ? TRIAL_DAYS : null;
 
   const hash = contractHash({
     contractVersion: CONTRACT_VERSION,
@@ -132,6 +136,7 @@ export async function POST(request: Request) {
     contratante,
     signatario,
     acceptedAt: now,
+    trialDays,
   });
 
   const doc: Omit<ContractDoc, "contractId"> = {
@@ -143,6 +148,7 @@ export async function POST(request: Request) {
     priceCents: plan.priceCents,
     contratante,
     signatario,
+    trialDays,
     hash,
     acceptedAt: now,
     ip: getClientIp(request) || null,

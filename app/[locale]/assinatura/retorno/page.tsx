@@ -26,6 +26,8 @@ function Retorno() {
   const preapprovalId = params.get("preapproval_id") || "";
   // Asaas volta com ?gateway=asaas (a assinatura é a gravada no checkout).
   const isAsaas = params.get("gateway") === "asaas";
+  // Teste grátis com cartão: o retorno confirma a VALIDAÇÃO do cartão, não um pagamento.
+  const isTrial = isAsaas && params.get("trial") === "1";
   const orderNsu = params.get("order_nsu") || "";
   const transactionNsu = params.get("transaction_nsu") || "";
   const slug = params.get("slug") || params.get("invoice_slug") || "";
@@ -118,7 +120,10 @@ function Retorno() {
 
   // Se a assinatura ficou ativa (via webhook, em paralelo), trata como sucesso
   // sem depender do resultado do /confirm.
-  const webhookConfirmou = !sub.loading && sub.isActive && sub.status === "active";
+  const webhookConfirmou =
+    !sub.loading &&
+    sub.isActive &&
+    (sub.status === "active" || (isTrial && sub.inTrial && sub.autoRenews));
   const effectivePhase: Phase = webhookConfirmou ? "ok" : phase;
 
   if (authLoading) return <PageLoader label={t("loading")} />;
@@ -136,14 +141,17 @@ function Retorno() {
           <>
             <CheckCircle2 size={44} className="mx-auto" style={{ color: "var(--success)" }} />
             <h1 className="mt-4 text-xl font-bold" style={{ color: "var(--db-text)" }}>
-              {t("okTitle")}
+              {t(isTrial ? "trialOkTitle" : "okTitle")}
             </h1>
             <p className="mt-2 text-sm" style={{ color: "var(--db-text-3)" }}>
-              {sub.accessUntil
-                ? t("accessUntil", { date: formatDate(sub.accessUntil, locale) })
-                : t("accessReleased")}
+              {isTrial && sub.accessUntil
+                ? t("trialOkBody", { date: formatDate(sub.accessUntil, locale) })
+                : sub.accessUntil
+                  ? t("accessUntil", { date: formatDate(sub.accessUntil, locale) })
+                  : t("accessReleased")}
             </p>
-            {contractId && (
+            {/* No teste o contrato só é finalizado (e enviado) na 1ª cobrança. */}
+            {contractId && !isTrial && (
               <>
                 <p className="mt-2 text-xs" style={{ color: "var(--db-text-4)" }}>
                   {t("contractEmailed")}
@@ -188,7 +196,7 @@ function Retorno() {
           <>
             <Loader2 size={44} className="mx-auto animate-spin" style={{ color: "var(--brand-500)" }} />
             <h1 className="mt-4 text-xl font-bold" style={{ color: "var(--db-text)" }}>
-              {t("confirmingTitle")}
+              {t(isTrial ? "trialConfirmingTitle" : "confirmingTitle")}
             </h1>
             <p className="mt-2 text-sm" style={{ color: "var(--db-text-3)" }}>
               {msg || t("confirmingBody")}

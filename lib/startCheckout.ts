@@ -22,13 +22,20 @@ export type CheckoutMethod = "card" | "boleto";
 export async function startCheckout(
   planId: string,
   contractId?: string,
-  method: CheckoutMethod = "card"
+  method: CheckoutMethod = "card",
+  /** true = teste grátis com cartão (só cadastra o cartão; 1ª cobrança em 7 dias). */
+  trial = false
 ): Promise<void> {
   const { authedFetch } = await import("./authedFetch");
   const res = await authedFetch("/api/billing/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan: planId, method, ...(contractId ? { contractId } : {}) }),
+    body: JSON.stringify({
+      plan: planId,
+      method: trial ? "card" : method,
+      ...(contractId ? { contractId } : {}),
+      ...(trial ? { trial: true } : {}),
+    }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.url) {
