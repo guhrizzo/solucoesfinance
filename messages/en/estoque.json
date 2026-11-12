@@ -40,6 +40,7 @@
     "fees": "fees: {value}"
   },
   "tabs": {
+    "filtersLabel": "Filter products",
     "todos": "All",
     "filterML": "Filter by Mercado Livre",
     "filterShopee": "Filter by Shopee",

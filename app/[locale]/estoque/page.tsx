@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo, useId, type ReactNode } from "react";
-import { useHScroll } from "@/app/hooks/useHScroll";
+import { useState, useEffect, useMemo, useId } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/app/hooks/useAuth";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
+import InventoryFilters, { type StockFilter } from "@/app/components/estoque/InventoryFilters";
 import { PageLoader } from "@/app/components/ui";
 import ConfirmModal from "@/app/components/ConfirmModal";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, LogOut, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
-  Loader2, ArrowRight, Package, X, CheckCircle, Download, ChevronLeft, ChevronRight
+  Loader2, ArrowRight, Package, X, CheckCircle, Download
 } from "lucide-react";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
@@ -120,7 +120,7 @@ export default function EstoquePage() {
 
   // Estados de UI/Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"todos" | "mercadolivre" | "shopee" | "tiktokshop" | "shein" | "local" | "baixo">("todos");
+  const [activeTab, setActiveTab] = useState<StockFilter>("todos");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
 
   // Confirmação no estilo NexusFi (substitui o confirm() nativo do navegador).
@@ -992,47 +992,22 @@ export default function EstoquePage() {
         <div className="cf-card overflow-hidden">
 
           {/* Header da Tabela com Filtros */}
-          <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
+          <div className="p-5 flex flex-col gap-4" style={{ borderBottom: "1px solid var(--cf-border)" }}>
 
-            {/* Abas */}
-            <HScrollTabs className="md:flex-1">
-              {[
-                { id: "todos", label: t("tabs.todos"), icon: null },
-                { id: "mercadolivre", label: "", ariaLabel: t("tabs.filterML"), image: "/Logotipo_MercadoLivre.png" },
-                { id: "shopee", label: "", ariaLabel: t("tabs.filterShopee"), image: "/Shopee.svg" },
-                { id: "tiktokshop", label: "", ariaLabel: t("tabs.filterTiktok"), image: "/TikTokShop.svg" },
-                { id: "shein", label: "", ariaLabel: t("tabs.filterShein"), image: "/Shein.svg" },
-                { id: "local", label: t("tabs.local"), icon: null },
-                { id: "baixo", label: t("tabs.lowStock"), icon: AlertTriangle }
-              ]
-                // Shopee oculta da interface (ver SHOPEE_UI_VISIVEL no topo do arquivo).
-                .filter((tab) => SHOPEE_UI_VISIVEL || tab.id !== "shopee")
-                .filter((tab) => TIKTOKSHOP_UI_VISIVEL || tab.id !== "tiktokshop")
-                .filter((tab) => SHEIN_UI_VISIVEL || tab.id !== "shein")
-                .map((tab) => {
-                const IconComponent = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    aria-label={tab.label ? undefined : tab.ariaLabel}
-                    className="shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold border-none transition-all cursor-pointer whitespace-nowrap flex items-center gap-2"
-                    style={activeTab === tab.id
-                      ? { background: "var(--primary)", color: "white" }
-                      : { background: "var(--cf-input)", color: "var(--cf-text-2)" }
-                    }
-                  >
-                    {tab.image && <img src={tab.image} alt="" style={{ height: "16px", objectFit: "contain" }} />}
-                    {IconComponent && <IconComponent size={14} />}
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </HScrollTabs>
+            <InventoryFilters
+              value={activeTab}
+              onChange={setActiveTab}
+              visiblePlatforms={[
+                "mercadolivre",
+                ...(SHOPEE_UI_VISIVEL ? ["shopee" as const] : []),
+                ...(TIKTOKSHOP_UI_VISIVEL ? ["tiktokshop" as const] : []),
+                ...(SHEIN_UI_VISIVEL ? ["shein" as const] : []),
+              ]}
+            />
 
             {/* Busca + Sync manual */}
-            <div className="flex items-center gap-3 w-full md:w-auto md:shrink-0">
-              <div className="relative flex-1 md:w-64">
+            <div className="flex flex-wrap items-center gap-3 w-full">
+              <div className="relative min-w-40 flex-1">
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--cf-text-3)" }} />
                 <input
                   type="text"
@@ -1745,37 +1720,6 @@ export default function EstoquePage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Faixa horizontal com rolagem: mostra setas laterais quando há abas escondidas.
-function HScrollTabs({ children, className = "" }: { children: ReactNode; className?: string }) {
-  const { ref, canLeft, canRight, scrollBy } = useHScroll();
-
-  const arrow = (dir: -1 | 1) => (
-    <button
-      type="button"
-      onClick={() => scrollBy(dir)}
-      aria-label={dir < 0 ? "Rolar para a esquerda" : "Rolar para a direita"}
-      className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center border-none cursor-pointer"
-      style={{ background: "var(--cf-input)", color: "var(--cf-text-2)" }}
-    >
-      {dir < 0 ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-    </button>
-  );
-
-  return (
-    <div className={`flex items-center gap-1 min-w-0 ${className}`}>
-      {canLeft && arrow(-1)}
-      <div
-        ref={ref}
-        className="flex gap-1 overflow-x-auto scrollbar-none min-w-0 flex-1"
-        style={{ scrollSnapType: "x proximity" }}
-      >
-        {children}
-      </div>
-      {canRight && arrow(1)}
     </div>
   );
 }

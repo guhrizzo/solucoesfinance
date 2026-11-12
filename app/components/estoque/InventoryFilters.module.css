@@ -1,0 +1,113 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.filter:hover {
+  background: var(--sunken);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.filter[data-selected="true"] {
+  background: var(--brand-weak);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.filter:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.logo[data-channel="mercadolivre"] {
+  padding: 3px 5px;
+  background: var(--on-accent);
+}
+
+.logoImage {
+  object-fit: contain;
+  max-height: 100%;
+}
+
+.logo[data-channel="shein"] .logoImage {
+  height: 28px;
+}
+
+.selection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.filter[data-selected="true"] .selection {
+  background: var(--brand);
+  color: var(--brand-on);
+}
+
+.filter[data-kind="warning"] .icon {
+  color: var(--warn);
+}
+
+.filter[data-kind="warning"][data-selected="true"] {
+  background: var(--warn-weak);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.filter[data-kind="warning"][data-selected="true"] .selection {
+  background: var(--warn);
+}
+
+@media (max-width: 480px) {
+  .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filter { justify-content: flex-start; gap: 6px; padding-inline: 8px; font-size: 12px; }
+  .label { white-space: normal; text-align: left; }
+  .selection { margin-left: auto; }
+  .logo[data-channel="mercadolivre"] { width: 38px; padding-inline: 3px; }
+  .logo[data-channel="shein"] { width: 38px; }
+}
+
+@media (max-width: 380px) {
+  .filters { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter { transition: none; }
+}
