@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
   { key: "impostos", icon: Landmark, href: "/impostos", permKey: "impostos" },
   { key: "contasReceber", icon: DollarSign, href: "/contasReceber", permKey: "contasReceber" },
   { key: "centroCustos", icon: BarChart2, href: "/costCenter", permKey: "centroCustos" },
-  { key: "estoque", icon: Boxes, href: "/estoque", permKey: "estoque" },
+  { key: "estoque", icon: Boxes, href: "/estoque", permAny: ["estoque", "restaurante"] },
   { key: "vendas", icon: ShoppingCart, href: "/vendas", permKey: "vendas" },
   { key: "rh", icon: Briefcase, href: "/rh", permAny: ["rh", "rh_proprio"] },
   { key: "usuarios", icon: Users, href: "/users" },

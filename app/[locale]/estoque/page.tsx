@@ -11,8 +11,9 @@ import ConfirmModal from "@/app/components/ConfirmModal";
 import {
   Plus, Search, Edit3, Trash2, Link as LinkIcon, RefreshCw, AlertTriangle,
   Settings, Check, Globe, HelpCircle, AlertCircle, ShoppingBag,
-  Loader2, ArrowRight, Package, X, CheckCircle, Download
+  Loader2, ArrowRight, Package, X, CheckCircle, Download, ChefHat, Boxes
 } from "lucide-react";
+import RestauranteModulo from "../restaurante/_components/RestauranteModulo";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
 // Flags de visibilidade dos canais (Shopee oculta, TikTok Shop e Shein
@@ -78,6 +79,12 @@ export default function EstoquePage() {
   // resolver, ver os `if (!user || !ownerUid) return;` logo adiante).
   const [ownerUid, setOwnerUid] = useState("");
   const [blocked, setBlocked] = useState(false);
+  // "Produtos" (estoque de venda) e "Restaurante" (ingredientes, fichas
+  // técnicas, pedidos da cozinha) são visões da mesma tela, cada uma com a
+  // própria permissão. `?aba=restaurante` abre direto na segunda.
+  const [podeProdutos, setPodeProdutos] = useState(true);
+  const [podeRestaurante, setPodeRestaurante] = useState(false);
+  const [visao, setVisao] = useState<"produtos" | "restaurante">("produtos");
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -87,7 +94,13 @@ export default function EstoquePage() {
       const { resolveAccountScope, hasPermission } = await import("@/lib/accountScope");
       const scope = await resolveAccountScope(db, user.uid);
       if (cancelled) return;
-      if (!hasPermission(scope, "estoque")) { setBlocked(true); return; }
+      const okProdutos = hasPermission(scope, "estoque");
+      const okRest = hasPermission(scope, "restaurante");
+      if (!okProdutos && !okRest) { setBlocked(true); return; }
+      setPodeProdutos(okProdutos);
+      setPodeRestaurante(okRest);
+      const quer = new URLSearchParams(window.location.search).get("aba") === "restaurante";
+      setVisao(okRest && (quer || !okProdutos) ? "restaurante" : "produtos");
       setOwnerUid(scope.ownerUid);
     })();
     return () => { cancelled = true; };
@@ -653,6 +666,36 @@ export default function EstoquePage() {
 
       <main className="px-6 py-8 max-w-7xl mx-auto space-y-8 pb-20">
 
+        {podeProdutos && podeRestaurante && (
+          <div role="tablist" aria-label={tNav("items.estoque")} className="flex gap-1 border-b" style={{ borderColor: "var(--cf-border)" }}>
+            {([
+              { k: "produtos" as const, label: tNav("items.estoque"), Icon: Boxes },
+              { k: "restaurante" as const, label: tNav("items.restaurante"), Icon: ChefHat },
+            ]).map(({ k, label, Icon }) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={visao === k}
+                onClick={() => setVisao(k)}
+                className="flex items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-bold"
+                style={{
+                  cursor: "pointer",
+                  color: visao === k ? "var(--primary)" : "var(--db-text-3)",
+                  borderBottom: `2px solid ${visao === k ? "var(--primary)" : "transparent"}`,
+                  marginBottom: -1,
+                }}
+              >
+                <Icon size={16} /> {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {visao === "restaurante" && podeRestaurante ? (
+          <RestauranteModulo ownerUid={ownerUid} />
+        ) : (
+        <>
+
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -1061,6 +1104,8 @@ export default function EstoquePage() {
 
         </div>
 
+        </>
+        )}
       </main>
 
       {/* ── MODAL 1: PRODUTO (NOVO OU EDITAR) ── */}

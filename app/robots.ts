@@ -17,6 +17,7 @@ const PRIVATE_PATHS = [
   "/vendas",
   "/impostos",
   "/rh",
+  "/restaurante",
   "/relatorios",
   "/configuracoes",
   "/assinatura",
