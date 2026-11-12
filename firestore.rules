@@ -128,9 +128,21 @@ service cloud.firestore {
       // sensível e gravam o log de acesso. O bloco genérico abaixo exclui
       // qualquer coleção "rh<Maiúscula>...".
 
+      // ── Restaurante (restIngredientes, restPratos, restPedidos,
+      // restMovimentos, restLotes, restContadores) — lib/restaurante.
+      // A conta LÊ (quadro da cozinha em tempo real) mas NUNCA escreve pelo
+      // client: baixa de estoque, estorno, nº do pedido e custo passam pelas
+      // rotas /api/restaurante/** (Admin SDK, em transação). A checagem da
+      // permissão "restaurante" e do plano Pro fica no app e nas rotas.
+      match /{restCollection}/{document=**} {
+        allow read: if restCollection.matches('^rest[A-Z].*') && inAccount(userId);
+        allow write: if false;
+      }
+
       // Demais dados do ninho (cashflow, bills, taxes, receivables, ...).
       match /{collection}/{document=**} {
         allow read, write: if !collection.matches('^rh[A-Z].*')
+          && !collection.matches('^rest[A-Z].*')
           && collection != 'profile'
           && collection != 'team'
           && collection != 'billingEvents'

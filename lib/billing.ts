@@ -273,3 +273,8 @@ export function isProAccess(state: Pick<SubscriptionState, "plan" | "comped">): 
 export function canUseRh(state: SubscriptionState, isOwner: boolean): boolean {
   return isProAccess(state) || (isOwner && state.isActive && state.rhEnabled);
 }
+
+/** Módulo Restaurante (pedidos, ficha técnica, estoque de ingredientes): só plano Pro. */
+export function canUseRestaurante(state: Pick<SubscriptionState, "plan" | "comped">): boolean {
+  return isProAccess(state);
+}

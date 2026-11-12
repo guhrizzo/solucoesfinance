@@ -8,7 +8,7 @@ import {
   LayoutDashboard, TrendingUp, FileText, CreditCard, DollarSign,
   BarChart2, Users, Bell, Search, ChevronDown, ChevronLeft, ChevronRight,
   Calendar, Settings, LogOut, Menu, X, HelpCircle, UserCircle, Moon, Sun,
-  Zap, PanelLeft, Landmark, Boxes, ShoppingCart, Briefcase,
+  Zap, PanelLeft, Landmark, Boxes, ShoppingCart, Briefcase, ChefHat,
 } from "lucide-react";
 import { Avatar } from "./ui";
 import { useTheme } from "../hooks/useTheme";
@@ -56,6 +56,7 @@ const navItems: NavItem[] = [
   { key: "estoque", icon: Boxes, href: "/estoque", permKey: "estoque" },
   { key: "vendas", icon: ShoppingCart, href: "/vendas", permKey: "vendas" },
   { key: "rh", icon: Briefcase, href: "/rh", permAny: ["rh", "rh_proprio"] },
+  { key: "restaurante", icon: ChefHat, href: "/restaurante", permKey: "restaurante" },
   { key: "usuarios", icon: Users, href: "/users" },
 ];
 

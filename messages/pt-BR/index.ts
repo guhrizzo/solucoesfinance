@@ -27,6 +27,7 @@ import compras from './compras.json';
 import tour from './tour.json';
 import rh from './rh.json';
 import midas from './midas.json';
+import restaurante from './restaurante.json';
 
 const messages = {
   common,
@@ -55,6 +56,7 @@ const messages = {
   tour,
   rh,
   midas,
+  restaurante,
 };
 
 export default messages;
