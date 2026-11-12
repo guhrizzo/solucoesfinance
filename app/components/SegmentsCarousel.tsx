@@ -131,7 +131,7 @@ export default function SegmentsCarousel() {
           onScroll={measure}
           className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {items.map(({ it, img }, n) => (
+          {items.map(({ it, img, i }, n) => (
             <li
               key={it.title}
               className="seg-reveal seg-card snap-start shrink-0 basis-[85%] sm:basis-[calc((100%-1.5rem)/2)] lg:basis-[calc((100%-3rem)/3)]"
@@ -159,6 +159,29 @@ export default function SegmentsCarousel() {
                       "linear-gradient(to top, rgba(6,16,38,0.92) 0%, rgba(6,16,38,0.6) 38%, rgba(6,16,38,0) 70%)",
                   }}
                 />
+                {i === 1 && (
+                  <div className="absolute inset-x-4 top-4 flex flex-wrap items-center gap-2">
+                    <span
+                      className="inline-flex h-10 items-center justify-center rounded-lg px-3 shadow-lg"
+                      style={{ background: "rgb(255 255 255)" }}
+                    >
+                      <Image
+                        src="/Logotipo_MercadoLivre.png"
+                        alt="Mercado Livre"
+                        width={100}
+                        height={28}
+                        className="h-7 w-[100px] object-contain"
+                      />
+                    </span>
+                    <Image
+                      src="/Shein.svg"
+                      alt="SHEIN"
+                      width={80}
+                      height={40}
+                      className="h-10 w-20 rounded-lg shadow-lg"
+                    />
+                  </div>
+                )}
                 <div className="seg-text absolute inset-x-0 bottom-0 p-5 pr-16" style={{ color: "white" }}>
                   <h3 className="text-lg font-bold mb-2" style={{ color: "white" }}>
                     {it.title}
