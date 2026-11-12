@@ -8,13 +8,20 @@ import { withWebhookLog } from "@/lib/webhookLog";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { asaasConfigured, verifyWebhookToken } from "@/lib/asaas";
 import { applyAsaasPayment, syncAsaasSubscription } from "@/lib/billingApplyAsaas";
+import {
+  activateCardTrialByCheckoutId,
+  activateCardTrialBySubscriptionId,
+  closeAbandonedCardTrialCheckout,
+} from "@/lib/billingCardTrial";
 
 // POST /api/webhooks/asaas
 //
 // Cadastre no painel do Asaas (Integrações → Webhooks) a URL
 //   ${APP_URL}/api/webhooks/asaas
 // com os eventos de COBRANÇA (PAYMENT_CONFIRMED, PAYMENT_RECEIVED) e de
-// ASSINATURA (SUBSCRIPTION_DELETED, SUBSCRIPTION_INACTIVATED), e defina um
+// ASSINATURA (SUBSCRIPTION_CREATED, SUBSCRIPTION_UPDATED, SUBSCRIPTION_DELETED,
+// SUBSCRIPTION_INACTIVATED) e de CHECKOUT (CHECKOUT_PAID, CHECKOUT_CANCELED,
+// CHECKOUT_EXPIRED — teste grátis com cartão), e defina um
 // "token de autenticação" — o mesmo valor vai em ASAAS_WEBHOOK_TOKEN.
 //
 // O corpo NÃO é confiado: o id só serve pra buscar o recurso na API do Asaas
@@ -59,6 +66,32 @@ async function handlePost(request: Request) {
         console.warn(`[Asaas webhook] cobrança ${body?.payment?.id} não aplicada: ${r.reason}`);
       }
       return NextResponse.json({ received: true, ...(r.applied ? {} : { note: r.reason }) });
+    }
+
+    // Teste com cartão: o Asaas Checkout concluiu (cartão validado) e criou a
+    // assinatura com 1ª cobrança em D+7. Os dois eventos convergem na mesma
+    // ativação idempotente, sempre relendo a assinatura na API.
+    if (event === "SUBSCRIPTION_CREATED" || event === "SUBSCRIPTION_UPDATED") {
+      const r = await activateCardTrialBySubscriptionId(db, String(body?.subscription?.id || ""));
+      if (r.handled) {
+        console.log(
+          `[Asaas webhook] teste c/ cartão ${r.ownerUid}: ${"activated" in r && r.activated ? "liberado" : `não liberado (${"reason" in r ? r.reason : "?"})`}`
+        );
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    if (event === "CHECKOUT_PAID") {
+      const r = await activateCardTrialByCheckoutId(db, String(body?.checkout?.id || ""));
+      if (r.handled && "pending" in r) {
+        console.warn(`[Asaas webhook] CHECKOUT_PAID ${body?.checkout?.id}: assinatura ainda não visível na API`);
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    if (event === "CHECKOUT_EXPIRED" || event === "CHECKOUT_CANCELED") {
+      await closeAbandonedCardTrialCheckout(db, String(body?.checkout?.id || ""));
+      return NextResponse.json({ received: true });
     }
 
     if (event === "SUBSCRIPTION_DELETED" || event === "SUBSCRIPTION_INACTIVATED") {

@@ -8,6 +8,10 @@
   "whatsapp": {
     "aria": "Habla con Midas, nuestro asistente",
     "tooltip": "Habla con nosotros",
+    "greetTitle": "Hola, soy Midas 👋",
+    "greetBody": "¿Primera vez por aquí? Te muestro NexusFi en la práctica, en pocos minutos.",
+    "greetCta": "Quiero conocerlo",
+    "greetClose": "Ahora no",
     "prefill": "¡Hola! Vine desde el sitio de NexusFi y me gustaría saber más.",
     "modalTitle": "Midas",
     "modalSubtitle": "Resuelve tu duda aquí o habla con nuestro equipo por WhatsApp.",
@@ -101,6 +105,20 @@
     "kpiDefaultRate": "Morosidad",
     "onTarget": "dentro del objetivo",
     "attention": "atención"
+  },
+  "segments": {
+    "title": "Una solución pensada para tu sector",
+    "carouselLabel": "Sectores atendidos",
+    "pageDot": "Ir al grupo {n} de sectores",
+    "cta": "Empezar prueba gratis — {segment}",
+    "items": [
+      { "title": "Alimentación", "bullets": ["Bares y Pizzerías", "Restaurantes y Cafeterías", "Panaderías y Cafés"], "alt": "Dueño de pizzería sonriendo con una tableta en la mano" },
+      { "title": "Comercio y Retail", "bullets": ["Tiendas de Ropa y Accesorios", "Supermercados y Almacenes", "Ventas en Marketplaces"], "alt": "Comerciante sonriendo con una tableta dentro de su tienda" },
+      { "title": "Servicios y Oficinas", "bullets": ["Contabilidad y Consultoría", "Agencias y Estudios", "Profesionales Independientes"], "alt": "Consultores revisando gráficos en una laptop" },
+      { "title": "Belleza y Bienestar", "bullets": ["Salones y Barberías", "Clínicas de Estética", "Estudios y Gimnasios"], "alt": "Dueña de salón sonriendo con una tableta en la recepción" },
+      { "title": "Industria y Logística", "bullets": ["Pequeñas Industrias", "Transportistas y Distribución", "Construcción"], "alt": "Gerente de almacén con casco sonriendo y sosteniendo una tableta" },
+      { "title": "Talleres y Mantenimiento", "bullets": ["Talleres Mecánicos", "Autopartes", "Asistencia Técnica"], "alt": "Dueño de taller sonriendo mientras mira su celular" }
+    ]
   },
   "integrations": {
     "label": "Nuestras integraciones",

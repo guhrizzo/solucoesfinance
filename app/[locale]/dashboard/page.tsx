@@ -7,7 +7,6 @@ import {
   AlertCircle, ChevronRight, ChevronLeft, Eye, EyeOff, Printer, X, ExternalLink, RefreshCw,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import OnboardingModal, { type OnboardingAnswers } from "@/app/components/OnboardingModal";
 import CreatePasswordGate from "@/app/components/CreatePasswordGate";
 import Navbar from "@/app/components/Navbar";
 import { PageLoader, Sensitive, Modal } from "@/app/components/ui";
@@ -168,7 +167,6 @@ export default function Dashboard() {
   const tCat = useTranslations("categories");
   const toBRL = useCallback((n: number) => formatMoney(n, locale), [locale]);
 
-  const [showOnboarding, setShowOnboarding] = useState(false);
   // Gate bloqueante pra contas que entraram só pelo Google e nunca definiram senha.
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
   const [user, setUser] = useState<{ displayName: string | null; email: string | null; uid: string } | null>(null);
@@ -276,8 +274,9 @@ export default function Dashboard() {
 
           getDoc(doc(db, "users", ownerUid, "profile", "onboarding"))
             .then((snap) => {
+              // Sem questionário de entrada: o Midas cuida da apresentação. Contas
+              // antigas que já responderam seguem alimentando o ramo (cache local).
               const completed = snap.exists() && snap.data()?.completed;
-              setShowOnboarding(!completed && scope.isOwner); // só o dono conclui o onboarding do negócio
               if (completed && typeof window !== "undefined") {
                 localStorage.setItem(`onboarding_ramo_${ownerUid}`, JSON.stringify(snap.data()?.answers?.ramo || []));
               }
@@ -442,42 +441,6 @@ export default function Dashboard() {
         email={user?.email ?? null}
         suggestedName={user?.displayName ?? null}
         onComplete={() => setNeedsPasswordSetup(false)}
-      />
-
-      <OnboardingModal
-        open={showOnboarding && !needsPasswordSetup}
-        onClose={() => setShowOnboarding(false)}
-        onComplete={async (answers: OnboardingAnswers) => {
-          if (!user) return;
-          try {
-            const { getFirebase } = await import("@/lib/firebase");
-            const { doc, setDoc } = await import("firebase/firestore");
-            const { db } = await getFirebase();
-            await setDoc(doc(db, "users", user.uid, "profile", "onboarding"), {
-              completed: true,
-              answers,
-              completedAt: Date.now(),
-            });
-            if (typeof window !== "undefined") {
-              localStorage.setItem(`onboarding_ramo_${user.uid}`, JSON.stringify(answers.ramo || []));
-            }
-            // "Preciso de ajuda de um mentor financeiro" → avisa a equipe no WhatsApp.
-            if (answers.desafio?.includes("Preciso de ajuda de um mentor financeiro")) {
-              const { authedFetch } = await import("@/lib/authedFetch");
-              authedFetch("/api/onboarding/mentor-lead", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  cargo: answers.cargo?.[0],
-                  faturamento: answers.faturamento?.[0],
-                  ramo: answers.ramo?.[0],
-                }),
-              }).catch(() => {});
-            }
-          } catch (err) {
-            console.error("Erro ao salvar onboarding:", err);
-          }
-        }}
       />
 
       <Navbar

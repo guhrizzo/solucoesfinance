@@ -40,6 +40,7 @@
     "fees": "comisiones: {value}"
   },
   "tabs": {
+    "filtersLabel": "Filtrar productos",
     "todos": "Todos",
     "filterML": "Filtrar por Mercado Livre",
     "filterShopee": "Filtrar por Shopee",

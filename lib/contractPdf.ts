@@ -50,6 +50,7 @@ export async function buildContractPdf(c: ContractDoc): Promise<Buffer> {
     planId: c.planId,
     planLabel: c.planLabel,
     priceCents: c.priceCents,
+    trialDays: c.trialDays ?? null,
   });
 
   // ── Cabeçalho ──

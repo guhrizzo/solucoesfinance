@@ -5,6 +5,7 @@
 // já que as telas reais exigem login Firebase.
 
 import { useState, useEffect } from "react";
+import InventoryFilters, { type StockFilter } from "@/app/components/estoque/InventoryFilters";
 import { Plus, Download, Trash2, Inbox, TrendingUp } from "lucide-react";
 import {
   Button, Pill, Card, Modal, Input, MoneyInput, Field,
@@ -37,6 +38,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function DesignSystemPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("todos");
   const [modalOpen, setModalOpen] = useState(false);
   const [money, setMoney] = useState("1.290,00");
 
@@ -60,6 +62,14 @@ export default function DesignSystemPage() {
             Tema: {theme === "dark" ? "escuro" : "claro"}
           </Button>
         </div>
+
+        <section id="stock-filters" className="scroll-mt-6">
+          <Section title="Filtros de estoque">
+            <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <InventoryFilters value={stockFilter} onChange={setStockFilter} visiblePlatforms={["mercadolivre", "tiktokshop", "shein"]} />
+            </div>
+          </Section>
+        </section>
 
         <Section title="Tokens">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

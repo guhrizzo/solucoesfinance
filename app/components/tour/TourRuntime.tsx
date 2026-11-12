@@ -7,24 +7,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useAccountScope } from "@/app/hooks/useAccountScope";
-import { useSubscription } from "@/app/hooks/useSubscription";
 import { getStep, stepForPath, visibleSteps, TOUR_STEP_IDS, type TourAccess } from "@/lib/tour/catalog";
-import { DEFAULT_TOUR_STATE, OPEN_EVENT, neighbor, normalizeTourState, shouldAutoOffer, type TourState } from "@/lib/tour/state";
+import { DEFAULT_TOUR_STATE, OPEN_EVENT, neighbor, normalizeTourState, type TourState } from "@/lib/tour/state";
 import { useSpotRect } from "./TourSpotlight";
-import { CompletionDialog, StepDialog, WelcomeDialog } from "./TourModal";
+import { CompletionDialog, StepDialog } from "./TourModal";
 import { TourHelpMenu } from "./TourHelpMenu";
 
-type View = "closed" | "welcome" | "step" | "completion";
-const SESSION_FLAG = "nexusfi-tour-offered";
+type View = "closed" | "step" | "completion";
 
 export function TourRuntime() {
   const pathname = usePathname();
   const router = useRouter();
   const scope = useAccountScope();
-  const sub = useSubscription();
 
   const [state, setState] = useState<TourState | null>(null);
-  const [setupDone, setSetupDone] = useState(false);
   const [view, setView] = useState<View>("closed");
   const [mode, setMode] = useState<"tour" | "single">("tour");
   const [stepId, setStepId] = useState<string | null>(null);
@@ -58,23 +54,12 @@ export function TourRuntime() {
             () => setState({ ...DEFAULT_TOUR_STATE, status: "completed" }) // sem leitura: nunca interrompe
           )
         );
-        if (scope.isOwner) {
-          unsubs.push(
-            onSnapshot(
-              doc(db, "users", scope.ownerUid, "profile", "onboarding"),
-              (snap) => setSetupDone(snap.exists() && !!snap.data()?.completed),
-              () => setSetupDone(false)
-            )
-          );
-        } else {
-          setSetupDone(true); // membro não responde o questionário do negócio
-        }
       } catch {
         /* Firebase indisponível: o botão de ajuda continua funcionando sem estado */
       }
     })();
     return () => { dead = true; unsubs.forEach((u) => u()); unsubs = []; };
-  }, [ready, scope.uid, scope.ownerUid, scope.isOwner]);
+  }, [ready, scope.uid]);
 
   const persist = useCallback(async (patch: Partial<TourState>) => {
     const uid = uidRef.current;
@@ -89,17 +74,8 @@ export function TourRuntime() {
     }
   }, []);
 
-  /* ── Oferta automática de primeiro acesso ── */
-  useEffect(() => {
-    if (view !== "closed" || !state || !ready || sub.loading) return;
-    const accessActive = !sub.signedOut && sub.isActive;
-    if (!shouldAutoOffer(state, { setupDone, accessActive, now: Date.now() })) return;
-    try {
-      if (sessionStorage.getItem(SESSION_FLAG) === uidRef.current) return;
-      sessionStorage.setItem(SESSION_FLAG, uidRef.current);
-    } catch { /* sem sessionStorage: a regra do Firestore já evita repetir */ }
-    setView("welcome");
-  }, [state, setupDone, ready, sub.loading, sub.signedOut, sub.isActive, view]);
+  /* Sem oferta automática: a apresentação de entrada é do Midas. O tour só abre
+     por ação do usuário (Configurações > Aparência / menu de ajuda). */
 
   /* ── Abertura manual: botão "Conheça a NexusFi" em Configurações > Aparência ── */
   useEffect(() => {
@@ -183,13 +159,6 @@ export function TourRuntime() {
           onPick={(id) => showStep(id, "single")}
           onRestart={() => startTour()}
           onResume={() => startTour(resumeId)}
-        />
-      )}
-
-      {view === "welcome" && (
-        <WelcomeDialog
-          onStart={() => startTour()}
-          onExplore={dismiss}
         />
       )}
 

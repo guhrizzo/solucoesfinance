@@ -22,6 +22,7 @@ import {
 } from "./asaas";
 import { extendPeriod, freshBillingDoc, type BillingDoc } from "./billing";
 import { finalizeContract } from "./contractFinalize";
+import { activateCardTrialByCheckoutId, orderNsuOf } from "./billingCardTrial";
 
 export type ApplyAsaasResult =
   | { applied: true; ownerUid: string; planId: string; currentPeriodEnd: number }
@@ -37,7 +38,9 @@ async function applyLoadedPayment(
   pay: AsaasPayment,
   sub: AsaasSubscription
 ): Promise<ApplyAsaasResult> {
-  const parsed = parseOrderNsu(sub.externalReference);
+  // Assinatura nascida de checkout (teste com cartão) pode não ter externalReference.
+  const orderNsu = await orderNsuOf(db, sub);
+  const parsed = parseOrderNsu(orderNsu);
   if (!parsed) return { applied: false, reason: "externalReference inválido" };
 
   const plan = getPlan(parsed.planId);
@@ -80,7 +83,7 @@ async function applyLoadedPayment(
       paymentMethod: methodOf(sub) ?? (pay.billingType === "BOLETO" ? "BOLETO" : "CREDIT_CARD"),
       currentPeriodEnd: periodEnd,
       lastTransactionNsu: eventKey,
-      lastOrderNsu: sub.externalReference,
+      lastOrderNsu: orderNsu,
       lastPaidAt: now,
       updatedAt: now,
     } satisfies BillingDoc);
@@ -90,7 +93,7 @@ async function applyLoadedPayment(
       paymentId: pay.id,
       subscriptionId: sub.id,
       billingType: pay.billingType,
-      orderNsu: sub.externalReference,
+      orderNsu,
       planId: plan.id,
       amount: amountCents,
       currentPeriodEnd: periodEnd,
@@ -109,7 +112,7 @@ async function applyLoadedPayment(
   if (parsed.contractId) {
     await finalizeContract(db, parsed.ownerUid, parsed.contractId, {
       transactionNsu: eventKey,
-      orderNsu: sub.externalReference,
+      orderNsu,
       paidAt: now,
       periodEnd: currentPeriodEnd,
     }).catch((e) => console.error("finalizeContract falhou:", e));
@@ -139,7 +142,7 @@ export async function syncAsaasSubscription(
   preloaded?: AsaasSubscription
 ): Promise<{ ownerUid: string; contractId: string | null; ended: boolean } | null> {
   const sub = preloaded ?? (await getSubscription(subscriptionId));
-  const parsed = parseOrderNsu(sub.externalReference);
+  const parsed = parseOrderNsu(await orderNsuOf(db, sub));
   if (!parsed) return null;
 
   const ended = sub.deleted || sub.status !== "ACTIVE";
@@ -181,15 +184,48 @@ export async function confirmAsaasFromReturn(
   contractId: string | null;
   applied: boolean;
   currentPeriodEnd: number | null;
+  /** Teste com cartão: activated = cartão validado e teste liberado. */
+  trial?: { activated: boolean; trialEndsAt: number | null; reason?: string };
 }> {
   const snap = await db.doc(`users/${ownerUid}/profile/billing`).get();
   const doc = snap.exists ? (snap.data() as BillingDoc) : null;
+
+  // Teste com cartão ainda não ativado: procura na API a assinatura do checkout.
+  if (doc?.gateway === "asaas" && doc.cardTrial?.checkoutId && !doc.cardTrial.activatedAt) {
+    const r = await activateCardTrialByCheckoutId(db, doc.cardTrial.checkoutId);
+    if (!r.handled || r.ownerUid !== ownerUid) {
+      return { found: false, contractId: null, applied: false, currentPeriodEnd: null };
+    }
+    const activated = "activated" in r && r.activated;
+    return {
+      found: true,
+      contractId: r.contractId,
+      applied: false,
+      currentPeriodEnd: null,
+      trial: {
+        activated,
+        trialEndsAt: activated && "trialEndsAt" in r ? r.trialEndsAt ?? null : null,
+        reason: "reason" in r ? r.reason : undefined,
+      },
+    };
+  }
+  if (doc?.gateway === "asaas" && doc.trialKind === "card" && doc.cardTrial?.activatedAt && !doc.currentPeriodEnd) {
+    // Já ativado (webhook chegou antes): devolve o estado sem tocar no Asaas.
+    return {
+      found: true,
+      contractId: doc.cardTrial.contractId || null,
+      applied: false,
+      currentPeriodEnd: null,
+      trial: { activated: true, trialEndsAt: doc.trialEndsAt },
+    };
+  }
+
   if (!doc?.subscriptionId || doc.gateway !== "asaas") {
     return { found: false, contractId: null, applied: false, currentPeriodEnd: null };
   }
 
   const sub = await getSubscription(doc.subscriptionId);
-  const parsed = parseOrderNsu(sub.externalReference);
+  const parsed = parseOrderNsu(await orderNsuOf(db, sub));
   // Defesa: a assinatura precisa ser desta conta.
   if (!parsed || parsed.ownerUid !== ownerUid) {
     return { found: false, contractId: null, applied: false, currentPeriodEnd: null };

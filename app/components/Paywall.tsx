@@ -12,6 +12,7 @@ import {
   getPlan,
   planFor,
   annualSavingsCents,
+  TRIAL_DAYS,
   type BillingPeriod,
 } from "@/lib/billingPlans";
 import { formatMoneyFromCents, formatDate } from "@/lib/format";
@@ -43,7 +44,10 @@ export default function Paywall({ state, blocking = false, initialError = null }
   const assinar = (planId: string) => {
     setError(null);
     setLoadingPlan(planId);
-    router.push(`/assinatura/contrato?plano=${encodeURIComponent(planId)}`);
+    // Conta do caminho "teste com cartão": o contrato sai com a cláusula do
+    // teste e o checkout só cadastra o cartão (1ª cobrança em 7 dias).
+    const trial = state.cardTrialEligible ? "&trial=cartao" : "";
+    router.push(`/assinatura/contrato?plano=${encodeURIComponent(planId)}${trial}`);
   };
 
   // Cancela a renovação automática no Mercado Pago. O acesso já pago segue até
@@ -74,8 +78,13 @@ export default function Paywall({ state, blocking = false, initialError = null }
     window.location.href = "/login";
   };
 
+  // Teste com cartão já validado: renovação viva, 1ª cobrança no fim do teste.
+  const cardTrialActive = state.inTrial && state.autoRenews;
+
   const titulo = state.comped
     ? t("titleComped")
+    : state.cardTrialEligible
+      ? t("titleCardTrial", { days: TRIAL_DAYS })
     : state.status === "past_due"
       ? blocking
         ? t("titleExpired")
@@ -88,6 +97,10 @@ export default function Paywall({ state, blocking = false, initialError = null }
   const planLabel = planTierId ? tPlans(`tier.${planTierId}.label`) : (state.plan ?? "");
   const subtitulo = state.comped
     ? t("subComped")
+    : state.cardTrialEligible
+      ? t("subCardTrial", { days: TRIAL_DAYS })
+    : cardTrialActive
+      ? t("subCardTrialActive", { date: formatDate(state.accessUntil, locale) })
     : state.status === "past_due"
       ? state.isOwner
         ? t("subExpiredOwner")
@@ -105,7 +118,9 @@ export default function Paywall({ state, blocking = false, initialError = null }
               : t("subActive", { plan: planLabel, date: formatDate(state.accessUntil, locale) });
 
   // Quem cancelou a renovação pode assinar de novo (o acesso já pago é mantido).
-  const mostrarPlanos = state.isOwner && (state.status !== "active" || state.cancelled) && !state.comped;
+  // Em teste com cartão já validado não há o que contratar (a assinatura existe).
+  const mostrarPlanos =
+    state.isOwner && (state.status !== "active" || state.cancelled) && !state.comped && !cardTrialActive;
   const podeCancelar = state.isOwner && state.autoRenews && !state.comped;
 
   return (
@@ -260,7 +275,11 @@ export default function Paywall({ state, blocking = false, initialError = null }
                         ) : (
                           <Check size={15} />
                         )}
-                        {state.status === "past_due" ? t("subscribe") : t("subscribeNow")}
+                        {state.cardTrialEligible
+                          ? t("startCardTrial")
+                          : state.status === "past_due"
+                            ? t("subscribe")
+                            : t("subscribeNow")}
                       </button>
                     </div>
                   );

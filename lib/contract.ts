@@ -39,7 +39,9 @@ export function isTaxRegime(v: unknown): v is TaxRegime {
 // Incremente sempre que o texto de lib/contractText.ts mudar de forma
 // relevante. Fica gravado no ContractDoc e no hash — contratos antigos
 // continuam identificando a versão que a pessoa realmente aceitou.
-export const CONTRACT_VERSION = 2; // v1: pré-pago via InfinitePay; v2: recorrente via Asaas (2026-10-22)
+// v1: pré-pago via InfinitePay; v2: recorrente via Asaas (2026-10-22);
+// v3: cláusula opcional de teste grátis com cartão (2026-11-09).
+export const CONTRACT_VERSION = 3;
 
 // ─── Limites de tamanho dos campos do formulário ─────────────────────────────
 export const CONTRACT_LIMITS = {
@@ -82,6 +84,12 @@ export interface ContractDoc {
 
   contratante: ContractContratante;
   signatario: ContractSignatario;
+
+  /**
+   * Dias de teste grátis com cartão aceitos neste contrato (caminho do Midas).
+   * Ausente/null = contratação comum (cobra já). Entra no hash quando presente.
+   */
+  trialDays?: number | null;
 
   /** SHA-256 hex do payload canônico (ver canonicalContractPayload). */
   hash: string;
@@ -177,6 +185,7 @@ export interface ContractHashInput {
   contratante: ContractContratante;
   signatario: ContractSignatario;
   acceptedAt: number;
+  trialDays?: number | null;
 }
 
 // O hash em si (SHA-256 do JSON canônico) é calculado server-side na rota
@@ -201,6 +210,8 @@ export function canonicalContractPayload(input: ContractHashInput): string {
       email: input.signatario.email,
       nome: input.signatario.nome,
     },
+    // Só entra quando há teste: contratos sem teste mantêm o mesmo hash de antes.
+    ...(input.trialDays ? { trialDays: input.trialDays } : {}),
   };
   return JSON.stringify(ordered);
 }

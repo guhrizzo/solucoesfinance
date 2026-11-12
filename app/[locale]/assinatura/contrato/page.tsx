@@ -9,9 +9,9 @@ import { useRouter } from "@/i18n/navigation";
 import { Loader2, ShieldCheck, FileText, ArrowRight, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useSubscription } from "@/app/hooks/useSubscription";
-import { PageLoader } from "@/app/components/ui";
+import { PageLoader, Select } from "@/app/components/ui";
 import SecurePaymentSeal from "@/app/components/SecurePaymentSeal";
-import { getPlan, formatBRLFromCents } from "@/lib/billingPlans";
+import { getPlan, formatBRLFromCents, TRIAL_DAYS } from "@/lib/billingPlans";
 import { isPlanId, startCheckout, type CheckoutMethod } from "@/lib/startCheckout";
 import {
   TAX_REGIMES,
@@ -50,6 +50,10 @@ function Contrato() {
 
   const plano = params.get("plano");
   const plan = plano && isPlanId(plano) ? getPlan(plano)! : null;
+  // Caminho do teste grátis com cartão (CTA do Midas). Só vale se a conta é
+  // elegível — o servidor confere de novo no contrato e no checkout.
+  const trialRequested = params.get("trial") === "cartao";
+  const trialMode = trialRequested && sub.cardTrialEligible;
 
   // ── Formulário ──
   const [razaoSocial, setRazaoSocial] = useState("");
@@ -154,8 +158,9 @@ function Contrato() {
       planId: plan.id,
       planLabel: plan.label,
       priceCents: plan.priceCents,
+      trialDays: trialMode ? TRIAL_DAYS : null,
     });
-  }, [plan, razaoSocial, cnpj, regime, endereco, nome, cpf, email]);
+  }, [plan, razaoSocial, cnpj, regime, endereco, nome, cpf, email, trialMode]);
 
   const formValido =
     !!plan &&
@@ -187,14 +192,15 @@ function Contrato() {
           nome: nome.trim(),
           cpf,
           email: email.trim().toLowerCase(),
+          ...(trialMode ? { trial: true } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.contractId) {
         throw new Error(data?.error || t("registerFailed"));
       }
-      // Aceito → segue direto pro pagamento seguro.
-      await startCheckout(plan.id, data.contractId, method);
+      // Aceito → segue direto pro pagamento seguro (no teste: cadastro do cartão no Asaas).
+      await startCheckout(plan.id, data.contractId, trialMode ? "card" : method, trialMode);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("processError"));
       setSubmitting(false);
@@ -216,7 +222,7 @@ function Contrato() {
     <div className="min-h-screen px-5 py-10" style={{ background: "var(--db-bg)" }}>
       <div className="mx-auto w-full max-w-5xl">
         <button
-          onClick={() => router.push("/assinatura")}
+          onClick={() => router.push(trialMode ? "/assinatura?trial=cartao" : "/assinatura")}
           className="inline-flex items-center gap-1.5 text-xs font-semibold mb-5 cursor-pointer"
           style={{ color: "var(--db-text-3)" }}
         >
@@ -230,12 +236,21 @@ function Contrato() {
           </h1>
         </div>
         <p className="text-sm mb-6" style={{ color: "var(--db-text-3)" }}>
-          {t.rich("intro", {
+          {t.rich(trialMode ? "introTrial" : "intro", {
             plan: plan.label,
             price: formatBRLFromCents(plan.priceCents),
+            days: TRIAL_DAYS,
             b: (c) => <strong>{c}</strong>,
           })}
         </p>
+        {trialRequested && !trialMode && (
+          <p
+            className="text-xs mb-5 rounded-lg px-3 py-2"
+            style={{ background: "var(--db-sub)", color: "var(--db-text-2)" }}
+          >
+            {t("trialNotEligible")}
+          </p>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-5">
           {/* ── Formulário ── */}
@@ -281,19 +296,13 @@ function Contrato() {
                 </div>
                 <div>
                   <label className={labelCls} style={labelStyle}>{t("taxRegime")}</label>
-                  <select
-                    className={fieldCls}
-                    style={fieldStyle}
+                  <Select<TaxRegime>
                     value={regime}
-                    onChange={(e) => setRegime(e.target.value as TaxRegime | "")}
-                  >
-                    <option value="">{t("selectPlaceholder")}</option>
-                    {TAX_REGIMES.map((r) => (
-                      <option key={r} value={r}>
-                        {REGIME_LABEL[r]}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setRegime}
+                    placeholder={t("selectPlaceholder")}
+                    aria-label={t("taxRegime")}
+                    options={TAX_REGIMES.map((r) => ({ value: r, label: REGIME_LABEL[r] }))}
+                  />
                 </div>
               </div>
 
@@ -355,6 +364,17 @@ function Contrato() {
                 </div>
               </div>
 
+              {trialMode ? (
+                <div
+                  className="rounded-xl px-3.5 py-3 text-xs leading-relaxed"
+                  style={{ background: "var(--db-sub)", border: "1px solid var(--brand-500)", color: "var(--db-text-2)" }}
+                >
+                  <span className="block text-sm font-semibold mb-0.5" style={{ color: "var(--db-text)" }}>
+                    {t("trialCardTitle", { days: TRIAL_DAYS })}
+                  </span>
+                  {t("trialCardNote", { days: TRIAL_DAYS, price: formatBRLFromCents(plan.priceCents) })}
+                </div>
+              ) : (
               <div className="pt-1">
                 <h2 className="text-sm font-bold mb-2" style={{ color: "var(--db-text)" }}>
                   {t("paymentMethod")}
@@ -386,6 +406,7 @@ function Contrato() {
                   })}
                 </div>
               </div>
+              )}
 
               <label
                 className="flex items-start gap-2.5 pt-2 cursor-pointer select-none"
@@ -426,7 +447,7 @@ function Contrato() {
                   </>
                 ) : (
                   <>
-                    {t("submit")} <ArrowRight size={15} />
+                    {t(trialMode ? "submitTrial" : "submit")} <ArrowRight size={15} />
                   </>
                 )}
               </button>

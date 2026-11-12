@@ -24,7 +24,11 @@ export function CtaCard({ sessionId }: { sessionId: string }) {
   const t = useTranslations("midas");
   return (
     <div className="midas-cta">
-      <Link className="midas-cta__btn" href={{ pathname: "/register", query: { lead: sessionId } }}>
+      {/* trial=cartao: o teste de 7 dias só começa depois que o Asaas valida o cartão. */}
+      <Link
+        className="midas-cta__btn"
+        href={{ pathname: "/register", query: { lead: sessionId, trial: "cartao" } }}
+      >
         {t("cta.button")}
         <ArrowRight size={17} aria-hidden="true" />
       </Link>

@@ -15,6 +15,7 @@ import { confirmAsaasFromReturn } from "@/lib/billingApplyAsaas";
 
 // POST /api/billing/confirm
 //   Asaas (recorrente): body { gateway: "asaas" } — a assinatura é a gravada no checkout
+//     (teste com cartão: procura a assinatura criada pelo Asaas Checkout gravado no billing)
 //   Mercado Pago (recorrente, dormente): body { preapproval_id }
 //   InfinitePay (legado, links já emitidos): body { order_nsu, transaction_nsu, slug }
 //
@@ -41,6 +42,20 @@ async function handlePost(request: Request) {
       const r = await confirmAsaasFromReturn(db, scope.ownerUid);
       if (!r.found) {
         return NextResponse.json({ error: "Nenhuma assinatura em andamento nesta conta." }, { status: 400 });
+      }
+      // Teste com cartão: ok = cartão validado e teste liberado (nada cobrado ainda).
+      if (r.trial) {
+        if (r.trial.activated) {
+          return NextResponse.json({ ok: true, trial: true, trialEndsAt: r.trial.trialEndsAt, contractId: r.contractId });
+        }
+        if (r.trial.reason) {
+          return NextResponse.json(
+            { ok: false, trial: true, error: `Não foi possível liberar o teste: ${r.trial.reason}.` },
+            { status: 409 }
+          );
+        }
+        // Cartão ainda em validação no Asaas — o webhook conclui.
+        return NextResponse.json({ ok: false, pending: true, trial: true, contractId: r.contractId });
       }
       if (r.applied) {
         return NextResponse.json({ ok: true, contractId: r.contractId, currentPeriodEnd: r.currentPeriodEnd });

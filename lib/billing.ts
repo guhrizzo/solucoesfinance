@@ -28,6 +28,8 @@ export interface BillingDoc {
    * Marcado pelo servidor quando o dono está em lib/compAccounts.
    */
   comped?: boolean;
+  /** Exceção de RH concedida à titular da conta. */
+  rhEnabled?: boolean;
   /** Gateway da última cobrança. Ausente = legado (InfinitePay, avulso). */
   gateway?: "infinitepay" | "mercadopago" | "asaas";
   /** Id da assinatura recorrente no gateway (Mercado Pago: preapproval; Asaas: subscription). */
@@ -38,6 +40,34 @@ export interface BillingDoc {
   cancelledAt?: number | null;
   /** Meio de pagamento escolhido na assinatura Asaas. */
   paymentMethod?: "BOLETO" | "CREDIT_CARD" | null;
+  /**
+   * Teste grátis condicionado ao cartão (caminho do CTA do Midas):
+   *  - "card_required": conta nova que entrou por esse caminho — SEM teste até
+   *    cadastrar e o Asaas validar o cartão (trialEndsAt fica = criação).
+   *  - "card": cartão validado; trialEndsAt = fim do dia da 1ª cobrança.
+   * Ausente = teste padrão (sem cartão), comportamento antigo.
+   */
+  trialKind?: "card_required" | "card" | null;
+  /** Estado do checkout de cartão do teste (Asaas Checkout). Gravado só pelo servidor. */
+  cardTrial?: CardTrialInfo | null;
+}
+
+export interface CardTrialInfo {
+  checkoutId: string;
+  customerId: string;
+  orderNsu: string;
+  planId: PlanId;
+  contractId: string;
+  /** CNPJ (só dígitos) do contrato — 1 teste por CNPJ. */
+  cnpj: string;
+  /** YYYY-MM-DD da 1ª cobrança pedida ao Asaas. */
+  firstDueDate: string;
+  createdAt: number;
+  /** Quando o cartão foi validado (assinatura criada pelo Asaas). */
+  activatedAt?: number | null;
+  subscriptionId?: string | null;
+  /** Motivo de recusa do teste (ex.: CNPJ já usou o teste). */
+  rejectedReason?: string | null;
 }
 
 export type BillingStatus = "trialing" | "active" | "past_due";
@@ -53,12 +83,43 @@ export interface SubscriptionState {
   inTrial: boolean;
   /** true = conta cortesia (adm supremo): sempre ativa, nunca cobrada. */
   comped: boolean;
+  rhEnabled: boolean;
   /** true = há assinatura recorrente autorizada (o MP cobra o próximo ciclo sozinho). */
   autoRenews: boolean;
   /** true = o cliente cancelou a renovação; o acesso vale só até `accessUntil`. */
   cancelled: boolean;
   /** true = passou do fim do período mas ainda está na carência (cobrança sendo reprocessada). */
   inGrace: boolean;
+  /** true = conta pode (e precisa) ativar o teste grátis cadastrando o cartão. */
+  cardTrialEligible: boolean;
+}
+
+/**
+ * Elegível ao teste com cartão: entrou pelo caminho do cartão, nunca pagou,
+ * nunca ativou esse teste e não tem renovação automática viva.
+ */
+export function isCardTrialEligible(doc: Partial<BillingDoc> | null | undefined): boolean {
+  if (!doc || doc.comped) return false;
+  if (doc.trialKind !== "card_required") return false;
+  if (doc.currentPeriodEnd || doc.lastPaidAt) return false;
+  if (doc.cardTrial?.activatedAt) return false;
+  if (doc.subscriptionStatus === "authorized") return false;
+  return true;
+}
+
+/**
+ * Fim do teste com cartão: fim do dia (Brasília) da 1ª cobrança, limitado a
+ * TRIAL_DAYS+1 dias depois da validação (defesa se a validação chegar tarde
+ * e o nextDueDate já tiver avançado de ciclo).
+ */
+export function cardTrialEndFrom(firstDueDate: string, validatedAtMs: number): number {
+  const cap = validatedAtMs + (TRIAL_DAYS + 1) * 24 * 60 * 60 * 1000;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(firstDueDate || "");
+  if (!m) return trialEndFrom(validatedAtMs);
+  // 23:59:59.999 em Brasília (UTC-3, sem horário de verão desde 2019).
+  const end = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1, 3) - 1;
+  if (!Number.isFinite(end) || end <= validatedAtMs) return trialEndFrom(validatedAtMs);
+  return Math.min(end, cap);
 }
 
 /**
@@ -102,10 +163,16 @@ function calendarDaysBetween(fromMs: number, toMs: number, timeZone = TRIAL_DISP
   return Math.round((toUTC - fromUTC) / (24 * 60 * 60 * 1000));
 }
 
-/** Doc inicial de uma conta dona nova (trial começa agora). */
+/**
+ * Doc inicial de uma conta dona nova. SEM acesso até o cartão ser cadastrado e
+ * validado pelo Asaas (trialKind "card_required", trialEndsAt = agora): os 7
+ * dias grátis só começam depois da validação (ver billingCardTrial). Contas
+ * antigas já têm doc e não são afetadas.
+ */
 export function freshBillingDoc(nowMs = Date.now()): BillingDoc {
   return {
-    trialEndsAt: trialEndFrom(nowMs),
+    trialEndsAt: nowMs,
+    trialKind: "card_required",
     currentPeriodEnd: null,
     plan: null,
     lastTransactionNsu: null,
@@ -138,9 +205,11 @@ export function resolveSubscriptionState(
       plan: (doc?.plan as PlanId) || null,
       inTrial: false,
       comped: true,
+      rhEnabled: doc.rhEnabled === true,
       autoRenews: false,
       cancelled: false,
       inGrace: false,
+      cardTrialEligible: false,
     };
   }
 
@@ -153,7 +222,14 @@ export function resolveSubscriptionState(
   // legada vence exatamente no fim do período.
   const graceMs = autoRenews && currentPeriodEnd ? RENEWAL_GRACE_DAYS * 24 * 60 * 60 * 1000 : 0;
   const paidActive = currentPeriodEnd > 0 && nowMs < currentPeriodEnd + graceMs;
-  const trialActive = nowMs < trialEndsAt;
+  // Teste com cartão validado e renovação viva: a 1ª cobrança (fim do teste)
+  // pode demorar a compensar — mesma carência da renovação, pra não travar
+  // o cliente no dia da cobrança.
+  const trialGraceMs =
+    autoRenews && !currentPeriodEnd && doc?.trialKind === "card"
+      ? RENEWAL_GRACE_DAYS * 24 * 60 * 60 * 1000
+      : 0;
+  const trialActive = nowMs < trialEndsAt + trialGraceMs;
 
   const accessUntil = Math.max(trialEndsAt, currentPeriodEnd);
   const isActive = paidActive || trialActive;
@@ -174,9 +250,11 @@ export function resolveSubscriptionState(
     plan: (doc?.plan as PlanId) || null,
     inTrial,
     comped: false,
+    rhEnabled: doc?.rhEnabled === true,
     autoRenews,
     cancelled,
     inGrace,
+    cardTrialEligible: isCardTrialEligible(doc),
   };
 }
 
@@ -190,4 +268,8 @@ export function isProAccess(state: Pick<SubscriptionState, "plan" | "comped">): 
   if (state.comped) return true;
   if (!state.plan) return false;
   return getPlan(state.plan)?.tier === "pro";
+}
+
+export function canUseRh(state: SubscriptionState, isOwner: boolean): boolean {
+  return isProAccess(state) || (isOwner && state.isActive && state.rhEnabled);
 }

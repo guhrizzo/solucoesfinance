@@ -109,6 +109,10 @@ export interface AsaasSubscription {
   value: number;
   nextDueDate: string | null;
   deleted: boolean;
+  /** Id do cliente no Asaas. */
+  customer: string;
+  /** Id do Asaas Checkout que originou a assinatura (null = criada direto pela API). */
+  checkoutSession: string | null;
   raw: any;
 }
 
@@ -122,6 +126,8 @@ function toSubscription(d: any): AsaasSubscription {
     value: Number(d?.value) || 0,
     nextDueDate: d?.nextDueDate ?? null,
     deleted: !!d?.deleted,
+    customer: String(d?.customer || ""),
+    checkoutSession: d?.checkoutSession ? String(d.checkoutSession) : null,
     raw: d,
   };
 }
@@ -168,6 +174,123 @@ export async function getSubscription(id: string): Promise<AsaasSubscription> {
 /** Cancela a renovação: nenhuma cobrança futura. O acesso já pago segue até o fim do período. */
 export async function cancelSubscription(id: string): Promise<void> {
   await asaasFetch(`/subscriptions/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/** Lista assinaturas (filtros documentados: customer, externalReference, includeDeleted). */
+export async function listSubscriptions(filter: {
+  customer?: string;
+  externalReference?: string;
+}): Promise<AsaasSubscription[]> {
+  const q = new URLSearchParams({ limit: "100", includeDeleted: "true" });
+  if (filter.customer) q.set("customer", filter.customer);
+  if (filter.externalReference) q.set("externalReference", filter.externalReference);
+  const data = await asaasFetch(`/subscriptions?${q.toString()}`);
+  const rows: any[] = Array.isArray(data?.data) ? data.data : [];
+  return rows.map(toSubscription);
+}
+
+/**
+ * Grava o nosso externalReference numa assinatura (POST /v3/subscriptions/{id}).
+ * Usado nas assinaturas nascidas de um Asaas Checkout: a doc não garante que o
+ * externalReference do checkout seja copiado pra assinatura.
+ */
+export async function setSubscriptionExternalReference(id: string, externalReference: string): Promise<void> {
+  await asaasFetch(`/subscriptions/${encodeURIComponent(id)}`, {
+    method: "POST",
+    body: JSON.stringify({ externalReference }),
+  });
+}
+
+// ─── Asaas Checkout (página hospedada) ──────────────────────────────────────
+// POST /v3/checkouts com chargeTypes RECURRENT: o cliente digita o cartão NA
+// PÁGINA DO ASAAS e, ao concluir, o Asaas cria a assinatura (com
+// `checkoutSession` = id do checkout). A 1ª cobrança acontece em
+// `subscription.nextDueDate` — com data futura, nada é cobrado no cadastro.
+// Doc: https://docs.asaas.com/docs/checkout-com-assinatura-recorrente
+//      https://docs.asaas.com/reference/criar-novo-checkout
+
+/**
+ * `items[].imageBase64` é obrigatório no schema do Asaas. PNG 1×1 neutro; troque
+ * por um ícone da marca (ASAAS_CHECKOUT_IMAGE_BASE64) se quiser.
+ */
+const CHECKOUT_FALLBACK_IMAGE =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+
+export interface CreateRecurringCheckoutInput {
+  /** Cliente já criado no Asaas (não mandar junto com customerData). */
+  customerId: string;
+  /** Nome do item (o Asaas limita a 30 caracteres). */
+  itemName: string;
+  itemDescription: string;
+  /** Valor de cada cobrança, em CENTAVOS. */
+  priceCents: number;
+  cycle: AsaasCycle;
+  /** YYYY-MM-DD — vencimento da 1ª cobrança (fim do teste). */
+  nextDueDate: string;
+  externalReference: string;
+  successUrl: string;
+  cancelUrl: string;
+  expiredUrl: string;
+  /** 10..1440 (doc do Asaas). */
+  minutesToExpire: number;
+}
+
+export interface AsaasCheckout {
+  id: string;
+  link: string | null;
+  status: string;
+}
+
+export async function createRecurringCheckout(input: CreateRecurringCheckoutInput): Promise<AsaasCheckout> {
+  const image = (process.env.ASAAS_CHECKOUT_IMAGE_BASE64 || "").trim() || CHECKOUT_FALLBACK_IMAGE;
+  const data = await asaasFetch("/checkouts", {
+    method: "POST",
+    body: JSON.stringify({
+      billingTypes: ["CREDIT_CARD"],
+      chargeTypes: ["RECURRENT"],
+      minutesToExpire: Math.min(1440, Math.max(10, Math.round(input.minutesToExpire))),
+      externalReference: input.externalReference,
+      customer: input.customerId,
+      callback: {
+        successUrl: input.successUrl,
+        cancelUrl: input.cancelUrl,
+        expiredUrl: input.expiredUrl,
+      },
+      items: [
+        {
+          name: input.itemName.slice(0, 30),
+          description: input.itemDescription.slice(0, 150),
+          quantity: 1,
+          value: input.priceCents / 100,
+          imageBase64: image,
+        },
+      ],
+      subscription: {
+        cycle: input.cycle,
+        nextDueDate: input.nextDueDate,
+      },
+    }),
+  });
+  if (!data?.id) {
+    throw new Error(`Asaas criou o checkout mas não devolveu o id: ${JSON.stringify(data).slice(0, 300)}`);
+  }
+  return { id: String(data.id), link: data?.link ? String(data.link) : null, status: String(data?.status || "") };
+}
+
+/**
+ * URL da página do checkout. A resposta da criação traz `link`; se não vier,
+ * monta pelo padrão documentado (`/checkoutSession/show?id=`) no host do ambiente.
+ */
+export function checkoutUrl(c: AsaasCheckout): string {
+  if (c.link) return c.link;
+  const sandbox = baseUrl() === SANDBOX_BASE;
+  const host = sandbox ? "https://sandbox.asaas.com" : "https://asaas.com";
+  return `${host}/checkoutSession/show?id=${encodeURIComponent(c.id)}`;
+}
+
+/** Cancela um checkout ainda não concluído (POST /v3/checkouts/{id}/cancel). */
+export async function cancelCheckout(id: string): Promise<void> {
+  await asaasFetch(`/checkouts/${encodeURIComponent(id)}/cancel`, { method: "POST" });
 }
 
 // ─── Cobranças ──────────────────────────────────────────────────────────────
