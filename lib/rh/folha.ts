@@ -192,6 +192,15 @@ export const TABELA_IRRF_2025 = {
   faixas: TABELAS_SUGERIDAS.irrf.faixas, deducaoDependente: 189.59, descontoSimplificado: 607.2,
 } as const;
 
+/**
+ * Parâmetros definidos em lei/convenção (FGTS, VT 6%, 13º, férias, multa, salário mínimo, periculosidade):
+ * valem sempre os do sistema, sem cadastro. Só horas, HE e adicional noturno ficam por conta da empresa.
+ */
+export const PARAMETROS_LEGAIS = [
+  "pctVT", "aliquotaFgts", "aliquotaFgtsAprendiz", "aliquotaFgtsDomestico", "pctFgtsRescisorioDomestico",
+  "multaFgtsPct", "multaFgtsAcordoPct", "pctTercoFerias", "pct1aParcela13", "salarioMinimo", "pctPericulosidade",
+] as const satisfies readonly (keyof ParametrosFolha)[];
+
 export type CategoriaFgts = "geral" | "aprendiz" | "domestico";
 
 /** Alíquota do FGTS do mês (e o extra do doméstico) conforme a categoria; null = parâmetro faltando. */

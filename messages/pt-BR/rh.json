@@ -643,6 +643,7 @@
         "multaFgtsPct": "Multa do FGTS — sem justa causa (%)",
         "multaFgtsAcordoPct": "Multa do FGTS — acordo entre as partes (%)"
       },
+      "automaticos": "Automáticos pela legislação (sem cadastro)",
       "sugeridos": "Preencher valores sugeridos (campos em branco)"
     },
     "tabelas": {

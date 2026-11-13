@@ -13,7 +13,7 @@
 
 import { createHash } from "node:crypto";
 import {
-  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_SUGERIDOS, PARAMETROS_VAZIOS, RUBRICAS_PADRAO, TABELAS_SUGERIDAS, TABELA_IRRF_2025,
+  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_SUGERIDOS, PARAMETROS_VAZIOS, RUBRICAS_PADRAO, PARAMETROS_LEGAIS, TABELAS_SUGERIDAS, TABELA_IRRF_2025,
   type CategoriaFgts, type LancamentoMes, type ParametrosFolha, type ResultadoFolha, type Rubrica, type TabelaInss, type TabelaIrrf,
 } from "./folha";
 import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vigencia";
@@ -29,6 +29,7 @@ export async function carregarParametros(ctx: RhBase): Promise<ParametrosFolha> 
     const v = x[k];
     out[k] = typeof v === "number" && Number.isFinite(v) ? v : null;
   }
+  for (const k of PARAMETROS_LEGAIS) out[k] = PARAMETROS_SUGERIDOS[k]; // regras legais: automáticas, ignoram valor salvo
   return out;
 }
 

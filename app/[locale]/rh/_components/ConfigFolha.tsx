@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button, Card, Field, Input, Pill } from "@/app/components/ui";
-import { PARAMETROS_SUGERIDOS, TABELAS_SUGERIDAS, TIPOS_RUBRICA } from "@/lib/rh/folha";
+import { PARAMETROS_LEGAIS, PARAMETROS_SUGERIDOS, TABELAS_SUGERIDAS, TIPOS_RUBRICA } from "@/lib/rh/folha";
 import { AcoesLinha, fmtData, hojeISO, rhApi, selectClass, selectStyle, RhModal as Modal } from "./shared";
 
 export interface RubricaUI {
@@ -180,12 +180,15 @@ export function ConfigFolha() {
           <p className="mt-1 text-xs" style={{ color: "var(--text-subtle)" }}>{t("folha.parametros.nota")}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {PARAMS.map((k) => (
+          {PARAMS.filter((k) => !(PARAMETROS_LEGAIS as readonly string[]).includes(k)).map((k) => (
             <Field key={k} label={t(`folha.parametros.campos.${k}`)}>
               <Input inputMode="decimal" value={par[k] ?? ""} onChange={(e) => setPar({ ...par, [k]: e.target.value })} />
             </Field>
           ))}
         </div>
+        <p className="text-xs" style={{ color: "var(--text-subtle)" }}>
+          {t("folha.parametros.automaticos")}: {PARAMETROS_LEGAIS.map((k) => `${t(`folha.parametros.campos.${k}`)} ${PARAMETROS_SUGERIDOS[k]}`).join(" · ")}
+        </p>
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={salvarPar}>{t("form.salvar")}</Button>
           <Button size="sm" variant="secondary" onClick={() => setPar((p) => ({ ...p, ...Object.fromEntries(Object.entries(PARAMETROS_SUGERIDOS).filter(([k]) => !p[k]).map(([k, v]) => [k, String(v)])) }))}>{t("folha.parametros.sugeridos")}</Button>
