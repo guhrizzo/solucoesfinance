@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { RETURN_COOKIE, RETURN_COOKIE_OPTS, parseReturnTo } from "@/lib/oauthReturn";
 import { randomBytes } from "crypto";
 import { mlCredentials, generatePkce, buildAuthUrl } from "@/lib/mercadolivre";
 
@@ -12,6 +13,8 @@ const OAUTH_COOKIE = "ml_oauth";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
+  // Página de volta (lista permitida); o callback lê do cookie.
+  const returnBase = parseReturnTo(searchParams.get("returnTo"));
 
   if (!userId) {
     return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
@@ -41,7 +44,9 @@ export async function GET(request: Request) {
     callbackUrl.searchParams.set("code", "mock_code_ml_123456");
     callbackUrl.searchParams.set("state", userId);
     callbackUrl.searchParams.set("mock", "true");
-    return NextResponse.redirect(callbackUrl.toString());
+    const mockRes = NextResponse.redirect(callbackUrl.toString());
+    mockRes.cookies.set(RETURN_COOKIE, returnBase, RETURN_COOKIE_OPTS);
+    return mockRes;
   }
 
   // Modo real: PKCE obrigatório no OAuth do ML.
@@ -67,5 +72,6 @@ export async function GET(request: Request) {
       maxAge: 600,
     }
   );
+  res.cookies.set(RETURN_COOKIE, returnBase, RETURN_COOKIE_OPTS);
   return res;
 }

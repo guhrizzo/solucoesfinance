@@ -5,19 +5,23 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { User as UserIcon, Palette, MessageSquarePlus, Inbox, BarChart3, MessageCircle } from "lucide-react";
+import { User as UserIcon, Palette, MessageSquarePlus, Inbox, BarChart3, MessageCircle, Plug } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import { PageLoader } from "@/app/components/ui";
 import { useToast } from "@/app/components/useToast";
 import { ToastContainer } from "@/app/components/ToastContainer";
 import { useAccountScope } from "@/app/hooks/useAccountScope";
 import { isSupremeAdminEmail } from "@/lib/compAccounts";
+import { isProAccess } from "@/lib/billing";
+import { useSubscription } from "@/app/hooks/useSubscription";
 import PerfilTab from "./PerfilTab";
 import AparenciaTab from "./AparenciaTab";
 import FeedbackTab from "./FeedbackTab";
 import FeedbackAdminTab from "./FeedbackAdminTab";
 import AnalyticsAdminTab from "./AnalyticsAdminTab";
 import WhatsAppTab from "./WhatsAppTab";
+import IntegracoesTab from "./IntegracoesTab";
+import AdminConectarCliente from "./AdminConectarCliente";
 
 interface AuthUser {
   uid: string;
@@ -25,7 +29,7 @@ interface AuthUser {
   displayName: string | null;
 }
 
-type TabId = "perfil" | "aparencia" | "whatsapp" | "feedback" | "feedbackAdmin" | "analytics";
+type TabId = "perfil" | "aparencia" | "whatsapp" | "integracoes" | "feedback" | "feedbackAdmin" | "analytics";
 
 const BASE_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "perfil", icon: UserIcon },
@@ -33,6 +37,9 @@ const BASE_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "whatsapp", icon: MessageCircle },
   { id: "feedback", icon: MessageSquarePlus },
 ];
+
+// Integrações: só o dono da conta (membros nunca veem). Quem não é Pro vê o aviso de plano no cartão do banco.
+const INTEGRACOES_TAB: { id: TabId; icon: React.ElementType } = { id: "integracoes", icon: Plug };
 
 const ADMIN_TABS: { id: TabId; icon: React.ElementType }[] = [
   { id: "feedbackAdmin", icon: Inbox },
@@ -49,10 +56,28 @@ export default function ConfiguracoesPage() {
   const { toasts, show: showToast, remove: removeToast } = useToast();
 
   const isAdmin = isSupremeAdminEmail(user?.email ?? null);
-  const tabs = useMemo(
-    () => (isAdmin ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS),
-    [isAdmin]
-  );
+  const sub = useSubscription();
+  const isPro = isProAccess(sub);
+  // Só aparece depois que o escopo carregou e confirmou que é o dono.
+  const showIntegracoes = !scope.loading && scope.isOwner && !!scope.ownerUid && !sub.loading;
+  const tabs = useMemo(() => {
+    const base = showIntegracoes ? [...BASE_TABS, INTEGRACOES_TAB] : BASE_TABS;
+    return isAdmin ? [...base, ...ADMIN_TABS] : base;
+  }, [isAdmin, showIntegracoes]);
+
+  // Retorno do OAuth (?integration=...): abre a aba Integrações uma única vez, quando ela
+  // estiver disponível. Os parâmetros da URL e o toast ficam com IntegracoesTab (hook no mount).
+  const [returnHandled, setReturnHandled] = useState(false);
+  useEffect(() => {
+    if (returnHandled || !showIntegracoes) return;
+    setReturnHandled(true);
+    if (new URLSearchParams(window.location.search).has("integration")) setTab("integracoes");
+  }, [returnHandled, showIntegracoes]);
+
+  // Aba some (ex.: escopo mudou): volta para o Perfil.
+  useEffect(() => {
+    if (tab === "integracoes" && !showIntegracoes) setTab("perfil");
+  }, [tab, showIntegracoes]);
 
   const activePath = "/configuracoes";
 
@@ -137,6 +162,12 @@ export default function ConfiguracoesPage() {
           )}
           {tab === "aparencia" && <AparenciaTab showToast={showToast} />}
           {tab === "whatsapp" && <WhatsAppTab showToast={showToast} defaultName={user.displayName ?? ""} />}
+          {tab === "integracoes" && showIntegracoes && (
+            <IntegracoesTab ownerUid={scope.ownerUid} isPro={isPro} isAdmin={isAdmin}
+              showToast={showToast}
+              adminSlot={isAdmin ? <AdminConectarCliente showToast={showToast} /> : undefined}
+            />
+          )}
           {tab === "feedback" && <FeedbackTab showToast={showToast} />}
           {tab === "feedbackAdmin" && isAdmin && <FeedbackAdminTab showToast={showToast} />}
           {tab === "analytics" && isAdmin && <AnalyticsAdminTab />}

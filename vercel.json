@@ -13,6 +13,10 @@
       "schedule": "20 9 * * *"
     },
     {
+      "path": "/api/cron/inter-sync",
+      "schedule": "30 9 * * *"
+    },
+    {
       "path": "/api/cron/demo-leads-cleanup",
       "schedule": "30 9 * * *"
     }

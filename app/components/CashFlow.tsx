@@ -25,6 +25,8 @@ import { stampCreate, stampUpdate, stampSettle, type Actor } from "@/lib/audit";
 import { CASHFLOW_CATEGORIES, CUSTOM_CATEGORY, isCustomCategory, categoryLabel } from "@/lib/cashflowCategories";
 import { formatMoney } from "@/lib/format";
 import { authedFetch } from "@/lib/authedFetch";
+import { closedMonthsFrom, shouldReopenOnDelete } from "@/lib/interConciliar";
+import InterConciliar from "./InterConciliar";
 import "./cashflow.css";
 
 // ─── Verificação de PIN compartilhada pelos modais desta tela ────────────────
@@ -109,6 +111,10 @@ interface Tx {
   sourceReceivableId?: string;
   /** Id do imposto do qual esta saída é o espelho (gravado por `syncTaxCashflow`, lib/billTaxSync.ts). */
   sourceTaxId?: string;
+  /** Marcado em Relatórios ("Fechamento de Caixa por Período"); mês todo marcado = mês fechado. */
+  reconciled?: boolean;
+  /** txKey da transação do extrato Banco Inter conciliada com este lançamento (ver InterConciliar). */
+  interTxId?: string;
 }
 
 interface CostCenterOption {
@@ -1814,17 +1820,52 @@ export default function CashFlowPage() {
       await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
       await checkCenterBudget();
     } else {
-      // Lançamento novo sem centro selecionado — tenta dar baixa automática
-      // numa despesa pendente correspondente por descrição+valor (comportamento
-      // anterior, mantido como fallback pra quem não usa o seletor de centro).
-      if (data.type === "saida") {
-        const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
-        if (matchedId) clean.sourceExpenseId = matchedId;
-      }
-      // Saída → Contas a Pagar/Impostos; entrada → Contas a Receber.
-      await settleBillOrTax(db, { type: data.type, description: data.description, amount: data.amount, date: data.date }, actor, clean);
+      await settleNewEntry(db, data, actor, clean);
       await addDoc(collection(db, "users", uid, "cashflow"), { ...clean, ...stampCreate(actor) });
     }
+  }
+
+  /**
+   * Baixas automáticas de um lançamento NOVO sem centro de custo — grava os
+   * vínculos em `clean`. Compartilhado pelo formulário (handleSave) e pela
+   * fila "A conciliar" do Banco Inter (createInterEntry), pra que criar pela
+   * fila se comporte igual a digitar o lançamento à mão.
+   */
+  async function settleNewEntry(
+    db: import("firebase/firestore").Firestore,
+    data: { type: TxType; description: string; amount: number; date: string },
+    actor: Actor,
+    clean: Record<string, unknown>
+  ) {
+    if (!uid) return;
+    // Tenta dar baixa automática numa despesa pendente correspondente por
+    // descrição+valor (comportamento anterior, mantido como fallback pra quem
+    // não usa o seletor de centro).
+    if (data.type === "saida") {
+      const matchedId = await autoSettleMatchingCostCenterExpense(db, uid, { description: data.description, amount: data.amount });
+      if (matchedId) clean.sourceExpenseId = matchedId;
+    }
+    // Saída → Contas a Pagar/Impostos; entrada → Contas a Receber.
+    await settleBillOrTax(db, { type: data.type, description: data.description, amount: data.amount, date: data.date }, actor, clean);
+  }
+
+  /**
+   * Criação de lançamento pela fila "A conciliar": mesmo caminho do formulário
+   * (baixa automática + SettlePickModal + carimbo de autoria). A gravação do
+   * doc fica com `commit`, que a fila usa pra criar o lançamento e virar o
+   * item para "conciliado" numa única transação. O PIN já foi validado na fila.
+   */
+  async function createInterEntry(
+    data: Omit<Tx, "id">,
+    commit: (db: import("firebase/firestore").Firestore, entry: Record<string, unknown>) => Promise<void>
+  ) {
+    if (!uid) throw new Error(t("notAuthenticated"));
+    const { getFirebase } = await import("@/lib/firebase");
+    const { db } = await getFirebase();
+    const actor = { uid: authUid ?? uid, name: userName };
+    const clean: Record<string, unknown> = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+    await settleNewEntry(db, data, actor, clean);
+    await commit(db, { ...clean, ...stampCreate(actor) });
   }
 
   async function handleImport(importedTxs: ImportedTx[]) {
@@ -1874,15 +1915,38 @@ export default function CashFlowPage() {
     if (!confirmId || !uid || deleting) return;
     setDeleting(true);
     try {
-      const [{ getFirebase }, { doc, deleteDoc }] = await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
+      const [{ getFirebase }, { doc, deleteDoc, collection, query, where, getDocs, runTransaction, deleteField }] =
+        await Promise.all([import("@/lib/firebase"), import("firebase/firestore")]);
       const { db } = await getFirebase();
+      const tx = txs.find(t => t.id === confirmId);
+      // Lançamento conciliado com uma transação do Banco Inter: acha o item da
+      // fila ANTES de excluir (pelo campo txKey — o id do doc pode ser
+      // "x:<hash>"), para a transação do banco não sumir junto.
+      const filaRefs = tx?.interTxId
+        ? (await getDocs(query(collection(db, "users", uid, "interPendentes"), where("txKey", "==", tx.interTxId)))).docs.map(d => d.ref)
+        : [];
       // Se essa saída tinha lançado uma despesa automaticamente num centro de
       // custo, remove a despesa junto — ela não existia antes desse pagamento.
-      const tx = txs.find(t => t.id === confirmId);
       if (tx?.expenseAutoCreated && tx.sourceExpenseId) {
         await deleteDoc(doc(db, "expenses", tx.sourceExpenseId)).catch(() => {});
       }
-      await deleteDoc(doc(db, "users", uid, "cashflow", confirmId));
+      const cfRef = doc(db, "users", uid, "cashflow", confirmId);
+      if (filaRefs.length === 0) {
+        await deleteDoc(cfRef);
+      } else {
+        // Mesma transação: exclui o lançamento e devolve o item a "A conciliar"
+        // (só se ele está conciliado com ESTE lançamento).
+        const deletedId = confirmId;
+        await runTransaction(db, async (tr) => {
+          const snaps = await Promise.all(filaRefs.map(r => tr.get(r)));
+          for (const s of snaps) {
+            if (s.exists() && shouldReopenOnDelete(s.data(), deletedId)) {
+              tr.update(s.ref, { status: "pendente", cashflowId: deleteField(), resolvedAt: deleteField(), resolvedBy: deleteField() });
+            }
+          }
+          tr.delete(cfRef);
+        });
+      }
       setConfirmId(null);
     } catch (e: any) { alert("Erro ao deletar: " + e.message); }
     finally { setDeleting(false); }
@@ -1895,6 +1959,10 @@ export default function CashFlowPage() {
     () => txs.filter(t => (t.date ?? "").slice(0, 7) === monthKey),
     [txs, monthKey]
   );
+
+  // Meses fechados (todos os lançamentos conciliados em Relatórios) — a fila
+  // do Banco Inter não cria nem vincula lançamento neles.
+  const closedMonths = useMemo(() => closedMonthsFrom(txs), [txs]);
 
   const entradas = useMemo(() => monthTxs.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0), [monthTxs]);
   const saidas = useMemo(() => monthTxs.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0), [monthTxs]);
@@ -2464,6 +2532,12 @@ export default function CashFlowPage() {
               {t("subtitle", { period: periodLabel })}
             </p>
           </div>
+          <div className="flex items-center gap-2">
+          {/* Fila "A conciliar" do Banco Inter — o próprio componente decide se
+              aparece (Pro + conexão ativa ou itens pendentes). */}
+          {uid && (
+            <InterConciliar ownerUid={uid} authUid={authUid} actorName={userName} txs={txs} closedMonths={closedMonths} createEntry={createInterEntry} />
+          )}
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={() => setHideValues(!hideValues)}
               className="p-2 hover:bg-opacity-50 rounded-xl transition-colors cursor-pointer"
@@ -2472,6 +2546,7 @@ export default function CashFlowPage() {
             </button>
             <Button variant="primary" size="sm" icon={Sparkles} onClick={() => setImportOpen(true)}>{t("importStatement")}</Button>
             <Button variant="success" size="sm" icon={Plus} onClick={() => { setEditing(null); setModal(true); }}>{t("newTransaction")}</Button>
+          </div>
           </div>
         </div>
 
