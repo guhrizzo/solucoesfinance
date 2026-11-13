@@ -13,7 +13,7 @@
 
 import { createHash } from "node:crypto";
 import {
-  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_SUGERIDOS, PARAMETROS_VAZIOS, RUBRICAS_PADRAO, TABELAS_SUGERIDAS,
+  calcularFolhaColab, LANCAMENTO_VAZIO, PARAMETROS_SUGERIDOS, PARAMETROS_VAZIOS, RUBRICAS_PADRAO, TABELAS_SUGERIDAS, TABELA_IRRF_2025,
   type CategoriaFgts, type LancamentoMes, type ParametrosFolha, type ResultadoFolha, type Rubrica, type TabelaInss, type TabelaIrrf,
 } from "./folha";
 import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vigencia";
@@ -57,9 +57,18 @@ export async function garantirPadroesFolha(ctx: RhBase): Promise<void> {
     batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_inss"), { tipo: "inss", inicio: t.inicio, fim: null, faixas: t.faixas, obs: "Valores sugeridos — conferir com o contador", createdAt: Date.now() });
     mudou = true;
   }
+  const obsSug = "Valores sugeridos — conferir com o contador";
+  const t26 = TABELAS_SUGERIDAS.irrf;
+  const grava2026 = () => batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_irrf_2026"), { tipo: "irrf", inicio: t26.inicio, fim: null, faixas: t26.faixas, deducaoDependente: t26.deducaoDependente, descontoSimplificado: t26.descontoSimplificado, redutor: t26.redutor, obs: `${obsSug} (inclui redutor da Lei 15.270/2025)`, createdAt: Date.now() });
   if (tIrrf.length === 0) {
-    const t = TABELAS_SUGERIDAS.irrf;
-    batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_irrf"), { tipo: "irrf", inicio: t.inicio, fim: null, faixas: t.faixas, deducaoDependente: t.deducaoDependente, descontoSimplificado: t.descontoSimplificado, obs: "Valores sugeridos — conferir com o contador", createdAt: Date.now() });
+    const t = TABELA_IRRF_2025;
+    batch.set(rhCol(ctx, "rhTabelasLegais").doc("padrao_irrf"), { tipo: "irrf", inicio: t.inicio, fim: t.fim, faixas: t.faixas, deducaoDependente: t.deducaoDependente, descontoSimplificado: t.descontoSimplificado, obs: obsSug, createdAt: Date.now() });
+    grava2026();
+    mudou = true;
+  } else if (tIrrf.length === 1 && tIrrf[0].id === "padrao_irrf" && tIrrf[0].fim === null && tIrrf[0].inicio < t26.inicio && !(tIrrf[0].dados as TabelaIrrf).redutor) {
+    // Conta existente com só a tabela sugerida antiga: encerra em 2025 e abre a de 2026 (com redutor).
+    batch.update(rhCol(ctx, "rhTabelasLegais").doc("padrao_irrf"), { fim: TABELA_IRRF_2025.fim });
+    grava2026();
     mudou = true;
   }
   if (mudou) await batch.commit();
@@ -81,7 +90,7 @@ export async function carregarTabelas(ctx: RhBase, tipo: "inss" | "irrf"): Promi
       const x = d.data();
       const dados = tipo === "inss"
         ? ({ faixas: x.faixas } as TabelaInss)
-        : ({ faixas: x.faixas, deducaoDependente: Number(x.deducaoDependente) || 0, descontoSimplificado: Number(x.descontoSimplificado) || 0 } as TabelaIrrf);
+        : ({ faixas: x.faixas, deducaoDependente: Number(x.deducaoDependente) || 0, descontoSimplificado: Number(x.descontoSimplificado) || 0, ...(x.redutor ? { redutor: x.redutor } : {}) } as TabelaIrrf);
       return { id: d.id, inicio: String(x.inicio), fim: (x.fim as string | null) ?? null, dados, obs: String(x.obs ?? "") };
     })
     .sort((a, b) => b.inicio.localeCompare(a.inicio));

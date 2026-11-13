@@ -26,6 +26,12 @@ export interface TabelaIrrf {
   deducaoDependente: number;
   /** 0 = não usa. Se > 0, calcula também com ele e fica com o imposto menor. */
   descontoSimplificado: number;
+  /**
+   * Redutor da Lei 15.270/2025 (vigente desde 2026-01). Opcional.
+   * Rendimento ≤ `isencaoAte`: o imposto é zerado.
+   * Rendimento ≤ `limite`: redutor = `a` − `b` × rendimento (nunca acima do imposto).
+   */
+  redutor?: { isencaoAte: number; limite: number; a: number; b: number };
 }
 
 export function validarTabelaInss(t: unknown): string | null {
@@ -55,6 +61,10 @@ export function validarTabelaIrrf(t: unknown): string | null {
   }
   if (!Number.isFinite(x.deducaoDependente) || x.deducaoDependente < 0) return "Dedução por dependente inválida.";
   if (!Number.isFinite(x.descontoSimplificado) || x.descontoSimplificado < 0) return "Desconto simplificado inválido.";
+  if (x.redutor) {
+    const r = x.redutor;
+    if (![r.isencaoAte, r.limite, r.a, r.b].every((v) => Number.isFinite(v) && v >= 0) || r.limite < r.isencaoAte) return "Redutor de IRRF inválido.";
+  }
   return null;
 }
 
@@ -77,16 +87,26 @@ function impostoDaTabela(t: TabelaIrrf, base: number): number {
   return Math.max(0, r2((base * f.aliquota) / 100 - f.deduzir));
 }
 
+/** Aplica o redutor mensal (rendimento tributável bruto) sobre o imposto já calculado pela tabela. */
+function reduzir(t: TabelaIrrf, rendimento: number, imposto: number): number {
+  const r = t.redutor;
+  if (!r || !(imposto > 0)) return imposto;
+  if (rendimento <= r.isencaoAte) return 0;
+  if (rendimento > r.limite) return imposto;
+  const redutor = Math.max(0, r2(r.a - r.b * rendimento + 1e-9)); // (1e-9 evita 46,604999… virar 46,60) o redutor é arredondado ao centavo antes de abater
+  return Math.max(0, r2(imposto - redutor));
+}
+
 export function calcularIrrf(
   t: TabelaIrrf,
   baseBruta: number,
   o: { inss: number; dependentes: number },
 ): { imposto: number; base: number; metodo: "legal" | "simplificado" } {
   const baseLegal = Math.max(0, r2(baseBruta - o.inss - o.dependentes * t.deducaoDependente));
-  const legal = impostoDaTabela(t, baseLegal);
+  const legal = reduzir(t, baseBruta, impostoDaTabela(t, baseLegal));
   if (t.descontoSimplificado > 0) {
     const baseSimp = Math.max(0, r2(baseBruta - t.descontoSimplificado));
-    const simp = impostoDaTabela(t, baseSimp);
+    const simp = reduzir(t, baseBruta, impostoDaTabela(t, baseSimp));
     if (simp < legal) return { imposto: simp, base: baseSimp, metodo: "simplificado" };
   }
   return { imposto: legal, base: baseLegal, metodo: "legal" };
@@ -157,11 +177,19 @@ export const PARAMETROS_SUGERIDOS: { [K in keyof ParametrosFolha]: number } = {
 /** Tabelas sugeridas. As parcelas a deduzir do IRRF seguem a tabela mensal oficial: conferir com o contador. */
 export const TABELAS_SUGERIDAS = {
   inss: { inicio: "2026-01-01", faixas: [{ ate: 1621, aliquota: 7.5 }, { ate: 2902.84, aliquota: 9 }, { ate: 4354.27, aliquota: 12 }, { ate: 8475.55, aliquota: 14 }] },
+  // 2026+: mesma tabela mensal + redutor da Lei 15.270/2025 (isento até 5.000; redutor 978,62 − 0,133145 × rendimento até 7.350).
   irrf: {
-    inicio: "2025-05-01",
+    inicio: "2026-01-01",
     faixas: [{ ate: 2428.8, aliquota: 0, deduzir: 0 }, { ate: 2826.65, aliquota: 7.5, deduzir: 182.16 }, { ate: 3751.05, aliquota: 15, deduzir: 394.16 }, { ate: 4664.68, aliquota: 22.5, deduzir: 675.49 }, { ate: null, aliquota: 27.5, deduzir: 908.73 }],
     deducaoDependente: 189.59, descontoSimplificado: 607.2,
+    redutor: { isencaoAte: 5000, limite: 7350, a: 978.62, b: 0.133145 },
   },
+} as const;
+
+/** Tabela de IRRF de maio a dezembro de 2025 (sem redutor). */
+export const TABELA_IRRF_2025 = {
+  inicio: "2025-05-01", fim: "2025-12-31",
+  faixas: TABELAS_SUGERIDAS.irrf.faixas, deducaoDependente: 189.59, descontoSimplificado: 607.2,
 } as const;
 
 export type CategoriaFgts = "geral" | "aprendiz" | "domestico";

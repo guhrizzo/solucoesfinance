@@ -210,3 +210,16 @@ test("demonstrativo de IRPF soma folhas e eventos fechados só do ano pedido", a
   assert.equal(d.totais.inss, 750);
   assert.equal(d.totais.irrf, 120);
 });
+
+test("IRRF 2026: redutor da Lei 15.270/2025 (isento até 5.000, redutor até 7.350)", async () => {
+  const { calcularIrrf, calcularInss, TABELAS_SUGERIDAS } = await import("../../lib/rh/folha.ts");
+  const t = { ...TABELAS_SUGERIDAS.irrf, faixas: [...TABELAS_SUGERIDAS.irrf.faixas], redutor: { ...TABELAS_SUGERIDAS.irrf.redutor } };
+  const inss = calcularInss(TABELAS_SUGERIDAS.inss, 7000);
+  assert.equal(inss, 781.51);
+  // 27,5% x (7000 - 781,51) - 908,73 = 801,35; redutor 978,62 - 0,133145 x 7000 = 46,61 -> 754,74
+  assert.equal(calcularIrrf(t, 7000, { inss, dependentes: 0 }).imposto, 754.74);
+  // isento até 5.000 de rendimento
+  assert.equal(calcularIrrf(t, 5000, { inss: calcularInss(TABELAS_SUGERIDAS.inss, 5000), dependentes: 0 }).imposto, 0);
+  // acima de 7.350: sem redutor
+  assert.equal(calcularIrrf(t, 8000, { inss: 800, dependentes: 0 }).imposto, calcularIrrf({ ...t, redutor: undefined }, 8000, { inss: 800, dependentes: 0 }).imposto);
+});
