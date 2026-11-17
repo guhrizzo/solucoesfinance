@@ -18,16 +18,19 @@ export function monthOf(dateISO: string): string | null {
 }
 
 /**
- * Pode executar a ação nesta data? Mês fechado bloqueia `criar` e `vincular`
- * (o item continua pendente até reabrir o mês); `ignorar` e `desfazer` só
- * mexem na fila e são sempre permitidos. Data inválida também bloqueia
- * criar/vincular — melhor não gravar no caixa do que gravar no mês errado.
+ * Pode executar a ação nesta data? `ignorar` e `desfazer` só mexem na fila e são
+ * sempre permitidos. Data inválida bloqueia criar/vincular — melhor não gravar no
+ * caixa do que gravar no mês errado.
+ *
+ * Mês "fechado" (todos os lançamentos conciliados, ver closedMonthsFrom) NÃO
+ * bloqueia mais: não existe fechamento manual, o estado é só derivado, e o
+ * lançamento criado pela fila entra não conciliado, reabrindo o mês sozinho. Com o
+ * bloqueio, qualquer movimento novo do banco num mês em dia ficava travado.
+ * `closedMonths` segue na assinatura só por compatibilidade com os chamadores.
  */
-export function canResolve(action: ConciliarAction, dateISO: string, closedMonths: Set<string>): boolean {
+export function canResolve(action: ConciliarAction, dateISO: string, _closedMonths?: Set<string>): boolean {
   if (action === "ignorar" || action === "desfazer") return true;
-  const mes = monthOf(dateISO);
-  if (!mes) return false;
-  return !closedMonths.has(mes);
+  return monthOf(dateISO) !== null;
 }
 
 /**

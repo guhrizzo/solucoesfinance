@@ -9,10 +9,10 @@ const item = (o) => ({
 });
 const ent = (o) => ({ id: "c1", type: "saida", amount: 150.5, date: "2026-10-10", description: "x", ...o });
 
-test("canResolve bloqueia criar e vincular em mês fechado", () => {
+test("canResolve NÃO bloqueia criar/vincular em mês 'fechado' (fechado = só estar tudo conciliado; o lançamento novo reabre o mês)", () => {
   const fechados = new Set(["2026-10"]);
-  assert.equal(canResolve("criar", "2026-10-10", fechados), false);
-  assert.equal(canResolve("vincular", "2026-10-31", fechados), false);
+  assert.equal(canResolve("criar", "2026-10-10", fechados), true);
+  assert.equal(canResolve("vincular", "2026-10-31", fechados), true);
   assert.equal(canResolve("criar", "2026-11-01", fechados), true);
   assert.equal(canResolve("vincular", "2026-09-30", fechados), true);
 });

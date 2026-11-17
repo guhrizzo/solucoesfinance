@@ -87,6 +87,9 @@ const CONC_PAGE = 100;
 
 type View = "pendentes" | "ignorados" | "conciliados";
 
+// No tema escuro o verde --pos é bem claro e o texto branco do botão perdia contraste.
+const SUCCESS_ESCURO = "!bg-[color-mix(in_srgb,var(--pos)_62%,black)]";
+
 export default function InterConciliar({ ownerUid, authUid, actorName, txs, closedMonths, createEntry }: {
   ownerUid: string;
   authUid: string | null;
@@ -579,7 +582,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
             </div>
             <div className="flex flex-wrap gap-2">
               {view === "pendentes" && confirmaveis.length > 0 && (
-                <Button variant="success" size="sm" icon={Check} onClick={confirmAll} loading={busy === "__batch"} disabled={working}>
+                <Button variant="success" size="sm" icon={Check} className={SUCCESS_ESCURO} onClick={confirmAll} loading={busy === "__batch"} disabled={working}>
                   {t("confirmAll", { count: confirmaveis.length })}
                 </Button>
               )}
@@ -643,7 +646,7 @@ export default function InterConciliar({ ownerUid, authUid, actorName, txs, clos
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-2.5">
-                          <Button variant="success" size="sm" icon={Check} disabled={!plan || working} loading={rowBusy}
+                          <Button variant="success" size="sm" icon={Check} className={SUCCESS_ESCURO} disabled={!plan || working} loading={rowBusy}
                             title={problem === "closed" ? t("closedMonth") : undefined}
                             onClick={() => plan && runPlan(item, plan)}>{t("confirm")}</Button>
                           <Button variant="secondary" size="sm" icon={Link2} disabled={working}

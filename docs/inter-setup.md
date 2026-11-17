@@ -107,7 +107,7 @@ Estão marcadas como `ASSUNÇÃO` em `lib/inter.ts`:
 ## 8. Regras de negócio
 
 - **Janela**: primeira sincronização busca os últimos **30 dias**; depois, desde `lastSyncAt` menos **3 dias** (sobreposição; a idempotência evita duplicar itens).
-- **Mês fechado**: um mês é fechado quando **todos** os seus lançamentos estão conciliados (mesma regra do Fechamento de Caixa por Mês). **Só a fila "A conciliar" aplica** isso: criar/vincular em mês fechado é bloqueado ali; o restante do app não muda de comportamento.
+- **Mês fechado**: a fila **não bloqueia mais** criar/vincular em mês "fechado" (todos os lançamentos conciliados). Não há fechamento manual, o estado é derivado, e o lançamento criado pela fila entra não conciliado e reabre o mês sozinho (mudança de 2026-11-16, após o teste com conta real). Só data inválida bloqueia criar/vincular.
 - Ações da fila: criar, vincular, ignorar, desfazer.
 
 ## 9. Limitações conhecidas
