@@ -23,6 +23,8 @@ export type EmitirInput = {
 export type CobrancaInter = {
   codigoSolicitacao: string;
   situacao: BoletoSituacao;
+  /** Nosso identificador (id do boleto), quando o Inter o repete na resposta. */
+  seuNumero?: string;
   linhaDigitavel?: string;
   codigoBarras?: string;
   nossoNumero?: string;
@@ -61,23 +63,66 @@ const SITUACOES: ReadonlySet<string> = new Set<BoletoSituacao>([
 
 // ---------- transporte real (mTLS) ----------
 
-/** Mensagem em português por status HTTP, sem vazar o corpo da resposta. */
-function erroHttp(status: number): Error {
-  if (status === 400 || status === 401) return new Error("Credenciais do Banco Inter inválidas (Client ID/Secret). Reconecte o Banco Inter.");
-  if (status === 403) return new Error("A aplicação do Banco Inter está sem o escopo de cobrança (boleto-cobranca). Ative-o no Internet Banking e reconecte.");
-  if (status === 404) return new Error("Cobrança não encontrada no Banco Inter.");
-  if (status === 429) return new Error("Limite de requisições do Banco Inter atingido. Aguarde um minuto e tente novamente.");
-  if (status >= 500) return new Error("O Banco Inter está indisponível no momento. Tente novamente mais tarde.");
-  return new Error(`O Banco Inter recusou a solicitação de cobrança (HTTP ${status}).`);
+/** Erro HTTP do Inter: mensagem em português (sem o corpo) + o status, para o chamador distinguir recusa de falha. */
+export class InterHttpError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "InterHttpError";
+    this.status = status;
+  }
 }
 
-/** Transporte real: abre o agente mTLS, pega o token do escopo, faz a chamada e destrói o agente. */
-export function transporteMtls(secrets: InterSecrets): Transporte {
+/** Mensagem em português por status HTTP, sem vazar o corpo da resposta. */
+function erroHttp(status: number): InterHttpError {
+  const e = (m: string) => new InterHttpError(m, status);
+  // 400 na chamada de cobrança é dado recusado (o 400/401 do token é tratado em getToken).
+  if (status === 400) return e("O Banco Inter recusou os dados da cobrança (HTTP 400). Confira documento, endereço e valores.");
+  if (status === 401) return e("Credenciais do Banco Inter inválidas (Client ID/Secret). Reconecte o Banco Inter.");
+  if (status === 403) return e("A aplicação do Banco Inter está sem o escopo de cobrança (boleto-cobranca). Ative-o no Internet Banking e reconecte.");
+  if (status === 404) return e("Cobrança não encontrada no Banco Inter.");
+  if (status === 429) return e("Limite de requisições do Banco Inter atingido. Aguarde um minuto e tente novamente.");
+  if (status >= 500) return e("O Banco Inter está indisponível no momento. Tente novamente mais tarde.");
+  return e(`O Banco Inter recusou a solicitação de cobrança (HTTP ${status}).`);
+}
+
+type Agente = { destroy(): void };
+
+/** Primitivas de rede (injetáveis só nos testes; padrão = lib/inter.ts). */
+export type RedeInter = {
+  makeAgent: (s: InterSecrets) => Agente;
+  getToken: (agent: Agente, s: InterSecrets, scope: string) => Promise<string>;
+  request: (agent: Agente, method: string, path: string, headers: Record<string, string>, body?: string) => Promise<{ status: number; body: string }>;
+};
+
+const REDE_REAL = { makeAgent, getToken, request } as unknown as RedeInter;
+
+/**
+ * Transporte real: por chamada abre o agente mTLS, faz a chamada e destrói o agente.
+ * O token fica guardado POR ESCOPO durante a vida desta instância (o Inter limita a
+ * emissão de tokens a 5/min): consultas/emissões em lote reaproveitam o mesmo.
+ * Um 401 na chamada renova o token uma única vez e repete (sem laço).
+ */
+export function transporteMtls(secrets: InterSecrets, rede: RedeInter = REDE_REAL): Transporte {
+  const tokens = new Map<string, Promise<string>>();
+  const tokenDe = (agent: Agente, scope: string, renovar: boolean): Promise<string> => {
+    if (renovar) tokens.delete(scope);
+    let p = tokens.get(scope);
+    if (!p) {
+      const novo = rede.getToken(agent, secrets, scope);
+      p = novo;
+      tokens.set(scope, novo);
+      // Falha não fica em cache: a próxima chamada tenta de novo.
+      novo.catch(() => {
+        if (tokens.get(scope) === novo) tokens.delete(scope);
+      });
+    }
+    return p;
+  };
   return async ({ method, path, scope, body }) => {
-    const agent = makeAgent(secrets);
+    const agent = rede.makeAgent(secrets);
     try {
-      const token = await getToken(agent, secrets, scope);
-      const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+      const headers: Record<string, string> = { Accept: "application/json" };
       // ASSUNÇÃO (não verificado no sandbox): x-conta-corrente só dígitos, sem zeros à esquerda (igual ao extrato).
       const conta = str(secrets.conta).replace(/\D/g, "").replace(/^0+/, "");
       if (conta) headers["x-conta-corrente"] = conta;
@@ -86,12 +131,18 @@ export function transporteMtls(secrets: InterSecrets): Transporte {
         headers["Content-Type"] = "application/json";
         payload = JSON.stringify(body);
       }
-      let r;
-      try {
-        r = await request(agent, method, path, headers, payload);
-      } catch (e) {
-        throw mapNetworkError(e);
+      let r: { status: number; body: string } | undefined;
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        const token = await tokenDe(agent, scope, tentativa > 0);
+        try {
+          r = await rede.request(agent, method, path, { ...headers, Authorization: `Bearer ${token}` }, payload);
+        } catch (e) {
+          throw mapNetworkError(e);
+        }
+        // 401 = token recusado: a chamada não foi processada, repetir com token novo é seguro.
+        if (r.status !== 401) break;
       }
+      if (!r) throw new Error("Falha ao consultar o Banco Inter.");
       let json: unknown = null;
       if (r.body) {
         try {
@@ -126,13 +177,15 @@ function valorOpcional(v: unknown): number | undefined {
     const t = v.trim();
     n = Number(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t);
   }
-  if (!Number.isFinite(n)) throw new Error("O Banco Inter devolveu um valor ilegível na cobrança.");
-  return Math.abs(n);
+  if (!Number.isFinite(n) || n < 0) throw new Error("O Banco Inter devolveu um valor ilegível na cobrança.");
+  return n;
 }
 
 /** Corpo do POST /cobrancas. */
 export function buildEmitBody(i: EmitirInput): Record<string, unknown> {
   const doc = i.pagador.doc.replace(/\D/g, "");
+  if (doc.length !== 11 && doc.length !== 14) throw new Error("Documento do pagador inválido: informe CPF (11 dígitos) ou CNPJ (14 dígitos).");
+  if (!Number.isFinite(i.valorNominal) || i.valorNominal <= 0) throw new Error("O valor do boleto precisa ser maior que zero.");
   const tel = (i.pagador.telefone ?? "").replace(/\D/g, "");
   // ASSUNÇÃO (não verificado no sandbox): ddd = 2 primeiros dígitos e telefone = restante (sem DDI 55).
   const semDdi = tel.length > 11 && tel.startsWith("55") ? tel.slice(2) : tel;
@@ -142,7 +195,7 @@ export function buildEmitBody(i: EmitirInput): Record<string, unknown> {
   const pagador: Record<string, unknown> = {
     cnpjCpf: doc,
     nome: i.pagador.nome,
-    tipoPessoa: doc.length > 11 ? "JURIDICA" : "FISICA",
+    tipoPessoa: doc.length === 14 ? "JURIDICA" : "FISICA",
     cep: e.cep,
     endereco: e.logradouro,
     numero: e.numero,
@@ -202,6 +255,8 @@ export function parseCobranca(raw: unknown): CobrancaInter {
     codigoSolicitacao: str(achar(objs, "codigoSolicitacao")),
     situacao: situacao as BoletoSituacao,
   };
+  const seu = str(achar(objs, "seuNumero"));
+  if (seu) out.seuNumero = seu;
   // ASSUNÇÃO (não verificado no sandbox): nomes dos campos abaixo.
   const linha = str(achar(objs, "linhaDigitavel"));
   if (linha) out.linhaDigitavel = linha;
@@ -224,18 +279,46 @@ export function parseCobranca(raw: unknown): CobrancaInter {
 
 // ---------- operações ----------
 
+const MSG_NAO_CORRESPONDE = "O Banco Inter devolveu uma cobrança que não corresponde à solicitada.";
+
 export async function emitirCobranca(t: Transporte, i: EmitirInput): Promise<{ codigoSolicitacao: string }> {
   const json = await chamar(t, { method: "POST", path: `${BASE}/cobrancas`, scope: SCOPE_WRITE, body: buildEmitBody(i) });
   const codigo = isRec(json) ? str(json.codigoSolicitacao) : "";
   if (!codigo) throw new Error("Resposta inesperada do Banco Inter ao emitir a cobrança.");
+  // O POST devolve só o código; se o Inter repetir o seuNumero, tem de ser o nosso.
+  const seu = isRec(json) ? str(json.seuNumero) : "";
+  if (seu && seu !== i.seuNumero) throw new Error(MSG_NAO_CORRESPONDE);
   return { codigoSolicitacao: codigo };
 }
 
 export async function consultarCobranca(t: Transporte, codigo: string): Promise<CobrancaInter> {
   const json = await chamar(t, { method: "GET", path: `${BASE}/cobrancas/${encodeURIComponent(codigo)}`, scope: SCOPE_READ });
   const c = parseCobranca(json);
+  if (c.codigoSolicitacao && c.codigoSolicitacao !== codigo) throw new Error(MSG_NAO_CORRESPONDE);
   // A consulta é pelo código: usa-o quando a resposta não o repete.
   return c.codigoSolicitacao ? c : { ...c, codigoSolicitacao: codigo };
+}
+
+/**
+ * Procura a cobrança pelo nosso seuNumero na listagem (recupera um boleto cujo
+ * codigoSolicitacao não chegou a ser gravado). null = não encontrada; mais de
+ * uma com o mesmo seuNumero lança (nunca escolhe por palpite).
+ * ASSUNÇÃO (não verificado no sandbox): GET /cobrancas com dataInicial/dataFinal
+ * obrigatórios, filtrarDataPor=EMISSAO e filtro seuNumero; resposta { cobrancas: [...] }
+ * com cada item no mesmo formato da consulta individual.
+ */
+export async function buscarPorSeuNumero(
+  t: Transporte,
+  seuNumero: string,
+  dataInicial: string,
+  dataFinal: string,
+): Promise<CobrancaInter | null> {
+  const q = new URLSearchParams({ dataInicial, dataFinal, filtrarDataPor: "EMISSAO", seuNumero, itensPorPagina: "10", paginaAtual: "0" });
+  const json = await chamar(t, { method: "GET", path: `${BASE}/cobrancas?${q}`, scope: SCOPE_READ });
+  const lista = isRec(json) && Array.isArray(json.cobrancas) ? json.cobrancas : [];
+  const achadas = lista.map((x) => parseCobranca(x)).filter((c) => c.seuNumero === seuNumero && c.codigoSolicitacao);
+  if (achadas.length > 1) throw new Error("O Banco Inter tem mais de uma cobrança com o mesmo identificador. Confira no Internet Banking.");
+  return achadas[0] ?? null;
 }
 
 export async function cancelarCobranca(t: Transporte, codigo: string, motivo: string): Promise<void> {
@@ -252,7 +335,11 @@ export async function pdfCobranca(t: Transporte, codigo: string): Promise<Buffer
   const json = await chamar(t, { method: "GET", path: `${BASE}/cobrancas/${encodeURIComponent(codigo)}/pdf`, scope: SCOPE_READ });
   const b64 = isRec(json) ? str(json.pdf) : "";
   if (!b64) throw new Error("Resposta inesperada do Banco Inter ao baixar o PDF.");
-  return Buffer.from(b64, "base64");
+  const buf = Buffer.from(b64, "base64");
+  if (buf.length === 0 || buf.subarray(0, 4).toString("latin1") !== "%PDF") {
+    throw new Error("O Banco Inter devolveu um arquivo que não é um PDF válido.");
+  }
+  return buf;
 }
 
 export async function registrarWebhook(t: Transporte, url: string): Promise<void> {

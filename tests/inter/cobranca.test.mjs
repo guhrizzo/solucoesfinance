@@ -9,6 +9,8 @@ import {
   cancelarCobranca,
   pdfCobranca,
   registrarWebhook,
+  buscarPorSeuNumero,
+  transporteMtls,
 } from "../../lib/interCobranca";
 
 const endereco = { cep: "01310100", logradouro: "Av. Paulista", numero: "1000", bairro: "Bela Vista", cidade: "São Paulo", uf: "SP" };
@@ -164,4 +166,156 @@ test("buildEmitBody: CNPJ é JURIDICA; multa 2 e mora 1 entram", () => {
 test("buildEmitBody: valor com 2 casas (arredonda centavos)", () => {
   assert.equal(buildEmitBody({ ...input, valorNominal: 10.005 }).valorNominal, 10.01);
   assert.equal(buildEmitBody({ ...input, valorNominal: 0.1 + 0.2 }).valorNominal, 0.3);
+});
+
+// ---------- endurecimento (revisão da Task 2) ----------
+
+test("erro HTTP 400 na cobrança fala de dados, não de credenciais", async () => {
+  const { t } = fake(400, { message: "SEGREDO" });
+  await assert.rejects(
+    () => emitirCobranca(t, input),
+    (e) => /recusou os dados da cobran[cç]a \(HTTP 400\)/i.test(e.message) && !/credenciais|reconecte/i.test(e.message) && e.status === 400,
+  );
+});
+
+test("erro HTTP leva o status (para o chamador distinguir recusa de falha ambígua)", async () => {
+  const { t } = fake(429, {});
+  await assert.rejects(() => emitirCobranca(t, input), (e) => e.status === 429);
+});
+
+test("buildEmitBody: documento com 11 dígitos = FISICA, 14 = JURIDICA, outro tamanho lança", () => {
+  assert.equal(buildEmitBody(input).pagador.tipoPessoa, "FISICA");
+  assert.equal(buildEmitBody({ ...input, pagador: { ...input.pagador, doc: "12345678000195" } }).pagador.tipoPessoa, "JURIDICA");
+  for (const doc of ["1234567890", "123456789012", "", "1234567800019"]) {
+    assert.throws(() => buildEmitBody({ ...input, pagador: { ...input.pagador, doc } }), /CPF|CNPJ/);
+  }
+});
+
+test("buildEmitBody: valor NaN, zero ou negativo lança", () => {
+  for (const v of [NaN, 0, -5, Infinity]) {
+    assert.throws(() => buildEmitBody({ ...input, valorNominal: v }), /valor/i);
+  }
+});
+
+test("parseCobranca: valorTotalRecebido negativo lança (sem Math.abs)", () => {
+  assert.throws(() => parseCobranca({ situacao: "RECEBIDO", valorTotalRecebido: "-150.50" }), /valor/i);
+  assert.throws(() => parseCobranca({ situacao: "RECEBIDO", valorTotalRecebido: -1 }), /valor/i);
+});
+
+test("parseCobranca: lê seuNumero quando vem", () => {
+  const c = parseCobranca({ cobranca: { situacao: "A_RECEBER", codigoSolicitacao: "u", seuNumero: "abc123" } });
+  assert.equal(c.seuNumero, "abc123");
+});
+
+test("consultarCobranca: código diferente do pedido lança", async () => {
+  const { t } = fake(200, { cobranca: { situacao: "A_RECEBER", codigoSolicitacao: "outro" } });
+  await assert.rejects(() => consultarCobranca(t, "uuid-1"), /diferente|n[aã]o corresponde/i);
+});
+
+test("emitirCobranca: seuNumero devolvido diferente do enviado lança", async () => {
+  const { t } = fake(200, { codigoSolicitacao: "uuid-1", seuNumero: "outro" });
+  await assert.rejects(() => emitirCobranca(t, input), /diferente|n[aã]o corresponde/i);
+});
+
+test("pdfCobranca: conteúdo que não é PDF ou vazio lança", async () => {
+  for (const pdf of [Buffer.from("<html>erro</html>").toString("base64"), "AAAA", "===="]) {
+    const { t } = fake(200, { pdf });
+    await assert.rejects(() => pdfCobranca(t, "uuid-1"), /PDF/);
+  }
+});
+
+test("buscarPorSeuNumero: lista por seuNumero e devolve a cobrança que casa", async () => {
+  const { t, calls } = fake(200, {
+    totalPaginas: 1,
+    cobrancas: [
+      { cobranca: { codigoSolicitacao: "c9", seuNumero: "abc123", situacao: "A_RECEBER" }, boleto: { linhaDigitavel: "999" } },
+    ],
+  });
+  const c = await buscarPorSeuNumero(t, "abc123", "2026-11-01", "2026-11-17");
+  assert.equal(calls[0].method, "GET");
+  assert.equal(calls[0].scope, "boleto-cobranca.read");
+  assert.match(calls[0].path, /^\/cobranca\/v3\/cobrancas\?/);
+  assert.match(calls[0].path, /seuNumero=abc123/);
+  assert.match(calls[0].path, /dataInicial=2026-11-01/);
+  assert.equal(c.codigoSolicitacao, "c9");
+  assert.equal(c.linhaDigitavel, "999");
+});
+
+test("buscarPorSeuNumero: nada encontrado = null; dois iguais lança", async () => {
+  assert.equal(await buscarPorSeuNumero(fake(200, { cobrancas: [] }).t, "abc", "2026-11-01", "2026-11-17"), null);
+  const dois = { cobrancas: [1, 2].map((n) => ({ cobranca: { codigoSolicitacao: `c${n}`, seuNumero: "abc", situacao: "A_RECEBER" } })) };
+  await assert.rejects(() => buscarPorSeuNumero(fake(200, dois).t, "abc", "2026-11-01", "2026-11-17"), /mais de uma/i);
+});
+
+// ---------- transporte mTLS: cache do token por escopo ----------
+
+function redeFalsa(respostas) {
+  const log = { tokens: [], requests: [], agents: 0, destroyed: 0 };
+  let n = 0;
+  const net = {
+    makeAgent: () => {
+      log.agents++;
+      return { destroy: () => log.destroyed++ };
+    },
+    getToken: async (_agent, _s, scope) => {
+      log.tokens.push(scope);
+      return `tok-${log.tokens.length}`;
+    },
+    request: async (_agent, method, path, headers) => {
+      log.requests.push({ method, path, auth: headers.Authorization });
+      const r = respostas[n++] ?? { status: 200, body: "{}" };
+      return r;
+    },
+  };
+  return { net, log };
+}
+
+const SECRETS = { clientId: "id", clientSecret: "sec", certPem: "c", keyPem: "k", conta: "00123" };
+
+test("transporteMtls: reaproveita o token do mesmo escopo; escopo novo pede outro", async () => {
+  const { net, log } = redeFalsa([]);
+  const t = transporteMtls(SECRETS, net);
+  await t({ method: "GET", path: "/a", scope: "boleto-cobranca.read" });
+  await t({ method: "GET", path: "/b", scope: "boleto-cobranca.read" });
+  await t({ method: "POST", path: "/c", scope: "boleto-cobranca.write", body: {} });
+  assert.deepEqual(log.tokens, ["boleto-cobranca.read", "boleto-cobranca.write"]);
+  assert.equal(log.requests[1].auth, "Bearer tok-1");
+  assert.equal(log.destroyed, log.agents);
+});
+
+test("transporteMtls: 401 na chamada renova o token UMA vez e repete", async () => {
+  const { net, log } = redeFalsa([{ status: 401, body: "" }, { status: 200, body: '{"ok":1}' }]);
+  const t = transporteMtls(SECRETS, net);
+  const r = await t({ method: "GET", path: "/a", scope: "boleto-cobranca.read" });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json, { ok: 1 });
+  assert.equal(log.tokens.length, 2);
+  assert.deepEqual(log.requests.map((x) => x.auth), ["Bearer tok-1", "Bearer tok-2"]);
+});
+
+test("transporteMtls: 401 de novo após renovar devolve 401 (sem laço)", async () => {
+  const { net, log } = redeFalsa([{ status: 401, body: "" }, { status: 401, body: "" }, { status: 200, body: "{}" }]);
+  const t = transporteMtls(SECRETS, net);
+  const r = await t({ method: "GET", path: "/a", scope: "boleto-cobranca.read" });
+  assert.equal(r.status, 401);
+  assert.equal(log.requests.length, 2);
+  assert.equal(log.tokens.length, 2);
+});
+
+test("transporteMtls: falha ao obter token não fica em cache", async () => {
+  const { net, log } = redeFalsa([]);
+  let falhar = true;
+  const getToken = net.getToken;
+  net.getToken = async (...a) => {
+    if (falhar) {
+      falhar = false;
+      log.tokens.push("falhou");
+      throw new Error("Credenciais do Banco Inter inválidas");
+    }
+    return getToken(...a);
+  };
+  const t = transporteMtls(SECRETS, net);
+  await assert.rejects(() => t({ method: "GET", path: "/a", scope: "boleto-cobranca.read" }), /Credenciais/);
+  const r = await t({ method: "GET", path: "/a", scope: "boleto-cobranca.read" });
+  assert.equal(r.status, 200);
 });
