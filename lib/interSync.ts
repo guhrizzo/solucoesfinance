@@ -12,7 +12,7 @@
 
 import { createHash } from "node:crypto";
 import type { Firestore } from "firebase-admin/firestore";
-import { fetchExtrato, type InterTx } from "./inter";
+import { fetchExtrato, InterConfigError, type InterTx } from "./inter";
 import { decryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "./interCrypto";
 import { candidatoUnico } from "./interBoletoExtrato";
 import { suggestAll, type CashEntryLite, type Suggestion } from "./interMatch";
@@ -192,6 +192,8 @@ export async function syncOwner(
     try {
       txs = await fetcher(secrets, from, to);
     } catch (e) {
+      // INTER_API_HOST inválido: configuração do servidor (500), não falha do Inter nem credencial.
+      if (e instanceof InterConfigError) throw new InterSyncError(MSG_CONFIG, "config");
       throw new InterSyncError(mensagemSegura(e), "falha");
     }
 

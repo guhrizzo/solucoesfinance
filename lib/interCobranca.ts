@@ -1,13 +1,13 @@
 // Banco Inter: cliente da API Cobrança V3 (boleto com Pix) via mTLS.
 // Conferido na documentação oficial: emissão é ASSÍNCRONA (POST /cobrancas devolve só
-// { codigoSolicitacao }; a situação vem depois por consulta/webhook). Host cdpj.partners.bancointer.com.br,
-// prefixo /cobranca/v3, escopos boleto-cobranca.write / boleto-cobranca.read.
+// { codigoSolicitacao }; a situação vem depois por consulta/webhook). Host: interApiHost() em lib/inter.ts
+// (produção por padrão; sandbox via INTER_API_HOST), prefixo /cobranca/v3, escopos boleto-cobranca.write / boleto-cobranca.read.
 // A FORMA EXATA da resposta de consulta (campos aninhados em cobranca/boleto/pix) NÃO foi verificada
 // no sandbox: todo mapeamento incerto está marcado com "ASSUNÇÃO (não verificado no sandbox)".
 import type { InterSecrets } from "./interCrypto";
 import type { BoletoSituacao } from "./interBoletoTypes";
 import type { PagadorEndereco } from "./pagadorEndereco";
-import { getToken, makeAgent, mapNetworkError, request } from "./inter";
+import { getToken, InterConfigError, makeAgent, mapNetworkError, request } from "./inter";
 
 export type EmitirInput = {
   seuNumero: string;
@@ -153,12 +153,15 @@ export function transporteMtls(secrets: InterSecrets, rede: RedeInter = REDE_REA
         try {
           token = await tokenDe(agent, scope, tentativa > 0);
         } catch (e) {
+          // Host inválido (INTER_API_HOST) é configuração do servidor, não rede: passa intacto.
+          if (e instanceof InterConfigError) throw e;
           // getToken já devolve mensagens nossas (credencial, escopo, rede).
           throw new InterRedeError(msgDe(e), "token");
         }
         try {
           r = await rede.request(agent, method, path, { ...headers, Authorization: `Bearer ${token}` }, payload);
         } catch (e) {
+          if (e instanceof InterConfigError) throw e;
           throw new InterRedeError(mapNetworkError(e).message, "chamada");
         }
         // 401 = token recusado: a chamada não foi processada, repetir com token novo é seguro.

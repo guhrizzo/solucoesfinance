@@ -6,6 +6,7 @@
 import https from "node:https";
 import { createHash, X509Certificate } from "node:crypto";
 import type { InterSecrets } from "./interCrypto";
+import { SERVER_CONFIG_ERROR } from "./interErrors";
 
 export type InterTx = {
   txKey: string;
@@ -16,7 +17,34 @@ export type InterTx = {
   counterparty?: string;
 };
 
-const HOST = "cdpj.partners.bancointer.com.br";
+/** Hosts aceitos em INTER_API_HOST: produção (padrão) e o sandbox do Inter. Nada além disso. */
+export const INTER_HOST_PRODUCAO = "cdpj.partners.bancointer.com.br";
+export const INTER_HOST_SANDBOX = "cdpj-sandbox.partners.uatinter.co";
+const HOSTS_PERMITIDOS: ReadonlySet<string> = new Set([INTER_HOST_PRODUCAO, INTER_HOST_SANDBOX]);
+
+/**
+ * Configuração do servidor inválida (hoje: INTER_API_HOST fora da lista). A mensagem é
+ * SEMPRE a genérica de configuração (nunca o valor configurado) e o erro não passa por
+ * mapNetworkError/mapStatus: não pode parecer problema de credencial nem de rede.
+ */
+export class InterConfigError extends Error {
+  constructor() {
+    super(SERVER_CONFIG_ERROR);
+    this.name = "InterConfigError";
+  }
+}
+
+/**
+ * Host da API do Inter, lido a cada chamada (os testes trocam a env). Vazio/ausente =
+ * produção; o sandbox só quando configurado de propósito; qualquer outro valor lança
+ * InterConfigError (nunca cai em silêncio na produção).
+ */
+export function interApiHost(): string {
+  const v = (process.env.INTER_API_HOST ?? "").trim();
+  if (!v) return INTER_HOST_PRODUCAO;
+  if (HOSTS_PERMITIDOS.has(v)) return v;
+  throw new InterConfigError();
+}
 const MAX_DAYS = 90;
 // ASSUNÇÃO (não verificado contra conta real): tamanhoPagina=1000 é aceito pela API.
 const PAGE_SIZE = 1000;
@@ -149,8 +177,9 @@ export type Resp = { status: number; body: string };
 
 export function request(agent: https.Agent, method: string, path: string, headers: Record<string, string>, body?: string): Promise<Resp> {
   return new Promise((resolve, reject) => {
+    const host = interApiHost(); // host inválido rejeita ANTES de abrir qualquer conexão
     const req = https.request(
-      { host: HOST, port: 443, method, path, agent, headers: body ? { ...headers, "Content-Length": String(Buffer.byteLength(body)) } : headers, timeout: 20000 },
+      { host, port: 443, method, path, agent, headers: body ? { ...headers, "Content-Length": String(Buffer.byteLength(body)) } : headers, timeout: 20000 },
       (res) => {
         const chunks: Buffer[] = [];
         res.on("data", (c) => chunks.push(c));
@@ -166,6 +195,7 @@ export function request(agent: https.Agent, method: string, path: string, header
 
 /** Erros de rede/TLS → mensagem em português, sem vazar certificado, chave ou segredo. */
 export function mapNetworkError(e: unknown): Error {
+  if (e instanceof InterConfigError) return e;
   const code = isRec(e) ? str(e.code) : "";
   const msg = e instanceof Error ? e.message : "";
   if (/timeout|ETIMEDOUT|ECONN|ENOTFOUND|EAI_AGAIN/i.test(code + " " + msg)) {

@@ -14,7 +14,7 @@
 import { X509Certificate, createPrivateKey } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import type { Firestore } from "firebase-admin/firestore";
-import { certExpiresAt, interTestConnection } from "./inter";
+import { certExpiresAt, InterConfigError, interTestConnection } from "./inter";
 import { decryptInterSecrets, encryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "./interCrypto";
 import { maskConta, validateConexaoBody, type ConexaoInput } from "./interConexao";
 import { errCode, interKeyConfigured, SERVER_CONFIG_ERROR } from "./interErrors";
@@ -310,6 +310,8 @@ export async function testInter(
   try {
     await tester(secrets);
   } catch (e) {
+    // INTER_API_HOST inválido: problema do servidor, não das credenciais da conta (nada vai para o status).
+    if (e instanceof InterConfigError) return fail(SERVER_CONFIG_ERROR, 500);
     const error = safeMessage(e);
     await statusRef.set({ lastSyncError: error }, { merge: true }).catch((err) => {
       console.error("[inter/testar] falha ao gravar status:", errCode(err));

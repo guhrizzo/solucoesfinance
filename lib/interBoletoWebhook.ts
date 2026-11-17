@@ -27,7 +27,7 @@ import type { Actor } from "./audit";
 import type { BoletoDoc } from "./interBoletoTypes";
 import { aplicarTudo, erroGeral, transporteDe } from "./interBoletoServer";
 import { consultarCobranca, registrarWebhook, transporteMtls, type Transporte } from "./interCobranca";
-import { getToken, makeAgent } from "./inter";
+import { getToken, interApiHost, makeAgent } from "./inter";
 import { decryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "./interCrypto";
 import { writeAuditoria } from "./interAdminTarget";
 import { errCode, SERVER_CONFIG_ERROR } from "./interErrors";
@@ -281,6 +281,12 @@ export async function ativarBoletos(
         return falhar(500, SERVER_CONFIG_ERROR);
       }
       if (typeof data.conta === "string" && data.conta) secrets.conta = data.conta;
+      // INTER_API_HOST inválido: erro de configuração (500), nunca "sem escopo" nem falha do Inter.
+      try {
+        interApiHost();
+      } catch {
+        return falhar(500, SERVER_CONFIG_ERROR);
+      }
       testar ??= testadorReal(secrets);
       transporte ??= transporteMtls(secrets);
     }

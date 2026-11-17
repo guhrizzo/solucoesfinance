@@ -37,6 +37,7 @@ import {
   type Transporte,
 } from "./interCobranca";
 import { decryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "./interCrypto";
+import { interApiHost, InterConfigError } from "./inter";
 import { MAX_FINE_RATE, MAX_INTEREST_RATE } from "./receivableCharge";
 import { todayKey } from "./rh/datas";
 import { validarEndereco } from "./pagadorEndereco";
@@ -113,6 +114,12 @@ export async function transporteDe(db: Firestore, ownerUid: string, deps: Boleto
     throw new BoletoError(MSG_CONFIG, "config");
   }
   if (typeof conexao.conta === "string" && conexao.conta) secrets.conta = conexao.conta;
+  // INTER_API_HOST inválido: recusa aqui, antes de qualquer gravação ou chamada.
+  try {
+    interApiHost();
+  } catch {
+    throw new BoletoError(MSG_CONFIG, "config");
+  }
   return transporteMtls(secrets);
 }
 
@@ -362,6 +369,11 @@ export async function emitirBoleto(
       ...(v.interestRate !== undefined ? { moraPercentualMensal: v.interestRate } : {}),
     }));
   } catch (e) {
+    if (e instanceof InterConfigError) {
+      // Nada saiu para o Inter (o host é conferido antes de abrir a conexão).
+      await boletoRef.update({ situacao: "FALHA_EMISSAO", lastError: MSG_CONFIG }).catch(() => undefined);
+      throw new BoletoError(MSG_CONFIG, "config");
+    }
     const msg = mensagemSegura(e);
     if (recusaClara(e)) {
       await boletoRef.update({ situacao: "FALHA_EMISSAO", lastError: msg }).catch(() => undefined);
@@ -576,6 +588,7 @@ export async function pdfBoleto(db: Firestore, ownerUid: string, boletoId: strin
 
 /** Erro que vale para a conta toda (credencial, escopo, limite, rede, Inter fora): para a rodada. */
 export const erroGeral = (e: unknown) =>
+  e instanceof InterConfigError ||
   e instanceof InterRedeError ||
   (e instanceof InterHttpError && (e.status === 401 || e.status === 403 || e.status === 429 || e.status >= 500));
 
@@ -620,6 +633,7 @@ export async function atualizarBoletos(
         if (remoto) await gravarCodigo(db, ownerUid, b.id, remoto.codigoSolicitacao);
       }
     } catch (e) {
+      if (e instanceof InterConfigError) throw new BoletoError(MSG_CONFIG, "config");
       const msg = mensagemSegura(e);
       if (erroGeral(e)) throw new BoletoError(msg, "inter");
       await col.doc(b.id).update({ lastError: msg }).catch(() => undefined);
