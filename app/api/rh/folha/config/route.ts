@@ -132,6 +132,7 @@ export async function POST(request: Request) {
             faixas: (t.faixas ?? []).map((f: { ate: number | null; aliquota: number; deduzir: number }) => ({ ate: f.ate === null || f.ate === undefined || (f.ate as unknown) === "" ? null : Number(f.ate), aliquota: Number(f.aliquota), deduzir: Number(f.deduzir) || 0 })),
             deducaoDependente: Number(t.deducaoDependente) || 0,
             descontoSimplificado: Number(t.descontoSimplificado) || 0,
+            ...(t.redutor ? { redutor: { isencaoAte: Number(t.redutor.isencaoAte), limite: Number(t.redutor.limite), a: Number(t.redutor.a), b: Number(t.redutor.b) } } : {}),
           };
       const erro = tipo === "inss" ? validarTabelaInss(dadosTabela) : validarTabelaIrrf(dadosTabela);
       if (erro) return NextResponse.json({ error: erro }, { status: 400 });

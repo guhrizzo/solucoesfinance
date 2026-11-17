@@ -3,14 +3,9 @@
 // Configurações (componente MarketplaceConnections), pra que os dois lugares
 // mostrem sempre os mesmos canais.
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shopee OCULTA da interface por enquanto. A integração de backend continua
-// existindo (rotas /api/shopee/*, lib/shopee.ts, webhooks, tipos) — só
-// escondemos os pontos de entrada visíveis no Estoque: aba de filtro, painel
-// "Resumo Shopee", o canal "Shopee" no modal de integrações e a opção Shopee
-// no vínculo manual.
-// Para voltar a exibir a Shopee, troque para `true`.
-export const SHOPEE_UI_VISIVEL = false;
+// Shopee: sem flag fixa. A visibilidade é POR CONTA (e-mails liberados) — veja
+// `useShopeeUi` em lib/shopeeAccess.ts; a integração de backend continua existindo
+// (rotas /api/shopee/*, lib/shopee.ts, webhooks, tipos).
 
 // TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
 export const TIKTOKSHOP_UI_VISIVEL = true;

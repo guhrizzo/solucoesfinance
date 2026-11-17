@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button, Card, Field, Input, Pill } from "@/app/components/ui";
-import { PARAMETROS_SUGERIDOS, TABELAS_SUGERIDAS, TIPOS_RUBRICA } from "@/lib/rh/folha";
+import { PARAMETROS_LEGAIS, PARAMETROS_SUGERIDOS, TABELAS_SUGERIDAS, TIPOS_RUBRICA } from "@/lib/rh/folha";
 import { AcoesLinha, fmtData, hojeISO, rhApi, selectClass, selectStyle, RhModal as Modal } from "./shared";
 
 export interface RubricaUI {
@@ -22,8 +22,9 @@ interface TabelaUI {
   inicio: string;
   fim: string | null;
   obs: string;
-  dados: { faixas: { ate: number | null; aliquota: number; deduzir?: number }[]; deducaoDependente?: number; descontoSimplificado?: number };
+  dados: { faixas: { ate: number | null; aliquota: number; deduzir?: number }[]; deducaoDependente?: number; descontoSimplificado?: number; redutor?: Redutor };
 }
+type Redutor = { isencaoAte: number; limite: number; a: number; b: number };
 
 interface Config {
   parametros: Record<string, number | null>;
@@ -88,14 +89,14 @@ export function ConfigFolha() {
   }
 
   // ── Tabelas ──────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<{ tipo: "inss" | "irrf"; id?: string; inicio: string; faixas: { ate: string; aliquota: string; deduzir: string }[]; dep: string; simp: string; obs: string } | null>(null);
+  const [tab, setTab] = useState<{ tipo: "inss" | "irrf"; id?: string; inicio: string; faixas: { ate: string; aliquota: string; deduzir: string }[]; dep: string; simp: string; obs: string; redutor?: Redutor } | null>(null);
   const [tabErro, setTabErro] = useState("");
   function abrirTabela(tipo: "inss" | "irrf", t0?: TabelaUI) {
     setTabErro("");
     setTab({
       tipo, id: t0?.id, inicio: t0?.inicio ?? hojeISO(),
       faixas: t0 ? t0.dados.faixas.map((f) => ({ ate: f.ate === null ? "" : String(f.ate), aliquota: String(f.aliquota), deduzir: String(f.deduzir ?? 0) })) : [{ ate: "", aliquota: "", deduzir: "0" }],
-      dep: String(t0?.dados.deducaoDependente ?? 0), simp: String(t0?.dados.descontoSimplificado ?? 0), obs: t0?.obs ?? "",
+      dep: String(t0?.dados.deducaoDependente ?? 0), simp: String(t0?.dados.descontoSimplificado ?? 0), obs: t0?.obs ?? "", redutor: t0?.dados.redutor,
     });
   }
   async function salvarTabela() {
@@ -110,6 +111,7 @@ export function ConfigFolha() {
             tipo: tab.tipo, id: tab.id, inicio: tab.inicio, obs: tab.obs,
             faixas: tab.faixas.map((f) => ({ ate: f.ate === "" ? null : n(f.ate), aliquota: n(f.aliquota), deduzir: n(f.deduzir || "0") })),
             deducaoDependente: n(tab.dep || "0"), descontoSimplificado: n(tab.simp || "0"),
+            redutor: tab.tipo === "irrf" ? tab.redutor : undefined,
           },
         },
       });
@@ -178,12 +180,15 @@ export function ConfigFolha() {
           <p className="mt-1 text-xs" style={{ color: "var(--text-subtle)" }}>{t("folha.parametros.nota")}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {PARAMS.map((k) => (
+          {PARAMS.filter((k) => !(PARAMETROS_LEGAIS as readonly string[]).includes(k)).map((k) => (
             <Field key={k} label={t(`folha.parametros.campos.${k}`)}>
               <Input inputMode="decimal" value={par[k] ?? ""} onChange={(e) => setPar({ ...par, [k]: e.target.value })} />
             </Field>
           ))}
         </div>
+        <p className="text-xs" style={{ color: "var(--text-subtle)" }}>
+          {t("folha.parametros.automaticos")}: {PARAMETROS_LEGAIS.map((k) => `${t(`folha.parametros.campos.${k}`)} ${PARAMETROS_SUGERIDOS[k]}`).join(" · ")}
+        </p>
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={salvarPar}>{t("form.salvar")}</Button>
           <Button size="sm" variant="secondary" onClick={() => setPar((p) => ({ ...p, ...Object.fromEntries(Object.entries(PARAMETROS_SUGERIDOS).filter(([k]) => !p[k]).map(([k, v]) => [k, String(v)])) }))}>{t("folha.parametros.sugeridos")}</Button>
@@ -276,7 +281,7 @@ export function ConfigFolha() {
             {!tab.id && (
               <div className="flex flex-wrap items-end gap-3">
                 <Field label={t("folha.tabelas.inicio")} className="max-w-xs"><Input type="date" value={tab.inicio} onChange={(e) => setTab({ ...tab, inicio: e.target.value })} /></Field>
-                <Button size="sm" variant="secondary" onClick={() => { const x = TABELAS_SUGERIDAS[tab.tipo]; setTab({ ...tab, inicio: x.inicio, faixas: x.faixas.map((f) => ({ ate: str(f.ate), aliquota: String(f.aliquota), deduzir: str("deduzir" in f ? f.deduzir : 0) })), dep: String("deducaoDependente" in x ? x.deducaoDependente : 0), simp: String("descontoSimplificado" in x ? x.descontoSimplificado : 0), obs: t("folha.tabelas.obsSugerida") }); }}>{t("folha.tabelas.usarSugerida")}</Button>
+                <Button size="sm" variant="secondary" onClick={() => { const x = TABELAS_SUGERIDAS[tab.tipo]; setTab({ ...tab, inicio: x.inicio, faixas: x.faixas.map((f) => ({ ate: str(f.ate), aliquota: String(f.aliquota), deduzir: str("deduzir" in f ? f.deduzir : 0) })), dep: String("deducaoDependente" in x ? x.deducaoDependente : 0), simp: String("descontoSimplificado" in x ? x.descontoSimplificado : 0), obs: t("folha.tabelas.obsSugerida"), redutor: "redutor" in x ? { ...x.redutor } : undefined }); }}>{t("folha.tabelas.usarSugerida")}</Button>
               </div>
             )}
             <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t(tab.tipo === "inss" ? "folha.tabelas.notaInss" : "folha.tabelas.notaIrrf")}</p>

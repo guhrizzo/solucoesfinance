@@ -1,9 +1,10 @@
 "use client";
 
+import { useShopeeUi } from "@/lib/shopeeAccess";
 import { useId } from "react";
 import { useTranslations } from "next-intl";
 import { Calendar, ChevronLeft, ChevronRight, FilterX } from "lucide-react";
-import { CANAIS_QUEBRA, CANAL_INFO, type Canal, type VendasFiltros } from "./shared";
+import { canaisQuebra, CANAL_INFO, type Canal, type VendasFiltros } from "./shared";
 
 interface FilterBarProps {
   periodLabel: string;
@@ -28,6 +29,7 @@ const fieldStyle = {
 export function FilterBar({
   periodLabel, isCurrentMonth, onPrevMonth, onNextMonth, filtros, onChange, produtos,
 }: FilterBarProps) {
+  const CANAIS_QUEBRA = canaisQuebra(useShopeeUi());
   const t = useTranslations("vendas.filters");
   const tNav = useTranslations("nav");
   const tCh = useTranslations("vendas.channels");

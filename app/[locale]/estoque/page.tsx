@@ -16,14 +16,15 @@ import {
 import RestauranteModulo from "../restaurante/_components/RestauranteModulo";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
-// Flags de visibilidade dos canais (Shopee oculta, TikTok Shop e Shein
-// visíveis) — compartilhadas com a aba Integrações de Configurações.
+// Flags de visibilidade dos canais (TikTok Shop e Shein visíveis) — compartilhadas
+// com a aba Integrações de Configurações. A Shopee NÃO tem flag fixa: é por conta
+// (e-mails liberados), veja `useShopeeUi` em lib/shopeeAccess.ts.
 import {
-  SHOPEE_UI_VISIVEL,
   TIKTOKSHOP_UI_VISIVEL,
   SHEIN_UI_VISIVEL,
   type Plataforma,
 } from "@/app/components/integracoes/flags";
+import { useShopeeUi } from "@/lib/shopeeAccess";
 // Cartões de conexão do modal de integrações + toasts de retorno do OAuth.
 import MarketplaceConnections, { useIntegrationReturnToast } from "@/app/components/integracoes/MarketplaceConnections";
 
@@ -67,6 +68,7 @@ export default function EstoquePage() {
   const tNav = useTranslations("nav");
   const locale = useLocale();
   const { user, loading: authLoading } = useAuth();
+  const SHOPEE_UI_VISIVEL = useShopeeUi();
 
   const platformLabel = (p: Plataforma) => t(`platformName.${p}`);
 

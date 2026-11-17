@@ -16,11 +16,11 @@ import { RefreshCw, LogOut } from "lucide-react";
 import ConfirmModal from "@/app/components/ConfirmModal";
 import { authedFetch } from "@/lib/authedFetch";
 import {
-  SHOPEE_UI_VISIVEL,
   TIKTOKSHOP_UI_VISIVEL,
   SHEIN_UI_VISIVEL,
   type Plataforma,
 } from "@/app/components/integracoes/flags";
+import { useShopeeUi } from "@/lib/shopeeAccess";
 
 // Mesma assinatura do showToast do Estoque e do useToast de Configurações
 // ("info" é usado no aviso de permissões limitadas do retorno do OAuth).
@@ -122,6 +122,8 @@ export function useIntegrationReturnToast(showToast: ShowToast): void {
 export default function MarketplaceConnections({ ownerUid, returnTo, showToast }: MarketplaceConnectionsProps) {
   const t = useTranslations("estoque");
   const locale = useLocale();
+  // Shopee só aparece para e-mails liberados (lib/shopeeAccess.ts), igual à Estoque.
+  const SHOPEE_UI_VISIVEL = useShopeeUi();
 
   const platformLabel = (p: Plataforma) => t(`platformName.${p}`);
 
@@ -352,7 +354,7 @@ export default function MarketplaceConnections({ ownerUid, returnTo, showToast }
           )}
         </div>
 
-        {/* Canal 2: Shopee — oculto da interface (ver SHOPEE_UI_VISIVEL em flags.ts). */}
+        {/* Canal 2: Shopee — oculto da interface (ver useShopeeUi em lib/shopeeAccess.ts). */}
         {SHOPEE_UI_VISIVEL && (
         <div className="flex items-center justify-between p-4 rounded-xl" style={{ border: "1px solid var(--cf-border)", background: "var(--cf-card-2)" }}>
           <div className="flex items-center gap-3">

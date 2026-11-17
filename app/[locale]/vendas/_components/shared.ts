@@ -9,7 +9,7 @@ export type Canal = "mercadolivre" | "shopee" | "tiktokshop" | "shein" | "manual
 // integração de backend continua no ar; aqui só escondemos os elementos
 // visíveis do painel de vendas que citam a Shopee. Para voltar a exibir,
 // troque para `true`.
-export const SHOPEE_UI_VISIVEL = false;
+// Agora é por conta: veja `useShopeeUi` em lib/shopeeAccess.ts.
 
 // TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
 export const TIKTOKSHOP_UI_VISIVEL = true;
@@ -19,16 +19,20 @@ export const TIKTOKSHOP_UI_VISIVEL = true;
 export const SHEIN_UI_VISIVEL = true;
 
 // Canais de MARKETPLACE exibidos na interface.
-export const CANAIS_VISIVEIS: Canal[] = [
-  "mercadolivre",
-  ...(SHOPEE_UI_VISIVEL ? (["shopee"] as Canal[]) : []),
-  ...(TIKTOKSHOP_UI_VISIVEL ? (["tiktokshop"] as Canal[]) : []),
-  ...(SHEIN_UI_VISIVEL ? (["shein"] as Canal[]) : []),
-];
+export function canaisVisiveis(shopee: boolean): Canal[] {
+  return [
+    "mercadolivre",
+    ...(shopee ? (["shopee"] as Canal[]) : []),
+    ...(TIKTOKSHOP_UI_VISIVEL ? (["tiktokshop"] as Canal[]) : []),
+    ...(SHEIN_UI_VISIVEL ? (["shein"] as Canal[]) : []),
+  ];
+}
 
 // Canais mostrados na quebra por canal, no gráfico e no filtro — inclui a
 // venda manual (balcão), registrada aqui no painel.
-export const CANAIS_QUEBRA: Canal[] = [...CANAIS_VISIVEIS, "manual"];
+export function canaisQuebra(shopee: boolean): Canal[] {
+  return [...canaisVisiveis(shopee), "manual"];
+}
 
 // Todo canal que conta como venda (independe da visibilidade na UI: uma venda
 // real de um canal oculto continua sendo receita).

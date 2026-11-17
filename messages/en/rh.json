@@ -643,6 +643,7 @@
         "multaFgtsPct": "FGTS fine — dismissal without cause (%)",
         "multaFgtsAcordoPct": "FGTS fine — mutual agreement (%)"
       },
+      "automaticos": "Automatic by law (no setup needed)",
       "sugeridos": "Fill suggested values (blank fields)"
     },
     "tabelas": {

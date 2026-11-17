@@ -1,10 +1,11 @@
 "use client";
 
+import { useShopeeUi } from "@/lib/shopeeAccess";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Settings, X } from "lucide-react";
 import { Button, Modal } from "@/app/components/ui";
-import { CANAIS_VISIVEIS, CANAL_INFO, type Canal } from "./shared";
+import { canaisVisiveis, CANAL_INFO, type Canal } from "./shared";
 
 export type LancarNoCaixa = Partial<Record<Exclude<Canal, "manual">, boolean>>;
 
@@ -24,6 +25,7 @@ export function ConfigVendasModal({
   conectados: Record<Canal, boolean>;
   onSaved: (msg: string, type: "success" | "error") => void;
 }) {
+  const shopeeUi = useShopeeUi();
   const t = useTranslations("vendas.config");
   const [rascunho, setRascunho] = useState<LancarNoCaixa>(atual);
   const [salvando, setSalvando] = useState(false);
@@ -36,7 +38,7 @@ export function ConfigVendasModal({
     if (open) setRascunho(atual);
   }
 
-  const canais = CANAIS_VISIVEIS as Exclude<Canal, "manual">[];
+  const canais = canaisVisiveis(shopeeUi) as Exclude<Canal, "manual">[];
   const ligado = (c: Exclude<Canal, "manual">) => rascunho[c] !== false;
 
   async function salvar() {
