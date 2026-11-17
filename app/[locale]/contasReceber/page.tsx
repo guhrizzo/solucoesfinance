@@ -33,7 +33,7 @@ import { isProAccess } from "@/lib/billing";
 import { authedFetch } from "@/lib/authedFetch";
 import { Link } from "@/i18n/navigation";
 import type { PagadorEndereco } from "@/lib/pagadorEndereco";
-import { podeEmitir } from "@/lib/boletoTela";
+import { podeEmitir, podeReenviarBoleto } from "@/lib/boletoTela";
 import { BoletosTab } from "./_components/BoletosTab";
 import { EmitirBoletoModal } from "./_components/EmitirBoletoModal";
 import { useBoletos, useBoletosEstado } from "./_components/useBoletos";
@@ -2238,7 +2238,11 @@ export default function ContasReceberPage() {
                         onToast={showToast}
                         onEmitAvulso={() => { setEmitTarget(null); setEmitOpen(true); }}
                         onResend={async (id) => { await sendChargeEmail(id); }}
-                        resendableIds={new Set(isPro ? receivables.filter(r => r.status !== "recebido" && !!r.partyEmail).map(r => r.id) : [])}
+                        resendableIds={new Set(isPro ? boletos.filter(b => {
+                            // Só oferece reenviar quando o e-mail vai levar ESTE boleto (mesmo saldo e vencimento).
+                            const r = b.receivableId ? receivables.find(x => x.id === b.receivableId) : undefined;
+                            return !!r && r.status !== "recebido" && !!r.partyEmail && podeReenviarBoleto(b, r);
+                        }).map(b => b.id) : [])}
                         focusReceivableId={focusReceivableId}
                         onClearFocus={() => setFocusReceivableId("")}
                     />

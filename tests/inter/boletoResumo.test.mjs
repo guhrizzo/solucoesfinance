@@ -10,6 +10,8 @@ import {
   podeDescartar,
   enderecoVazio,
   validarPagadorForm,
+  erroVisivel,
+  podeReenviarBoleto,
 } from "../../lib/boletoTela";
 
 const HOJE = "2026-11-16";
@@ -109,4 +111,41 @@ test("validarPagadorForm: exige nome, CPF/CNPJ válido, endereço completo e con
   assert.equal(validarPagadorForm({ ...ok, endereco: { ...END, cep: "123" } }).error, "endereco");
   assert.equal(validarPagadorForm({ ...ok, endereco: enderecoVazio() }).error, "endereco");
   assert.equal(validarPagadorForm({ ...ok, email: "a@b.co", telefone: "(11) 91234-5678" }).ok, true);
+});
+
+// ---------- erro visível na linha (F5) e reenviar por e-mail (F8) ----------
+
+test("erroVisivel: só em processamento/aberto/vencido/falha, sem revisarCaixa, e com texto", () => {
+  const msg = "Não foi possível confirmar a emissão.";
+  for (const situacao of ["EM_PROCESSAMENTO", "A_RECEBER", "ATRASADO", "FALHA_EMISSAO"]) {
+    assert.equal(erroVisivel(bol({ situacao, lastError: msg })), msg, situacao);
+  }
+  for (const situacao of ["RECEBIDO", "MARCADO_RECEBIDO", "CANCELADO", "EXPIRADO", "PROTESTO"]) {
+    assert.equal(erroVisivel(bol({ situacao, lastError: msg })), null, situacao);
+  }
+  assert.equal(erroVisivel(bol({ lastError: msg, revisarCaixa: true })), null);
+  assert.equal(erroVisivel(bol({ lastError: null })), null);
+  assert.equal(erroVisivel(bol({ lastError: "   " })), null);
+  assert.equal(erroVisivel(bol({})), null);
+});
+
+test("podeReenviarBoleto: linha digitável, mesmo saldo e mesmo vencimento da conta", () => {
+  const rec = { amount: 100, amountReceived: 0, dueDate: "2026-11-20" };
+  const b = (o) => bol({ linhaDigitavel: "0779", ...o });
+  assert.equal(podeReenviarBoleto(b({}), rec), true);
+  assert.equal(podeReenviarBoleto(b({ situacao: "ATRASADO" }), rec), true);
+  // Saldo após recebimento parcial (com centavos).
+  assert.equal(podeReenviarBoleto(b({ amount: 59.9 }), { amount: 100, amountReceived: 40.1, dueDate: "2026-11-20" }), true);
+  assert.equal(podeReenviarBoleto(b({ amount: 100.004 }), rec), true);
+  // Sem linha digitável (em processamento) → não.
+  assert.equal(podeReenviarBoleto(bol({ situacao: "EM_PROCESSAMENTO" }), rec), false);
+  assert.equal(podeReenviarBoleto(b({ situacao: "EM_PROCESSAMENTO" }), rec), false);
+  // Valor editado ou vencimento diferente (sugestão "hoje" para conta vencida) → o e-mail iria só com Pix.
+  assert.equal(podeReenviarBoleto(b({ amount: 90 }), rec), false);
+  assert.equal(podeReenviarBoleto(b({ amount: 100 }), { ...rec, amountReceived: 10 }), false);
+  assert.equal(podeReenviarBoleto(b({ dueDate: "2026-11-16" }), rec), false);
+  assert.equal(podeReenviarBoleto(b({}), { amount: 100 }), false);
+  // Pago/cancelado → não.
+  assert.equal(podeReenviarBoleto(b({ situacao: "RECEBIDO" }), rec), false);
+  assert.equal(podeReenviarBoleto(b({ situacao: "CANCELADO" }), rec), false);
 });

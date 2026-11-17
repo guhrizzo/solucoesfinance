@@ -31,3 +31,27 @@ test("sem vírgula: ponto só como milhar; dígitos puros valem", () => {
 test("vazio, zero, negativo, letras: erro", () => {
   for (const s of ["", "  ", "0", "0,00", "-10", "-1,00", "abc", "R$ 10", "1e3", "10,0a"]) bad(s);
 });
+
+test("zero à esquerda na parte inteira é recusado; 0,5 e 0,50 valem", () => {
+  ok("0,5", 0.5);
+  ok("0,50", 0.5);
+  bad("0.500");
+  bad("00.500");
+  bad("01,00");
+  bad("012");
+  bad("00,50");
+});
+
+test("formatos pela metade ou em inglês são recusados", () => {
+  bad("12,");
+  bad(",50");
+  bad("1,234.56");
+});
+
+test("teto do servidor: até 99.999.999,99", () => {
+  ok("99.999.999,99", 99999999.99);
+  ok("99999999,99", 99999999.99);
+  bad("100.000.000,00");
+  bad("100000000");
+  bad("99.999.999.999");
+});

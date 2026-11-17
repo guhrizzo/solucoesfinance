@@ -74,6 +74,38 @@ export function podeDescartar(b: Pick<BoletoDoc, "situacao" | "codigoSolicitacao
   return Number.isFinite(criado) && agora - criado >= DESCARTE_MIN_MS;
 }
 
+/** Situações em que o último erro do servidor ainda ajuda (pago/cancelado/expirado: irrelevante). */
+const COM_ERRO_VISIVEL: ReadonlySet<BoletoSituacao> = new Set(["EM_PROCESSAMENTO", "A_RECEBER", "ATRASADO", "FALHA_EMISSAO"]);
+
+/**
+ * Texto do último erro (mensagem em português do servidor) para mostrar na linha
+ * do boleto; null quando não há, quando o aviso de revisar caixa já ocupa o lugar
+ * ou quando a situação não pede mais ação.
+ */
+export function erroVisivel(b: Pick<BoletoDoc, "situacao" | "lastError" | "revisarCaixa">): string | null {
+  if (b.revisarCaixa || !COM_ERRO_VISIVEL.has(b.situacao)) return null;
+  const m = typeof b.lastError === "string" ? b.lastError.trim() : "";
+  return m || null;
+}
+
+/**
+ * "Reenviar por e-mail" só quando o e-mail vai levar ESTE boleto: o servidor
+ * (lib/receivableChargeSend.ts) só usa o boleto da conta se ele tem linha
+ * digitável e o mesmo valor (saldo em aberto) e vencimento da conta a receber;
+ * senão o e-mail sairia só com Pix.
+ */
+export function podeReenviarBoleto(
+  b: Pick<BoletoDoc, "situacao" | "linhaDigitavel" | "amount" | "dueDate">,
+  r: { amount: number; amountReceived?: number; dueDate?: string },
+): boolean {
+  if (b.situacao !== "A_RECEBER" && b.situacao !== "ATRASADO") return false;
+  if (!b.linhaDigitavel || !r.dueDate || b.dueDate !== r.dueDate) return false;
+  const total = Number(r.amount) || 0;
+  const recebido = Math.min(Math.max(Number(r.amountReceived) || 0, 0), total);
+  const saldo = r2(total - recebido);
+  return Math.abs((Number(b.amount) || 0) - saldo) < 0.005;
+}
+
 export const enderecoVazio = (): PagadorEndereco => ({
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
 });
@@ -132,11 +164,15 @@ export function validarPagadorForm(
   };
 }
 
+/** Teto do servidor (lib/interBoletoServer.ts) para o valor do boleto. */
+const VALOR_MAX = 99_999_999.99;
+
 /**
  * Valor digitado em pt-BR, estrito (não usa o parseAmount compartilhado, que
  * lê "12.500" como 12,5). Com vírgula: ela é o decimal (até 2 casas) e os
  * pontos são milhar. Sem vírgula: ponto só como milhar (12.500); "12.50" é
- * ambíguo e recusado. Vazio, zero, negativo ou letras: recusado.
+ * ambíguo e recusado. Vazio, zero, negativo, letras, zero à esquerda na parte
+ * inteira ou acima de R$ 99.999.999,99 (teto do servidor): recusado.
  */
 export function parseValorBRL(input: string): { ok: true; value: number } | { ok: false } {
   const s = input.trim();
@@ -153,7 +189,9 @@ export function parseValorBRL(input: string): { ok: true; value: number } | { ok
     if (!/^\d{1,3}(\.\d{3})+$|^\d+$/.test(s)) return { ok: false };
     inteiro = s.replace(/\./g, "");
   }
+  // Zero à esquerda na parte inteira ("0.500", "01,00") é recusado; "0,5" vale.
+  if (inteiro.length > 1 && inteiro.startsWith("0")) return { ok: false };
   const value = Number(`${inteiro}.${frac || "0"}`);
-  if (!Number.isFinite(value) || value <= 0) return { ok: false };
+  if (!Number.isFinite(value) || value <= 0 || value > VALOR_MAX) return { ok: false };
   return { ok: true, value: Math.round(value * 100) / 100 };
 }

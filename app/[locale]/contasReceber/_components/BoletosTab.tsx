@@ -17,7 +17,7 @@ import { authedFetch } from "@/lib/authedFetch";
 import { formatDate, formatMoney } from "@/lib/format";
 import { grupoDe, resumo, type BoletoDoc, type BoletoGrupo } from "@/lib/interBoletoRegras";
 import type { BoletosEstado } from "@/lib/interBoletosEstado";
-import { filtrarBoletos, hojeSP, podeDescartar } from "@/lib/boletoTela";
+import { erroVisivel, filtrarBoletos, hojeSP, podeDescartar } from "@/lib/boletoTela";
 import { PinGate, hasPin } from "./PinGate";
 
 type Toast = (msg: string, type?: "ok" | "err" | "warn") => void;
@@ -67,7 +67,11 @@ export function BoletosTab({
   onEmitAvulso: () => void;
   /** Reusa o envio de cobrança por e-mail da própria página. */
   onResend: (receivableId: string) => Promise<void>;
-  /** Contas a receber com e-mail do cliente e ainda não recebidas (Pro). */
+  /**
+   * Ids dos BOLETOS que podem ser reenviados por e-mail: conta a receber com e-mail
+   * do cliente, ainda não recebida (Pro), e boleto com linha digitável no mesmo
+   * valor (saldo) e vencimento da conta — senão o e-mail sairia só com Pix.
+   */
   resendableIds: ReadonlySet<string>;
   /** Mostra só os boletos desta conta a receber (vindo do "Boleto emitido"). */
   focusReceivableId: string;
@@ -256,21 +260,33 @@ export function BoletosTab({
     return <Pill tone={tomDe(b, hoje)} dot>{rotulo}</Pill>;
   };
 
-  const avisos = (b: BoletoDoc) =>
-    b.revisarCaixa || b.pagoAposCancelamento ? (
-      <span className="flex flex-wrap gap-1.5 mt-1">
-        {b.revisarCaixa && (
-          <Pill tone="warn"><AlertTriangle size={11} aria-hidden="true" /> {t("warn.revisarCaixa")}</Pill>
+  const avisos = (b: BoletoDoc) => {
+    // Último erro do servidor (mensagem em português), só onde ainda pede ação.
+    const erro = erroVisivel(b);
+    return b.revisarCaixa || b.pagoAposCancelamento || erro ? (
+      <>
+        {(b.revisarCaixa || b.pagoAposCancelamento) && (
+          <span className="flex flex-wrap gap-1.5 mt-1">
+            {b.revisarCaixa && (
+              <Pill tone="warn"><AlertTriangle size={11} aria-hidden="true" /> {t("warn.revisarCaixa")}</Pill>
+            )}
+            {b.pagoAposCancelamento && (
+              <Pill tone="warn"><AlertTriangle size={11} aria-hidden="true" /> {t("warn.pagoAposCancelamento")}</Pill>
+            )}
+          </span>
         )}
-        {b.pagoAposCancelamento && (
-          <Pill tone="warn"><AlertTriangle size={11} aria-hidden="true" /> {t("warn.pagoAposCancelamento")}</Pill>
+        {erro && (
+          <span className="block mt-1 text-xs leading-snug whitespace-normal break-words max-w-[22rem]" style={{ color: "var(--text-muted)" }}>
+            {erro}
+          </span>
         )}
-      </span>
+      </>
     ) : null;
+  };
 
   const acoes = (b: BoletoDoc) => {
     const vigente = b.situacao === "EM_PROCESSAMENTO" || b.situacao === "A_RECEBER" || b.situacao === "ATRASADO";
-    const pode = b.receivableId ? resendableIds.has(b.receivableId) && vigente : false;
+    const pode = !!b.receivableId && vigente && resendableIds.has(b.id);
     return (
       <span className="inline-flex items-center gap-1 flex-wrap justify-end">
         {b.codigoSolicitacao && b.situacao !== "EM_PROCESSAMENTO" && b.situacao !== "FALHA_EMISSAO" && (
