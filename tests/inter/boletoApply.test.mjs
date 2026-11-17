@@ -329,14 +329,13 @@ test("adoção de entrada já baixada na mesma conta a receber → não soma de 
   assert.equal(get(db, "receivables/r1").amountReceived, 100);
 });
 
-test("entrada à mão de outro valor, sem interTxId, ou de outra conta a receber → não é adotada", async () => {
+test("entrada à mão de outro valor, sem interTxId nem baixa, ou fora da janela → não é adotada nem sinalizada", async () => {
   const db = setup({
     b: boleto({ receivableId: "r1" }),
     rec: receivable(),
     cash: [
       ["m1", lancadaDoExtrato({ amount: 100.01 })],
       ["m2", lancadaDoExtrato({ interTxId: undefined })],
-      ["m3", lancadaDoExtrato({ settledReceivableId: "r9" })],
       ["m4", lancadaDoExtrato({ date: "2026-11-25" })],
     ],
   });
@@ -344,6 +343,68 @@ test("entrada à mão de outro valor, sem interTxId, ou de outra conta a receber
   assert.equal(get(db, "boletos/b1").cashflowId, "boleto_b1");
   assert.ok(cashIds(db).includes("boleto_b1"));
   assert.equal(get(db, "boletos/b1").revisarCaixa, undefined);
+  assert.equal(get(db, "boletos/b1").lastError, undefined);
+});
+
+test("entrada do extrato já baixada em OUTRA conta a receber → não adota, cria boleto_b1 e marca revisarCaixa", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable(),
+    cash: [["m3", lancadaDoExtrato({ settledReceivableId: "r9" })]],
+  });
+  assert.deepEqual(await apply(db, pago()), { aplicada: true, pago: true });
+  assert.deepEqual(cashIds(db).sort(), ["boleto_b1", "m3"]);
+  const b = get(db, "boletos/b1");
+  assert.equal(b.cashflowId, "boleto_b1");
+  assert.equal(b.revisarCaixa, true);
+  assert.equal(b.lastError, "Possível lançamento duplicado no caixa; confira");
+  assert.equal(get(db, "cashflow/m3").boletoId, undefined);
+  assert.equal(get(db, "cashflow/m3").settledReceivableId, "r9");
+
+  const antes = structuredClone([...db.store.entries()]);
+  assert.deepEqual(await apply(db, pago()), { aplicada: false, pago: false });
+  assert.deepEqual([...db.store.entries()], antes);
+});
+
+test("pagamento lançado à mão no caixa e baixado NESTA conta (sem interTxId) → cria boleto_b1 e marca revisarCaixa", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable({ amountReceived: 100, status: "recebido", receivedAt: "2026-11-18" }),
+    cash: [["mao1", { type: "entrada", amount: 100, date: "2026-11-18", description: "Cliente X pagou", settledReceivableId: "r1" }]],
+  });
+  assert.deepEqual(await apply(db, pago()), { aplicada: true, pago: true });
+  assert.deepEqual(cashIds(db).sort(), ["boleto_b1", "mao1"]);
+  const b = get(db, "boletos/b1");
+  assert.equal(b.revisarCaixa, true);
+  assert.equal(b.lastError, "Possível lançamento duplicado no caixa; confira");
+  assert.equal(get(db, "cashflow/mao1").boletoId, undefined);
+
+  const antes = structuredClone([...db.store.entries()]);
+  assert.deepEqual(await apply(db, pago()), { aplicada: false, pago: false });
+  assert.deepEqual([...db.store.entries()], antes);
+});
+
+test("controle: entrada comum do mesmo valor/janela sem baixa nem interTxId não sinaliza; de outra conta sem interTxId também não", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable(),
+    cash: [
+      ["v1", { type: "entrada", amount: 100, date: "2026-11-18", description: "Venda balcão" }],
+      ["v2", { type: "entrada", amount: 100, date: "2026-11-17", description: "Outro cliente", settledReceivableId: "r9" }],
+    ],
+  });
+  await apply(db, pago());
+  const b = get(db, "boletos/b1");
+  assert.equal(b.situacao, "RECEBIDO");
+  assert.equal(b.revisarCaixa, undefined);
+  assert.equal(b.lastError, undefined);
+});
+
+test("boleto avulso: entrada do extrato baixada numa conta a receber → marca revisarCaixa", async () => {
+  const db = setup({ cash: [["m5", lancadaDoExtrato({ settledReceivableId: "r9" })]] });
+  await apply(db, pago());
+  assert.equal(get(db, "boletos/b1").revisarCaixa, true);
+  assert.equal(get(db, "cashflow/m5").boletoId, undefined);
 });
 
 test("duas entradas à mão candidatas → cria boleto_b1 e marca revisarCaixa", async () => {

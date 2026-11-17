@@ -15,7 +15,9 @@
 //  - Se o item do extrato chegou antes e foi resolvido à mão ("criar"), já existe
 //    uma entrada com interTxId e sem boletoId: com exatamente uma dessas no mesmo
 //    valor/janela, o boleto ADOTA essa entrada em vez de criar outra; com mais de
-//    uma, cria a do boleto e marca o boleto para revisão (revisarCaixa).
+//    uma, cria a do boleto e marca o boleto para revisão (revisarCaixa). Também marca
+//    revisão (sem adotar) quando há uma entrada do mesmo valor/janela lançada à mão
+//    e baixada nesta conta a receber, ou vinda do extrato e baixada em outra conta.
 // Nada de segredo é lido, gravado ou devolvido aqui.
 
 import type { Firestore } from "firebase-admin/firestore";
@@ -140,6 +142,20 @@ export async function aplicarSituacao(
       if (x.settledReceivableId && x.settledReceivableId !== recId) return false;
       return Number.isFinite(Number(x.amount)) && cents(Number(x.amount)) === cents(valorRecebido);
     });
+    // Suspeitas que o boleto NÃO pode adotar (só sinaliza): mesmo valor/janela, sem
+    // boletoId e que não é espelho, e (a) lançada à mão no caixa e baixada NESTA conta
+    // pela baixa automática (sem interTxId), ou (b) vinda de "A conciliar" (interTxId)
+    // mas já baixada em OUTRA conta a receber. O dinheiro do boleto entra garantido.
+    const idsExtrato = new Set(lancadasDoExtrato.map((d) => d.id));
+    const suspeitas = vizinhosSnap.docs.filter((d) => {
+      const x = d.data() ?? {};
+      if (d.id === cashId || idsExtrato.has(d.id) || x.type !== "entrada") return false;
+      if (x.boletoId || x.sourceReceivableId) return false;
+      if (!Number.isFinite(Number(x.amount)) || cents(Number(x.amount)) !== cents(valorRecebido)) return false;
+      const daConta = !!recId && x.settledReceivableId === recId;
+      const deOutraConta = !!x.interTxId && !!x.settledReceivableId && x.settledReceivableId !== recId;
+      return daConta || deOutraConta;
+    });
 
     // ---------- escritas ----------
     let jaBaixada = false;
@@ -172,9 +188,10 @@ export async function aplicarSituacao(
       };
       if (recId) entrada.settledReceivableId = recId;
 
-      // Mais de uma entrada lançada à mão no mesmo valor/janela: o dinheiro do boleto
-      // entra garantido, mas pode haver duplicata — o usuário confere.
-      if (lancadasDoExtrato.length > 1) {
+      // Mais de uma entrada lançada à mão no mesmo valor/janela, ou uma suspeita que
+      // não dá para adotar: o dinheiro do boleto entra garantido, mas pode haver
+      // duplicata — o usuário confere.
+      if (lancadasDoExtrato.length > 1 || suspeitas.length > 0) {
         marcaBoleto.revisarCaixa = true;
         marcaBoleto.lastError = MSG_REVISAR_CAIXA;
       }
