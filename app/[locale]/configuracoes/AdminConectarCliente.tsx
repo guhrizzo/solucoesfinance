@@ -11,12 +11,13 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, FileKey2, Plug, RefreshCw, Search, ShieldCheck, Unplug } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileKey2, Plug, Receipt, RefreshCw, Search, ShieldCheck, Unplug, XCircle } from "lucide-react";
 import { Button, Card, Input, Pill } from "@/app/components/ui";
 import ConfirmModal from "@/app/components/ConfirmModal";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { InterStatus } from "@/lib/interTypes";
+import { boletosEstado } from "@/lib/interBoletosEstado";
 import { createGenerationToken } from "@/lib/generationToken";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
@@ -27,7 +28,8 @@ const MAX_ID_CHARS = 200;
 const MAX_CONTA_CHARS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-type Busy = null | "search" | "connect" | "update" | "test" | "disconnect";
+type Busy = null | "search" | "connect" | "update" | "test" | "disconnect" | "boletos";
+type Ativacao = { write: boolean; read: boolean; webhook: boolean };
 type PemField = { name: string; text: string };
 type Target = { nome: string; email: string; pro: boolean; conexao: InterStatus | null };
 
@@ -55,6 +57,8 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
   const [busy, setBusy] = useState<Busy>(null);
   const [formError, setFormError] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [ativacao, setAtivacao] = useState<Ativacao | null>(null);
+  const [ativacaoError, setAtivacaoError] = useState("");
   const [now] = useState(() => Date.now()); // referência estável p/ validade do certificado
   // Geração do alvo: nova busca/edição do e-mail invalida lookups, refreshes e leituras de arquivo em voo.
   const genRef = useRef(createGenerationToken());
@@ -141,6 +145,8 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     setSearchError("");
     setFormError("");
     setConfirmOpen(false);
+    setAtivacao(null);
+    setAtivacaoError("");
     clearSecrets();
     const r = await lookup(value);
     busyRef.current = false;
@@ -170,6 +176,8 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
       setTarget(null);
       setFormError("");
       setConfirmOpen(false);
+      setAtivacao(null);
+      setAtivacaoError("");
       clearSecrets();
     }
   }
@@ -265,6 +273,34 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
     if (mountedRef.current) setBusy(null);
   }
 
+  async function ativarBoletos() {
+    if (busyRef.current || !target || !target.pro) return;
+    busyRef.current = true;
+    const gen = genRef.current.current();
+    setBusy("boletos");
+    setAtivacaoError("");
+    const r = await call("POST", "/api/admin/inter/boletos", { clienteEmail: target.email });
+    if (!mountedRef.current || !genRef.current.isCurrent(gen)) {
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(null);
+      return;
+    }
+    if (!r.ok) {
+      setAtivacao(null);
+      setAtivacaoError(r.error); // mensagem do servidor (ex.: URL local/não pública)
+      showToast(r.error, "error");
+    } else {
+      const esc = (r.data.escopos ?? {}) as Record<string, unknown>;
+      const result: Ativacao = { write: esc.write === true, read: esc.read === true, webhook: r.data.webhook === true };
+      setAtivacao(result);
+      const complete = result.write && result.read && result.webhook;
+      showToast(t(complete ? "boletosActivatedOk" : "boletosPartial"), complete ? "success" : "warning");
+      await refreshStatus(target, gen);
+    }
+    busyRef.current = false;
+    if (mountedRef.current) setBusy(null);
+  }
+
   async function disconnect() {
     if (busyRef.current || !target) return;
     busyRef.current = true;
@@ -299,6 +335,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
   const daysLeft = expiresAt ? Math.ceil((expiresAt - now) / DAY_MS) : null;
   const expired = daysLeft !== null && daysLeft <= 0;
   const expiring = daysLeft !== null && daysLeft > 0 && daysLeft <= 30;
+  const boletos = boletosEstado(status);
 
   return (
     <div className="space-y-5">
@@ -428,6 +465,79 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
               </div>
             )}
           </Card>
+
+          {/* ── Boletos (cobrança) ── */}
+          {connected && (
+            <Card padding="lg" className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--db-text)" }}>
+                    <Receipt size={14} /> {t("boletosTitle")}
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--cf-text-3)" }}>{t("boletosDesc")}</p>
+                </div>
+                <Pill tone={boletos === "ativo" ? "pos" : boletos === "escopoFaltando" ? "neg" : "muted"} dot>
+                  {boletos === "ativo"
+                    ? t("boletosActiveBadge")
+                    : boletos === "escopoFaltando"
+                      ? t("boletosScopeMissingBadge")
+                      : t("boletosInactiveBadge")}
+                </Pill>
+              </div>
+
+              {ativacaoError && (
+                <p role="alert" className="text-xs" style={{ color: "var(--neg)" }}>{ativacaoError}</p>
+              )}
+
+              {ativacao && (
+                <div aria-live="polite" className="space-y-2">
+                  <p className="text-xs font-semibold" style={{ color: "var(--text)" }}>{t("boletosResultTitle")}</p>
+                  <ul className="grid gap-2 text-xs sm:grid-cols-2">
+                    {[
+                      { label: t("scopeExtrato"), ok: true, okText: t("ok"), noText: t("missing") },
+                      { label: t("scopeRead"), ok: ativacao.read, okText: t("ok"), noText: t("missing") },
+                      { label: t("scopeWrite"), ok: ativacao.write, okText: t("ok"), noText: t("missing") },
+                      { label: t("webhook"), ok: ativacao.webhook, okText: t("webhookRegistered"), noText: t("webhookNotRegistered") },
+                    ].map((item) => (
+                      <li key={item.label} className="flex items-center gap-2">
+                        {item.ok ? (
+                          <CheckCircle2 size={14} className="shrink-0" style={{ color: "var(--pos)" }} aria-hidden="true" />
+                        ) : (
+                          <XCircle size={14} className="shrink-0" style={{ color: "var(--neg)" }} aria-hidden="true" />
+                        )}
+                        <span style={{ color: "var(--cf-text-3)" }}>{item.label}:</span>
+                        <span className="font-semibold" style={{ color: item.ok ? "var(--pos)" : "var(--neg)" }}>
+                          {item.ok ? item.okText : item.noText}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {(!ativacao.read || !ativacao.write) && (
+                    <div role="alert" className="rounded-xl px-4 py-3 text-xs" style={{ background: "var(--warn-weak)", color: "var(--warn)" }}>
+                      {t("boletosScopeHelp")}
+                    </div>
+                  )}
+                  {ativacao.read && ativacao.write && !ativacao.webhook && (
+                    <div role="alert" className="rounded-xl px-4 py-3 text-xs" style={{ background: "var(--warn-weak)", color: "var(--warn)" }}>
+                      {t("boletosWebhookHelp")}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  size="sm"
+                  icon={Receipt}
+                  loading={busy === "boletos"}
+                  disabled={working || !target.pro}
+                  onClick={ativarBoletos}
+                >
+                  {t(boletos === "ativo" ? "boletosReactivate" : "boletosActivate")}
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {/* ── Credenciais (conectar / atualizar) ── */}
           <Card padding="lg" className="space-y-4">

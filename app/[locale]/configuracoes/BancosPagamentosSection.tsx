@@ -13,6 +13,7 @@ import { Link } from "@/i18n/navigation";
 import { Card, Pill } from "@/app/components/ui";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { InterStatus } from "@/lib/interTypes";
+import { boletosEstado } from "@/lib/interBoletosEstado";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -61,6 +62,7 @@ export default function BancosPagamentosSection({ ownerUid, isPro }: { ownerUid:
   const daysLeft = expiresAt ? Math.ceil((expiresAt - Date.now()) / DAY_MS) : null;
   const expired = daysLeft !== null && daysLeft <= 0;
   const expiring = daysLeft !== null && daysLeft > 0 && daysLeft <= 30;
+  const boletos = boletosEstado(status);
 
   function interCard() {
     if (!status) {
@@ -143,6 +145,15 @@ export default function BancosPagamentosSection({ ownerUid, isPro }: { ownerUid:
                 <strong className="font-semibold">{t("lastError")}</strong> {status.lastSyncError}
               </div>
             )}
+
+            <p
+              className="text-xs"
+              style={{ color: boletos === "ativo" ? "var(--pos)" : boletos === "escopoFaltando" ? "var(--warn)" : "var(--cf-text-3)" }}
+            >
+              <strong className="font-semibold">
+                {t(boletos === "ativo" ? "boletosActive" : boletos === "escopoFaltando" ? "boletosScopeMissing" : "boletosOff")}
+              </strong>
+            </p>
 
             <div className="flex flex-wrap items-center justify-between gap-2">
               {status.configuradoPelaEquipe ? (
