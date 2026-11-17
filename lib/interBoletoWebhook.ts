@@ -43,6 +43,11 @@ const ID_RE = /^[0-9a-z]{1,15}$/;
 export const SCOPE_WRITE = "boleto-cobranca.write";
 export const SCOPE_READ = "boleto-cobranca.read";
 
+/** O token tem o formato de um token nosso (32 bytes em base64url)? Conferido antes de ler o corpo. */
+export function tokenComFormato(token: unknown): token is string {
+  return typeof token === "string" && TOKEN_RE.test(token);
+}
+
 export function hashWebhookToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -71,6 +76,13 @@ export type WebhookDeps = {
 
 export type WebhookResultado = {
   status: 200 | 404;
+  /**
+   * true quando a rodada parou num erro que vale para a conta toda (credencial,
+   * rede, limite, Inter fora, configuração, conexão sumida): o callback que falhou
+   * e os seguintes ficaram sem processar, então a rota responde 503 para o Inter
+   * reenviar (reaplicar é idempotente).
+   */
+  parouPorErroGeral: boolean;
   processados: number;
   ignorados: number;
   falhas: number;
@@ -78,11 +90,11 @@ export type WebhookResultado = {
   motivos: Record<string, number>;
 };
 
-const NAO_ACHADO = (): WebhookResultado => ({ status: 404, processados: 0, ignorados: 0, falhas: 0, motivos: {} });
+const NAO_ACHADO = (): WebhookResultado => ({ status: 404, parouPorErroGeral: false, processados: 0, ignorados: 0, falhas: 0, motivos: {} });
 
 /** Resolve o token → ownerUid. null = desconhecido, rotacionado ou conta sem cobrança ativa/conexão. */
 async function donoDoToken(db: Firestore, token: unknown): Promise<string | null> {
-  if (typeof token !== "string" || !TOKEN_RE.test(token)) return null;
+  if (!tokenComFormato(token)) return null;
   const hash = hashWebhookToken(token);
   const idx = await db.doc(`${TOKENS_COL}/${hash}`).get();
   if (!idx.exists) return null;
@@ -97,8 +109,9 @@ async function donoDoToken(db: Firestore, token: unknown): Promise<string | null
 
 /**
  * Processa o corpo do webhook (array de callbacks; objeto único é tolerado).
- * Token inválido → 404 sem tocar em nada. Token válido → 200 sempre (o Inter
- * só reenvia em falha; o cron cobre o que não deu certo aqui).
+ * Token inválido → 404 sem tocar em nada. Token válido → 200, mesmo com falha
+ * de um callback só (o cron cobre); se a rodada parou num erro geral, devolve
+ * parouPorErroGeral = true (a rota responde 503 para o Inter reenviar).
  */
 export async function processarCallbacks(
   db: Firestore,
@@ -111,7 +124,7 @@ export async function processarCallbacks(
 
   const now = deps.now ?? Date.now();
   const lista = Array.isArray(corpo) ? corpo : corpo && typeof corpo === "object" ? [corpo] : [];
-  const out: WebhookResultado = { status: 200, processados: 0, ignorados: 0, falhas: 0, motivos: {} };
+  const out: WebhookResultado = { status: 200, parouPorErroGeral: false, processados: 0, ignorados: 0, falhas: 0, motivos: {} };
   const conta = (motivo: string, campo: "ignorados" | "falhas") => {
     out[campo]++;
     out.motivos[motivo] = (out.motivos[motivo] ?? 0) + 1;
@@ -161,11 +174,40 @@ export async function processarCallbacks(
     } catch (e) {
       conta(e instanceof Error && e.name ? e.name : errCode(e), "falhas");
       // Credencial/rede/limite/Inter fora: os próximos falhariam igual. Para aqui; o cron cobre.
-      if (erroGeral(e) || (e as { kind?: unknown })?.kind === "config" || (e as { kind?: unknown })?.kind === "nao-conectado") break;
+      if (erroGeral(e) || (e as { kind?: unknown })?.kind === "config" || (e as { kind?: unknown })?.kind === "nao-conectado") {
+        out.parouPorErroGeral = true;
+        break;
+      }
     }
   }
   if (lista.length > MAX_CALLBACKS) out.motivos["acima-do-limite"] = lista.length - MAX_CALLBACKS;
   return out;
+}
+
+/**
+ * Lê o corpo como texto parando em `max` bytes (não carrega um corpo gigante na
+ * memória mesmo sem content-length). null = passou do limite. Erro de leitura = "".
+ */
+export async function lerTextoLimitado(req: Request, max: number): Promise<string | null> {
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const partes: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > max) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      partes.push(value);
+    }
+  } catch {
+    return "";
+  }
+  return Buffer.concat(partes).toString("utf8");
 }
 
 // ---------- ativação (adm supremo) ----------
@@ -195,6 +237,8 @@ const MSG_URL =
 const MSG_NAO_CONECTADO = "O Banco Inter não está conectado. Conecte primeiro.";
 const MSG_FALHA_ESCOPO = "Não foi possível falar com o Banco Inter para conferir os escopos de cobrança. Tente novamente em instantes.";
 const MSG_GRAVAR = "Não foi possível salvar a ativação dos boletos. Tente novamente.";
+export const MSG_ROTACAO_NAO_SALVA =
+  "O Inter já recebeu a nova URL do aviso, mas ela não foi salva aqui: clique em Reativar boletos de novo; até lá os avisos não chegam (a consulta diária continua).";
 
 /** Origem HTTPS pública a partir de NEXT_PUBLIC_APP_URL; null quando não serve para webhook. */
 export function origemPublica(appUrl: string | undefined): string | null {
@@ -347,6 +391,9 @@ export async function ativarBoletos(
   } catch (e) {
     console.error("[inter/boletos ativar] falha ao gravar:", errCode(e));
     if ((e as { code?: unknown })?.code === "nao-conectado") return falhar(404, MSG_NAO_CONECTADO);
+    // O Inter já aponta para a URL nova, mas o hash dela não foi salvo: os avisos
+    // dão 404 até reativar. Diz isso claramente ao adm.
+    if (novoHash) return falhar(500, MSG_ROTACAO_NAO_SALVA);
     return falhar(500, MSG_GRAVAR);
   }
 

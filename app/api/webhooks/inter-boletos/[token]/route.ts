@@ -7,9 +7,12 @@
 // banco. O corpo não é confiado: cada callback só aponta o boleto, e a situação
 // aplicada vem de uma consulta nossa ao Inter (lib/interBoletoWebhook.ts).
 //
-// Respostas: token desconhecido → 404 com corpo genérico; token válido → 200
-// { ok, processados } mesmo se algum callback falhou (o cron cobre); corpo
-// grande → 413; abuso → 429. Logs: só contagens e códigos (nunca o token, a
+// Respostas: token desconhecido ou fora do formato → 404 com corpo genérico
+// (o formato é conferido ANTES de ler o corpo); token válido → 200
+// { ok, processados } mesmo se algum callback falhou (o cron cobre); rodada
+// interrompida por erro geral (credencial, rede, Inter fora) → 503 genérico para
+// o Inter reenviar; Firestore fora antes de processar → 500; corpo grande → 413
+// (lido com limite de bytes); abuso → 429. Logs: só contagens e códigos (nunca o token, a
 // URL nem o corpo). Não usa withWebhookLog de propósito: ele gravaria a URL
 // com o token.
 //
@@ -22,7 +25,7 @@ export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
-import { hashWebhookToken, processarCallbacks } from "@/lib/interBoletoWebhook";
+import { hashWebhookToken, lerTextoLimitado, processarCallbacks, tokenComFormato } from "@/lib/interBoletoWebhook";
 import { errCode } from "@/lib/interErrors";
 
 const MAX_BYTES = 256 * 1024;
@@ -38,7 +41,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   }
 
   const { token } = await ctx.params;
-  if (typeof token !== "string" || token.length > 128) return naoEncontrado();
+  // Fora do formato: o mesmo 404 genérico, sem ler o corpo.
+  if (!tokenComFormato(token)) return naoEncontrado();
   // Chave do limite = prefixo do hash (nunca o token).
   const porToken = checkRateLimit(`inter-boletos-webhook:${hashWebhookToken(token).slice(0, 32)}`, RATE_TOKEN);
   if (porToken.limited) {
@@ -49,13 +53,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (Number.isFinite(declarado) && declarado > MAX_BYTES) {
     return NextResponse.json({ error: "Corpo muito grande." }, { status: 413 });
   }
-  let texto: string;
-  try {
-    texto = await req.text();
-  } catch {
-    texto = "";
-  }
-  if (Buffer.byteLength(texto, "utf8") > MAX_BYTES) {
+  const texto = await lerTextoLimitado(req, MAX_BYTES);
+  if (texto === null) {
     return NextResponse.json({ error: "Corpo muito grande." }, { status: 413 });
   }
   let corpo: unknown = null;
@@ -72,6 +71,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
     if (r.falhas || r.ignorados) {
       console.warn("[Inter boletos webhook]", { processados: r.processados, ignorados: r.ignorados, falhas: r.falhas, motivos: r.motivos });
     }
+    // Parou num erro geral: o que ficou sem processar volta no reenvio do Inter (idempotente).
+    if (r.parouPorErroGeral) return NextResponse.json({ error: "Falha temporária." }, { status: 503 });
     return NextResponse.json({ ok: true, processados: r.processados });
   } catch (e) {
     // Falha antes de processar (ex.: Firestore fora): 500 para o Inter reenviar.

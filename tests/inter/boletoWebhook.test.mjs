@@ -4,7 +4,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createFakeFirestore } from "../support/fakeFirestore.mjs";
-import { processarCallbacks, ativarBoletos, hashWebhookToken } from "../../lib/interBoletoWebhook";
+import {
+  processarCallbacks,
+  ativarBoletos,
+  hashWebhookToken,
+  tokenComFormato,
+  lerTextoLimitado,
+  MSG_ROTACAO_NAO_SALVA,
+} from "../../lib/interBoletoWebhook";
 import { disconnectInter } from "../../lib/interConexaoServer";
 
 const OWNER = "o1";
@@ -325,4 +332,104 @@ test("desconectar o Inter apaga o índice do token do webhook", async () => {
   assert.deepEqual(r, { ok: true });
   assert.deepEqual(tokenDocs(db), []);
   assert.equal((await processarCallbacks(db, TOKEN, [cb()], { transporte: inter().t, now: NOW })).status, 404);
+});
+
+// ---------- formato do token e corpo com limite (F1) ----------
+
+test("tokenComFormato: só 43 caracteres base64url", () => {
+  assert.equal(tokenComFormato(TOKEN), true);
+  assert.equal(tokenComFormato("a-_Z9".repeat(8) + "abc"), true);
+  for (const t of ["", "curto", TOKEN + "x", TOKEN.slice(1), "A".repeat(42) + "=", "A".repeat(42) + "/", "../../x", "A".repeat(200), undefined, null, 43]) {
+    assert.equal(tokenComFormato(t), false, String(t));
+  }
+});
+
+const corpoStream = (bytes) =>
+  new Request("http://localhost/x", {
+    method: "POST",
+    duplex: "half",
+    body: new ReadableStream({
+      start(c) {
+        // Em pedaços, sem content-length (como um envio chunked).
+        for (let i = 0; i < bytes; i += 1000) c.enqueue(new Uint8Array(Math.min(1000, bytes - i)).fill(0x61));
+        c.close();
+      },
+    }),
+  });
+
+test("lerTextoLimitado: devolve o texto até o limite e null acima dele (sem content-length)", async () => {
+  assert.equal(await lerTextoLimitado(new Request("http://localhost/x", { method: "POST", body: '[{"a":"ç"}]' }), 100), '[{"a":"ç"}]');
+  assert.equal(await lerTextoLimitado(new Request("http://localhost/x", { method: "POST" }), 100), "");
+  assert.equal((await lerTextoLimitado(corpoStream(5000), 5000)).length, 5000);
+  assert.equal(await lerTextoLimitado(corpoStream(5001), 5000), null);
+  assert.equal(await lerTextoLimitado(corpoStream(300 * 1024), 256 * 1024), null);
+});
+
+// ---------- erro geral → o Inter reenvia (F2) ----------
+
+test("processou um e parou num erro geral (503 do Inter) → parouPorErroGeral, o resto fica para o reenvio", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b2`, emitido({ id: "b2", codigoSolicitacao: "c2" }));
+  db.store.set(`${P}/boletos/b3`, emitido({ id: "b3", codigoSolicitacao: "c3" }));
+  const calls = [];
+  const t = async (req) => {
+    calls.push(req);
+    const c = decodeURIComponent(req.path.split("/").pop());
+    if (c === "c2") return { status: 503, json: null };
+    return { status: 200, json: PAGO(c) };
+  };
+  const corpo = [cb(), cb({ seuNumero: "b2", codigoSolicitacao: "c2" }), cb({ seuNumero: "b3", codigoSolicitacao: "c3" })];
+  const r = await processarCallbacks(db, TOKEN, corpo, { transporte: t, now: NOW });
+  assert.equal(r.status, 200);
+  assert.equal(r.parouPorErroGeral, true);
+  assert.equal(r.processados, 1);
+  assert.equal(calls.length, 2, "não consulta o terceiro depois do erro geral");
+  assert.deepEqual(cashIds(db), [`${P}/cashflow/boleto_b1`]);
+
+  // Reenvio do Inter com o Inter de volta: b1 não duplica, b2 e b3 entram.
+  const r2 = await processarCallbacks(db, TOKEN, corpo, { transporte: inter(PAGO).t, now: NOW });
+  assert.equal(r2.parouPorErroGeral, false);
+  assert.deepEqual(cashIds(db).sort(), [`${P}/cashflow/boleto_b1`, `${P}/cashflow/boleto_b2`, `${P}/cashflow/boleto_b3`]);
+});
+
+test("erro geral já no primeiro (429) → parouPorErroGeral; erro de UM callback só → não", async () => {
+  const db = setup();
+  const r = await processarCallbacks(db, TOKEN, [cb()], { transporte: async () => ({ status: 429, json: null }), now: NOW });
+  assert.equal(r.parouPorErroGeral, true);
+  assert.equal(r.processados, 0);
+
+  const db2 = setup();
+  const ilegivel = await processarCallbacks(db2, TOKEN, [cb()], { transporte: inter(() => ({ cobranca: { situacao: "XYZ" } })).t, now: NOW });
+  assert.equal(ilegivel.status, 200);
+  assert.equal(ilegivel.parouPorErroGeral, false);
+  assert.equal(ilegivel.falhas, 1);
+
+  const nao = await processarCallbacks(setup(), "B".repeat(43), [cb()], { transporte: inter().t, now: NOW });
+  assert.equal(nao.parouPorErroGeral, false);
+});
+
+// ---------- rotação que não foi salva (F3) ----------
+
+const transacaoFalhando = (db) => ({
+  ...db,
+  runTransaction: async () => {
+    throw Object.assign(new Error("falha simulada"), { code: "unavailable" });
+  },
+});
+
+test("ativar: Inter recebeu a URL nova mas o hash não foi salvo → 500 com o aviso de reativar", async () => {
+  const db = setup();
+  const { t, calls } = inter();
+  const r = await ativarBoletos(transacaoFalhando(db), OWNER, "adm1", { ...escopos("ok", "ok"), transporte: t, appUrl: APP, now: NOW });
+  assert.deepEqual(r, { ok: false, status: 500, error: MSG_ROTACAO_NAO_SALVA });
+  assert.match(MSG_ROTACAO_NAO_SALVA, /Reativar boletos/);
+  assert.equal(calls.filter((c) => c.method === "PUT").length, 1);
+  // O token antigo continua guardado (nada foi trocado).
+  assert.deepEqual(tokenDocs(db), [`interWebhookTokens/${HASH}`]);
+
+  // Sem registro novo (sem escopo de escrita), a falha ao gravar segue a mensagem genérica.
+  const r2 = await ativarBoletos(transacaoFalhando(conectado()), OWNER, "adm1", { ...escopos("sem-escopo", "ok"), transporte: inter().t, appUrl: APP, now: NOW });
+  assert.equal(r2.ok, false);
+  assert.equal(r2.status, 500);
+  assert.notEqual(r2.error, MSG_ROTACAO_NAO_SALVA);
 });
