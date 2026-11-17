@@ -38,6 +38,7 @@ A conexão **não é mais feita pelo cliente**. Só um **adm supremo** (os e-mai
 | `INTER_ENC_KEY` | Chave de 32 bytes (base64) que criptografa `clientSecret`, certificado e chave privada no Firestore. Sem ela, a conexão fica indisponível. |
 | `CRON_SECRET` | Já usada pelos outros crons; os crons do Inter (`inter-sync` e `inter-boletos`) exigem o mesmo header `Authorization: Bearer`. |
 | `NEXT_PUBLIC_APP_URL` | **Novo para boletos.** Endereço público **https** do app (ex.: `https://app.seudominio.com.br`). É a base da URL do webhook registrada no Inter. Em produção, sem ela (ou com localhost/http) a ativação de boletos é recusada com HTTP 400. |
+| `INTER_API_HOST` | **Deixe sem definir em produção** (vazio = `cdpj.partners.bancointer.com.br`). Defina `cdpj-sandbox.partners.uatinter.co` **só num deploy de teste** para falar com o sandbox do Inter (o sandbox exige credencial e certificado próprios, gerados no portal de desenvolvedores). Vale para token, extrato, cobrança e registro do webhook. Só esses dois valores são aceitos: qualquer outro faz as chamadas ao Inter falharem com o erro de configuração do servidor (HTTP 500, "Avise o suporte"), sem cair na produção em silêncio. |
 
 Gerar a chave (nunca commitar o valor):
 
@@ -63,7 +64,9 @@ Sem o deploy, a fila "A conciliar" e o status não funcionam para o usuário.
 
 **Regras novas dos boletos (publicar também):**
 
-- `users/{uid}/boletos/{id}`: o dono/membro só **lê**; escrita é sempre negada (só o servidor grava). Sem o deploy, a **aba Boletos não carrega** para o usuário.
+**Ordem do deploy: regras primeiro, depois o código** (ou os dois juntos). Publicar as regras antes é seguro: nenhum client grava `boleto` nem `ultimoBoletoId`, e `boletos` só é gravado pelo servidor. O contrário é que é perigoso: **sem as regras novas a aba Boletos funciona**, porque o bloco genérico antigo deixa a conta ler **e gravar** `boletos` e gravar `receivables.boleto`; aí qualquer membro poderia gravar `boletos` e forjar o `boleto` de uma conta a receber (linha digitável/Pix do e-mail de cobrança).
+
+- `users/{uid}/boletos/{id}`: o dono/membro só **lê**; escrita é sempre negada (só o servidor grava).
 - `interWebhookTokens/{sha256}`: negada a qualquer acesso de cliente (só servidor); guarda o índice hash do token do webhook para o dono.
 - `users/{uid}/receivables/{id}`: regra própria que **protege os campos `boleto` e `ultimoBoletoId`** (o client não cria nem altera esses campos). Sem o deploy, a proteção contra um membro forjar linha digitável/Pix no e-mail de cobrança **não vale**.
 - O bloco genérico agora exclui também `boletos` e `receivables`.
@@ -74,7 +77,7 @@ Sem o deploy, a fila "A conciliar" e o status não funcionam para o usuário.
 
 `vercel.json` registra `/api/cron/inter-sync` com agenda `30 9 * * *` (diário, 09:30 UTC). Ele sincroniza as contas conectadas em lotes com concorrência limitada e informa quantas ficaram para a próxima execução. Também existe sincronização sob demanda (`/api/inter/sincronizar`, botão no Fluxo de Caixa). Rota e cron do extrato não mudaram.
 
-**Cron novo dos boletos:** `vercel.json` registra `/api/cron/inter-boletos` com agenda `45 9 * * *` (diário, 09:45 UTC). É a "consulta de segurança": para cada conta com a cobrança ativa (`integracoesBanco.cobranca.ativo`) e Pro, consulta os boletos em aberto no Inter e aplica o que mudou (cobre aviso de webhook perdido). Exige `CRON_SECRET` (header `Authorization: Bearer`) e `INTER_ENC_KEY` (sem ela responde 500). Concorrência 3, com orçamento de tempo próprio; uma conta com falha não interrompe as outras. A resposta traz só contagens (`contas`, `atualizadas`, `falhas`, `puladas`, `restantes`, `consultados`, `pagos`). Também existe o botão **Atualizar** na aba Boletos (`/api/inter/boletos/atualizar`).
+**Cron novo dos boletos:** `vercel.json` registra `/api/cron/inter-boletos` com agenda `45 9 * * *` (diário, 09:45 UTC). É a "consulta de segurança": para cada conta **conectada** (todo doc de `integracoesBanco`, com ou sem a cobrança ativa) e Pro, consulta os boletos em aberto no Inter e aplica o que mudou (cobre aviso de webhook perdido e os boletos abertos de uma conta que reconectou e ainda não foi reativada). Conta sem boleto em aberto não chama o Inter. Exige `CRON_SECRET` (header `Authorization: Bearer`) e `INTER_ENC_KEY` (sem ela responde 500). Concorrência 3, com orçamento de tempo próprio; uma conta com falha não interrompe as outras. A resposta traz só contagens (`contas`, `atualizadas`, `falhas`, `puladas`, `restantes`, `consultados`, `pagos`). Também existe o botão **Atualizar** na aba Boletos (`/api/inter/boletos/atualizar`).
 
 ## 4. Credenciais do cliente
 
@@ -143,6 +146,7 @@ Estão marcadas como `ASSUNÇÃO` em `lib/inter.ts`:
 - O painel do adm não consegue limpar um valor de `conta` já existente: dá para alterar, mas só remover desconectando e reconectando.
 - Fechar a aba no meio de "criar" pode deixar uma baixa (settlement) órfã.
 - A reserva de um item expira em 15 min usando o relógio do cliente.
+- **Corrida extrato × boleto:** se o aviso de pagamento do boleto chegar **durante** uma sincronização do extrato, o item do pagamento pode entrar em "A conciliar" **sem sugestão** (o vínculo automático não o viu). Nesse caso **não use "criar"** nele (duplicaria a entrada do boleto): use **vincular** ao lançamento `boleto_{id}` ou **ignorar**.
 
 ## 10. Boletos: ativação pelo adm
 
@@ -161,16 +165,24 @@ O resultado mostra 4 linhas:
 | Escrita (`boleto-cobranca.write`) | Idem. Sem escrita não há emissão nem registro de webhook. |
 | Webhook | "Registrado" = registrado **agora**. "Não registrado" = faltou escrita, a URL não é https pública, ou o Inter recusou o registro. |
 
-Os boletos só ficam **ativos** com leitura **e** escrita; com escopo faltando o cartão mostra "escopo faltando" e a mensagem orienta a regerar a credencial. Se o Inter não puder ser contatado, a resposta é HTTP 502 ("tente novamente") e **nada é gravado**. Ativar é seguro de repetir; cada ativação com escrita e URL pública **gira o token** do webhook. A ação é auditada em `auditoriaIntegracoes` (`ativar-boletos`).
+Os boletos só ficam **ativos** com leitura **e** escrita; com escopo faltando o cartão mostra "escopo faltando" e a mensagem orienta a regerar a credencial. Se o Inter não puder ser contatado, a resposta é HTTP 502 ("tente novamente") e **a conexão não muda** (só a auditoria registra a tentativa em `auditoriaIntegracoes`). Ativar é seguro de repetir; cada ativação com escrita e URL pública **gira o token** do webhook. A ação é auditada em `auditoriaIntegracoes` (`ativar-boletos`).
+
+Se o Inter já recebeu a URL nova mas a gravação do token aqui falhar, a resposta é HTTP 500 com "O Inter já recebeu a nova URL do aviso, mas ela não foi salva aqui: clique em Reativar boletos de novo…". Até reativar, os avisos respondem 404 (a consulta diária continua cobrindo).
+
+### Reconectar, desconectar ou trocar credenciais
+
+- **Conectar de novo** (Conectar com uma conexão já existente) substitui a conexão inteira: apaga o índice do token do webhook e a ativação dos boletos (`cobranca`). Daí em diante o webhook antigo responde **404**, o cartão fica "inativo" e **é preciso clicar "Reativar boletos"** para registrar o webhook de novo. Enquanto isso os boletos já emitidos seguem cobertos: o cron diário consulta toda conta conectada e o botão **Atualizar** da aba Boletos continua habilitado (se a credencial nova não tiver o escopo de cobrança, aparece a mensagem de escopo faltando do servidor).
+- **Desconectar** apaga a conexão, o índice do token e a ativação: o webhook responde **404**, o cron **pula** a conta (não há credencial) e o **Atualizar** fica desabilitado. Boletos em aberto só voltam a ser consultados depois de conectar e reativar.
+- **Atualizar credenciais** mantém a ativação e o token, mas os escopos guardados podem ter ficado velhos: **rode "Reativar boletos"** depois de trocar a credencial para conferir os escopos de novo (isso também gira o token).
 
 ## 11. Boletos: webhook
 
 - **URL registrada no Inter:** `${NEXT_PUBLIC_APP_URL}/api/webhooks/inter-boletos/{token}`. O token (32 bytes aleatórios) é o único segredo; só o **sha256** dele é guardado (`interWebhookTokens/{hash}` e `integracoesBanco/{uid}.cobranca.token`).
-- **Só https público e só depois do deploy.** Não funciona no localhost (o Inter só chama https público). Fora de produção a ativação grava as flags mas não registra o webhook.
+- **Só https público e só depois do deploy.** Não funciona no localhost (o Inter só chama https público). O webhook é registrado **sempre que `NEXT_PUBLIC_APP_URL` é uma origem https pública, em qualquer ambiente** (inclusive previews da Vercel, que também rodam com `NODE_ENV=production`). A única diferença fora de produção: sem URL pública, a ativação grava as flags sem registrar o webhook em vez de responder 400.
 - **O token vai na URL**, portanto aparece nos **logs de acesso da Vercel**. Não compartilhe esses logs. O app não grava a URL nem o corpo nos próprios logs.
 - **Reativar gira o token:** o anterior deixa de valer (responde 404). Se o registro do novo token falhar no Inter, o token antigo é mantido.
 - O corpo do aviso **não é confiado**: cada item só aponta o boleto (`seuNumero` + `codigoSolicitacao`); a situação e o valor aplicados vêm de uma **consulta nossa** ao Inter. A aplicação é idempotente (repetição não duplica entrada no caixa).
-- Token válido responde sempre 200 (mesmo com item que falhou); token desconhecido, rotacionado ou conta desconectada responde 404. Corpo grande: 413; abuso: 429.
+- Respostas: token fora do formato (conferido **antes** de ler o corpo), desconhecido, rotacionado ou de conta desconectada → **404** genérico. Token válido → **200** mesmo com um item que falhou sozinho (o cron cobre). Se a rodada **parou num erro geral** (credencial, rede, limite, Inter fora, configuração) → **503** genérico, para o Inter reenviar (reaplicar é idempotente). Firestore fora antes de processar → **500**. Corpo acima de 256 KB (lido com limite, mesmo sem `content-length`) → 413; abuso → 429.
 - **Aviso perdido:** o cron diário (`45 9 * * *`) e o botão **Atualizar** consultam os boletos em aberto e cobrem o que o webhook não entregou.
 
 ## 12. Boletos: como o app se comporta
@@ -182,13 +194,15 @@ Os boletos só ficam **ativos** com leitura **e** escrita; com escopo faltando o
 - **Cancelar** confere antes no Inter: se já foi pago lá, aplica o pagamento e recusa o cancelamento.
 - **Pagamento sempre entra no caixa pelo valor recebido** (`valorTotalRecebido`, que pode incluir juros/multa), na data do pagamento, como entrada `boleto_{id}` (única, nunca duplica). Baixa a conta a receber ligada (parcial é aceita) e ajusta o lançamento-espelho se a conta já tinha sido marcada como recebida à mão.
 - **Extrato:** o item do extrato é vinculado ao lançamento do boleto automaticamente **só quando há par único** (mesmo valor em centavos, data a até 3 dias, sem concorrente), nas duas ordens. Se o extrato chegou antes e a entrada foi criada à mão com o mesmo valor, o boleto **adota** essa entrada em vez de criar outra. Qualquer ambiguidade: nada é vinculado sozinho.
-- **Flags de revisão** (avisos no boleto): `revisarCaixa` = havia mais de uma entrada à mão com o mesmo valor/janela, então pode haver duplicata no caixa; `pagoAposCancelamento` = o Inter confirmou pagamento de um boleto que já estava cancelado/expirado/com falha. Sem valor ou data no retorno do Inter, nada é lançado e o boleto fica com o erro "Pagamento confirmado sem valor/data; consulte novamente" até a próxima consulta.
-- O e-mail de cobrança reaproveita o boleto gravado em `receivables/{id}.boleto` (linha digitável, Pix copia-e-cola).
+- **Flags de revisão** (avisos no boleto): `revisarCaixa` = pode haver duplicata no caixa: havia mais de uma entrada à mão do extrato com o mesmo valor/janela, **ou** uma entrada do mesmo valor/janela que o boleto não pode adotar (lançada à mão no Fluxo de Caixa e baixada nesta conta a receber sem item do extrato, ou vinda de "A conciliar" mas baixada em outra conta). O boleto cria a própria entrada (o dinheiro entra garantido) e o usuário confere; `pagoAposCancelamento` = o Inter confirmou pagamento de um boleto que já estava cancelado/expirado/com falha. Sem valor ou data no retorno do Inter, nada é lançado e o boleto fica com o erro "Pagamento confirmado sem valor/data; consulte novamente" até a próxima consulta.
+- O e-mail de cobrança reaproveita o boleto gravado em `receivables/{id}.boleto` (linha digitável, Pix copia-e-cola). Na aba Boletos, **"Reenviar por e-mail" só aparece** quando o boleto tem linha digitável e o **mesmo valor (saldo em aberto) e vencimento** da conta a receber; senão o e-mail sairia só com Pix (ex.: boleto de conta vencida emitido com vencimento hoje, ou valor editado no modal).
+- O último erro do servidor (`lastError`) aparece em texto discreto na linha do boleto enquanto ele está em processamento, a receber, vencido ou com falha na emissão.
+- **Repetir o envio não duplica:** o modal de emissão gera uma chave de idempotência por abertura (`idemKey`); reenviar o mesmo pedido (rede caiu, clique duplo) devolve o boleto já criado sem chamar o Inter. Uma recusa clara (falha na emissão) não conta, então dá para corrigir e tentar de novo no mesmo modal.
 - Emitir, cancelar e descartar exigem o **PIN** no app; o carimbo de quem fez fica no boleto.
 
 ## 13. Checklist de validação no SANDBOX do Inter
 
-Host do sandbox: `cdpj-sandbox.partners.uatinter.co`. **Hoje o código fala só com o host de produção** (`cdpj.partners.bancointer.com.br`, constante `HOST` em `lib/inter.ts`); para o sandbox, aponte essa constante para o host do sandbox em um ambiente de teste (nunca em produção) antes de começar. Use um ambiente publicado com https (o webhook não chega ao localhost).
+Host do sandbox: `cdpj-sandbox.partners.uatinter.co`. Num **deploy de teste** (nunca em produção), defina `INTER_API_HOST=cdpj-sandbox.partners.uatinter.co` (seção 1) antes de começar; sem a variável o app fala com a produção (`cdpj.partners.bancointer.com.br`). O sandbox exige credencial e certificado próprios. Use um ambiente publicado com https (o webhook não chega ao localhost).
 
 ### Passo a passo
 
@@ -213,23 +227,23 @@ Todas as marcadas `ASSUNÇÃO (não verificado no sandbox)` no código, mais as 
 | # | Suposição | Onde | O que olhar | Se divergir, ajustar |
 |---|---|---|---|---|
 | 1 | `x-conta-corrente` só dígitos, sem zeros à esquerda (igual ao extrato) | `lib/interCobranca.ts:142` | Chamadas na conta certa; 400/403 de conta | Normalização da conta em `transporteMtls` |
-| 2 | Telefone: `ddd` = 2 primeiros dígitos, `telefone` = restante, sem DDI 55 | `lib/interCobranca.ts:212` | Emitir com telefone; o Inter aceita e mostra no boleto | `ddd`/`telefone` em `buildEmitBody` |
-| 3 | Multa percentual: `multa = { codigoMulta: "PERCENTUAL", taxa }` | `lib/interCobranca.ts:241` | Emitir com multa e ver se voltou igual | Objeto `multa` |
-| 4 | Mora mensal: `mora = { codigoMora: "TAXAMENSAL", taxa }` | `lib/interCobranca.ts:245` | Idem, com juros | Objeto `mora` |
-| 5 | Campos da consulta no topo ou dentro de `cobranca`/`boleto`/`pix` | `lib/interCobranca.ts:269` | JSON real do `GET /cobrancas/{codigo}` | Lista de objetos em `parseCobranca` |
-| 6 | Nomes `linhaDigitavel`, `codigoBarras`, `nossoNumero`, `pixCopiaECola` (aceita também `pixCopiaCola`) | `lib/interCobranca.ts:282` | Linha digitável e Pix preenchidos no app | Chaves lidas em `parseCobranca` |
-| 7 | Data do pagamento em `dataPagamento` ou `dataSituacao` | `lib/interCobranca.ts:293` | Campo real; **formato e fuso** (o código pega os 10 primeiros caracteres e exige `AAAA-MM-DD`; pagamento perto da meia-noite pode cair no dia errado) | Chave e conversão de data |
-| 8 | `origemRecebimento` = `BOLETO` ou `PIX` | `lib/interCobranca.ts:296` | Valor real pago por boleto e por Pix | Mapeamento (hoje só informativo) |
-| 9 | Listagem: `GET /cobrancas` com `dataInicial`/`dataFinal` obrigatórios, `filtrarDataPor=EMISSAO`, filtro `seuNumero`, `itensPorPagina`/`paginaAtual` (0-based), resposta `{ cobrancas: [...] }` com itens no formato da consulta individual | `lib/interCobranca.ts:328` (`buscarPorSeuNumero`) | Provocar uma falha ambígua (ou chamar a listagem direto) e ver se acha o boleto; paginação; filtro de data | Query e leitura da lista (usada por Atualizar e pelo cancelamento de boleto sem código) |
-| 10 | Cancelamento: `POST /cobrancas/{codigo}/cancelar` com corpo `{ motivoCancelamento }` | `lib/interCobranca.ts:347` | HTTP 2xx e situação cancelada | Corpo do cancelamento |
-| 11 | Webhook: `PUT /cobrancas/webhook` com corpo `{ webhookUrl }` | `lib/interCobranca.ts:368` | Ativação com "Registrado" e o Inter chamando a URL | Corpo de `registrarWebhook` |
-| 12 | Faixa do `valorNominal`: mínimo **R$ 2,50**, máximo 99.999.999,99 | `lib/interBoletoServer.ts:200` | Tentar emitir R$ 1,00 e R$ 2,50 | Limites em `validar` e a mensagem |
-| 13 | Formato decimal: `valorNominal` enviado como **número** com 2 casas; `valorTotalRecebido` aceito como número ou string com ponto (com vírgula, pontos viram milhar) | `lib/interCobranca.ts:235` e `:191-204` | JSON real de envio/retorno; valor recebido com juros/multa | `buildEmitBody` / `valorOpcional` |
-| 14 | Os callbacks do webhook **sempre** trazem `seuNumero` e `codigoSolicitacao` (sem código local ou divergente o item é ignorado) | `lib/interBoletoWebhook.ts:128-152` | Corpo real de aviso de pagamento e de cancelamento; formato (array ou objeto) | Leitura dos campos do callback (o cron cobre enquanto isso) |
+| 2 | Telefone: `ddd` = 2 primeiros dígitos, `telefone` = restante, sem DDI 55 | `lib/interCobranca.ts:215` | Emitir com telefone; o Inter aceita e mostra no boleto | `ddd`/`telefone` em `buildEmitBody` |
+| 3 | Multa percentual: `multa = { codigoMulta: "PERCENTUAL", taxa }` | `lib/interCobranca.ts:244` | Emitir com multa e ver se voltou igual | Objeto `multa` |
+| 4 | Mora mensal: `mora = { codigoMora: "TAXAMENSAL", taxa }` | `lib/interCobranca.ts:248` | Idem, com juros | Objeto `mora` |
+| 5 | Campos da consulta no topo ou dentro de `cobranca`/`boleto`/`pix` | `lib/interCobranca.ts:272` | JSON real do `GET /cobrancas/{codigo}` | Lista de objetos em `parseCobranca` |
+| 6 | Nomes `linhaDigitavel`, `codigoBarras`, `nossoNumero`, `pixCopiaECola` (aceita também `pixCopiaCola`) | `lib/interCobranca.ts:285` | Linha digitável e Pix preenchidos no app | Chaves lidas em `parseCobranca` |
+| 7 | Data do pagamento em `dataPagamento` ou `dataSituacao` | `lib/interCobranca.ts:296` | Campo real; **formato e fuso** (o código pega os 10 primeiros caracteres e exige `AAAA-MM-DD`; pagamento perto da meia-noite pode cair no dia errado) | Chave e conversão de data |
+| 8 | `origemRecebimento` = `BOLETO` ou `PIX` | `lib/interCobranca.ts:299` | Valor real pago por boleto e por Pix | Mapeamento (hoje só informativo) |
+| 9 | Listagem: `GET /cobrancas` com `dataInicial`/`dataFinal` obrigatórios, `filtrarDataPor=EMISSAO`, filtro `seuNumero`, `itensPorPagina`/`paginaAtual` (0-based), resposta `{ cobrancas: [...] }` com itens no formato da consulta individual | `lib/interCobranca.ts:331` (`buscarPorSeuNumero`) | Provocar uma falha ambígua (ou chamar a listagem direto) e ver se acha o boleto; paginação; filtro de data | Query e leitura da lista (usada por Atualizar e pelo cancelamento de boleto sem código) |
+| 10 | Cancelamento: `POST /cobrancas/{codigo}/cancelar` com corpo `{ motivoCancelamento }` | `lib/interCobranca.ts:350` | HTTP 2xx e situação cancelada | Corpo do cancelamento |
+| 11 | Webhook: `PUT /cobrancas/webhook` com corpo `{ webhookUrl }` | `lib/interCobranca.ts:371` | Ativação com "Registrado" e o Inter chamando a URL | Corpo de `registrarWebhook` |
+| 12 | Faixa do `valorNominal`: mínimo **R$ 2,50**, máximo 99.999.999,99 | `lib/interBoletoServer.ts:215` | Tentar emitir R$ 1,00 e R$ 2,50 | Limites em `validar` e a mensagem |
+| 13 | Formato decimal: `valorNominal` enviado como **número** com 2 casas; `valorTotalRecebido` aceito como número ou string com ponto (com vírgula, pontos viram milhar) | `lib/interCobranca.ts:238` e `:194-207` | JSON real de envio/retorno; valor recebido com juros/multa | `buildEmitBody` / `valorOpcional` |
+| 14 | Os callbacks do webhook **sempre** trazem `seuNumero` e `codigoSolicitacao` (sem código local ou divergente o item é ignorado) | `lib/interBoletoWebhook.ts:141-164` | Corpo real de aviso de pagamento e de cancelamento; formato (array ou objeto) | Leitura dos campos do callback (o cron cobre enquanto isso) |
 | 15 | `seuNumero` de 12 caracteres `[0-9a-z]` (limite 15) é aceito e devolvido na consulta e no aviso | `lib/interBoletoTypes.ts` | O Inter repete o `seuNumero` | Geração do id / casamento |
 | 16 | Autenticação do webhook: só o token na URL (sem assinatura do Inter) | `app/api/webhooks/inter-boletos/[token]/route.ts` | Se o Inter envia cabeçalho de assinatura | Acrescentar verificação se existir |
 | 17 | Como o pagamento aparece no **extrato** (`tipoTransacao`, descrição, data, valor) para o casamento automático | `lib/interSync.ts`, `lib/interBoletoExtrato.ts` | Valor igual ao recebido? Data a até 3 dias? | `candidatoUnico` / mapeamento em `lib/inter.ts` |
-| 18 | Suposições do extrato já existentes | `lib/inter.ts:21, 48, 95, 219, 246` | Seção 7 | Seção 7 |
+| 18 | Suposições do extrato já existentes | `lib/inter.ts:49, 76, 123, 249, 276` | Seção 7 | Seção 7 |
 
 Confirme também na primeira emissão que o `POST /cobrancas` devolve só `{ codigoSolicitacao }` (se repetir o `seuNumero`, tem de ser o nosso) e que o `GET /cobrancas/{codigo}/pdf` traz o campo `pdf` em base64.
 
@@ -238,9 +252,10 @@ Confirme também na primeira emissão que o `POST /cobrancas` devolve só `{ cod
 - Vencimento, juros e multa só nos campos suportados (percentual de multa e de mora mensal; sem desconto nem outras modalidades).
 - **Não edita** boleto emitido: cancelar e emitir outro.
 - Sem emissão em lote.
-- Boleto **avulso** (sem conta a receber) não tem chave de idempotência: **duplo clique pode emitir dois**. Com conta a receber, a regra de "um boleto vigente" segura.
+- A chave de idempotência vale **por abertura do modal**: fechar e abrir de novo gera outra chave, então um boleto **avulso** emitido de novo num modal novo cria outro boleto. Com conta a receber, a regra de "um boleto vigente" continua segurando.
+- Repetir o envio com a mesma chave devolve o boleto já criado mesmo se valor/pagador tiverem sido editados entre as tentativas (de propósito: a primeira pode já existir no Inter).
 - O **Atualizar** (e o cron) consulta no máximo **25 boletos por rodada** (limite de chamadas por minuto do Inter); os demais ficam para a próxima.
-- Se a gravação do novo token falhar depois de o Inter já ter recebido a URL nova, o webhook responde **404 até reativar**.
+- Se a gravação do novo token falhar depois de o Inter já ter recebido a URL nova, o webhook responde **404 até reativar** (a ativação avisa com mensagem própria; seção 10).
 - **Cada aviso** do webhook pede um novo token OAuth ao Inter (limite de 5 por minuto); em rajadas, o restante é coberto pela consulta diária.
 - O rate limit das rotas (inclusive do webhook) é **em memória, por instância**.
 - **Qualquer membro** ainda pode excluir uma conta a receber que tenha boleto (o boleto continua no Inter e no app).
