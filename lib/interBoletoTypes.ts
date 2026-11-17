@@ -44,6 +44,9 @@ export type BoletoDoc = {
   createdAt: string;
   createdBy: string;
   cancelledBy?: string;
+  /** Boleto sem código descartado à força pelo dono (uid) e quando (ISO). */
+  descartadoManualmentePor?: string;
+  descartadoManualmenteEm?: string;
   /** null = erro anterior já resolvido. */
   lastError?: string | null;
   /** O banco confirmou o pagamento de um boleto que aqui estava cancelado/expirado/com falha. */

@@ -43,7 +43,7 @@ import { validarEndereco } from "./pagadorEndereco";
 
 // ---------- erros ----------
 
-export type BoletoErroKind = "validacao" | "nao-encontrado" | "conflito" | "nao-conectado" | "config" | "inter";
+export type BoletoErroKind = "validacao" | "nao-encontrado" | "conflito" | "nao-conectado" | "config" | "inter" | "proibido";
 
 /** Erro com mensagem legível (pode ir para a tela) e o tipo, para a rota escolher o status HTTP. */
 export class BoletoError extends Error {
@@ -119,7 +119,8 @@ async function transporteDe(db: Firestore, ownerUid: string, deps: BoletoDeps): 
 // ---------- validação ----------
 
 export type EmitirBoletoInput = {
-  receivableId?: string;
+  /** Vem cru do corpo: qualquer coisa que não seja texto é recusada (nunca vira avulso em silêncio). */
+  receivableId?: unknown;
   payer: unknown;
   amount: unknown;
   dueDate: unknown;
@@ -133,6 +134,14 @@ function dataValida(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const d = new Date(s + "T00:00:00Z");
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
+/** hoje + 2 anos (29/02 vira 28/02 quando o ano de destino não é bissexto). */
+function maisDoisAnos(hoje: string): string {
+  const [a, m, d] = hoje.split("-").map(Number);
+  const alvo = new Date(Date.UTC(a + 2, m - 1, d));
+  if (alvo.getUTCMonth() !== m - 1) alvo.setUTCDate(0);
+  return alvo.toISOString().slice(0, 10);
 }
 
 function taxa(v: unknown, max: number, nome: string): number | undefined {
@@ -157,6 +166,7 @@ function validar(i: EmitirBoletoInput, hoje: string): Validado {
 
   let receivableId: string | undefined;
   if (i.receivableId !== undefined && i.receivableId !== null && i.receivableId !== "") {
+    if (typeof i.receivableId !== "string") throw erro("Conta a receber inválida.");
     receivableId = txt(i.receivableId);
     if (!receivableId || receivableId.length > 200 || receivableId.includes("/")) throw erro("Conta a receber inválida.");
   }
@@ -174,9 +184,15 @@ function validar(i: EmitirBoletoInput, hoje: string): Validado {
   if (pr.endereco === undefined || pr.endereco === null) throw erro("Informe o endereço do pagador.");
   const end = validarEndereco(pr.endereco);
   if (!end.ok) throw erro(end.error);
+  const presente = (v: unknown) => v !== undefined && v !== null && v !== "";
+  if (presente(pr.email) && typeof pr.email !== "string") throw erro("E-mail do pagador inválido.");
   const email = txt(pr.email);
-  if (email && !EMAIL_RE.test(email)) throw erro("E-mail do pagador inválido.");
-  const telefone = txt(pr.telefone);
+  if (email && (email.length > 120 || !EMAIL_RE.test(email))) throw erro("E-mail do pagador inválido.");
+  if (presente(pr.telefone) && typeof pr.telefone !== "string") throw erro("Telefone do pagador inválido.");
+  const telefone = txt(pr.telefone).replace(/\D/g, "");
+  if (telefone && (telefone.length < 10 || telefone.length > 13)) {
+    throw erro("Telefone do pagador inválido: informe DDD e número (10 a 13 dígitos).");
+  }
 
   const amount = typeof i.amount === "number" ? i.amount : Number.NaN;
   if (!Number.isFinite(amount) || amount <= 0) throw erro("O valor do boleto precisa ser maior que zero.");
@@ -188,6 +204,7 @@ function validar(i: EmitirBoletoInput, hoje: string): Validado {
   const dueDate = txt(i.dueDate);
   if (!dataValida(dueDate)) throw erro("Data de vencimento inválida.");
   if (dueDate < hoje) throw erro("O vencimento não pode ser anterior a hoje.");
+  if (dueDate > maisDoisAnos(hoje)) throw erro("O vencimento não pode passar de 2 anos a partir de hoje.");
 
   const fineRate = taxa(i.fineRate, MAX_FINE_RATE, "Multa");
   const interestRate = taxa(i.interestRate, MAX_INTEREST_RATE, "Taxa de juros");
@@ -401,6 +418,18 @@ async function conferirConta(db: Firestore, base: string, recRef: DocRef, tx: Tx
 // ---------- cancelar ----------
 
 const MOTIVO_CANCELAMENTO = "Cancelado pelo emissor";
+/** Idade mínima de um boleto sem codigoSolicitacao para poder ser descartado localmente. */
+const DESCARTE_MIN_MS = 24 * 60 * 60 * 1000;
+const MSG_AINDA_PROCESSANDO =
+  "Este boleto ainda pode estar em processamento no Banco Inter. Tente cancelar novamente mais tarde.";
+export const AVISO_DESCARTE =
+  "Boleto descartado só no app. Confira no Internet Banking do Banco Inter que nenhum boleto foi emitido para este pagador antes de emitir outro.";
+
+export type CancelarOpts = {
+  /** Descarta um boleto sem código com 24 h ou mais mesmo se a listagem do Inter falhar (só o dono). */
+  forcarDescarte?: boolean;
+  isOwner?: boolean;
+};
 
 async function lerBoleto(db: Firestore, ownerUid: string, boletoId: string): Promise<BoletoDoc> {
   if (typeof boletoId !== "string" || !ID_RE.test(boletoId)) throw new BoletoError("Boleto inválido.", "validacao");
@@ -432,8 +461,12 @@ export async function cancelarBoleto(
   boletoId: string,
   actor: Actor,
   deps: BoletoDeps = {},
-): Promise<void> {
+  opts: CancelarOpts = {},
+): Promise<{ aviso?: string }> {
   const now = deps.now ?? Date.now();
+  if (opts.forcarDescarte && !opts.isOwner) {
+    throw new BoletoError("Só o dono da conta pode descartar um boleto sem confirmação do Banco Inter.", "proibido");
+  }
   const b = await lerBoleto(db, ownerUid, boletoId);
   if (PAGAS.has(b.situacao)) throw new BoletoError("Este boleto já foi pago e não pode ser cancelado.", "validacao");
   if (b.situacao === "CANCELADO") throw new BoletoError("Este boleto já está cancelado.", "validacao");
@@ -444,23 +477,45 @@ export async function cancelarBoleto(
 
   let codigo = b.codigoSolicitacao;
   if (!codigo) {
-    // Emissão sem confirmação: procura no Inter. Achou → cancela lá; não achou →
-    // descarta só aqui (o Inter não tem essa cobrança).
-    let achada: CobrancaInter | null;
+    // Emissão sem confirmação: procura no Inter. Achou → cancela lá. Não achou →
+    // só descarta aqui se o doc tem 24 h ou mais (a emissão é assíncrona e a
+    // listagem pode não mostrar um boleto ainda em processamento). O dono pode
+    // forçar o descarte de um doc antigo mesmo com a listagem falhando.
+    const criado = Date.parse(b.createdAt);
+    const antigo = Number.isFinite(criado) && now - criado >= DESCARTE_MIN_MS;
+    if (opts.forcarDescarte && !antigo) throw new BoletoError(MSG_AINDA_PROCESSANDO, "validacao");
+
+    let achada: CobrancaInter | null = null;
+    let falhaListagem: unknown = null;
     const { de, ate } = janelaDe(b, now);
     try {
       achada = await buscarPorSeuNumero(t, boletoId, de, ate);
     } catch (e) {
-      throw new BoletoError(mensagemSegura(e), "inter");
+      falhaListagem = e;
     }
     if (!achada) {
-      await db.runTransaction(async (tx) => {
+      if (falhaListagem && !opts.forcarDescarte) throw new BoletoError(mensagemSegura(falhaListagem), "inter");
+      if (!antigo) throw new BoletoError(MSG_AINDA_PROCESSANDO, "validacao");
+      const manual = !!opts.forcarDescarte;
+      const descartado = await db.runTransaction(async (tx) => {
         const s = await tx.get(ref);
         const atual = s.data() as BoletoDoc | undefined;
-        if (!atual || atual.codigoSolicitacao || atual.situacao !== "EM_PROCESSAMENTO") return;
-        tx.update(ref, { situacao: "FALHA_EMISSAO", cancelledBy: actor.uid, lastError: "Descartado: o Banco Inter não registrou este boleto." });
+        if (!atual || atual.codigoSolicitacao || atual.situacao !== "EM_PROCESSAMENTO") return false;
+        tx.update(
+          ref,
+          manual
+            ? {
+                situacao: "FALHA_EMISSAO",
+                descartadoManualmentePor: actor.uid,
+                descartadoManualmenteEm: new Date(now).toISOString(),
+                lastError: "Descartado manualmente pelo dono da conta, sem confirmação do Banco Inter.",
+              }
+            : { situacao: "FALHA_EMISSAO", cancelledBy: actor.uid, lastError: "Descartado: o Banco Inter não registrou este boleto." },
+        );
+        return true;
       });
-      return;
+      if (!descartado) throw new BoletoError("O boleto mudou enquanto era cancelado. Atualize a lista e tente de novo.", "conflito");
+      return { aviso: AVISO_DESCARTE };
     }
     codigo = achada.codigoSolicitacao;
     await gravarCodigo(db, ownerUid, boletoId, codigo);
@@ -499,6 +554,7 @@ export async function cancelarBoleto(
     const bd = rs?.exists ? ((rs.data() ?? {}).boleto as Partial<BoletoData> | null | undefined) : null;
     if (recRef && bd && bd.provider === "inter" && bd.externalId === codigo) tx.update(recRef, { boleto: null });
   });
+  return {};
 }
 
 // ---------- PDF ----------

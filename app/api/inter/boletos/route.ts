@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
       db,
       scope.ownerUid,
       {
-        receivableId: typeof body.receivableId === "string" ? body.receivableId : undefined,
+        // Cru: o núcleo recusa (400) o que não for texto, em vez de emitir avulso em silêncio.
+        receivableId: body.receivableId,
         payer: body.payer,
         amount: body.amount,
         dueDate: body.dueDate,

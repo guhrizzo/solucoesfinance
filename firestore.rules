@@ -157,6 +157,22 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // ── Contas a receber ──────────────────────────────────────────────
+      // Como no bloco genérico, MENOS `boleto` (linha digitável/Pix que o
+      // e-mail de cobrança envia ao cliente) e `ultimoBoletoId`: só o
+      // servidor (Admin SDK) grava esses campos, senão um membro poderia
+      // forjar os dados de pagamento. Criar sem eles; editar sem mexer neles
+      // (o client nunca os reenvia). O bloco genérico abaixo exclui `receivables`.
+      match /receivables/{receivableId} {
+        allow read, delete: if inAccount(userId);
+        allow create: if inAccount(userId)
+          && !('boleto' in request.resource.data)
+          && !('ultimoBoletoId' in request.resource.data);
+        allow update: if inAccount(userId)
+          && !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['boleto', 'ultimoBoletoId']);
+      }
+
       // ── RH (rhColaboradores, rhVigencias, rhCompetencias, rhCustos,
       // rhVariaveis, rhLog, ...) — salários, CPF e dados bancários (LGPD).
       // NENHUM acesso pelo client, nem leitura: tudo passa pelas rotas
@@ -190,6 +206,7 @@ service cloud.firestore {
           && collection != 'counters'
           && collection != 'interPendentes'
           && collection != 'boletos'
+          && collection != 'receivables'
           && inAccount(userId);
       }
     }

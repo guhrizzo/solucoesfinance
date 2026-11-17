@@ -43,6 +43,7 @@ function inter(cfg = {}) {
     }
     if (method === "POST" && path.endsWith("/cancelar")) return { status: cfg.cancelStatus ?? 204, json: null };
     if (method === "GET" && path.startsWith("/cobranca/v3/cobrancas?")) {
+      if (cfg.listaStatus) return { status: cfg.listaStatus, json: null };
       return { status: 200, json: { cobrancas: cfg.lista ?? [] } };
     }
     if (method === "GET" && path.endsWith("/pdf")) {
@@ -423,4 +424,138 @@ test("atualizarBoletos: falha de rede/credencial interrompe a rodada", async () 
   };
   await assert.rejects(() => atualizarBoletos(db, OWNER, ACTOR, deps(t)), /falar com o Banco Inter/);
   assert.equal(n, 1);
+});
+
+// ---------- fix round 1: cancelar boleto sem código (Ruling 9) ----------
+
+const H = 3600 * 1000;
+/** Boleto sem codigoSolicitacao criado `horas` antes de NOW. */
+const semCodigo = (horas, o = {}) =>
+  emitido({ codigoSolicitacao: undefined, situacao: "EM_PROCESSAMENTO", createdAt: new Date(NOW - horas * H).toISOString(), ...o });
+const cancelCalls = (calls) => calls.filter((c) => c.path.endsWith("/cancelar"));
+const DONO = { isOwner: true };
+
+test("cancelar sem código, doc com menos de 24 h e não achado no Inter → recusado, doc intacto", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b1`, semCodigo(2));
+  const { t, calls } = inter({ lista: [] });
+  await assert.rejects(() => cancelarBoleto(db, OWNER, "b1", ACTOR, deps(t)), /ainda pode estar em processamento/i);
+  assert.equal(get(db, "boletos/b1").situacao, "EM_PROCESSAMENTO");
+  assert.equal(cancelCalls(calls).length, 0);
+  // Continua vigente: a conta a receber segue bloqueada para outra emissão.
+  await assert.rejects(() => emitirBoleto(db, OWNER, entrada(), ACTOR, deps(t)), /vigente/i);
+});
+
+test("cancelar sem código, doc com 24 h ou mais e não achado → descarta (FALHA_EMISSAO) com aviso", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b1`, semCodigo(25));
+  const { t, calls } = inter({ lista: [] });
+  const r = await cancelarBoleto(db, OWNER, "b1", ACTOR, deps(t));
+  assert.match(r.aviso, /Internet Banking/);
+  const b = get(db, "boletos/b1");
+  assert.equal(b.situacao, "FALHA_EMISSAO");
+  assert.equal(b.cancelledBy, "u1");
+  assert.equal(b.descartadoManualmentePor, undefined);
+  assert.equal(cancelCalls(calls).length, 0);
+});
+
+test("cancelar sem código, doc antigo e listagem com erro, sem forcarDescarte → erro e doc intacto", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b1`, semCodigo(48));
+  const { t } = inter({ listaStatus: 503 });
+  await assert.rejects(() => cancelarBoleto(db, OWNER, "b1", ACTOR, deps(t)), /indispon[ií]vel/i);
+  const b = get(db, "boletos/b1");
+  assert.equal(b.situacao, "EM_PROCESSAMENTO");
+  assert.equal(b.descartadoManualmentePor, undefined);
+});
+
+test("cancelar sem código, doc antigo e listagem com erro, forcarDescarte do dono → descarta com carimbo manual", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b1`, semCodigo(48));
+  const { t, calls } = inter({ listaStatus: 503 });
+  const r = await cancelarBoleto(db, OWNER, "b1", ACTOR, deps(t), { forcarDescarte: true, ...DONO });
+  assert.match(r.aviso, /Internet Banking/);
+  const b = get(db, "boletos/b1");
+  assert.equal(b.situacao, "FALHA_EMISSAO");
+  assert.equal(b.descartadoManualmentePor, "u1");
+  assert.equal(b.descartadoManualmenteEm, new Date(NOW).toISOString());
+  assert.match(b.lastError, /manualmente/i);
+  assert.equal(cancelCalls(calls).length, 0);
+});
+
+test("cancelar: forcarDescarte de quem não é dono → proibido, sem chamada e doc intacto", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b1`, semCodigo(48));
+  const { t, calls } = inter({ listaStatus: 503 });
+  await assert.rejects(
+    () => cancelarBoleto(db, OWNER, "b1", ACTOR, deps(t), { forcarDescarte: true, isOwner: false }),
+    (e) => e.kind === "proibido" && /dono/i.test(e.message),
+  );
+  assert.equal(calls.length, 0);
+  assert.equal(get(db, "boletos/b1").situacao, "EM_PROCESSAMENTO");
+});
+
+test("cancelar: forcarDescarte num doc com menos de 24 h → recusado", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b1`, semCodigo(3));
+  const { t } = inter({ listaStatus: 503 });
+  await assert.rejects(
+    () => cancelarBoleto(db, OWNER, "b1", ACTOR, deps(t), { forcarDescarte: true, ...DONO }),
+    /ainda pode estar em processamento/i,
+  );
+  assert.equal(get(db, "boletos/b1").situacao, "EM_PROCESSAMENTO");
+});
+
+test("cancelar sem código achado na listagem → adota o código e cancela no Inter (mesmo doc novo)", async () => {
+  const db = setup();
+  db.store.set(`${P}/boletos/b1`, semCodigo(1));
+  const { t, calls } = inter({ lista: [{ cobranca: { codigoSolicitacao: "c5", seuNumero: "b1", situacao: "A_RECEBER" } }] });
+  const r = await cancelarBoleto(db, OWNER, "b1", ACTOR, deps(t));
+  assert.equal(r.aviso, undefined);
+  const cc = cancelCalls(calls);
+  assert.equal(cc.length, 1);
+  assert.equal(cc[0].path, "/cobranca/v3/cobrancas/c5/cancelar");
+  const b = get(db, "boletos/b1");
+  assert.equal(b.codigoSolicitacao, "c5");
+  assert.equal(b.situacao, "CANCELADO");
+  assert.equal(b.cancelledBy, "u1");
+});
+
+// ---------- fix round 1: validações menores ----------
+
+test("emitir: receivableId que não é texto → recusado (não vira avulso)", async () => {
+  const db = setup();
+  const { t, calls } = inter();
+  for (const receivableId of [123, { x: 1 }, true]) {
+    await assert.rejects(() => emitirBoleto(db, OWNER, entrada({ receivableId }), ACTOR, deps(t)), /conta a receber inv[aá]lida/i);
+  }
+  assert.equal(calls.length, 0);
+  assert.equal(boletos(db).length, 0);
+});
+
+test("emitir: e-mail longo/malformado, telefone fora de 10-13 dígitos e vencimento além de 2 anos → recusados", async () => {
+  const db = setup();
+  const { t, calls } = inter();
+  const longo = "a".repeat(115) + "@x.com";
+  const casos = [
+    [entrada({ payer: { ...payer, email: longo } }), /e-mail/i],
+    [entrada({ payer: { ...payer, email: "sem-arroba" } }), /e-mail/i],
+    [entrada({ payer: { ...payer, email: 42 } }), /e-mail/i],
+    [entrada({ payer: { ...payer, telefone: "12345" } }), /telefone/i],
+    [entrada({ payer: { ...payer, telefone: "+55 (11) 91234-56789" } }), /telefone/i],
+    [entrada({ dueDate: "2028-11-18" }), /2 anos/],
+  ];
+  for (const [i, re] of casos) await assert.rejects(() => emitirBoleto(db, OWNER, i, ACTOR, deps(t)), re);
+  assert.equal(calls.length, 0);
+});
+
+test("emitir: telefone com máscara é guardado só com dígitos; vencimento em exatamente 2 anos é aceito", async () => {
+  const db = setup({ rec: null });
+  const { t } = inter();
+  const r = await emitirBoleto(
+    db, OWNER,
+    entrada({ receivableId: undefined, dueDate: "2028-11-17", payer: { ...payer, telefone: "(11) 91234-5678" } }),
+    ACTOR, deps(t),
+  );
+  assert.equal(get(db, `boletos/${r.id}`).payer.telefone, "11912345678");
 });

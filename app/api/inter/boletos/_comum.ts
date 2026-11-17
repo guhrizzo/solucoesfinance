@@ -18,6 +18,7 @@ const STATUS: Record<BoletoErroKind, number> = {
   "nao-conectado": 404,
   config: 500,
   inter: 502,
+  proibido: 403,
 };
 
 /** Quem fez: sempre o usuário logado (não o dono dos dados). */
