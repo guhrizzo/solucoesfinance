@@ -559,3 +559,78 @@ test("emitir: telefone com máscara é guardado só com dígitos; vencimento em 
   );
   assert.equal(get(db, `boletos/${r.id}`).payer.telefone, "11912345678");
 });
+
+// ---------- chave de idempotência (F7) ----------
+
+const K1 = "3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b";
+const K2 = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+
+test("idemKey: repetir o envio com a mesma chave devolve o mesmo boleto e chama o Inter UMA vez", async () => {
+  const db = setup({ rec: null });
+  const { t, calls } = inter();
+  const avulso = { payer, amount: 80, dueDate: "2026-12-10", idemKey: K1 };
+  const r1 = await emitirBoleto(db, OWNER, avulso, ACTOR, deps(t));
+  const r2 = await emitirBoleto(db, OWNER, avulso, ACTOR, deps(t));
+  assert.equal(r2.id, r1.id);
+  assert.equal(r2.situacao, r1.situacao);
+  assert.equal(posts(calls).length, 1);
+  assert.equal(boletos(db).length, 1);
+  assert.equal(get(db, `boletos/${r1.id}`).idemKey, K1);
+});
+
+test("idemKey: chaves diferentes criam dois boletos avulsos", async () => {
+  const db = setup({ rec: null });
+  const { t, calls } = inter();
+  const r1 = await emitirBoleto(db, OWNER, { payer, amount: 80, dueDate: "2026-12-10", idemKey: K1 }, ACTOR, deps(t));
+  const r2 = await emitirBoleto(db, OWNER, { payer, amount: 80, dueDate: "2026-12-10", idemKey: K2 }, ACTOR, deps(t));
+  assert.notEqual(r1.id, r2.id);
+  assert.equal(posts(calls).length, 2);
+  assert.equal(boletos(db).length, 2);
+});
+
+test("idemKey: chave inválida é recusada antes de qualquer gravação ou chamada", async () => {
+  const db = setup({ rec: null });
+  const { t, calls } = inter();
+  for (const idemKey of ["x", "3F2B8C1E-9A4D-4E6F-8B7A-1C2D3E4F5A6B", K1 + "0", 123, { a: 1 }, "../../../../../../../../../../../x"]) {
+    await assert.rejects(
+      () => emitirBoleto(db, OWNER, { payer, amount: 80, dueDate: "2026-12-10", idemKey }, ACTOR, deps(t)),
+      (e) => e.kind === "validacao" && /idempot/i.test(e.message),
+      String(idemKey),
+    );
+  }
+  assert.equal(calls.length, 0);
+  assert.equal(boletos(db).length, 0);
+});
+
+test("idemKey com conta a receber: repetir devolve o mesmo (sem conflito de 'vigente'); outra chave segue recusada", async () => {
+  const db = setup();
+  const { t, calls } = inter();
+  const r1 = await emitirBoleto(db, OWNER, entrada({ idemKey: K1 }), ACTOR, deps(t));
+  const r2 = await emitirBoleto(db, OWNER, entrada({ idemKey: K1 }), ACTOR, deps(t));
+  assert.equal(r2.id, r1.id);
+  await assert.rejects(() => emitirBoleto(db, OWNER, entrada({ idemKey: K2 }), ACTOR, deps(t)), (e) => e.kind === "conflito");
+  assert.equal(posts(calls).length, 1);
+});
+
+test("idemKey: envio ambíguo (rede) repetido com a mesma chave não emite de novo", async () => {
+  const db = setup({ rec: null });
+  const { t, calls } = inter({ postFalha: () => { throw new InterRedeError("Não foi possível falar com o Banco Inter agora.", "chamada"); } });
+  const avulso = { payer, amount: 80, dueDate: "2026-12-10", idemKey: K1 };
+  await assert.rejects(() => emitirBoleto(db, OWNER, avulso, ACTOR, deps(t)));
+  const r = await emitirBoleto(db, OWNER, avulso, ACTOR, deps(t));
+  assert.equal(r.situacao, "EM_PROCESSAMENTO");
+  assert.equal(posts(calls).length, 1);
+  assert.equal(boletos(db).length, 1);
+});
+
+test("idemKey: recusa clara (FALHA_EMISSAO) permite tentar de novo com a mesma chave", async () => {
+  const db = setup({ rec: null });
+  let n = 0;
+  const { t, calls } = inter({ postFalha: () => (n++ === 0 ? { status: 400, json: null } : { status: 200, json: { codigoSolicitacao: "c1" } }) });
+  const avulso = { payer, amount: 80, dueDate: "2026-12-10", idemKey: K1 };
+  await assert.rejects(() => emitirBoleto(db, OWNER, avulso, ACTOR, deps(t)));
+  const r = await emitirBoleto(db, OWNER, avulso, ACTOR, deps(t));
+  assert.equal(r.situacao, "A_RECEBER");
+  assert.equal(posts(calls).length, 2);
+  assert.deepEqual(boletos(db).map((b) => b.situacao).sort(), ["A_RECEBER", "FALHA_EMISSAO"]);
+});

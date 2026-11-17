@@ -133,7 +133,14 @@ export type EmitirBoletoInput = {
   dueDate: unknown;
   fineRate?: unknown;
   interestRate?: unknown;
+  /**
+   * Chave de idempotência gerada pelo modal (crypto.randomUUID, uma por abertura).
+   * Repetir o pedido com a mesma chave devolve o boleto já criado, sem chamar o Inter.
+   */
+  idemKey?: unknown;
 };
+
+const IDEM_RE = /^[0-9a-f-]{36}$/;
 
 const txt = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
@@ -165,6 +172,7 @@ type Validado = {
   dueDate: string;
   fineRate?: number;
   interestRate?: number;
+  idemKey?: string;
 };
 
 function validar(i: EmitirBoletoInput, hoje: string): Validado {
@@ -216,6 +224,12 @@ function validar(i: EmitirBoletoInput, hoje: string): Validado {
   const fineRate = taxa(i.fineRate, MAX_FINE_RATE, "Multa");
   const interestRate = taxa(i.interestRate, MAX_INTEREST_RATE, "Taxa de juros");
 
+  let idemKey: string | undefined;
+  if (presente(i.idemKey)) {
+    if (typeof i.idemKey !== "string" || !IDEM_RE.test(i.idemKey)) throw erro("Chave de idempotência inválida.");
+    idemKey = i.idemKey;
+  }
+
   return {
     ...(receivableId ? { receivableId } : {}),
     payer: {
@@ -229,6 +243,7 @@ function validar(i: EmitirBoletoInput, hoje: string): Validado {
     dueDate,
     ...(fineRate !== undefined ? { fineRate } : {}),
     ...(interestRate !== undefined ? { interestRate } : {}),
+    ...(idemKey ? { idemKey } : {}),
   };
 }
 
@@ -326,6 +341,13 @@ export async function emitirBoleto(
   const v = validar(input, todayKey(new Date(now)));
   const base = `users/${ownerUid}`;
   const recRef = v.receivableId ? db.doc(`${base}/receivables/${v.receivableId}`) : null;
+  // Mesma chave de idempotência (repetição do mesmo envio): devolve o boleto já criado.
+  const idemQ = v.idemKey ? db.collection(`${base}/boletos`).where("idemKey", "==", v.idemKey).limit(10) : null;
+
+  if (idemQ) {
+    const ja = jaEmitido((await idemQ.get()).docs);
+    if (ja) return ja;
+  }
 
   // Conferência prévia (sem escrita) para recusar cedo; a definitiva é na transação abaixo.
   if (recRef) await conferirConta(db, base, recRef, null);
@@ -346,16 +368,25 @@ export async function emitirBoleto(
     situacao: "EM_PROCESSAMENTO",
     createdAt: new Date(now).toISOString(),
     createdBy: actor.uid,
+    ...(v.idemKey ? { idemKey: v.idemKey } : {}),
   };
 
   // Doc local PRIMEIRO. Com conta a receber: na MESMA transação relê a conta e os
   // boletos dela e grava um marcador na conta — duas emissões simultâneas para a
   // mesma conta conflitam e a segunda vê o boleto da primeira.
-  await db.runTransaction(async (tx) => {
+  // A chave de idempotência é relida AQUI (antes de qualquer escrita): dois envios
+  // simultâneos com a mesma chave conflitam e o segundo devolve o boleto do primeiro.
+  const existente = await db.runTransaction(async (tx) => {
+    if (idemQ) {
+      const ja = jaEmitido((await tx.get(idemQ)).docs);
+      if (ja) return ja;
+    }
     if (recRef) await conferirConta(db, base, recRef, tx);
     tx.create(boletoRef, doc);
     if (recRef) tx.update(recRef, { ultimoBoletoId: id });
+    return null;
   });
+  if (existente) return existente;
 
   // Inter: UMA chamada, sem retry.
   let codigo: string;
@@ -409,6 +440,18 @@ export async function emitirBoleto(
 
   const final = await boletoRef.get();
   return { id, situacao: ((final.data() as BoletoDoc | undefined)?.situacao ?? "EM_PROCESSAMENTO") };
+}
+
+/**
+ * Boleto já criado com a mesma chave de idempotência. FALHA_EMISSAO não conta:
+ * é recusa clara (nada foi criado no Inter), então o mesmo envio pode tentar de novo.
+ */
+function jaEmitido(docs: Array<{ id: string; data(): unknown }>): { id: string; situacao: BoletoSituacao } | null {
+  for (const d of docs) {
+    const b = (d.data() ?? {}) as Partial<BoletoDoc>;
+    if (b.situacao && b.situacao !== "FALHA_EMISSAO") return { id: d.id, situacao: b.situacao };
+  }
+  return null;
 }
 
 type Tx = Parameters<Parameters<Firestore["runTransaction"]>[0]>[0];

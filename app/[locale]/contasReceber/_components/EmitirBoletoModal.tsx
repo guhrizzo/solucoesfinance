@@ -108,6 +108,8 @@ export function EmitirBoletoModal({
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState("");
   const busyRef = useRef(false);
+  // Uma chave por abertura: repetir o envio (rede caiu, clique duplo) devolve o mesmo boleto.
+  const idemRef = useRef("");
 
   // Preenche ao abrir (a cada abertura: a conta a receber pode ter mudado).
   useEffect(() => {
@@ -126,6 +128,7 @@ export function EmitirBoletoModal({
     setPinOpen(false);
     setBusy(false);
     busyRef.current = false;
+    idemRef.current = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : "";
     setErro("");
     // `hoje` muda só à meia-noite; abrir de novo já recalcula.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,6 +188,7 @@ export function EmitirBoletoModal({
           dueDate: venc,
           ...(multaN > 0 ? { fineRate: multaN } : {}),
           ...(jurosN > 0 ? { interestRate: jurosN } : {}),
+          ...(idemRef.current ? { idemKey: idemRef.current } : {}),
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string; situacao?: string };

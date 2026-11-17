@@ -2,7 +2,8 @@
 //
 // POST — emite um boleto (Cobrança V3 do Banco Inter) avulso ou de uma conta a
 // receber. Corpo: { receivableId?, payer: { nome, doc, email?, telefone?,
-// endereco }, amount, dueDate, fineRate?, interestRate? }. Núcleo em
+// endereco }, amount, dueDate, fineRate?, interestRate?, idemKey? } (idemKey = UUID
+// por abertura do modal: repetir o envio devolve o mesmo boleto, sem chamar o Inter). Núcleo em
 // lib/interBoletoServer.ts (emitirBoleto): valida, grava o doc local primeiro e
 // chama o Inter UMA vez, sem retry. Dono ou membro com a permissão de Contas a
 // Receber, plano Pro, rate limit por conta. Resposta e logs nunca trazem
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
         dueDate: body.dueDate,
         fineRate: body.fineRate,
         interestRate: body.interestRate,
+        idemKey: body.idemKey,
       },
       actorDe(scope),
     );

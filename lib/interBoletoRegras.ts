@@ -52,8 +52,14 @@ export type BoletoDoc = {
   lastError?: string | null;
   /** O banco confirmou o pagamento de um boleto que aqui estava cancelado/expirado/com falha. */
   pagoAposCancelamento?: boolean;
-  /** Havia mais de uma entrada do extrato lançada à mão no mesmo valor/janela: conferir duplicata no caixa. */
+  /**
+   * Conferir duplicata no caixa: havia mais de uma entrada do extrato lançada à mão no
+   * mesmo valor/janela, ou uma entrada à mão que o boleto não pôde adotar (baixada nesta
+   * conta sem item do extrato, ou do extrato mas baixada em outra conta).
+   */
   revisarCaixa?: boolean;
+  /** Chave de idempotência do envio (modal de emissão): repetir o pedido devolve este boleto. */
+  idemKey?: string;
 };
 
 export function grupoDe(
