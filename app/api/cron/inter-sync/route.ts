@@ -14,22 +14,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 import { NextResponse } from "next/server";
-import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
-import { isCompedEmail } from "@/lib/compAccounts";
-import { isProAccess, resolveSubscriptionState, type BillingDoc } from "@/lib/billing";
+import { getAdminDb } from "@/lib/firebaseAdmin";
+import { donoTemPro as temPro } from "@/lib/interDonoPro";
 import { InterSyncError, syncOwner } from "@/lib/interSync";
 
 /** Para de PEGAR contas novas 30 s antes do maxDuration. */
 const ORCAMENTO_MS = (maxDuration - 30) * 1000;
 const CONCORRENCIA = 3;
-
-async function temPro(db: Awaited<ReturnType<typeof getAdminDb>>, ownerUid: string): Promise<boolean> {
-  const b = await db.doc(`users/${ownerUid}/profile/billing`).get();
-  const doc = (b.exists ? b.data() : null) as BillingDoc | null;
-  if (isProAccess(resolveSubscriptionState(doc))) return true;
-  const email = await getAdminAuth().then((a) => a.getUser(ownerUid)).then((u) => u.email ?? null).catch(() => null);
-  return isCompedEmail(email);
-}
 
 export async function GET(request: Request) {
   const inicio = Date.now();
