@@ -148,6 +148,15 @@ service cloud.firestore {
         allow create, delete: if false;
       }
 
+      // ── Banco Inter: boletos (lib/interBoletoTypes.ts) ─────────────────
+      // Escritos SÓ pelo servidor (rotas /api/inter/boletos/*, webhook e cron,
+      // Admin SDK): situação, valores e vínculo com o caixa nunca vêm do client.
+      // A conta só LÊ. O bloco genérico abaixo exclui `boletos`.
+      match /boletos/{boletoId} {
+        allow read: if inAccount(userId);
+        allow write: if false;
+      }
+
       // ── RH (rhColaboradores, rhVigencias, rhCompetencias, rhCustos,
       // rhVariaveis, rhLog, ...) — salários, CPF e dados bancários (LGPD).
       // NENHUM acesso pelo client, nem leitura: tudo passa pelas rotas
@@ -180,6 +189,7 @@ service cloud.firestore {
           && collection != 'comprasNotifications'
           && collection != 'counters'
           && collection != 'interPendentes'
+          && collection != 'boletos'
           && inAccount(userId);
       }
     }

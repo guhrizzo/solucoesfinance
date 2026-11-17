@@ -86,6 +86,22 @@ function erroHttp(status: number): InterHttpError {
   return e(`O Banco Inter recusou a solicitação de cobrança (HTTP ${status}).`);
 }
 
+/**
+ * Falha do próprio transporte, antes de haver resposta HTTP (mensagem nossa, em português).
+ * fase "token": nada foi enviado ao endpoint de cobrança; fase "chamada": a requisição
+ * pode ter chegado ao Inter (ambíguo para uma emissão).
+ */
+export class InterRedeError extends Error {
+  fase: "token" | "chamada";
+  constructor(message: string, fase: "token" | "chamada") {
+    super(message);
+    this.name = "InterRedeError";
+    this.fase = fase;
+  }
+}
+
+const msgDe = (e: unknown) => (e instanceof Error && e.message ? e.message : "Falha ao consultar o Banco Inter.");
+
 type Agente = { destroy(): void };
 
 /** Primitivas de rede (injetáveis só nos testes; padrão = lib/inter.ts). */
@@ -133,11 +149,17 @@ export function transporteMtls(secrets: InterSecrets, rede: RedeInter = REDE_REA
       }
       let r: { status: number; body: string } | undefined;
       for (let tentativa = 0; tentativa < 2; tentativa++) {
-        const token = await tokenDe(agent, scope, tentativa > 0);
+        let token: string;
+        try {
+          token = await tokenDe(agent, scope, tentativa > 0);
+        } catch (e) {
+          // getToken já devolve mensagens nossas (credencial, escopo, rede).
+          throw new InterRedeError(msgDe(e), "token");
+        }
         try {
           r = await rede.request(agent, method, path, { ...headers, Authorization: `Bearer ${token}` }, payload);
         } catch (e) {
-          throw mapNetworkError(e);
+          throw new InterRedeError(mapNetworkError(e).message, "chamada");
         }
         // 401 = token recusado: a chamada não foi processada, repetir com token novo é seguro.
         if (r.status !== 401) break;

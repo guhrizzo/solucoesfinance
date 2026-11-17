@@ -11,6 +11,7 @@ import {
   registrarWebhook,
   buscarPorSeuNumero,
   transporteMtls,
+  InterRedeError,
 } from "../../lib/interCobranca";
 
 const endereco = { cep: "01310100", logradouro: "Av. Paulista", numero: "1000", bairro: "Bela Vista", cidade: "São Paulo", uf: "SP" };
@@ -318,4 +319,23 @@ test("transporteMtls: falha ao obter token não fica em cache", async () => {
   await assert.rejects(() => t({ method: "GET", path: "/a", scope: "boleto-cobranca.read" }), /Credenciais/);
   const r = await t({ method: "GET", path: "/a", scope: "boleto-cobranca.read" });
   assert.equal(r.status, 200);
+});
+
+test("transporteMtls: falha no token vira InterRedeError fase token; falha de rede na chamada, fase chamada", async () => {
+  const a = redeFalsa([]);
+  a.net.getToken = async () => {
+    throw new Error("Credenciais do Banco Inter inválidas (Client ID/Secret) ou sem o escopo boleto-cobranca.write.");
+  };
+  await assert.rejects(
+    () => transporteMtls(SECRETS, a.net)({ method: "POST", path: "/x", scope: "boleto-cobranca.write", body: {} }),
+    (e) => e instanceof InterRedeError && e.fase === "token" && /Credenciais/.test(e.message),
+  );
+  const b = redeFalsa([]);
+  b.net.request = async () => {
+    throw Object.assign(new Error("socket hang up"), { code: "ECONNRESET" });
+  };
+  await assert.rejects(
+    () => transporteMtls(SECRETS, b.net)({ method: "POST", path: "/x", scope: "boleto-cobranca.write", body: {} }),
+    (e) => e instanceof InterRedeError && e.fase === "chamada" && /falar com o Banco Inter/.test(e.message),
+  );
 });
