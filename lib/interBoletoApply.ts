@@ -7,6 +7,15 @@
 // é a trava: nunca duas entradas, em nenhuma ordem de chegada), dá baixa na conta
 // a receber ligada e, se o item do extrato já está em "A conciliar" sem nenhuma
 // ambiguidade, vincula. Todas as leituras vêm antes das escritas.
+//
+// Dois cuidados contra dinheiro em dobro no caixa:
+//  - Conta a receber já marcada "recebido" à mão tem um lançamento-espelho
+//    (sourceReceivableId); a baixa do boleto reajusta/remove o espelho com a mesma
+//    regra de syncReceivableCashflow.
+//  - Se o item do extrato chegou antes e foi resolvido à mão ("criar"), já existe
+//    uma entrada com interTxId e sem boletoId: com exatamente uma dessas no mesmo
+//    valor/janela, o boleto ADOTA essa entrada em vez de criar outra; com mais de
+//    uma, cria a do boleto e marca o boleto para revisão (revisarCaixa).
 // Nada de segredo é lido, gravado ou devolvido aqui.
 
 import type { Firestore } from "firebase-admin/firestore";
@@ -23,12 +32,14 @@ const CENTS_EPSILON = 0.005;
 const CATEGORIA_AVULSO = "Outros recebimentos";
 const CATEGORIA_PADRAO_CONTA = "Outros ganhos";
 export const MSG_PAGO_SEM_DADOS = "Pagamento confirmado sem valor/data; consulte novamente";
+export const MSG_REVISAR_CAIXA = "Possível lançamento duplicado no caixa; confira";
 
 const PAGAS: ReadonlySet<BoletoSituacao> = new Set(["RECEBIDO", "MARCADO_RECEBIDO"]);
 /** Terminais não pagos que ainda aceitam um pagamento confirmado pelo banco. */
 const ENCERRADAS_SEM_PAGAMENTO: ReadonlySet<BoletoSituacao> = new Set(["CANCELADO", "EXPIRADO", "FALHA_EMISSAO"]);
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
+const cents = (v: number) => Math.round(v * 100);
 const isoMs = (iso: string) => Date.parse(iso + "T00:00:00Z");
 const toISO = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
@@ -76,7 +87,7 @@ export async function aplicarSituacao(
       return { aplicada: true, pago: false };
     }
 
-    // Pago no banco. Já pago aqui → nada a fazer (idempotente).
+    // Pago no banco. Já pago aqui → nada a fazer (idempotente, inclusive após adoção).
     if (PAGAS.has(atual.situacao)) return NADA;
     const aposCancelamento = ENCERRADAS_SEM_PAGAMENTO.has(atual.situacao);
     if (!aposCancelamento && !podeAplicar(atual.situacao, nova)) return NADA;
@@ -93,6 +104,7 @@ export async function aplicarSituacao(
     const cashSnap = await t.get(cashRef);
     const recRef = atual.receivableId ? db.doc(`${base}/receivables/${atual.receivableId}`) : null;
     const recSnap = recRef ? await t.get(recRef) : null;
+    const espelhosSnap = recRef ? await t.get(cashCol.where("sourceReceivableId", "==", recRef.id)) : null;
     const pendSnap = await t.get(pendCol.where("status", "==", "pendente").where("type", "==", "entrada"));
     const de = toISO(isoMs(data) - JANELA_DIAS * DAY);
     const ate = toISO(isoMs(data) + JANELA_DIAS * DAY);
@@ -115,66 +127,120 @@ export async function aplicarSituacao(
       return { aplicada: true, pago: true };
     }
 
-    // ---------- monta as escritas ----------
-    const rec = recSnap?.exists ? (recSnap.data() as Record<string, unknown>) : null;
-    const titulo = rec && typeof rec.title === "string" && rec.title.trim() ? rec.title.trim() : "";
-    const entrada: Record<string, unknown> = {
-      type: "entrada",
-      amount: valorRecebido,
-      date: data,
-      description: titulo || `Boleto · ${atual.payer?.nome ?? ""}`.trim(),
-      category: rec
-        ? CAT_TO_CASHFLOW[typeof rec.category === "string" ? rec.category : ""] ?? CATEGORIA_PADRAO_CONTA
-        : CATEGORIA_AVULSO,
-      boletoId,
-      createdAt: now,
-      createdBy: actor.uid,
-      createdByName: actor.name,
-    };
-    if (rec && recRef) entrada.settledReceivableId = recRef.id;
+    const rec = recSnap?.exists && recRef ? (recSnap.data() as Record<string, unknown>) : null;
+    const recId = rec && recRef ? recRef.id : null;
 
-    // Extrato: candidatos = itens pendentes de entrada; concorrentes = outros
-    // lançamentos de boleto ainda sem item do extrato (disputariam o mesmo item).
-    const candidatos = pendSnap.docs.map((d) => {
+    // ---------- entrada já lançada à mão a partir do extrato? ----------
+    // Entrada do mesmo valor (centavos) na janela, com interTxId, sem boletoId,
+    // que não é espelho e não pertence a OUTRA conta a receber.
+    const lancadasDoExtrato = vizinhosSnap.docs.filter((d) => {
       const x = d.data() ?? {};
-      return { docId: d.id, txKey: String(x.txKey ?? ""), amount: Number(x.amount), date: String(x.date ?? "") };
-    }).filter((c) => c.txKey);
-    const concorrentes = vizinhosSnap.docs
-      .filter((d) => d.id !== cashId)
-      .map((d) => d.data() ?? {})
-      .filter((x) => x.type === "entrada" && typeof x.boletoId === "string" && x.boletoId && !x.interTxId)
-      .map((x) => ({ amount: Number(x.amount), date: String(x.date ?? "") }));
-    const casado = candidatoUnico({ amount: valorRecebido, date: data }, candidatos, concorrentes);
-    if (casado) {
-      entrada.interTxId = casado.txKey;
-      marcaBoleto.interTxKey = casado.txKey;
-    }
+      if (d.id === cashId || x.type !== "entrada") return false;
+      if (!x.interTxId || x.boletoId || x.sourceReceivableId) return false;
+      if (x.settledReceivableId && x.settledReceivableId !== recId) return false;
+      return Number.isFinite(Number(x.amount)) && cents(Number(x.amount)) === cents(valorRecebido);
+    });
 
     // ---------- escritas ----------
-    t.update(boletoRef, marcaBoleto);
-    t.create(cashRef, entrada);
-    if (rec && recRef) {
+    let jaBaixada = false;
+    if (lancadasDoExtrato.length === 1) {
+      // ADOÇÃO: a entrada existente passa a ser a do boleto; nada é criado.
+      const adotada = lancadasDoExtrato[0];
+      const x = adotada.data() ?? {};
+      jaBaixada = !!recId && x.settledReceivableId === recId;
+      marcaBoleto.cashflowId = adotada.id;
+      marcaBoleto.interTxKey = String(x.interTxId);
+      t.update(boletoRef, marcaBoleto);
+      t.update(cashCol.doc(adotada.id), {
+        boletoId,
+        ...(recId && !x.settledReceivableId ? { settledReceivableId: recId } : {}),
+      });
+    } else {
+      const titulo = rec && typeof rec.title === "string" && rec.title.trim() ? rec.title.trim() : "";
+      const entrada: Record<string, unknown> = {
+        type: "entrada",
+        amount: valorRecebido,
+        date: data,
+        description: titulo || `Boleto · ${atual.payer?.nome ?? ""}`.trim(),
+        category: rec
+          ? CAT_TO_CASHFLOW[typeof rec.category === "string" ? rec.category : ""] ?? CATEGORIA_PADRAO_CONTA
+          : CATEGORIA_AVULSO,
+        boletoId,
+        createdAt: now,
+        createdBy: actor.uid,
+        createdByName: actor.name,
+      };
+      if (recId) entrada.settledReceivableId = recId;
+
+      // Mais de uma entrada lançada à mão no mesmo valor/janela: o dinheiro do boleto
+      // entra garantido, mas pode haver duplicata — o usuário confere.
+      if (lancadasDoExtrato.length > 1) {
+        marcaBoleto.revisarCaixa = true;
+        marcaBoleto.lastError = MSG_REVISAR_CAIXA;
+      }
+
+      // Extrato: candidatos = itens pendentes de entrada; concorrentes = outros
+      // lançamentos de boleto ainda sem item do extrato (disputariam o mesmo item).
+      const candidatos = pendSnap.docs.map((d) => {
+        const p = d.data() ?? {};
+        return { docId: d.id, txKey: String(p.txKey ?? ""), amount: Number(p.amount), date: String(p.date ?? "") };
+      }).filter((c) => c.txKey);
+      const concorrentes = vizinhosSnap.docs
+        .filter((d) => d.id !== cashId)
+        .map((d) => d.data() ?? {})
+        .filter((v) => v.type === "entrada" && typeof v.boletoId === "string" && v.boletoId && !v.interTxId)
+        .map((v) => ({ amount: Number(v.amount), date: String(v.date ?? "") }));
+      const casado = candidatoUnico({ amount: valorRecebido, date: data }, candidatos, concorrentes);
+      if (casado) {
+        entrada.interTxId = casado.txKey;
+        marcaBoleto.interTxKey = casado.txKey;
+      }
+
+      t.update(boletoRef, marcaBoleto);
+      t.create(cashRef, entrada);
+      if (casado) {
+        t.update(pendCol.doc(casado.docId), {
+          status: "conciliado",
+          cashflowId: cashId,
+          resolvedAt: now,
+          resolvedBy: actor.uid,
+        });
+      }
+    }
+
+    // ---------- conta a receber + espelho ----------
+    if (rec && recRef && !jaBaixada) {
       const total = Number(rec.amount) || 0;
-      const recebido = round2((Number(rec.amountReceived) || 0) + valorRecebido);
+      const anterior = Number(rec.amountReceived) || 0;
+      const jaRecebida = rec.status === "recebido";
+      // Conta já dada como recebida à mão: o boleto é o MESMO dinheiro do espelho,
+      // então não passa do total — salvo se o próprio pagamento real for maior
+      // (juros/multa), aí vale o pagamento.
+      const recebido = jaRecebida
+        ? round2(Math.min(anterior + valorRecebido, Math.max(total, valorRecebido)))
+        : round2(anterior + valorRecebido);
+      const fica = jaRecebida || recebido >= total - CENTS_EPSILON;
       const upd: Record<string, unknown> = {
         amountReceived: recebido,
         settledBy: actor.uid,
         settledByName: actor.name,
         settledAt: now,
       };
-      if (recebido >= total - CENTS_EPSILON) {
+      if (fica && !jaRecebida) {
         upd.status = "recebido";
         upd.receivedAt = data;
       }
       t.update(recRef, upd);
-    }
-    if (casado) {
-      t.update(pendCol.doc(casado.docId), {
-        status: "conciliado",
-        cashflowId: cashId,
-        resolvedAt: now,
-        resolvedBy: actor.uid,
-      });
+
+      // Mesma regra de syncReceivableCashflow: espelho só cobre o saldo.
+      const espelhos = espelhosSnap?.docs ?? [];
+      const resto = round2(total - recebido);
+      if (!fica || resto <= CENTS_EPSILON) {
+        for (const d of espelhos) t.delete(cashCol.doc(d.id));
+      } else if (espelhos.length > 0) {
+        t.update(cashCol.doc(espelhos[0].id), { amount: resto });
+        for (const d of espelhos.slice(1)) t.delete(cashCol.doc(d.id));
+      }
     }
     return { aplicada: true, pago: true };
   });

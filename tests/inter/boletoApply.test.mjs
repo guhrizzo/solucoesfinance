@@ -230,6 +230,140 @@ test("pendente de outro valor, fora da janela, saída ou já conciliado → não
   assert.equal(get(db, "interPendentes/id:4").cashflowId, "outro");
 });
 
+// ---------- espelho da conta a receber ----------
+
+const espelho = (o = {}) => ({
+  type: "entrada", amount: 100, date: "2026-11-15", description: "Consultoria novembro", sourceReceivableId: "r1", ...o,
+});
+/** Soma do dinheiro no caixa (excluindo o que não é desta conta). */
+const somaCaixa = (db) => [...db.store.entries()]
+  .filter(([k, v]) => k.startsWith(`${P}/cashflow/`) && v.type === "entrada")
+  .reduce((s, [, v]) => s + v.amount, 0);
+
+test("conta já 'recebido' à mão com espelho de 100; boleto paga 100 → só boleto_b1, espelho some, sem passar do total", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable({ status: "recebido", receivedAt: "2026-11-15", amountReceived: 0 }),
+    cash: [["esp1", espelho()]],
+  });
+  assert.deepEqual(await apply(db, pago()), { aplicada: true, pago: true });
+  assert.deepEqual(cashIds(db), ["boleto_b1"]);
+  assert.equal(somaCaixa(db), 100);
+  const rec = get(db, "receivables/r1");
+  assert.equal(rec.amountReceived, 100);
+  assert.equal(rec.status, "recebido");
+  assert.equal(rec.receivedAt, "2026-11-15");
+  // Reaplicar não muda nada.
+  assert.deepEqual(await apply(db, pago()), { aplicada: false, pago: false });
+  assert.equal(get(db, "receivables/r1").amountReceived, 100);
+});
+
+test("conta 'recebido' à mão, boleto parcial → espelho vira o saldo (caixa continua no total)", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable({ status: "recebido", amountReceived: 0 }),
+    cash: [["esp1", espelho()], ["esp2", espelho({ amount: 100 })]],
+  });
+  await apply(db, pago({ valorTotalRecebido: 40 }));
+  assert.deepEqual(cashIds(db).sort(), ["boleto_b1", "esp1"]);
+  assert.equal(get(db, "cashflow/esp1").amount, 60);
+  assert.equal(get(db, "receivables/r1").amountReceived, 40);
+  assert.equal(get(db, "receivables/r1").status, "recebido");
+  assert.equal(somaCaixa(db), 100);
+});
+
+test("conta 'recebido' à mão, boleto pago com juros → vale o pagamento real e espelho some", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable({ status: "recebido", amountReceived: 0 }),
+    cash: [["esp1", espelho()]],
+  });
+  await apply(db, pago({ valorTotalRecebido: 103.2 }));
+  assert.deepEqual(cashIds(db), ["boleto_b1"]);
+  assert.equal(get(db, "receivables/r1").amountReceived, 103.2);
+});
+
+// ---------- entrada do extrato resolvida à mão ("criar") ----------
+
+const lancadaDoExtrato = (o = {}) => ({
+  type: "entrada", amount: 100, date: "2026-11-19", description: "BOLETO RECEBIDO", category: "Outros recebimentos", interTxId: "id:7", ...o,
+});
+
+test("item do extrato já virou entrada à mão → boleto ADOTA a entrada, sem criar boleto_b1", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable(),
+    pendentes: [pendente({ txKey: "id:7", status: "conciliado", cashflowId: "man1" })],
+    cash: [["man1", lancadaDoExtrato()]],
+  });
+  assert.deepEqual(await apply(db, pago()), { aplicada: true, pago: true });
+  assert.deepEqual(cashIds(db), ["man1"]);
+  const e = get(db, "cashflow/man1");
+  assert.equal(e.boletoId, "b1");
+  assert.equal(e.interTxId, "id:7");
+  assert.equal(e.settledReceivableId, "r1");
+  const b = get(db, "boletos/b1");
+  assert.equal(b.situacao, "RECEBIDO");
+  assert.equal(b.cashflowId, "man1");
+  assert.equal(b.interTxKey, "id:7");
+  assert.equal(b.revisarCaixa, undefined);
+  assert.equal(get(db, "receivables/r1").amountReceived, 100);
+  assert.equal(get(db, "receivables/r1").status, "recebido");
+
+  // Reaplicar 2× → nada muda (não adota outra, não soma de novo).
+  const antes = structuredClone([...db.store.entries()]);
+  assert.deepEqual(await apply(db, pago()), { aplicada: false, pago: false });
+  assert.deepEqual(await apply(db, pago({ situacao: "MARCADO_RECEBIDO" })), { aplicada: false, pago: false });
+  assert.deepEqual([...db.store.entries()], antes);
+});
+
+test("adoção de entrada já baixada na mesma conta a receber → não soma de novo", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable({ amountReceived: 100, status: "recebido" }),
+    cash: [["man1", lancadaDoExtrato({ settledReceivableId: "r1" })]],
+  });
+  await apply(db, pago());
+  assert.deepEqual(cashIds(db), ["man1"]);
+  assert.equal(get(db, "cashflow/man1").boletoId, "b1");
+  assert.equal(get(db, "receivables/r1").amountReceived, 100);
+});
+
+test("entrada à mão de outro valor, sem interTxId, ou de outra conta a receber → não é adotada", async () => {
+  const db = setup({
+    b: boleto({ receivableId: "r1" }),
+    rec: receivable(),
+    cash: [
+      ["m1", lancadaDoExtrato({ amount: 100.01 })],
+      ["m2", lancadaDoExtrato({ interTxId: undefined })],
+      ["m3", lancadaDoExtrato({ settledReceivableId: "r9" })],
+      ["m4", lancadaDoExtrato({ date: "2026-11-25" })],
+    ],
+  });
+  await apply(db, pago());
+  assert.equal(get(db, "boletos/b1").cashflowId, "boleto_b1");
+  assert.ok(cashIds(db).includes("boleto_b1"));
+  assert.equal(get(db, "boletos/b1").revisarCaixa, undefined);
+});
+
+test("duas entradas à mão candidatas → cria boleto_b1 e marca revisarCaixa", async () => {
+  const db = setup({
+    cash: [["man1", lancadaDoExtrato()], ["man2", lancadaDoExtrato({ interTxId: "id:8", date: "2026-11-17" })]],
+  });
+  assert.deepEqual(await apply(db, pago()), { aplicada: true, pago: true });
+  assert.deepEqual(cashIds(db).sort(), ["boleto_b1", "man1", "man2"]);
+  const b = get(db, "boletos/b1");
+  assert.equal(b.cashflowId, "boleto_b1");
+  assert.equal(b.revisarCaixa, true);
+  assert.equal(b.lastError, "Possível lançamento duplicado no caixa; confira");
+  assert.equal(get(db, "cashflow/man1").boletoId, undefined);
+
+  const antes = structuredClone([...db.store.entries()]);
+  assert.deepEqual(await apply(db, pago()), { aplicada: false, pago: false });
+  assert.deepEqual(await apply(db, pago()), { aplicada: false, pago: false });
+  assert.deepEqual([...db.store.entries()], antes);
+});
+
 // ---------- atomicidade ----------
 
 /** Envolve o fake: a gravação da conta a receber explode NO COMMIT da transação. */

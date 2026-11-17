@@ -48,6 +48,8 @@ export type BoletoDoc = {
   lastError?: string | null;
   /** O banco confirmou o pagamento de um boleto que aqui estava cancelado/expirado/com falha. */
   pagoAposCancelamento?: boolean;
+  /** Havia mais de uma entrada do extrato lançada à mão no mesmo valor/janela: conferir duplicata no caixa. */
+  revisarCaixa?: boolean;
 };
 
 const SEU_NUMERO_MAX = 15;
