@@ -417,8 +417,10 @@
         "fine": "Multa fuera del límite permitido.",
         "interest": "Intereses fuera del límite permitido.",
         "hasBoleto": "Esta cuenta por cobrar ya tiene un boleto vigente. Cancela el actual para emitir otro.",
-        "noPin": "Configura tu PIN para emitir boletos."
-      }
+        "noPin": "Configura tu PIN para emitir boletos.",
+        "amountFormat": "Usa coma para los centavos (ej.: 1.234,56)."
+      },
+      "pinSubtitleDetail": "Ingresa tu PIN para emitir {amount} a {payer}, con vencimiento {date}"
     }
   }
 }

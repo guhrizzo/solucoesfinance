@@ -2375,7 +2375,7 @@ export default function ContasReceberPage() {
                                             isPro={isPro}
                                             onSendCharge={async () => { await sendChargeEmail(receivable.id); }}
                                             hasBoleto={idsComBoleto.has(receivable.id)}
-                                            canIssueBoleto={isPro && receivable._status !== "recebido" && podeEmitir(receivable, boletos)}
+                                            canIssueBoleto={isPro && !boletosLoading && receivable._status !== "recebido" && podeEmitir(receivable, boletos)}
                                             onIssueBoleto={() => { setEmitTarget(receivable); setEmitOpen(true); }}
                                             onOpenBoletos={() => { setFocusReceivableId(receivable.id); setTab("boletos"); }}
                                             onEdit={() => { setEditing(receivable); setModal(true); }}

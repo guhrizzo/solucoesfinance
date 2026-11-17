@@ -6,7 +6,7 @@
 // botão Atualizar (consulta de segurança no Inter). Os dados vêm de
 // useBoletos (somente leitura); toda escrita passa pelas rotas /api/inter/boletos.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   AlertTriangle, Ban, Barcode, FileText, Landmark, Lock, Plus, QrCode, RefreshCw, Search, Send, Sparkles, X,
@@ -86,7 +86,10 @@ export function BoletosTab({
   const [resending, setResending] = useState<string | null>(null);
 
   // Cancelamento: confirmar → PIN → enviar. `falhou` libera o "descartar" do dono.
-  const [alvo, setAlvo] = useState<BoletoDoc | null>(null);
+  const [alvoId, setAlvoId] = useState<string | null>(null);
+  const cancelBusy = useRef(false);
+  // Sempre o boleto vivo da lista (podeDescartar e mensagens acompanham as atualizações).
+  const alvo = alvoId ? boletos.find((x) => x.id === alvoId) ?? null : null;
   const [etapa, setEtapa] = useState<CancelEtapa>("confirmar");
   const [descartando, setDescartando] = useState(false);
   const [falhou, setFalhou] = useState(false);
@@ -149,8 +152,16 @@ export function BoletosTab({
         return;
       }
       const url = URL.createObjectURL(await res.blob());
-      if (w) w.location.href = url;
-      else window.location.assign(url);
+      if (w) {
+        w.location.href = url;
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `boleto-${b.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) {
       w?.close();
@@ -178,7 +189,7 @@ export function BoletosTab({
   }
 
   function abrirCancelar(b: BoletoDoc) {
-    setAlvo(b);
+    setAlvoId(b.id);
     setEtapa("confirmar");
     setFalhou(false);
     setErroCancel("");
@@ -188,7 +199,7 @@ export function BoletosTab({
 
   function fecharCancelar() {
     if (etapa === "enviando") return;
-    setAlvo(null);
+    setAlvoId(null);
   }
 
   async function pedirPin(forcar: boolean) {
@@ -202,7 +213,9 @@ export function BoletosTab({
   }
 
   async function cancelar() {
-    if (!alvo) return;
+    // Guarda síncrona: o PinModal pode confirmar duas vezes (Enter/clique rápidos).
+    if (!alvo || cancelBusy.current || etapa !== "pin") return;
+    cancelBusy.current = true;
     const forcar = descartando;
     setEtapa("enviando");
     setErroCancel("");
@@ -224,12 +237,14 @@ export function BoletosTab({
         setAviso(json.aviso);
         setEtapa("confirmar");
       } else {
-        setAlvo(null);
+        setAlvoId(null);
       }
     } catch (e) {
       setErroCancel((e as Error)?.message || t("cancel.error"));
       setFalhou(true);
       setEtapa("confirmar");
+    } finally {
+      cancelBusy.current = false;
     }
   }
 
@@ -258,7 +273,9 @@ export function BoletosTab({
     const pode = b.receivableId ? resendableIds.has(b.receivableId) && vigente : false;
     return (
       <span className="inline-flex items-center gap-1 flex-wrap justify-end">
-        <Button variant="ghost" size="sm" icon={FileText} aria-label={t("actions.pdf")} title={t("actions.pdf")} onClick={() => void abrirPdf(b)} />
+        {b.codigoSolicitacao && b.situacao !== "EM_PROCESSAMENTO" && b.situacao !== "FALHA_EMISSAO" && (
+          <Button variant="ghost" size="sm" icon={FileText} aria-label={t("actions.pdf")} title={t("actions.pdf")} onClick={() => void abrirPdf(b)} />
+        )}
         {b.linhaDigitavel && (
           <Button variant="ghost" size="sm" icon={Barcode} aria-label={t("actions.copyLine")} title={t("actions.copyLine")} onClick={() => void copiar(b.linhaDigitavel!)} />
         )}
@@ -458,7 +475,7 @@ export function BoletosTab({
             {aviso ? (
               <>
                 <div role="status" className="rounded-xl px-4 py-3 text-sm" style={{ background: "var(--warn-weak)", color: "var(--warn)" }}>{aviso}</div>
-                <div className="flex justify-end"><Button onClick={() => setAlvo(null)}>{t("emit.close")}</Button></div>
+                <div className="flex justify-end"><Button onClick={() => setAlvoId(null)}>{t("emit.close")}</Button></div>
               </>
             ) : (
               <>

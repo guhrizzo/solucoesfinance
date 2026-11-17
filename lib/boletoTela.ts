@@ -131,3 +131,29 @@ export function validarPagadorForm(
     value: { nome, doc, ...(email ? { email } : {}), ...(telefone ? { telefone } : {}), endereco: end.value },
   };
 }
+
+/**
+ * Valor digitado em pt-BR, estrito (não usa o parseAmount compartilhado, que
+ * lê "12.500" como 12,5). Com vírgula: ela é o decimal (até 2 casas) e os
+ * pontos são milhar. Sem vírgula: ponto só como milhar (12.500); "12.50" é
+ * ambíguo e recusado. Vazio, zero, negativo ou letras: recusado.
+ */
+export function parseValorBRL(input: string): { ok: true; value: number } | { ok: false } {
+  const s = input.trim();
+  let inteiro: string;
+  let frac = "";
+  if (s.includes(",")) {
+    const partes = s.split(",");
+    if (partes.length !== 2) return { ok: false };
+    const [i, f] = partes;
+    if (!/^\d{1,3}(\.\d{3})+$|^\d+$/.test(i) || !/^\d{1,2}$/.test(f)) return { ok: false };
+    inteiro = i.replace(/\./g, "");
+    frac = f;
+  } else {
+    if (!/^\d{1,3}(\.\d{3})+$|^\d+$/.test(s)) return { ok: false };
+    inteiro = s.replace(/\./g, "");
+  }
+  const value = Number(`${inteiro}.${frac || "0"}`);
+  if (!Number.isFinite(value) || value <= 0) return { ok: false };
+  return { ok: true, value: Math.round(value * 100) / 100 };
+}

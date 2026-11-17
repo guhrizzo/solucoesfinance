@@ -417,8 +417,10 @@
         "fine": "Multa fora do limite permitido.",
         "interest": "Juros fora do limite permitido.",
         "hasBoleto": "Esta conta a receber já tem um boleto vigente. Cancele o atual para emitir outro.",
-        "noPin": "Cadastre seu PIN para emitir boletos."
-      }
+        "noPin": "Cadastre seu PIN para emitir boletos.",
+        "amountFormat": "Use vírgula nos centavos (ex.: 1.234,56)."
+      },
+      "pinSubtitleDetail": "Digite seu PIN para emitir {amount} para {payer}, vencendo em {date}"
     }
   }
 }

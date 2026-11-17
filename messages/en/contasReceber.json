@@ -417,8 +417,10 @@
         "fine": "Fine outside the allowed limit.",
         "interest": "Interest outside the allowed limit.",
         "hasBoleto": "This receivable already has an active boleto. Cancel it to issue another.",
-        "noPin": "Set up your PIN to issue boletos."
-      }
+        "noPin": "Set up your PIN to issue boletos.",
+        "amountFormat": "Use a comma for cents (e.g. 1.234,56)."
+      },
+      "pinSubtitleDetail": "Enter your PIN to issue {amount} to {payer}, due {date}"
     }
   }
 }

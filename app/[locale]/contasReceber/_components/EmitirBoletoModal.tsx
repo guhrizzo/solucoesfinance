@@ -7,18 +7,20 @@
 // da conta a receber e pré-preencher a próxima emissão.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { Button, Field, Input, Modal, MoneyInput, formatAmount, parseAmount } from "@/app/components/ui";
+import { Button, Field, Input, Modal, MoneyInput, formatAmount } from "@/app/components/ui";
 import { onlyDigits } from "@/app/components/CadastroPanel";
 import { authedFetch } from "@/lib/authedFetch";
 import { maskCpf, maskCnpj } from "@/lib/contract";
+import { formatDate, formatMoney } from "@/lib/format";
 import { formatPhone, MAX_FINE_RATE, MAX_INTEREST_RATE } from "@/lib/receivableCharge";
 import type { PagadorEndereco } from "@/lib/pagadorEndereco";
 import type { BoletosEstado } from "@/lib/interBoletosEstado";
 import {
   enderecoVazio,
   hojeSP,
+  parseValorBRL,
   validarPagadorForm,
   valorSugerido,
   vencimentoSugerido,
@@ -89,6 +91,7 @@ export function EmitirBoletoModal({
 }) {
   const t = useTranslations("contasReceber.boletos.emit");
   const tEstado = useTranslations("contasReceber.boletos.estado");
+  const locale = useLocale();
   const hoje = hojeSP();
 
   const [nome, setNome] = useState("");
@@ -137,7 +140,7 @@ export function EmitirBoletoModal({
       if (p.error === "endereco" && p.campo) e[ERRO_CAMPO[p.campo]] = t(`errors.${ERRO_CAMPO[p.campo]}`);
       else e[ERRO_PAGADOR[p.error]] = t(`errors.${ERRO_PAGADOR[p.error]}`);
     }
-    if (!(parseAmount(valor) > 0)) e.amount = t("errors.amount");
+    if (!parseValorBRL(valor).ok) e.amount = valor.trim() ? t("errors.amountFormat") : t("errors.amount");
     if (!venc || venc < hoje || venc > maisDoisAnos(hoje)) e.due = t("errors.due");
     const m = parseRate(multa);
     if (!Number.isFinite(m) || m < 0 || m > MAX_FINE_RATE) e.fine = t("errors.fine");
@@ -164,7 +167,8 @@ export function EmitirBoletoModal({
   async function emitir() {
     if (busyRef.current) return;
     const p = validarPagadorForm({ nome, doc, email, telefone, endereco: end });
-    if (!p.ok) return;
+    const valorOk = parseValorBRL(valor);
+    if (!p.ok || !valorOk.ok) return;
     busyRef.current = true;
     setBusy(true);
     setErro("");
@@ -177,7 +181,7 @@ export function EmitirBoletoModal({
         body: JSON.stringify({
           ...(receivable ? { receivableId: receivable.id } : {}),
           payer: p.value,
-          amount: Math.round(parseAmount(valor) * 100) / 100,
+          amount: valorOk.value,
           dueDate: venc,
           ...(multaN > 0 ? { fineRate: multaN } : {}),
           ...(jurosN > 0 ? { interestRate: jurosN } : {}),
@@ -347,7 +351,11 @@ export function EmitirBoletoModal({
         <PinGate
           open={pinOpen}
           title={t("pinTitle")}
-          subtitle={t("pinSubtitle")}
+          subtitle={t("pinSubtitleDetail", {
+            amount: (() => { const v = parseValorBRL(valor); return v.ok ? formatMoney(v.value, locale) : ""; })(),
+            payer: nome.trim(),
+            date: venc ? formatDate(`${venc}T12:00:00`, locale) : "",
+          })}
           pinUid={pinUid}
           onClose={() => setPinOpen(false)}
           onVerified={() => void emitir()}
