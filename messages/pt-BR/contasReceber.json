@@ -255,5 +255,172 @@
     "paid": "Esta cobrança já foi paga. Obrigado!",
     "invalid": "Este link de pagamento não é mais válido. Peça uma nova cobrança a quem enviou o e-mail.",
     "footer": "Cobrança enviada pela NexusFi — gestão financeira empresarial."
+  },
+  "boletos": {
+    "tabs": {
+      "aria": "Seções de Contas a Receber",
+      "receivables": "Contas a receber",
+      "boletos": "Boletos"
+    },
+    "locked": {
+      "title": "Boletos pelo Banco Inter",
+      "body": "Emita boletos com Pix direto do app e acompanhe o que foi pago, sem sair da tela.",
+      "cta": "Plano Pro"
+    },
+    "estado": {
+      "indisponivel": "Banco Inter não conectado. Conecte sua conta para emitir boletos.",
+      "inativo": "A emissão de boletos ainda não foi ativada na sua conta. Fale com a equipe NexusFi para ativar.",
+      "escopoFaltando": "A credencial do Banco Inter não tem a permissão de cobrança. Fale com a equipe NexusFi para ajustar."
+    },
+    "cards": {
+      "aguardando": "Aguardando pagamento",
+      "vencido": "Vencidos",
+      "pago": "Pagos",
+      "aReceber": "A receber",
+      "count": "{count, plural, one {# boleto} other {# boletos}}"
+    },
+    "filters": {
+      "situacao": "Situação",
+      "todos": "Todos",
+      "aguardando": "Aguardando",
+      "vencido": "Vencidos",
+      "pago": "Pagos",
+      "outros": "Outros",
+      "outrosHint": "Cancelados, expirados, falhas de emissão e protesto",
+      "from": "Vence de",
+      "to": "até",
+      "clearPeriod": "Limpar período",
+      "searchPlaceholder": "Buscar por pagador ou documento",
+      "searchAria": "Buscar boletos por pagador ou documento",
+      "onlyReceivable": "Só os boletos de uma conta a receber",
+      "clearReceivable": "Ver todos",
+      "resultCount": "{count, plural, one {# boleto} other {# boletos}}"
+    },
+    "situacao": {
+      "EM_PROCESSAMENTO": "Em processamento",
+      "A_RECEBER": "A receber",
+      "ATRASADO": "Atrasado",
+      "RECEBIDO": "Pago",
+      "MARCADO_RECEBIDO": "Pago (baixa manual)",
+      "CANCELADO": "Cancelado",
+      "EXPIRADO": "Expirado",
+      "FALHA_EMISSAO": "Falha na emissão",
+      "PROTESTO": "Protestado",
+      "vencido": "Vencido"
+    },
+    "warn": {
+      "revisarCaixa": "Possível duplicidade no caixa; confira",
+      "pagoAposCancelamento": "Pago depois de cancelado; confira no Banco Inter"
+    },
+    "columns": {
+      "payer": "Pagador",
+      "amount": "Valor",
+      "due": "Vencimento",
+      "status": "Situação",
+      "actions": "Ações",
+      "table": "Lista de boletos"
+    },
+    "actions": {
+      "emitAvulso": "Emitir boleto avulso",
+      "refresh": "Atualizar",
+      "refreshing": "Atualizando…",
+      "pdf": "Abrir PDF do boleto",
+      "copyLine": "Copiar linha digitável",
+      "copyPix": "Copiar Pix copia e cola",
+      "resend": "Reenviar cobrança por e-mail",
+      "cancel": "Cancelar boleto"
+    },
+    "toast": {
+      "refreshDone": "{checked, plural, one {# boleto consultado} other {# boletos consultados}} · {paid, plural, =0 {nenhum pago} one {# pago} other {# pagos}}",
+      "refreshError": "Não foi possível atualizar os boletos.",
+      "pdfError": "Não foi possível abrir o PDF do boleto.",
+      "copied": "Copiado.",
+      "copyError": "Não foi possível copiar."
+    },
+    "empty": {
+      "title": "Nenhum boleto emitido ainda",
+      "description": "Emita um boleto avulso ou a partir de uma conta a receber.",
+      "noResults": "Nenhum boleto encontrado",
+      "adjustFilters": "Ajuste a busca ou os filtros para ver outros boletos."
+    },
+    "state": {
+      "loading": "Carregando boletos…",
+      "error": "Não foi possível carregar os boletos. Tente recarregar a página."
+    },
+    "row": {
+      "issue": "Emitir boleto",
+      "issued": "Boleto emitido",
+      "issuedHint": "Ver este boleto na aba Boletos"
+    },
+    "cancel": {
+      "title": "Cancelar boleto",
+      "message": "O boleto de {payer} ({amount}, vence em {due}) será cancelado no Banco Inter e deixará de poder ser pago.",
+      "confirm": "Cancelar boleto",
+      "back": "Voltar",
+      "pinTitle": "Confirmar cancelamento",
+      "pinSubtitle": "Digite seu PIN para cancelar o boleto",
+      "success": "Boleto cancelado.",
+      "error": "Não foi possível cancelar o boleto.",
+      "discard": "Descartar só no app",
+      "discardHint": "Este boleto não tem confirmação do Banco Inter e está há mais de 24 horas em processamento. Só o dono da conta pode descartá-lo apenas no app; depois, confira no Internet Banking que nenhum boleto foi emitido.",
+      "discardPinTitle": "Confirmar descarte",
+      "discardPinSubtitle": "Digite seu PIN para descartar o boleto",
+      "discardSuccess": "Boleto descartado."
+    },
+    "emit": {
+      "title": "Emitir boleto",
+      "titleReceivable": "Emitir boleto de {title}",
+      "intro": "Boleto com Pix emitido pelo Banco Inter.",
+      "unavailable": "Emissão indisponível",
+      "payerSection": "Pagador",
+      "addressSection": "Endereço do pagador",
+      "addressHint": "O Banco Inter exige o endereço completo. Ele fica salvo no cliente para os próximos boletos.",
+      "name": "Nome ou razão social",
+      "doc": "CPF ou CNPJ",
+      "email": "E-mail (opcional)",
+      "phone": "Telefone (opcional)",
+      "cep": "CEP",
+      "street": "Logradouro",
+      "number": "Número",
+      "complement": "Complemento (opcional)",
+      "district": "Bairro",
+      "city": "Cidade",
+      "state": "UF",
+      "amount": "Valor",
+      "amountHint": "Sugerido: saldo restante da conta a receber.",
+      "due": "Vencimento",
+      "fine": "Multa por atraso (%)",
+      "interest": "Juros ao mês (%)",
+      "submit": "Emitir boleto",
+      "submitting": "Emitindo…",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "pinTitle": "Confirmar emissão",
+      "pinSubtitle": "Digite seu PIN para emitir o boleto",
+      "success": "Boleto emitido.",
+      "successProcessing": "Boleto enviado ao Banco Inter. A linha digitável aparece em instantes.",
+      "error": "Não foi possível emitir o boleto.",
+      "errors": {
+        "name": "Informe o nome do pagador (até 100 caracteres).",
+        "doc": "CPF ou CNPJ inválido.",
+        "email": "E-mail inválido.",
+        "phone": "Telefone inválido: use DDD + número.",
+        "address": "Complete o endereço do pagador.",
+        "cep": "CEP inválido: informe 8 dígitos.",
+        "uf": "UF inválida.",
+        "street": "Informe o logradouro.",
+        "number": "Informe o número.",
+        "district": "Informe o bairro.",
+        "city": "Informe a cidade.",
+        "amount": "Informe um valor maior que zero.",
+        "due": "O vencimento deve ser entre hoje e 2 anos.",
+        "fine": "Multa fora do limite permitido.",
+        "interest": "Juros fora do limite permitido.",
+        "hasBoleto": "Esta conta a receber já tem um boleto vigente. Cancele o atual para emitir outro.",
+        "noPin": "Cadastre seu PIN para emitir boletos.",
+        "amountFormat": "Use vírgula nos centavos (ex.: 1.234,56)."
+      },
+      "pinSubtitleDetail": "Digite seu PIN para emitir {amount} para {payer}, vencendo em {date}"
+    }
   }
 }

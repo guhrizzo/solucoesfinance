@@ -64,6 +64,7 @@ export function createFakeFirestore() {
     ...queryRef(path),
     path,
     doc(id) { return docRef(`${path}/${id ?? nextId()}`); },
+    async add(data) { const ref = docRef(`${path}/${nextId()}`); applyCreate(ref.path, data); return ref; },
   });
 
   const db = {
@@ -87,6 +88,8 @@ export function createFakeFirestore() {
         const tx = {
           async get(ref) {
             if (wrote) throw new Error("Firestore: todas as leituras precisam vir antes das escritas na transação.");
+            // Query (collection/where/limit) também pode ser lida na transação, como no Admin SDK.
+            if (typeof ref.where === "function") return ref.get();
             return snapshot(ref.path, store.get(ref.path));
           },
           set(ref, data, opts) { wrote = true; writes.push(() => applySet(ref.path, data, opts)); return tx; },

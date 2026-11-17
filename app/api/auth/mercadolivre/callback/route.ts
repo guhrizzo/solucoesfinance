@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { RETURN_COOKIE, returnBaseFromCookieHeader } from "@/lib/oauthReturn";
 import {
   mlCredentials,
   exchangeCodeForToken,
@@ -15,10 +16,12 @@ import {
 const OAUTH_COOKIE = "ml_oauth";
 
 function redirectEstoque(request: Request, params: Record<string, string>) {
-  const url = new URL("/estoque", request.url);
+  // Base de retorno vem do cookie (lista permitida); sem cookie = /estoque.
+  const url = new URL(returnBaseFromCookieHeader(request.headers.get("cookie")), request.url);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = NextResponse.redirect(url);
   res.cookies.delete(OAUTH_COOKIE);
+  res.cookies.delete(RETURN_COOKIE);
   return res;
 }
 

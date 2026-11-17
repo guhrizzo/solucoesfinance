@@ -10,11 +10,11 @@ import {
     CheckCircle2, CircleDollarSign, Repeat, Settings2,
     ArrowUpRight, Tag, Building2, Zap, Receipt,
     Bell, Image as ImageIcon, Trash, ChevronLeft, ChevronRight, type LucideIcon,
-    ShieldCheck, Mail, Lock, Sparkles, Send,
+    ShieldCheck, Mail, Lock, Sparkles, Send, Barcode,
 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import AccessDenied from "@/app/components/AccessDenied";
-import { PageLoader } from "@/app/components/ui";
+import { PageLoader, Pill } from "@/app/components/ui";
 import PaymentMethodSelector, { PaymentMethodBadge } from "@/app/components/PaymentMethodSelector";
 import PinModal from "@/app/components/PinModal";
 import { CadastroManager, CadastroField, formatDoc, onlyDigits } from "@/app/components/CadastroPanel";
@@ -32,6 +32,11 @@ import { PIX_KEY_TYPES, normalizePixKey, formatPixKey, type PixKeyType } from "@
 import { isProAccess } from "@/lib/billing";
 import { authedFetch } from "@/lib/authedFetch";
 import { Link } from "@/i18n/navigation";
+import type { PagadorEndereco } from "@/lib/pagadorEndereco";
+import { podeEmitir, podeReenviarBoleto } from "@/lib/boletoTela";
+import { BoletosTab } from "./_components/BoletosTab";
+import { EmitirBoletoModal } from "./_components/EmitirBoletoModal";
+import { useBoletos, useBoletosEstado } from "./_components/useBoletos";
 import {
     FINE_PRESETS, INTEREST_PRESETS, MAX_FINE_RATE, MAX_INTEREST_RATE,
     clampRate, isValidEmail, formatPhone, chargeWithPenalties,
@@ -74,6 +79,7 @@ interface Receivable {
     // Cobrança por e-mail (plano Pro) — ver lib/receivableCharge.ts
     partyEmail?: string;
     partyPhone?: string;                // só dígitos
+    partyAddress?: PagadorEndereco;     // endereço do cliente (boleto do Banco Inter pede; salvo ao emitir)
     fineRate?: number;                  // multa por atraso, % do valor
     interestRate?: number;              // juros por atraso, % ao mês (pró-rata dia)
     chargeEmailSentAt?: number;         // último aviso enviado (gravado pela API)
@@ -1299,7 +1305,7 @@ function ReceiveModal({ open, receivable, uid, onClose, onConfirm }: {
 
 // ─── Receivable Card ──────────────────────────────────────────────────────────
 
-function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpenReceiveModal, onSendCharge }: {
+function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpenReceiveModal, onSendCharge, hasBoleto, canIssueBoleto, onIssueBoleto, onOpenBoletos }: {
     receivable: Receivable & { _status: ReceivableStatus };
     alertDays: number;
     isPro: boolean;
@@ -1308,9 +1314,16 @@ function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpen
     onOpenReceiveModal: () => void;
     /** Reenvia o aviso de cobrança por e-mail (Pro). */
     onSendCharge: () => Promise<void>;
+    /** Já existe boleto (Banco Inter) ligado a esta conta. */
+    hasBoleto: boolean;
+    /** Pode emitir boleto agora (Pro, em aberto e sem boleto vigente). */
+    canIssueBoleto: boolean;
+    onIssueBoleto: () => void;
+    onOpenBoletos: () => void;
 }) {
     const [sendingCharge, setSendingCharge] = useState(false);
     const t = useTranslations("contasReceber.card");
+    const tBol = useTranslations("contasReceber.boletos.row");
     const tStatus = useTranslations("contasReceber.status");
     const locale = useLocale();
     const [showPhotos, setShowPhotos] = useState(false);
@@ -1461,6 +1474,22 @@ function ReceivableCard({ receivable, alertDays, isPro, onEdit, onDelete, onOpen
                                 })}
                             </p>
                         )}
+                        {isPro && (hasBoleto || canIssueBoleto) && (
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                {hasBoleto && (
+                                    <button type="button" onClick={onOpenBoletos} title={tBol("issuedHint")} className="cursor-pointer">
+                                        <Pill tone="info"><Barcode size={11} aria-hidden="true" /> {tBol("issued")}</Pill>
+                                    </button>
+                                )}
+                                {canIssueBoleto && (
+                                    <button type="button" onClick={onIssueBoleto}
+                                        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg cursor-pointer"
+                                        style={{ border: "1px solid var(--brand)", color: "var(--brand)", background: "transparent" }}>
+                                        <Barcode size={12} aria-hidden="true" /> {tBol("issue")}
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1585,6 +1614,29 @@ export default function ContasReceberPage() {
     // Cobrança por e-mail é do plano Pro (o servidor confere de novo).
     const sub = useSubscription();
     const isPro = isProAccess(sub);
+
+    // Boletos do Banco Inter (aba "Boletos"): leitura em tempo real, só Pro.
+    const [tab, setTab] = useState<"contas" | "boletos">("contas");
+    const [focusReceivableId, setFocusReceivableId] = useState("");
+    const [emitOpen, setEmitOpen] = useState(false);
+    const [emitTarget, setEmitTarget] = useState<Receivable | null>(null);
+    const { boletos, loading: boletosLoading, error: boletosError } = useBoletos(uid, isPro);
+    const boletosEstadoAtual = useBoletosEstado(uid, isPro);
+    const idsComBoleto = useMemo(() => new Set(boletos.map(b => b.receivableId).filter(Boolean) as string[]), [boletos]);
+
+    // Cliente vinculado guarda o endereço para a próxima emissão. Não toca em
+    // `boleto`/`ultimoBoletoId` (só o servidor grava; ver firestore.rules).
+    async function saveBoletoAddress(receivableId: string, endereco: PagadorEndereco) {
+        if (!uid) return;
+        const [{ getFirebase }, { doc, updateDoc }] = await Promise.all([
+            import("@/lib/firebase"),
+            import("firebase/firestore"),
+        ]);
+        const { db } = await getFirebase();
+        await updateDoc(doc(db, "users", uid, "receivables", receivableId), {
+            partyAddress: endereco, ...stampUpdate({ uid: authUid ?? uid, name: userName }),
+        });
+    }
 
     async function sendChargeEmail(receivableId: string): Promise<boolean> {
         try {
@@ -2105,6 +2157,17 @@ export default function ContasReceberPage() {
             {/* Toast stack */}
             <ToastStack toasts={toasts} />
 
+            <EmitirBoletoModal
+                open={emitOpen}
+                onClose={() => { setEmitOpen(false); setEmitTarget(null); }}
+                receivable={emitTarget}
+                estado={boletosEstadoAtual}
+                pinUid={authUid ?? uid}
+                onToast={showToast}
+                onSaveAddress={saveBoletoAddress}
+                onEmitted={() => { if (emitTarget) { setFocusReceivableId(emitTarget.id); setTab("boletos"); } }}
+            />
+
             <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 overflow-y-auto overflow-x-hidden pb-24 lg:pb-8">
 
                 {/* Header */}
@@ -2149,6 +2212,41 @@ export default function ContasReceberPage() {
                     </div>
                 </div>
 
+                {/* Abas: contas a receber | boletos (Banco Inter) */}
+                <div role="tablist" aria-label={t("boletos.tabs.aria")} className="flex rounded-lg p-1 w-fit" style={{ background: "var(--cf-input)" }}>
+                    {(["contas", "boletos"] as const).map(k => (
+                        <button key={k} type="button" role="tab" aria-selected={tab === k}
+                            onClick={() => setTab(k)}
+                            className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all"
+                            style={tab === k
+                                ? { background: "var(--cf-card)", color: "var(--pos)", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }
+                                : { background: "transparent", color: "var(--cf-text-2)" }}>
+                            {t(k === "contas" ? "boletos.tabs.receivables" : "boletos.tabs.boletos")}
+                        </button>
+                    ))}
+                </div>
+
+                {tab === "boletos" ? (
+                    <BoletosTab
+                        boletos={boletos}
+                        loading={boletosLoading}
+                        error={boletosError}
+                        isPro={isPro}
+                        estado={boletosEstadoAtual}
+                        isOwner={!!uid && authUid === uid}
+                        pinUid={authUid ?? uid}
+                        onToast={showToast}
+                        onEmitAvulso={() => { setEmitTarget(null); setEmitOpen(true); }}
+                        onResend={async (id) => { await sendChargeEmail(id); }}
+                        resendableIds={new Set(isPro ? boletos.filter(b => {
+                            // Só oferece reenviar quando o e-mail vai levar ESTE boleto (mesmo saldo e vencimento).
+                            const r = b.receivableId ? receivables.find(x => x.id === b.receivableId) : undefined;
+                            return !!r && r.status !== "recebido" && !!r.partyEmail && podeReenviarBoleto(b, r);
+                        }).map(b => b.id) : [])}
+                        focusReceivableId={focusReceivableId}
+                        onClearFocus={() => setFocusReceivableId("")}
+                    />
+                ) : (<>
                 {/* Período dos resultados (KPIs abaixo) — Mensal ou Anual */}
                 <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex rounded-lg p-1" style={{ background: "var(--cf-input)" }}>
@@ -2280,6 +2378,10 @@ export default function ContasReceberPage() {
                                             alertDays={alertDays}
                                             isPro={isPro}
                                             onSendCharge={async () => { await sendChargeEmail(receivable.id); }}
+                                            hasBoleto={idsComBoleto.has(receivable.id)}
+                                            canIssueBoleto={isPro && !boletosLoading && receivable._status !== "recebido" && podeEmitir(receivable, boletos)}
+                                            onIssueBoleto={() => { setEmitTarget(receivable); setEmitOpen(true); }}
+                                            onOpenBoletos={() => { setFocusReceivableId(receivable.id); setTab("boletos"); }}
                                             onEdit={() => { setEditing(receivable); setModal(true); }}
                                             onDelete={() => onDeleteRequested(receivable)}
                                             onOpenReceiveModal={() => {
@@ -2293,6 +2395,7 @@ export default function ContasReceberPage() {
                         ))}
                     </div>
                 )}
+                </>)}
             </main>
 
             {/* FAB mobile */}
