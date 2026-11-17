@@ -101,7 +101,7 @@ const sleep = (ms: number) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : 
 const ID_RE = /^[0-9a-z]{1,15}$/;
 
 /** Lê e decifra a conexão do dono (integracoesBanco/{ownerUid}); `conta` fica em claro, fora do envelope. */
-async function transporteDe(db: Firestore, ownerUid: string, deps: BoletoDeps): Promise<Transporte> {
+export async function transporteDe(db: Firestore, ownerUid: string, deps: BoletoDeps): Promise<Transporte> {
   if (deps.transporte) return deps.transporte;
   const snap = await db.doc(`integracoesBanco/${ownerUid}`).get();
   if (!snap.exists) throw new BoletoError(MSG_NAO_CONECTADO, "nao-conectado");
@@ -288,7 +288,7 @@ async function completarDados(db: Firestore, ownerUid: string, boletoId: string,
 }
 
 /** Aplica a situação remota (núcleo idempotente) + completa dados + espelha na conta a receber. */
-async function aplicarTudo(
+export async function aplicarTudo(
   db: Firestore,
   ownerUid: string,
   boletoId: string,
@@ -575,7 +575,7 @@ export async function pdfBoleto(db: Firestore, ownerUid: string, boletoId: strin
 // ---------- atualizar ----------
 
 /** Erro que vale para a conta toda (credencial, escopo, limite, rede, Inter fora): para a rodada. */
-const erroGeral = (e: unknown) =>
+export const erroGeral = (e: unknown) =>
   e instanceof InterRedeError ||
   (e instanceof InterHttpError && (e.status === 401 || e.status === 403 || e.status === 429 || e.status >= 500));
 

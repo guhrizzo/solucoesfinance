@@ -30,4 +30,8 @@ export type InterStatus = {
   certExpiresAt?: number;
   /** true quando a equipe (adm supremo) configurou a conexão; some ao desconectar. */
   configuradoPelaEquipe?: boolean;
+  /** Boletos (cobrança) ativados pelo adm: os dois escopos funcionam. Sem token nem segredo. */
+  cobrancaAtiva?: boolean;
+  /** Resultado do teste de cada escopo de cobrança na última ativação. */
+  cobrancaEscopos?: { write: boolean; read: boolean };
 };

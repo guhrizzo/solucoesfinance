@@ -252,6 +252,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // interWebhookTokens/{sha256} — índice token do webhook de boletos do Inter
+    // → { ownerUid }. Só o HASH do token é guardado. Lido e escrito SOMENTE
+    // pelo Admin SDK (webhook público, ativação pelo adm e conexão); o client
+    // nunca acessa. Regra explícita (além do fallback) pra deixar claro.
+    match /interWebhookTokens/{id} {
+      allow read, write: if false;
+    }
+
     // auditoriaIntegracoes/{id} — trilha de quem (adm supremo) conectou, testou
     // ou desconectou um banco de qual cliente. Gravada SOMENTE pelo Admin SDK
     // (rotas /api/admin/inter/*); o client nunca lê nem escreve. Regra

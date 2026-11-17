@@ -13,7 +13,9 @@
 //   • auditoria e resposta só carregam a mensagem fixa devolvida pelo núcleo,
 //     nunca segredo, PEM, campo *Enc nem texto de exceção.
 
-import type { AdminTargetDeps, AuditoriaEntry } from "./interAdminTarget";
+import { assertAdmin, type AdminTarget, type AdminTargetDeps, type AuditoriaEntry } from "./interAdminTarget";
+import type { AtivarResultado } from "./interBoletoWebhook";
+import { SERVER_CONFIG_ERROR } from "./interErrors";
 import type { InterStatus } from "./interTypes";
 
 export type AdminAcao = AuditoriaEntry["acao"];
@@ -137,5 +139,58 @@ export function pickInterStatus(data: unknown): InterStatus | null {
   if (typeof d.lastSyncError === "string" || d.lastSyncError === null) out.lastSyncError = d.lastSyncError as string | null;
   if (typeof d.certExpiresAt === "number") out.certExpiresAt = d.certExpiresAt;
   if (d.configuradoPelaEquipe === true) out.configuradoPelaEquipe = true;
+  if (typeof d.cobrancaAtiva === "boolean") out.cobrancaAtiva = d.cobrancaAtiva;
+  const esc = d.cobrancaEscopos as Record<string, unknown> | null | undefined;
+  if (esc && typeof esc === "object") out.cobrancaEscopos = { write: esc.write === true, read: esc.read === true };
   return out;
+}
+
+// ---------- POST /api/admin/inter/boletos (ativar boletos de um cliente) ----------
+
+export type AtivarBoletosDeps = {
+  /** resolveTarget com o I/O real (re-resolve o e-mail; única origem do ownerUid). */
+  resolveTarget(rawEmail: unknown): Promise<AdminTarget>;
+  keyConfigured(): boolean;
+  /** lib/interBoletoWebhook.ts ativarBoletos (grava a própria auditoria). */
+  ativar(ownerUid: string, adminUid: string, ctx: { adminEmail: string | null; alvoEmail: string }): Promise<AtivarResultado>;
+  /** Auditoria das recusas antes do núcleo (sem Pro, sem chave). */
+  auditar(alvo: { ownerUid: string; email: string }, result: AdminActionResult): Promise<void>;
+};
+
+/**
+ * Núcleo puro da rota: adm supremo → corpo → alvo (dono, nunca membro) → Pro →
+ * INTER_ENC_KEY → ativar. A resposta é montada por lista branca: só ok, escopos
+ * e webhook (nunca token, hash, segredo ou corpo do Inter).
+ */
+export async function rotaAtivarBoletos(
+  scope: { uid: string; email: string | null; isSupremeAdmin: boolean },
+  body: unknown,
+  deps: AtivarBoletosDeps,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const adm = assertAdmin(scope);
+  if (!adm.ok) return { status: adm.status, body: { error: adm.error } };
+
+  const parts = splitAdminBody(body);
+  if (!parts) return { status: 400, body: { error: INVALID_BODY_ERROR } };
+
+  const alvo = await deps.resolveTarget(parts.clienteEmail);
+  if (!alvo.ok) return { status: alvo.status, body: { error: alvo.error } };
+
+  if (!alvo.pro) {
+    const r: AdminActionResult = { ok: false, status: 403, error: PRO_REQUIRED_ERROR };
+    await deps.auditar(alvo, r);
+    return { status: 403, body: { error: PRO_REQUIRED_ERROR } };
+  }
+  if (!deps.keyConfigured()) {
+    const r: AdminActionResult = { ok: false, status: 500, error: SERVER_CONFIG_ERROR };
+    await deps.auditar(alvo, r);
+    return { status: 500, body: { error: SERVER_CONFIG_ERROR } };
+  }
+
+  const r = await deps.ativar(alvo.ownerUid, scope.uid, { adminEmail: scope.email, alvoEmail: alvo.email });
+  if (!r.ok) return { status: r.status, body: { error: r.error } };
+  return {
+    status: 200,
+    body: { ok: true, escopos: { write: r.escopos.write === true, read: r.escopos.read === true }, webhook: r.webhook === true },
+  };
 }

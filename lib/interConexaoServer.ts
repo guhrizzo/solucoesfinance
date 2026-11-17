@@ -35,6 +35,19 @@ const statusPath = (ownerUid: string) => `users/${ownerUid}/profile/interStatus`
 
 const FALLBACK_TEST_ERROR = "Falha ao testar a conexão com o Banco Inter.";
 
+/**
+ * Hash do token do webhook de boletos guardado na conexão (cobranca.token).
+ * Conectar de novo ou desconectar apaga o índice interWebhookTokens/{hash}: a
+ * URL antiga deixa de valer e os boletos precisam ser reativados pelo adm.
+ */
+function webhookHashDe(data: Record<string, unknown> | undefined): string | null {
+  const c = data?.cobranca as Record<string, unknown> | undefined;
+  return c && typeof c.token === "string" && /^[0-9a-f]{64}$/.test(c.token) ? c.token : null;
+}
+
+/** Flags públicas de cobrança (interStatus) zeradas junto com a conexão. */
+const COBRANCA_STATUS_RESET = { cobrancaAtiva: FieldValue.delete(), cobrancaEscopos: FieldValue.delete() };
+
 function fail(error: string, status = 400): InterAccountResult {
   return { ok: false, status, error };
 }
@@ -119,8 +132,12 @@ export async function connectInter(
 
   try {
     const now = Date.now();
+    const anterior = await db.doc(secretsPath(ownerUid)).get();
+    const hashAntigo = anterior.exists ? webhookHashDe(anterior.data()) : null;
     const batch = db.batch();
-    // set sem merge: reconectar substitui por completo os segredos antigos.
+    if (hashAntigo) batch.delete(db.doc(`interWebhookTokens/${hashAntigo}`));
+    // set sem merge: reconectar substitui por completo os segredos antigos
+    // (inclusive a ativação de boletos: o adm reativa depois).
     batch.set(db.doc(secretsPath(ownerUid)), {
       provider: "inter",
       ...enc,
@@ -139,6 +156,7 @@ export async function connectInter(
         certExpiresAt: ck.expiresAt,
         lastSyncAt: FieldValue.delete(),
         lastSyncError: null,
+        ...COBRANCA_STATUS_RESET,
         ...equipeField(opts),
       },
       { merge: true }
@@ -230,8 +248,11 @@ export async function updateInter(
 /** Apaga os segredos (não precisa de INTER_ENC_KEY). interPendentes ficam intactos. */
 export async function disconnectInter(db: Firestore, ownerUid: string): Promise<InterAccountResult> {
   try {
+    const anterior = await db.doc(secretsPath(ownerUid)).get();
+    const hashAntigo = anterior.exists ? webhookHashDe(anterior.data()) : null;
     const batch = db.batch();
     batch.delete(db.doc(secretsPath(ownerUid)));
+    if (hashAntigo) batch.delete(db.doc(`interWebhookTokens/${hashAntigo}`));
     // interPendentes não é tocado. O cursor lastSyncAt NÃO sobrevive ao
     // desconectar (o doc de segredos some e o status perde o campo): uma
     // reconexão começa do zero, com a busca de 30 dias.
@@ -244,6 +265,7 @@ export async function disconnectInter(db: Firestore, ownerUid: string): Promise<
         lastSyncAt: FieldValue.delete(),
         lastSyncError: null,
         configuradoPelaEquipe: FieldValue.delete(),
+        ...COBRANCA_STATUS_RESET,
       },
       { merge: true }
     );

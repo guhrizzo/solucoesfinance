@@ -66,9 +66,11 @@ export type AuditoriaEntry = {
   alvoOwnerUid: string;
   alvoEmail: string;
   provider: "inter";
-  acao: "conectar" | "atualizar" | "testar" | "desconectar";
+  acao: "conectar" | "atualizar" | "testar" | "desconectar" | "ativar-boletos";
   ok: boolean;
   erro?: string;
+  /** Só flags (ativar-boletos): nunca token, hash ou segredo. */
+  detalhe?: { write: boolean; read: boolean; webhook: boolean };
 };
 
 // Remove blocos PEM completos e, se o bloco vier cortado, o marcador e tudo depois.

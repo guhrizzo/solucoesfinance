@@ -64,6 +64,7 @@ export function createFakeFirestore() {
     ...queryRef(path),
     path,
     doc(id) { return docRef(`${path}/${id ?? nextId()}`); },
+    async add(data) { const ref = docRef(`${path}/${nextId()}`); applyCreate(ref.path, data); return ref; },
   });
 
   const db = {
