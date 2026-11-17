@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 import type { Firestore } from "firebase-admin/firestore";
 import { fetchExtrato, type InterTx } from "./inter";
 import { decryptInterSecrets, type EncryptedInterSecrets, type InterSecrets } from "./interCrypto";
+import { candidatoUnico } from "./interBoletoExtrato";
 import { suggestAll, type CashEntryLite, type Suggestion } from "./interMatch";
 import type { InterPendente } from "./interTypes";
 import { todayKey } from "./rh/datas";
@@ -116,17 +117,20 @@ export type SyncDeps = {
   fetchExtrato?: Fetcher;
 };
 
+/** Entrada do caixa + origem de boleto (usada só para o vínculo automático do extrato). */
+type CashEntryComBoleto = CashEntryLite & { boletoId?: string };
+
 /** Lançamentos do Fluxo de Caixa no período (com folga de ±3 dias) no formato do motor de sugestão. */
-async function lerCashflow(db: Firestore, ownerUid: string, from: string, to: string): Promise<CashEntryLite[]> {
+async function lerCashflow(db: Firestore, ownerUid: string, from: string, to: string): Promise<CashEntryComBoleto[]> {
   const de = toISO(isoMs(from) - FOLGA_MATCH_DIAS * DAY);
   const ate = toISO(isoMs(to) + FOLGA_MATCH_DIAS * DAY);
   const snap = await db
     .collection(`users/${ownerUid}/cashflow`)
     .where("date", ">=", de)
     .where("date", "<=", ate)
-    .select("type", "amount", "date", "description", "category", "interTxId")
+    .select("type", "amount", "date", "description", "category", "interTxId", "boletoId")
     .get();
-  const out: CashEntryLite[] = [];
+  const out: CashEntryComBoleto[] = [];
   for (const d of snap.docs) {
     const x = d.data() ?? {};
     if (x.type !== "entrada" && x.type !== "saida") continue;
@@ -140,6 +144,7 @@ async function lerCashflow(db: Firestore, ownerUid: string, from: string, to: st
       description: typeof x.description === "string" ? x.description : "",
       ...(typeof x.category === "string" ? { category: x.category } : {}),
       ...(typeof x.interTxId === "string" && x.interTxId ? { interTxId: x.interTxId } : {}),
+      ...(typeof x.boletoId === "string" && x.boletoId ? { boletoId: x.boletoId } : {}),
     });
   }
   return out;
@@ -194,6 +199,10 @@ export async function syncOwner(
     if (txs.length > 0) {
       const entries = await lerCashflow(db, ownerUid, from, to);
       const suggestions = suggestAll(txs, entries);
+      // Entradas de boleto pago ainda sem item do extrato: candidatas ao vínculo automático.
+      const candidatasBoleto = entries.filter((e) => e.type === "entrada" && e.boletoId && !e.interTxId);
+      // Todo item de entrada do extrato disputa o mesmo valor/janela: ambiguidade → sem vínculo.
+      const entradasExtrato = txs.filter((x) => x.type === "entrada");
       const pendCol = db.collection(`users/${ownerUid}/interPendentes`);
 
       // Em lotes: cada lote é uma transação que LÊ os ids e só grava os que não
@@ -210,8 +219,51 @@ export async function syncOwner(
             if (s.exists) existing.set(lote[k].txKey, s.data() as InterPendente);
           });
           const novosLote = mergePendentes(existing, lote, suggestions, now);
-          for (const p of novosLote) t.set(pendCol.doc(pendenteDocId(p.txKey)), p);
-          return novosLote.length;
+
+          // Vínculo automático (boleto pago antes do extrato): só com par único.
+          const usados = new Set<string>();
+          const par = new Map<string, string>(); // txKey → id do lançamento
+          for (const p of novosLote) {
+            if (p.type !== "entrada") continue;
+            const orig = lote.find((x) => x.txKey === p.txKey);
+            if (!orig) continue;
+            const c = candidatoUnico(orig, candidatasBoleto.filter((e) => !usados.has(e.id)), entradasExtrato);
+            if (!c) continue;
+            usados.add(c.id);
+            par.set(p.txKey, c.id);
+          }
+          // Reconfere os lançamentos DENTRO da transação (todas as leituras antes das escritas):
+          // outro sync ou o usuário pode ter vinculado o lançamento desde a leitura inicial.
+          const cashCol = db.collection(`users/${ownerUid}/cashflow`);
+          const ids = [...par.values()];
+          const cashSnaps = ids.length ? await t.getAll(...ids.map((id) => cashCol.doc(id))) : [];
+          const livres = new Set<string>();
+          cashSnaps.forEach((s, k) => {
+            const d = s.exists ? s.data() ?? {} : null;
+            if (d && d.boletoId && !d.interTxId && d.type === "entrada") livres.add(ids[k]);
+          });
+
+          let pendentes = 0;
+          for (const p of novosLote) {
+            const cashId = par.get(p.txKey);
+            if (cashId && livres.has(cashId)) {
+              const { suggestion: _s, ...semSugestao } = p;
+              void _s;
+              t.set(pendCol.doc(pendenteDocId(p.txKey)), {
+                ...semSugestao,
+                status: "conciliado",
+                cashflowId: cashId,
+                resolvedAt: now,
+                resolvedBy: "sistema",
+              });
+              t.update(cashCol.doc(cashId), { interTxId: p.txKey });
+            } else {
+              t.set(pendCol.doc(pendenteDocId(p.txKey)), p);
+              pendentes++;
+            }
+          }
+          // "novos" = só o que caiu em "A conciliar" (os vinculados sozinhos não contam).
+          return pendentes;
         });
       }
     }

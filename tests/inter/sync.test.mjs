@@ -283,3 +283,96 @@ test("syncOwner não herda cursor se a conexão foi trocada no meio", async () =
   await syncOwner(db, OWNER, NOW, { fetchExtrato });
   assert.equal(db.store.get(`integracoesBanco/${OWNER}`).lastSyncAt, undefined);
 });
+
+// ---------- extrato chega DEPOIS do boleto pago ----------
+
+const CF = (id) => `users/${OWNER}/cashflow/${id}`;
+const PEND = (id) => `users/${OWNER}/interPendentes/${id}`;
+const boletoEntry = (o = {}) => ({ type: "entrada", amount: 150.5, date: "2026-11-01", description: "Boleto · Cliente", category: "Outros recebimentos", boletoId: "b1", ...o });
+const extrato150 = (o = {}) => tx({ txKey: "id:b", amount: 150.5, description: "BOLETO COBRANCA RECEBIDO", ...o });
+
+function setupBoleto() {
+  const db = setup();
+  db.store.delete(CF("cf1"));
+  return db;
+}
+
+test("extrato depois do boleto pago: item nasce conciliado, lançamento ganha interTxId e novos não conta", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("boleto_b1"), boletoEntry());
+  const r = await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => [extrato150()] });
+  assert.deepEqual(r, { novos: 0 });
+  const p = db.store.get(PEND("id:b"));
+  assert.equal(p.status, "conciliado");
+  assert.equal(p.cashflowId, "boleto_b1");
+  assert.equal(p.resolvedAt, NOW);
+  assert.equal(p.resolvedBy, "sistema");
+  assert.equal(p.suggestion, undefined);
+  assert.equal(db.store.get(CF("boleto_b1")).interTxId, "id:b");
+});
+
+test("extrato depois do boleto: com 1 conciliado e 1 pendente comum, novos conta só o pendente", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("boleto_b1"), boletoEntry());
+  const r = await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => [extrato150(), tx({ txKey: "id:z", amount: 999 })] });
+  assert.deepEqual(r, { novos: 1 });
+  assert.equal(db.store.get(PEND("id:z")).status, "pendente");
+});
+
+test("duas entradas de boleto de mesmo valor → item nasce pendente e nada é vinculado", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("boleto_b1"), boletoEntry());
+  db.store.set(CF("boleto_b2"), boletoEntry({ boletoId: "b2", date: "2026-11-02" }));
+  const r = await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => [extrato150()] });
+  assert.deepEqual(r, { novos: 1 });
+  assert.equal(db.store.get(PEND("id:b")).status, "pendente");
+  assert.equal(db.store.get(CF("boleto_b1")).interTxId, undefined);
+  assert.equal(db.store.get(CF("boleto_b2")).interTxId, undefined);
+});
+
+test("dois itens idênticos no extrato e uma entrada de boleto → ambos pendentes", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("boleto_b1"), boletoEntry());
+  const r = await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => [extrato150({ txKey: "id:b" }), extrato150({ txKey: "id:c" })] });
+  assert.deepEqual(r, { novos: 2 });
+  assert.equal(db.store.get(PEND("id:b")).status, "pendente");
+  assert.equal(db.store.get(PEND("id:c")).status, "pendente");
+  assert.equal(db.store.get(CF("boleto_b1")).interTxId, undefined);
+});
+
+test("entrada sem boletoId não é vinculada por essa regra", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("manual"), boletoEntry({ boletoId: undefined }));
+  const r = await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => [extrato150()] });
+  assert.deepEqual(r, { novos: 1 });
+  assert.equal(db.store.get(PEND("id:b")).status, "pendente");
+  assert.equal(db.store.get(CF("manual")).interTxId, undefined);
+});
+
+test("entrada de boleto que já tem interTxId não é candidata", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("boleto_b1"), boletoEntry({ interTxId: "id:outro" }));
+  const r = await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => [extrato150()] });
+  assert.deepEqual(r, { novos: 1 });
+  assert.equal(db.store.get(CF("boleto_b1")).interTxId, "id:outro");
+});
+
+test("saída do extrato nunca vincula entrada de boleto", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("boleto_b1"), boletoEntry());
+  const r = await syncOwner(db, OWNER, NOW, { fetchExtrato: async () => [extrato150({ type: "saida" })] });
+  assert.deepEqual(r, { novos: 1 });
+  assert.equal(db.store.get(CF("boleto_b1")).interTxId, undefined);
+});
+
+test("vínculo automático é idempotente: rodar 2× não altera nada", async () => {
+  const db = setupBoleto();
+  db.store.set(CF("boleto_b1"), boletoEntry());
+  const fetchExtrato = async () => [extrato150()];
+  await syncOwner(db, OWNER, NOW, { fetchExtrato });
+  const antes = structuredClone([...db.store.entries()].filter(([k]) => k.includes("/cashflow/") || k.includes("/interPendentes/")));
+  const r = await syncOwner(db, OWNER, NOW + DAY, { fetchExtrato });
+  assert.deepEqual(r, { novos: 0 });
+  const depois = [...db.store.entries()].filter(([k]) => k.includes("/cashflow/") || k.includes("/interPendentes/"));
+  assert.deepEqual(depois, antes);
+});
