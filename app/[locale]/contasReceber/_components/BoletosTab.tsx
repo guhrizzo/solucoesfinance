@@ -316,7 +316,9 @@ export function BoletosTab({
     <div className="space-y-4">
       {/* Ações do topo */}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button variant="secondary" icon={RefreshCw} loading={atualizando} onClick={() => void atualizar()} disabled={estado !== "ativo"}>
+        {/* Habilitado com o Inter conectado mesmo sem a cobrança ativa: cobre boletos abertos após
+            reconexão; sem o escopo, o servidor devolve a mensagem do 403 em vez de um botão morto. */}
+        <Button variant="secondary" icon={RefreshCw} loading={atualizando} onClick={() => void atualizar()} disabled={estado === null || estado === "indisponivel"}>
           {atualizando ? t("actions.refreshing") : t("actions.refresh")}
         </Button>
         <Button icon={Plus} onClick={onEmitAvulso}>{t("actions.emitAvulso")}</Button>

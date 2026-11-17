@@ -1,9 +1,11 @@
 // app/api/cron/inter-boletos/route.ts
 // GET (agendado — vercel.json, todo dia) → "consulta de segurança" dos boletos
-// do Banco Inter: para cada conta com a cobrança ativa (integracoesBanco
-// cobranca.ativo) e Pro, consulta os boletos em aberto e aplica a situação pelo
+// do Banco Inter: para cada conta conectada (integracoesBanco, com ou sem a
+// cobrança ativa) e Pro, consulta os boletos em aberto e aplica a situação pelo
 // núcleo idempotente (lib/interBoletoServer.ts atualizarBoletos). Cobre aviso
-// do webhook perdido. Orçamento de tempo e concorrência limitada como o
+// do webhook perdido e também os boletos abertos de uma conta que reconectou ou
+// trocou credenciais e ainda não foi reativada (a reconexão apaga `cobranca`).
+// Conta sem boleto em aberto sai antes de montar o transporte (sem chamar o Inter). Orçamento de tempo e concorrência limitada como o
 // cron/inter-sync; uma conta com falha não interrompe as outras.
 //
 // Proteção: header `Authorization: Bearer ${CRON_SECRET}`.
@@ -35,7 +37,7 @@ export async function GET(request: Request) {
   }
 
   const db = await getAdminDb();
-  const snap = await db.collection("integracoesBanco").where("cobranca.ativo", "==", true).select().get();
+  const snap = await db.collection("integracoesBanco").select().get();
   const fila = snap.docs.map((d) => d.id);
 
   let atualizadas = 0;
