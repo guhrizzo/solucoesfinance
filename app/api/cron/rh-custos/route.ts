@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     try {
       const b = await db.doc(`users/${ownerUid}/profile/billing`).get();
       const doc = (b.exists ? b.data() : null) as BillingDoc | null;
-      let rhEnabled = canUseRh(resolveSubscriptionState(doc), true);
+      let rhEnabled = canUseRh(resolveSubscriptionState(doc));
       if (!rhEnabled) {
         const email = await getAdminAuth().then((a) => a.getUser(ownerUid)).then((u) => u.email ?? null).catch(() => null);
         rhEnabled = isCompedEmail(email);

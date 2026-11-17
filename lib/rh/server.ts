@@ -87,7 +87,7 @@ export async function guardRh(
   if (isScopeError(scope)) return NextResponse.json({ error: scope.error }, { status: scope.status });
 
   const db = await getAdminDb();
-  if (!canUseRh(await resolveScopeSubscription(db, scope), scope.isOwner)) {
+  if (!canUseRh(await resolveScopeSubscription(db, scope))) {
     return NextResponse.json({ error: "O módulo de RH é exclusivo do plano Pro." }, { status: 403 });
   }
   const { limited, retryAfterSec } = checkRateLimit(

@@ -270,8 +270,13 @@ export function isProAccess(state: Pick<SubscriptionState, "plan" | "comped">): 
   return getPlan(state.plan)?.tier === "pro";
 }
 
-export function canUseRh(state: SubscriptionState, isOwner: boolean): boolean {
-  return isProAccess(state) || (isOwner && state.isActive && state.rhEnabled);
+/**
+ * RH: Pro, ou conta com a liberação avulsa `rhEnabled` (profile/billing do dono).
+ * O estado vem sempre do billing do DONO, então membros herdam a liberação —
+ * quem decide se o membro vê o RH é a permissão "rh" dele (requireScope).
+ */
+export function canUseRh(state: SubscriptionState): boolean {
+  return isProAccess(state) || (state.isActive && state.rhEnabled);
 }
 
 /** Módulo Restaurante (pedidos, ficha técnica, estoque de ingredientes): só plano Pro. */

@@ -61,7 +61,7 @@ export default function RhPage() {
   if (authLoading || sub.loading || acesso === null) return <PageLoader />;
   if (!user) return null;
 
-  const rhEnabled = canUseRh(sub, sub.isOwner);
+  const rhEnabled = canUseRh(sub);
 
   return (
     <RhPinProvider authUid={user.uid}>
