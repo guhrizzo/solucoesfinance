@@ -1,4 +1,5 @@
-// Banco Inter (API Empresas): extrato via mTLS. Formato conferido numa cópia de terceiros do
+// Banco Inter (API Empresas): extrato via mTLS (as primitivas de rede/token são exportadas e
+// reaproveitadas pela API de cobrança em lib/interCobranca.ts). Formato conferido numa cópia de terceiros do
 // OpenAPI do Inter (edusouza/inter-pj-cli, spec/), NÃO contra a documentação oficial ao vivo
 // (developers.inter.co) nem contra uma conta real. Endpoint: GET /banking/v2/extrato/completo,
 // escopo extrato.read, máx. 90 dias por consulta, 10 chamadas/min (token: 5/min, validade 60 min).
@@ -144,9 +145,9 @@ export function certExpiresAt(certPem: string): number {
 
 // ---------- HTTP (mTLS) ----------
 
-type Resp = { status: number; body: string };
+export type Resp = { status: number; body: string };
 
-function request(agent: https.Agent, method: string, path: string, headers: Record<string, string>, body?: string): Promise<Resp> {
+export function request(agent: https.Agent, method: string, path: string, headers: Record<string, string>, body?: string): Promise<Resp> {
   return new Promise((resolve, reject) => {
     const req = https.request(
       { host: HOST, port: 443, method, path, agent, headers: body ? { ...headers, "Content-Length": String(Buffer.byteLength(body)) } : headers, timeout: 20000 },
@@ -164,7 +165,7 @@ function request(agent: https.Agent, method: string, path: string, headers: Reco
 }
 
 /** Erros de rede/TLS → mensagem em português, sem vazar certificado, chave ou segredo. */
-function mapNetworkError(e: unknown): Error {
+export function mapNetworkError(e: unknown): Error {
   const code = isRec(e) ? str(e.code) : "";
   const msg = e instanceof Error ? e.message : "";
   if (/timeout|ETIMEDOUT|ECONN|ENOTFOUND|EAI_AGAIN/i.test(code + " " + msg)) {
@@ -176,15 +177,15 @@ function mapNetworkError(e: unknown): Error {
   return new Error("Falha ao consultar o Banco Inter.");
 }
 
-function mapStatus(status: number): Error {
-  if (status === 400 || status === 401) return new Error("Credenciais do Banco Inter inválidas (Client ID/Secret) ou sem o escopo extrato.read.");
-  if (status === 403) return new Error("Acesso negado pelo Banco Inter: verifique se a aplicação tem o escopo extrato.read e a conta correta.");
+export function mapStatus(status: number, scope = "extrato.read"): Error {
+  if (status === 400 || status === 401) return new Error(`Credenciais do Banco Inter inválidas (Client ID/Secret) ou sem o escopo ${scope}.`);
+  if (status === 403) return new Error(`Acesso negado pelo Banco Inter: verifique se a aplicação tem o escopo ${scope} e a conta correta.`);
   if (status === 429) return new Error("Limite de requisições do Banco Inter atingido. Aguarde um minuto e tente novamente.");
   if (status >= 500) return new Error("O Banco Inter está indisponível no momento. Tente novamente mais tarde.");
   return new Error(`O Banco Inter recusou a consulta (HTTP ${status}).`);
 }
 
-function makeAgent(s: InterSecrets): https.Agent {
+export function makeAgent(s: InterSecrets): https.Agent {
   try {
     return new https.Agent({ cert: s.certPem, key: s.keyPem, keepAlive: false });
   } catch {
@@ -192,12 +193,12 @@ function makeAgent(s: InterSecrets): https.Agent {
   }
 }
 
-async function getToken(agent: https.Agent, s: InterSecrets): Promise<string> {
+export async function getToken(agent: https.Agent, s: InterSecrets, scope = "extrato.read"): Promise<string> {
   const form = new URLSearchParams({
     client_id: s.clientId,
     client_secret: s.clientSecret,
     grant_type: "client_credentials",
-    scope: "extrato.read",
+    scope,
   }).toString();
   let r: Resp;
   try {
@@ -205,7 +206,7 @@ async function getToken(agent: https.Agent, s: InterSecrets): Promise<string> {
   } catch (e) {
     throw mapNetworkError(e);
   }
-  if (r.status !== 200) throw mapStatus(r.status);
+  if (r.status !== 200) throw mapStatus(r.status, scope);
   try {
     const t = str((JSON.parse(r.body) as Rec).access_token);
     if (t) return t;
