@@ -44,7 +44,10 @@ export type BoletoDoc = {
   createdAt: string;
   createdBy: string;
   cancelledBy?: string;
-  lastError?: string;
+  /** null = erro anterior já resolvido. */
+  lastError?: string | null;
+  /** O banco confirmou o pagamento de um boleto que aqui estava cancelado/expirado/com falha. */
+  pagoAposCancelamento?: boolean;
 };
 
 const SEU_NUMERO_MAX = 15;
