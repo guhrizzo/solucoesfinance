@@ -1,9 +1,10 @@
 "use client";
 
+import { useShopeeUi } from "@/lib/shopeeAccess";
 import { useEffect, useMemo, useState } from "react";
 import { budgetForCenterMonth } from "@/lib/costCenterSync";
 import {
-  CANAIS_QUEBRA, TODOS_CANAIS, monthKey, prevMonthKey,
+  canaisQuebra, TODOS_CANAIS, monthKey, prevMonthKey,
   type Canal, type CashflowTx, type Integracao, type ProdutoEstoque, type VendasFiltros,
 } from "./shared";
 import type { LancarNoCaixa } from "./ConfigVendasModal";
@@ -53,6 +54,7 @@ const resumir = (vendas: CashflowTx[], taxas: CashflowTx[]): Resumo => {
  * entram aqui e valem pra KPIs, gráfico, rankings e lista.
  */
 export function useVendasData(ownerUid: string, mesSelecionado: string, filtros: VendasFiltros) {
+  const shopeeUi = useShopeeUi();
   const [txsCaixa, setTxsCaixa] = useState<CashflowTx[]>([]);
   // Vendas manuais que o usuário escolheu NÃO lançar no caixa (users/{uid}/vendas).
   const [txsForaCaixa, setTxsForaCaixa] = useState<CashflowTx[]>([]);
@@ -176,7 +178,7 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
       (v) => (v.date || "").slice(0, 7) === mesSelecionado && (!sku || (v.saleSku || "").toUpperCase() === sku),
     );
     const total = base.reduce((s, v) => s + (v.amount || 0), 0);
-    return CANAIS_QUEBRA.map((c) => {
+    return canaisQuebra(shopeeUi).map((c) => {
       const list = base.filter((v) => v.saleChannel === c);
       const valor = list.reduce((s, v) => s + (v.amount || 0), 0);
       return {
@@ -187,7 +189,7 @@ export function useVendasData(ownerUid: string, mesSelecionado: string, filtros:
         pct: total > 0 ? (valor / total) * 100 : 0,
       };
     });
-  }, [todasVendas, mesSelecionado, filtros.sku]);
+  }, [todasVendas, mesSelecionado, filtros.sku, shopeeUi]);
 
   // ── Ponto de equilíbrio (sempre sobre o faturamento TOTAL do mês) ───────────
   // É uma meta da empresa, não de um canal — por isso ignora os filtros.

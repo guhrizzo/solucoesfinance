@@ -1,5 +1,6 @@
 "use client";
 
+import { useShopeeUi } from "@/lib/shopeeAccess";
 import { useEffect, useId, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Check, ShoppingCart, X } from "lucide-react";
@@ -8,7 +9,7 @@ import PinModal from "@/app/components/PinModal";
 import { loadPinHash, verifyPin, getPinLockStatus } from "@/app/hooks/usePin";
 import { authedFetch } from "@/lib/authedFetch";
 import {
-  CANAL_INFO, SHEIN_UI_VISIVEL, SHOPEE_UI_VISIVEL, TIKTOKSHOP_UI_VISIVEL, toBRL,
+  CANAL_INFO, SHEIN_UI_VISIVEL, TIKTOKSHOP_UI_VISIVEL, toBRL,
   type Canal, type ProdutoEstoque,
 } from "./shared";
 
@@ -30,6 +31,7 @@ export function NovaVendaModal({
   canaisConectados: { mercadolivre: boolean; shopee: boolean; tiktokshop: boolean; shein: boolean };
   onDone: (msg: string, type: "success" | "error") => void;
 }) {
+  const shopeeUi = useShopeeUi();
   const t = useTranslations("vendas.newSale");
   const tPin = useTranslations("common.pin");
   const locale = useLocale();
@@ -53,7 +55,7 @@ export function NovaVendaModal({
   const canais: Canal[] = [
     "manual",
     ...(canaisConectados.mercadolivre ? (["mercadolivre"] as Canal[]) : []),
-    ...(canaisConectados.shopee && SHOPEE_UI_VISIVEL ? (["shopee"] as Canal[]) : []),
+    ...(canaisConectados.shopee && shopeeUi ? (["shopee"] as Canal[]) : []),
     ...(canaisConectados.tiktokshop && TIKTOKSHOP_UI_VISIVEL ? (["tiktokshop"] as Canal[]) : []),
     ...(canaisConectados.shein && SHEIN_UI_VISIVEL ? (["shein"] as Canal[]) : []),
   ];

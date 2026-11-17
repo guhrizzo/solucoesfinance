@@ -16,6 +16,7 @@ import {
 import RestauranteModulo from "../restaurante/_components/RestauranteModulo";
 import { authedFetch } from "@/lib/authedFetch";
 import { formatMoney } from "@/lib/format";
+import { useShopeeUi } from "@/lib/shopeeAccess";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shopee OCULTA da interface por enquanto. A integração de backend continua
@@ -24,7 +25,7 @@ import { formatMoney } from "@/lib/format";
 // "Resumo Shopee", o canal "Shopee" no modal de integrações e a opção Shopee
 // no vínculo manual.
 // Para voltar a exibir a Shopee, troque para `true`.
-const SHOPEE_UI_VISIVEL = false;
+// Agora é por conta (e-mails liberados): veja `useShopeeUi` em lib/shopeeAccess.ts.
 
 // TikTok Shop: visível desde o lançamento (ao contrário da Shopee acima).
 const TIKTOKSHOP_UI_VISIVEL = true;
@@ -77,6 +78,7 @@ export default function EstoquePage() {
   const tNav = useTranslations("nav");
   const locale = useLocale();
   const { user, loading: authLoading } = useAuth();
+  const SHOPEE_UI_VISIVEL = useShopeeUi();
 
   const platformLabel = (p: Plataforma) => t(`platformName.${p}`);
 

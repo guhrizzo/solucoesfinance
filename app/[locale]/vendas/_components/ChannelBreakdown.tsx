@@ -1,7 +1,8 @@
 "use client";
 
+import { useShopeeUi } from "@/lib/shopeeAccess";
 import { useLocale, useTranslations } from "next-intl";
-import { CANAIS_VISIVEIS, CANAL_INFO, toBRL, type Canal } from "./shared";
+import { canaisVisiveis, CANAL_INFO, toBRL, type Canal } from "./shared";
 
 interface LinhaCanal {
   canal: Canal;
@@ -21,6 +22,7 @@ export function ChannelBreakdown({
   selecionado: Canal | "todos";
   onSelect: (c: Canal | "todos") => void;
 }) {
+  const CANAIS_VISIVEIS = canaisVisiveis(useShopeeUi());
   const t = useTranslations("vendas");
   const locale = useLocale();
   const label = (c: Canal) => (c === "manual" ? t("channels.manual") : CANAL_INFO[c].label);

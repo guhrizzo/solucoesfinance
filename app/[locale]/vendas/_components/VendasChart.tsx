@@ -1,7 +1,8 @@
 "use client";
 
+import { useShopeeUi } from "@/lib/shopeeAccess";
 import { useLocale, useTranslations } from "next-intl";
-import { CANAIS_QUEBRA, CANAL_INFO, toBRL, type Canal } from "./shared";
+import { canaisQuebra, CANAL_INFO, toBRL, type Canal } from "./shared";
 
 interface Bucket {
   dia: number;
@@ -22,6 +23,7 @@ const compact = (n: number, locale: string) =>
  * visíveis pela própria linha — sem cor extra além das de canal.
  */
 export function VendasChart({ buckets, metaDiaria }: { buckets: Bucket[]; metaDiaria: number }) {
+  const CANAIS_QUEBRA = canaisQuebra(useShopeeUi());
   const t = useTranslations("vendas.chart");
   const tCh = useTranslations("vendas.channels");
   const locale = useLocale();
