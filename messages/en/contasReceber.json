@@ -255,5 +255,170 @@
     "paid": "This charge has already been paid. Thank you!",
     "invalid": "This payment link is no longer valid. Ask the sender for a new charge.",
     "footer": "Charge sent via NexusFi — business financial management."
+  },
+  "boletos": {
+    "tabs": {
+      "aria": "Accounts receivable sections",
+      "receivables": "Receivables",
+      "boletos": "Boletos"
+    },
+    "locked": {
+      "title": "Boletos through Banco Inter",
+      "body": "Issue boletos with Pix right from the app and track what was paid without leaving the screen.",
+      "cta": "Pro plan"
+    },
+    "estado": {
+      "indisponivel": "Banco Inter is not connected. Connect your account to issue boletos.",
+      "inativo": "Boleto issuing has not been enabled on your account yet. Contact the NexusFi team to enable it.",
+      "escopoFaltando": "The Banco Inter credential lacks the billing permission. Contact the NexusFi team to fix it."
+    },
+    "cards": {
+      "aguardando": "Awaiting payment",
+      "vencido": "Overdue",
+      "pago": "Paid",
+      "aReceber": "To receive",
+      "count": "{count, plural, one {# boleto} other {# boletos}}"
+    },
+    "filters": {
+      "situacao": "Status",
+      "todos": "All",
+      "aguardando": "Awaiting",
+      "vencido": "Overdue",
+      "pago": "Paid",
+      "outros": "Other",
+      "outrosHint": "Cancelled, expired, issuing failures and protest",
+      "from": "Due from",
+      "to": "to",
+      "clearPeriod": "Clear period",
+      "searchPlaceholder": "Search by payer or document",
+      "searchAria": "Search boletos by payer or document",
+      "onlyReceivable": "Only the boletos of one receivable",
+      "clearReceivable": "Show all",
+      "resultCount": "{count, plural, one {# boleto} other {# boletos}}"
+    },
+    "situacao": {
+      "EM_PROCESSAMENTO": "Processing",
+      "A_RECEBER": "To receive",
+      "ATRASADO": "Late",
+      "RECEBIDO": "Paid",
+      "MARCADO_RECEBIDO": "Paid (manual)",
+      "CANCELADO": "Cancelled",
+      "EXPIRADO": "Expired",
+      "FALHA_EMISSAO": "Issuing failed",
+      "PROTESTO": "Protested",
+      "vencido": "Overdue"
+    },
+    "warn": {
+      "revisarCaixa": "Possible duplicate in the cash flow; please check",
+      "pagoAposCancelamento": "Paid after being cancelled; check at Banco Inter"
+    },
+    "columns": {
+      "payer": "Payer",
+      "amount": "Amount",
+      "due": "Due date",
+      "status": "Status",
+      "actions": "Actions",
+      "table": "Boleto list"
+    },
+    "actions": {
+      "emitAvulso": "Issue standalone boleto",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing…",
+      "pdf": "Open boleto PDF",
+      "copyLine": "Copy payment line",
+      "copyPix": "Copy Pix copy-and-paste",
+      "resend": "Resend charge by e-mail",
+      "cancel": "Cancel boleto"
+    },
+    "toast": {
+      "refreshDone": "{checked, plural, one {# boleto checked} other {# boletos checked}} · {paid, plural, =0 {none paid} one {# paid} other {# paid}}",
+      "refreshError": "Could not refresh the boletos.",
+      "pdfError": "Could not open the boleto PDF.",
+      "copied": "Copied.",
+      "copyError": "Could not copy."
+    },
+    "empty": {
+      "title": "No boletos issued yet",
+      "description": "Issue a standalone boleto or one from a receivable.",
+      "noResults": "No boletos found",
+      "adjustFilters": "Adjust the search or filters to see other boletos."
+    },
+    "state": {
+      "loading": "Loading boletos…",
+      "error": "Could not load the boletos. Try reloading the page."
+    },
+    "row": {
+      "issue": "Issue boleto",
+      "issued": "Boleto issued",
+      "issuedHint": "See this boleto in the Boletos tab"
+    },
+    "cancel": {
+      "title": "Cancel boleto",
+      "message": "The boleto for {payer} ({amount}, due {due}) will be cancelled at Banco Inter and can no longer be paid.",
+      "confirm": "Cancel boleto",
+      "back": "Back",
+      "pinTitle": "Confirm cancellation",
+      "pinSubtitle": "Enter your PIN to cancel the boleto",
+      "success": "Boleto cancelled.",
+      "error": "Could not cancel the boleto.",
+      "discard": "Discard in the app only",
+      "discardHint": "This boleto has no confirmation from Banco Inter and has been processing for over 24 hours. Only the account owner can discard it in the app only; afterwards, check Internet Banking that no boleto was issued.",
+      "discardPinTitle": "Confirm discard",
+      "discardPinSubtitle": "Enter your PIN to discard the boleto",
+      "discardSuccess": "Boleto discarded."
+    },
+    "emit": {
+      "title": "Issue boleto",
+      "titleReceivable": "Issue boleto for {title}",
+      "intro": "Boleto with Pix issued by Banco Inter.",
+      "unavailable": "Issuing unavailable",
+      "payerSection": "Payer",
+      "addressSection": "Payer address",
+      "addressHint": "Banco Inter requires the full address. It is saved on the customer for the next boletos.",
+      "name": "Name or company name",
+      "doc": "CPF or CNPJ",
+      "email": "E-mail (optional)",
+      "phone": "Phone (optional)",
+      "cep": "ZIP code (CEP)",
+      "street": "Street",
+      "number": "Number",
+      "complement": "Complement (optional)",
+      "district": "District",
+      "city": "City",
+      "state": "State",
+      "amount": "Amount",
+      "amountHint": "Suggested: remaining balance of the receivable.",
+      "due": "Due date",
+      "fine": "Late fine (%)",
+      "interest": "Interest per month (%)",
+      "submit": "Issue boleto",
+      "submitting": "Issuing…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "pinTitle": "Confirm issuing",
+      "pinSubtitle": "Enter your PIN to issue the boleto",
+      "success": "Boleto issued.",
+      "successProcessing": "Boleto sent to Banco Inter. The payment line will show up shortly.",
+      "error": "Could not issue the boleto.",
+      "errors": {
+        "name": "Enter the payer name (up to 100 characters).",
+        "doc": "Invalid CPF or CNPJ.",
+        "email": "Invalid e-mail.",
+        "phone": "Invalid phone: use area code + number.",
+        "address": "Complete the payer address.",
+        "cep": "Invalid ZIP code: enter 8 digits.",
+        "uf": "Invalid state.",
+        "street": "Enter the street.",
+        "number": "Enter the number.",
+        "district": "Enter the district.",
+        "city": "Enter the city.",
+        "amount": "Enter an amount greater than zero.",
+        "due": "The due date must be between today and 2 years from now.",
+        "fine": "Fine outside the allowed limit.",
+        "interest": "Interest outside the allowed limit.",
+        "hasBoleto": "This receivable already has an active boleto. Cancel it to issue another.",
+        "noPin": "Set up your PIN to issue boletos."
+      }
+    }
   }
 }

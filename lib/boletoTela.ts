@@ -48,7 +48,7 @@ export type FiltroBoletos = {
   hoje: string;
 };
 
-const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+const semAcento = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
 
 export function filtrarBoletos(bs: BoletoDoc[], f: FiltroBoletos): BoletoDoc[] {
   const q = semAcento(f.busca);
