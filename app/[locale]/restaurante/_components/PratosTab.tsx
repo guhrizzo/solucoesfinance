@@ -143,10 +143,10 @@ function PratoModal({ prato, dados, onFechar, locale }: { prato: Prato | null; d
     <RestModal open onClose={onFechar} title={prato ? t("pratos.editarTitulo") : t("pratos.novoTitulo")} size="lg" closeDisabled={busy}>
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t("pratos.nome")}><Input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} /></Field>
-          <Field label={t("pratos.categoria")}><Input value={categoria} onChange={(e) => setCategoria(e.target.value)} maxLength={40} /></Field>
+          <Field label={t("pratos.nome")}><Input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={80} placeholder={t("ph.prato")} /></Field>
+          <Field label={t("pratos.categoria")}><Input value={categoria} onChange={(e) => setCategoria(e.target.value)} maxLength={40} placeholder={t("ph.categoria")} /></Field>
           <Field label={t("pratos.preco")}><Input inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} placeholder="0,00" /></Field>
-          <Field label={t("pratos.rendimento")} hint={t("pratos.rendimentoHint")}><Input inputMode="decimal" value={rendimento} onChange={(e) => setRendimento(e.target.value)} /></Field>
+          <Field label={t("pratos.rendimento")} hint={t("pratos.rendimentoHint")}><Input inputMode="decimal" placeholder="1" value={rendimento} onChange={(e) => setRendimento(e.target.value)} /></Field>
         </div>
         <FichaEditor linhas={ficha} onChange={setFicha} ingredientes={dados.ingredientes} rotulo={t("pratos.ficha")} />
         <div className="grid grid-cols-3 gap-2 rounded-lg p-3 text-sm" style={{ background: "var(--sunken)" }}>

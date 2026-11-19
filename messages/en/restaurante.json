@@ -252,5 +252,13 @@
     "pratosTitulo": "Unavailable dishes",
     "faltam": "Missing",
     "whatsappHint": "When a deduction leaves an ingredient at the minimum or out of stock, the owner gets a WhatsApp alert (if the Inventory alert is on in Settings > WhatsApp). It is not repeated while the ingredient stays low."
+  },
+  "ph": {
+    "ingrediente": "e.g. Wheat flour",
+    "motivo": "e.g. Spoiled, past expiry",
+    "cliente": "e.g. Jane Smith",
+    "observacao": "e.g. No onions",
+    "prato": "e.g. Mushroom risotto",
+    "categoria": "e.g. Main courses"
   }
 }

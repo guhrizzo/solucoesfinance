@@ -304,7 +304,7 @@ function OrderView() {
       <Modal open={cancelOpen} onClose={() => !busy && setCancelOpen(false)} size="sm" title={t("portal.order.cancelTitle", { number: o.numberLabel })}>
         <div className="px-5 py-4">
           <Field label={t("confirm.reasonLabel")}>
-            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500}
+            <textarea value={reason} placeholder={t("ph.reason")} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500}
               className={controlClass} style={{ ...controlStyle, resize: "vertical" }} />
           </Field>
         </div>

@@ -371,6 +371,7 @@
     "manageMeta": "{n} line(s) · {total} · imported on {date}",
     "delete": "Delete",
     "noImports": "No reports imported yet",
-    "noImportsHint": "Import a sales report (PDF, CSV or text): the AI reads the data and this panel computes sales, COGS, profit, margin and ROI. Nothing is pulled from other modules."
+    "noImportsHint": "Import a sales report (PDF, CSV or text): the AI reads the data and this panel computes sales, COGS, profit, margin and ROI. Nothing is pulled from other modules.",
+    "importNamePh": "e.g. March cost spreadsheet"
   }
 }

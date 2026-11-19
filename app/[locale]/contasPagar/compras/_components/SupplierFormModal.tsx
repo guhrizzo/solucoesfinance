@@ -146,19 +146,19 @@ export function SupplierFormModal({ open, editing, existingCnpjs, onClose, onSav
         {step === 0 && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={t("supplier.fields.razaoSocial")} error={e.razaoSocial} className="sm:col-span-2">
-              <Input value={form.razaoSocial} maxLength={160} onChange={(ev) => set("razaoSocial", ev.target.value)} />
+              <Input value={form.razaoSocial} maxLength={160} placeholder={t("ph.razaoSocial")} onChange={(ev) => set("razaoSocial", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.nomeFantasia")} error={e.nomeFantasia}>
-              <Input value={form.nomeFantasia} maxLength={120} onChange={(ev) => set("nomeFantasia", ev.target.value)} />
+              <Input value={form.nomeFantasia} maxLength={120} placeholder={t("ph.nomeFantasia")} onChange={(ev) => set("nomeFantasia", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.cnpj")} error={e.cnpj ?? (onlyDigits(form.cnpj).length === 14 && allErrors.cnpj ? tErr(allErrors.cnpj) : undefined)}>
               <Input value={form.cnpj} inputMode="numeric" placeholder="00.000.000/0000-00" onChange={(ev) => set("cnpj", maskCnpj(ev.target.value))} />
             </Field>
             <Field label={t("supplier.fields.ie")} error={e.ie}>
-              <Input value={form.ie} maxLength={20} onChange={(ev) => set("ie", ev.target.value)} />
+              <Input value={form.ie} maxLength={20} placeholder="000.000.000.000" onChange={(ev) => set("ie", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.categoria")} error={e.categoria}>
-              <Input value={form.categoria} maxLength={80} onChange={(ev) => set("categoria", ev.target.value)} />
+              <Input value={form.categoria} maxLength={80} placeholder={t("ph.categoria")} onChange={(ev) => set("categoria", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.status")} hint={form.status === "inativo" ? t("supplier.inactiveHint") : undefined}>
               <select value={form.status} onChange={(ev) => set("status", ev.target.value)} className={controlClass} style={controlStyle}>
@@ -172,16 +172,16 @@ export function SupplierFormModal({ open, editing, existingCnpjs, onClose, onSav
         {step === 1 && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={t("supplier.fields.responsavel")} error={e.responsavel}>
-              <Input value={form.responsavel} maxLength={120} onChange={(ev) => set("responsavel", ev.target.value)} />
+              <Input value={form.responsavel} maxLength={120} placeholder={t("ph.responsavel")} onChange={(ev) => set("responsavel", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.email")} error={e.email}>
-              <Input type="email" value={form.email} maxLength={160} onChange={(ev) => set("email", ev.target.value)} />
+              <Input type="email" value={form.email} maxLength={160} placeholder="nome@empresa.com" onChange={(ev) => set("email", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.telefone")} error={e.telefone}>
-              <Input inputMode="tel" value={form.telefone} onChange={(ev) => set("telefone", maskPhone(ev.target.value))} />
+              <Input inputMode="tel" value={form.telefone} placeholder="(11) 90000-0000" onChange={(ev) => set("telefone", maskPhone(ev.target.value))} />
             </Field>
             <Field label={t("supplier.fields.whatsapp")} error={e.whatsapp} hint={t("supplier.whatsappHint")}>
-              <Input inputMode="tel" value={form.whatsapp} onChange={(ev) => set("whatsapp", maskPhone(ev.target.value))} />
+              <Input inputMode="tel" value={form.whatsapp} placeholder="(11) 90000-0000" onChange={(ev) => set("whatsapp", maskPhone(ev.target.value))} />
             </Field>
           </div>
         )}
@@ -189,22 +189,22 @@ export function SupplierFormModal({ open, editing, existingCnpjs, onClose, onSav
         {step === 2 && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
             <Field label={t("supplier.fields.cep")} error={e["endereco.cep"]} className="sm:col-span-2">
-              <Input inputMode="numeric" value={form.cep} onChange={(ev) => set("cep", maskCep(ev.target.value))} />
+              <Input inputMode="numeric" value={form.cep} placeholder="00000-000" onChange={(ev) => set("cep", maskCep(ev.target.value))} />
             </Field>
             <Field label={t("supplier.fields.logradouro")} error={e["endereco.logradouro"]} className="sm:col-span-4">
-              <Input value={form.logradouro} maxLength={160} onChange={(ev) => set("logradouro", ev.target.value)} />
+              <Input value={form.logradouro} maxLength={160} placeholder={t("ph.logradouro")} onChange={(ev) => set("logradouro", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.numero")} error={e["endereco.numero"]} className="sm:col-span-2">
-              <Input value={form.numero} maxLength={20} onChange={(ev) => set("numero", ev.target.value)} />
+              <Input value={form.numero} maxLength={20} placeholder="123" onChange={(ev) => set("numero", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.complemento")} className="sm:col-span-4">
-              <Input value={form.complemento} maxLength={80} onChange={(ev) => set("complemento", ev.target.value)} />
+              <Input value={form.complemento} maxLength={80} placeholder={t("ph.complemento")} onChange={(ev) => set("complemento", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.bairro")} className="sm:col-span-2">
-              <Input value={form.bairro} maxLength={80} onChange={(ev) => set("bairro", ev.target.value)} />
+              <Input value={form.bairro} maxLength={80} placeholder={t("ph.bairro")} onChange={(ev) => set("bairro", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.cidade")} error={e["endereco.cidade"]} className="sm:col-span-3">
-              <Input value={form.cidade} maxLength={80} onChange={(ev) => set("cidade", ev.target.value)} />
+              <Input value={form.cidade} maxLength={80} placeholder={t("ph.cidade")} onChange={(ev) => set("cidade", ev.target.value)} />
             </Field>
             <Field label={t("supplier.fields.uf")} error={e["endereco.uf"]} className="sm:col-span-1">
               <select value={form.uf} onChange={(ev) => set("uf", ev.target.value)} className={`${controlClass} px-2`} style={controlStyle}>
@@ -213,7 +213,7 @@ export function SupplierFormModal({ open, editing, existingCnpjs, onClose, onSav
               </select>
             </Field>
             <Field label={t("supplier.fields.observacoes")} hint={t("supplier.observacoesHint")} className="sm:col-span-6">
-              <textarea value={form.observacoes} maxLength={2000} rows={3} onChange={(ev) => set("observacoes", ev.target.value)}
+              <textarea value={form.observacoes} maxLength={2000} rows={3} placeholder={t("ph.observacoes")} onChange={(ev) => set("observacoes", ev.target.value)}
                 className={controlClass} style={{ ...controlStyle, resize: "vertical" }} />
             </Field>
           </div>

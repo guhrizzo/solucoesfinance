@@ -148,7 +148,7 @@ function IngredienteModal({ ing, todos, onFechar }: { ing: Ingrediente | null; t
   return (
     <RestModal open onClose={onFechar} title={ing ? t("ingredientes.editarTitulo") : t("ingredientes.novoTitulo")} size="lg" closeDisabled={busy}>
       <div className="space-y-4">
-        <Field label={t("ingredientes.nome")}><Input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={60} /></Field>
+        <Field label={t("ingredientes.nome")}><Input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={60} placeholder={t("ph.ingrediente")} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t("ingredientes.unidadeBase")} hint={ing ? t("ingredientes.baseFixa") : t("ingredientes.baseHint")}>
             <select className={selectClass} style={selectStyle} value={base} disabled={!!ing} onChange={(e) => trocarBase(e.target.value as UnidadeBase)}>
@@ -257,7 +257,7 @@ export function MovimentoModal({ ing, onFechar, acaoInicial = "entrada" }: { ing
           </Field>
         )}
         <Field label={motivoObrigatorio ? t("comum.motivo") : t("comum.motivoOpcional")}>
-          <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={200} />
+          <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={200} placeholder={t("ph.motivo")} />
         </Field>
         <Erro msg={erro} />
         <div className="flex justify-end gap-2">

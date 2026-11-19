@@ -371,6 +371,7 @@
     "manageMeta": "{n} linha(s) · {total} · importado em {date}",
     "delete": "Excluir",
     "noImports": "Nenhum relatório importado ainda",
-    "noImportsHint": "Importe um relatório de vendas (PDF, CSV ou texto): a IA lê os dados e este painel calcula vendas, CMV, lucro, margem e ROI. Nada é puxado de outros módulos."
+    "noImportsHint": "Importe um relatório de vendas (PDF, CSV ou texto): a IA lê os dados e este painel calcula vendas, CMV, lucro, margem e ROI. Nada é puxado de outros módulos.",
+    "importNamePh": "Ex.: Planilha de custos de março"
   }
 }

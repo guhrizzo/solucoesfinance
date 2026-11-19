@@ -371,6 +371,7 @@
     "manageMeta": "{n} línea(s) · {total} · importado el {date}",
     "delete": "Eliminar",
     "noImports": "Ningún informe importado aún",
-    "noImportsHint": "Importa un informe de ventas (PDF, CSV o texto): la IA lee los datos y este panel calcula ventas, CMV, utilidad, margen y ROI. No se extrae nada de otros módulos."
+    "noImportsHint": "Importa un informe de ventas (PDF, CSV o texto): la IA lee los datos y este panel calcula ventas, CMV, utilidad, margen y ROI. No se extrae nada de otros módulos.",
+    "importNamePh": "Ej.: Planilla de costos de marzo"
   }
 }

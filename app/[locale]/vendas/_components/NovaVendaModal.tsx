@@ -220,7 +220,7 @@ export function NovaVendaModal({
               <label htmlFor={qtyId} className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-subtle)" }}>{t("quantity")}</label>
               <input
                 id={qtyId}
-                type="number"
+                type="number" placeholder="1"
                 min="1"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}

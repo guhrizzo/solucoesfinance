@@ -108,7 +108,7 @@ export function AbrirCaixa({
 
             <div className="space-y-1">
               <label htmlFor={opId} className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{t("open.operator")}</label>
-              <Input id={opId} value={operador} maxLength={60} onChange={(e) => setOperador(e.target.value)} />
+              <Input id={opId} value={operador} maxLength={60} placeholder={t("open.operatorPh")} onChange={(e) => setOperador(e.target.value)} />
             </div>
             <div className="space-y-1">
               <label htmlFor={trocoId} className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{t("open.openingCash")}</label>

@@ -183,6 +183,7 @@ export default function WhatsAppTab({ showToast, defaultName }: { showToast: Sho
             <label htmlFor={nameId} className={labelCls} style={labelStyle}>{t("name")}</label>
             <Input
               id={nameId}
+              placeholder={t("namePlaceholder")}
               value={name}
               maxLength={60}
               disabled={!podeEditar}

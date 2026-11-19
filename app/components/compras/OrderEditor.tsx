@@ -123,7 +123,7 @@ export function OrderEditor({ value, onChange, readOnly = false, errors = {} }: 
           </Field>
           <Field label={t("order.deliveryDays")} error={errors.deliveryDays}>
             <Input inputMode="numeric" value={value.deliveryDays} disabled={readOnly} maxLength={4}
-              onChange={(e) => set("deliveryDays", e.target.value.replace(/\D/g, ""))} />
+              placeholder="15" onChange={(e) => set("deliveryDays", e.target.value.replace(/\D/g, ""))} />
           </Field>
         </div>
       </section>
@@ -156,14 +156,14 @@ export function OrderEditor({ value, onChange, readOnly = false, errors = {} }: 
                     <Field label={i === 0 ? t("items.description") : undefined} error={errors[`items.${i}.description`]}>
                       <Input value={it.description} disabled={readOnly} maxLength={300}
                         aria-label={`${t("items.itemN", { n: i + 1 })} — ${t("items.description")}`}
-                        onChange={(e) => setItem(i, { description: e.target.value })} />
+                        placeholder={t("ph.description")} onChange={(e) => setItem(i, { description: e.target.value })} />
                     </Field>
                   </div>
                   <div className="col-span-4 sm:col-span-2">
                     <Field label={i === 0 ? t("items.quantity") : undefined} error={errors[`items.${i}.quantity`]}>
                       <Input inputMode="decimal" value={it.quantity} disabled={readOnly}
                         aria-label={`${t("items.itemN", { n: i + 1 })} — ${t("items.quantity")}`}
-                        onChange={(e) => setItem(i, { quantity: e.target.value.replace(/[^\d,]/g, "") })} />
+                        placeholder="1" onChange={(e) => setItem(i, { quantity: e.target.value.replace(/[^\d,]/g, "") })} />
                     </Field>
                   </div>
                   <div className="col-span-3 sm:col-span-1">
@@ -213,17 +213,17 @@ export function OrderEditor({ value, onChange, readOnly = false, errors = {} }: 
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("order.proposedInstallments")} error={errors.proposedInstallments}>
               <Input inputMode="numeric" value={value.proposedInstallments} disabled={readOnly} maxLength={2}
-                onChange={(e) => set("proposedInstallments", e.target.value.replace(/\D/g, ""))} />
+                placeholder="12" onChange={(e) => set("proposedInstallments", e.target.value.replace(/\D/g, ""))} />
             </Field>
             <Field label={t("order.proposedFirstDueDays")} error={errors.proposedFirstDueDays}>
               <Input inputMode="numeric" value={value.proposedFirstDueDays} disabled={readOnly} maxLength={3}
-                onChange={(e) => set("proposedFirstDueDays", e.target.value.replace(/\D/g, ""))} />
+                placeholder="30" onChange={(e) => set("proposedFirstDueDays", e.target.value.replace(/\D/g, ""))} />
             </Field>
           </div>
           <Field label={t("order.notes")} error={errors.notes}>
             <textarea value={value.notes} disabled={readOnly} maxLength={2000} rows={3}
               className={controlClass} style={{ ...controlStyle, resize: "vertical" }}
-              onChange={(e) => set("notes", e.target.value)} />
+              placeholder={t("ph.notes")} onChange={(e) => set("notes", e.target.value)} />
           </Field>
         </section>
 

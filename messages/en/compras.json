@@ -469,5 +469,20 @@
       "cancelled": "Cancelled",
       "completed": "Completed"
     }
+  },
+  "ph": {
+    "razaoSocial": "E.g. Central Stationery Ltd.",
+    "nomeFantasia": "E.g. Central Stationery",
+    "categoria": "E.g. Office supplies",
+    "responsavel": "E.g. Mary Smith",
+    "logradouro": "E.g. Flower Street",
+    "complemento": "E.g. Suite 12",
+    "bairro": "E.g. Downtown",
+    "cidade": "E.g. São Paulo",
+    "observacoes": "E.g. Prefers contact via WhatsApp",
+    "internalNotes": "E.g. Negotiated a cash discount",
+    "reason": "E.g. Delivery time not suitable",
+    "description": "E.g. A4 paper ream",
+    "notes": "E.g. Delivery during business hours"
   }
 }

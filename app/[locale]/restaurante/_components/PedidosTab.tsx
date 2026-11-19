@@ -218,8 +218,8 @@ function PedidoModal({ pedido, dados, alertas, onFechar }: { pedido: Pedido | nu
               {ORIGENS_PEDIDO.map((o) => <option key={o} value={o}>{t(`origem.${o}`)}</option>)}
             </select>
           </Field>
-          <Field label={t("pedidoModal.mesa")}><Input value={mesa} onChange={(e) => setMesa(e.target.value)} maxLength={20} /></Field>
-          <Field label={t("pedidoModal.cliente")}><Input value={cliente} onChange={(e) => setCliente(e.target.value)} maxLength={80} /></Field>
+          <Field label={t("pedidoModal.mesa")}><Input value={mesa} onChange={(e) => setMesa(e.target.value)} maxLength={20} placeholder="12" /></Field>
+          <Field label={t("pedidoModal.cliente")}><Input value={cliente} onChange={(e) => setCliente(e.target.value)} maxLength={80} placeholder={t("ph.cliente")} /></Field>
         </div>
 
         <Field label={t("pedidoModal.adicionar")}>
@@ -247,7 +247,7 @@ function PedidoModal({ pedido, dados, alertas, onFechar }: { pedido: Pedido | nu
                   </span>
                   <Input
                     aria-label={t("pedidoModal.qtd")}
-                    inputMode="numeric"
+                    inputMode="numeric" placeholder="1"
                     className="!py-1.5 text-right"
                     value={String(l.qtd)}
                     onChange={(e) => {
@@ -270,7 +270,7 @@ function PedidoModal({ pedido, dados, alertas, onFechar }: { pedido: Pedido | nu
           </ul>
         )}
 
-        <Field label={t("pedidoModal.observacao")}><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} maxLength={300} /></Field>
+        <Field label={t("pedidoModal.observacao")}><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} maxLength={300} placeholder={t("ph.observacao")} /></Field>
 
         <p className="flex items-center justify-between text-sm">
           <span style={{ color: "var(--text-muted)" }}>{t("pedidoModal.totalPrevia")}</span>
@@ -329,7 +329,7 @@ function CancelarModal({ pedido, onFechar }: { pedido: Pedido; onFechar: () => v
         ) : (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("cancelar.semBaixa")}</p>
         )}
-        <Field label={t("comum.motivoOpcional")}><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={200} /></Field>
+        <Field label={t("comum.motivoOpcional")}><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={200} placeholder={t("ph.motivo")} /></Field>
         <Erro msg={erro} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onFechar} disabled={busy}>{t("comum.voltar")}</Button>

@@ -211,7 +211,7 @@ export function OrderDetailModal({ ownerUid, order, supplier, canEdit, canApprov
               )}
               <OrderEditor value={draft} onChange={setDraft} errors={errors} />
               <Field label={t("order.internalNotes")} hint={t("order.internalNotesHint")}>
-                <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} maxLength={2000} rows={2}
+                <textarea value={internalNotes} placeholder={t("ph.internalNotes")} onChange={(e) => setInternalNotes(e.target.value)} maxLength={2000} rows={2}
                   className={controlClass} style={{ ...controlStyle, resize: "vertical" }} />
               </Field>
             </div>
@@ -342,7 +342,7 @@ export function OrderDetailModal({ ownerUid, order, supplier, canEdit, canApprov
         title={confirm === "reject" ? t("confirm.rejectTitle", { number: o.numberLabel }) : t("confirm.cancelTitle", { number: o.numberLabel })}>
         <div className="space-y-3 px-5 py-4">
           <Field label={t("confirm.reasonLabel")} hint={<span className="inline-flex items-center gap-1"><Info size={11} />{t("confirm.reasonPlaceholder")}</span>}>
-            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500}
+            <textarea value={reason} placeholder={t("ph.reason")} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500}
               className={controlClass} style={{ ...controlStyle, resize: "vertical" }} />
           </Field>
         </div>

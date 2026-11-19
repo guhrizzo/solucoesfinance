@@ -76,11 +76,11 @@ export default function FornecedorEntrar() {
         </div>
         <form onSubmit={submit} className="space-y-3" noValidate>
           <Field label={t("login.email")}>
-            <Input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input type="email" autoComplete="username" value={email} placeholder="nome@empresa.com" onChange={(e) => setEmail(e.target.value)} required />
           </Field>
           <Field label={t("login.password")}>
             <div className="relative">
-              <Input type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pr-10" />
+              <Input type={show ? "text" : "password"} autoComplete="current-password" value={password} placeholder="••••••••" onChange={(e) => setPassword(e.target.value)} required className="pr-10" />
               <button type="button" onClick={() => setShow((s) => !s)} aria-label={show ? t("login.hidePassword") : t("login.showPassword")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer p-1" style={{ color: "var(--text-subtle)" }}>
                 {show ? <EyeOff size={16} /> : <Eye size={16} />}

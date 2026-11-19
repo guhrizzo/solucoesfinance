@@ -420,7 +420,14 @@
         "noPin": "Configura tu PIN para emitir boletos.",
         "amountFormat": "Usa coma para los centavos (ej.: 1.234,56)."
       },
-      "pinSubtitleDetail": "Ingresa tu PIN para emitir {amount} a {payer}, con vencimiento {date}"
+      "pinSubtitleDetail": "Ingresa tu PIN para emitir {amount} a {payer}, con vencimiento {date}",
+      "ph": {
+        "name": "Ej.: María García",
+        "street": "Ej.: Calle de las Flores",
+        "complement": "Ej.: Apto. 45",
+        "district": "Ej.: Centro",
+        "city": "Ej.: São Paulo"
+      }
     }
   }
 }

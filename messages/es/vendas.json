@@ -177,7 +177,8 @@
       "success": "Caja abierta. ¡Buenas ventas!",
       "error": "No se pudo abrir la caja.",
       "pinTitle": "Abrir caja",
-      "pinSubtitle": "Ingresa tu PIN de 4 dígitos para abrir la caja"
+      "pinSubtitle": "Ingresa tu PIN de 4 dígitos para abrir la caja",
+      "operatorPh": "Ej.: Juan"
     },
     "history": {
       "title": "Cierres anteriores",

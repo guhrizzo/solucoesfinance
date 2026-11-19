@@ -620,6 +620,7 @@ export default function AdminConectarCliente({ showToast }: { showToast: ShowToa
                 <label htmlFor={contaId} className={labelCls} style={labelStyle}>{t("conta")}</label>
                 <Input
                   id={contaId}
+                  placeholder="00000000"
                   value={conta}
                   inputMode="numeric"
                   maxLength={MAX_CONTA_CHARS}

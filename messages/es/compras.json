@@ -469,5 +469,20 @@
       "cancelled": "Cancelado",
       "completed": "Concluido"
     }
+  },
+  "ph": {
+    "razaoSocial": "Ej.: Papelería Central S.L.",
+    "nomeFantasia": "Ej.: Papelería Central",
+    "categoria": "Ej.: Material de oficina",
+    "responsavel": "Ej.: María García",
+    "logradouro": "Ej.: Calle de las Flores",
+    "complemento": "Ej.: Oficina 12",
+    "bairro": "Ej.: Centro",
+    "cidade": "Ej.: São Paulo",
+    "observacoes": "Ej.: Prefiere contacto por WhatsApp",
+    "internalNotes": "Ej.: Negociado con descuento al contado",
+    "reason": "Ej.: Plazo de entrega incompatible",
+    "description": "Ej.: Resma de papel A4",
+    "notes": "Ej.: Entrega en horario comercial"
   }
 }

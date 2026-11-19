@@ -832,7 +832,7 @@ function ReceivableModal({ open, editing, uid, isPro, onClose, onSave }: Receiva
                                     </label>
                                     <input
                                         id={installmentsId}
-                                        type="number" min={2} max={60} value={installments}
+                                        type="number" min={2} max={60} placeholder="12" value={installments}
                                         onChange={e => setInstallments(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
                                         disabled={!!editing}
                                         className="w-20 rounded-lg px-3 py-2 text-sm outline-none font-mono disabled:opacity-50"

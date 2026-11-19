@@ -252,5 +252,13 @@
     "pratosTitulo": "Platos no disponibles",
     "faltam": "Falta",
     "whatsappHint": "Cuando un descuento deja un ingrediente en el mínimo o sin saldo, el dueño recibe un aviso por WhatsApp (si el aviso de Inventario está activo en Configuración > WhatsApp). El aviso no se repite mientras el ingrediente siga bajo."
+  },
+  "ph": {
+    "ingrediente": "Ej.: Harina de trigo",
+    "motivo": "Ej.: Pérdida por vencimiento",
+    "cliente": "Ej.: María García",
+    "observacao": "Ej.: Sin cebolla",
+    "prato": "Ej.: Risotto de hongos",
+    "categoria": "Ej.: Platos principales"
   }
 }

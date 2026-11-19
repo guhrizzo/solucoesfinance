@@ -209,7 +209,7 @@ export default function PerfilTab({
             {t("personal.email")}
           </label>
           <div className="flex items-center gap-2">
-            <Input id={emailId} value={user.email ?? ""} disabled style={{ opacity: 0.7 }} />
+            <Input id={emailId} value={user.email ?? ""} placeholder="nome@empresa.com" disabled style={{ opacity: 0.7 }} />
             <span
               className="flex items-center gap-1 text-xs whitespace-nowrap"
               style={{ color: "var(--cf-text-3)" }}

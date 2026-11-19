@@ -216,6 +216,7 @@
     "descMember": "Only the account owner can change the number and alerts.",
     "phone": "Your WhatsApp",
     "name": "Your name (used in the greeting)",
+    "namePlaceholder": "E.g. Maria",
     "kindsTitle": "Which alerts you want to receive",
     "kinds": {
       "caixa": {

@@ -173,7 +173,7 @@ function LoteForm({ dados, unidades }: { dados: RestauranteData; unidades: Map<s
                 {prep ? unidadesCompativeis(prep.unidadeBase).map((x) => <option key={x} value={x}>{x}</option>) : <option value="">—</option>}
               </select>
             </Field>
-            <Field label={t("comum.motivoOpcional")}><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={200} /></Field>
+            <Field label={t("comum.motivoOpcional")}><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={200} placeholder={t("ph.motivo")} /></Field>
             <Button onClick={() => registrar()} loading={busy} disabled={busy || !prep || !qtd.trim()}>{t("comum.registrar")}</Button>
           </div>
           {prep && (prep.receita?.length ?? 0) > 0 && (

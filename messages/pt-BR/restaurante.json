@@ -252,5 +252,13 @@
     "pratosTitulo": "Pratos indisponíveis",
     "faltam": "Falta",
     "whatsappHint": "Quando uma baixa deixa um ingrediente no mínimo ou sem saldo, o dono recebe um aviso por WhatsApp (se o aviso de Estoque estiver ligado em Configurações > WhatsApp). O aviso não se repete enquanto o ingrediente continuar baixo."
+  },
+  "ph": {
+    "ingrediente": "Ex.: Farinha de trigo",
+    "motivo": "Ex.: Perda por validade",
+    "cliente": "Ex.: Maria da Silva",
+    "observacao": "Ex.: Sem cebola",
+    "prato": "Ex.: Risoto de cogumelos",
+    "categoria": "Ex.: Pratos principais"
   }
 }

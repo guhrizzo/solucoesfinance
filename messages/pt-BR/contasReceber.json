@@ -420,7 +420,14 @@
         "noPin": "Cadastre seu PIN para emitir boletos.",
         "amountFormat": "Use vírgula nos centavos (ex.: 1.234,56)."
       },
-      "pinSubtitleDetail": "Digite seu PIN para emitir {amount} para {payer}, vencendo em {date}"
+      "pinSubtitleDetail": "Digite seu PIN para emitir {amount} para {payer}, vencendo em {date}",
+      "ph": {
+        "name": "Ex.: Maria da Silva",
+        "street": "Ex.: Rua das Flores",
+        "complement": "Ex.: Apto 45",
+        "district": "Ex.: Centro",
+        "city": "Ex.: São Paulo"
+      }
     }
   }
 }

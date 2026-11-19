@@ -495,7 +495,7 @@ export function VendasReport({ ownerUid, hideValues }: { ownerUid: string; hideV
                 {skippedRows > 0 && <span style={{ color: "var(--warn)" }}>{t("pvSkipped", { n: skippedRows })}</span>}
               </div>
               <label className="flex flex-col gap-1" style={{ color: "var(--text-muted)" }}>{t("importName")}
-                <input value={importLabel} onChange={(e) => setImportLabel(e.target.value)} maxLength={80} className="px-2 py-1.5" style={inputStyle} />
+                <input value={importLabel} onChange={(e) => setImportLabel(e.target.value)} maxLength={80} placeholder={t("importNamePh")} className="px-2 py-1.5" style={inputStyle} />
               </label>
               <div className="max-h-72 overflow-auto border rounded-lg" style={{ borderColor: "var(--border)" }}>
                 <table className="w-full">

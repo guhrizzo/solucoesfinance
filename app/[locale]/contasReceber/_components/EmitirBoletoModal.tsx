@@ -254,12 +254,13 @@ export function EmitirBoletoModal({
             </legend>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label={t("name")} error={err("name")} className="sm:col-span-2">
-                <Input value={nome} maxLength={100} autoComplete="off" onChange={(e) => setNome(e.target.value)} />
+                <Input value={nome} maxLength={100} autoComplete="off" placeholder={t("ph.name")} onChange={(e) => setNome(e.target.value)} />
               </Field>
               <Field label={t("doc")} error={err("doc")}>
                 <Input
                   inputMode="numeric"
                   autoComplete="off"
+                  placeholder="000.000.000-00"
                   className="mono"
                   value={doc}
                   onChange={(e) => setDoc(docMask(e.target.value))}
@@ -270,13 +271,14 @@ export function EmitirBoletoModal({
                   type="tel"
                   inputMode="tel"
                   autoComplete="off"
+                  placeholder="(11) 90000-0000"
                   className="mono"
                   value={telefone}
                   onChange={(e) => setTelefone(formatPhone(onlyDigits(e.target.value).slice(0, 11)))}
                 />
               </Field>
               <Field label={t("email")} error={err("email")} className="sm:col-span-2">
-                <Input type="email" inputMode="email" autoComplete="off" maxLength={120} value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input type="email" inputMode="email" autoComplete="off" maxLength={120} placeholder="nome@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </Field>
             </div>
           </fieldset>
@@ -289,25 +291,25 @@ export function EmitirBoletoModal({
             {err("address") && <p className="text-xs font-medium" style={{ color: "var(--neg)" }}>{err("address")}</p>}
             <div className="grid grid-cols-6 gap-3">
               <Field label={t("cep")} error={err("cep")} className="col-span-6 sm:col-span-2">
-                <Input inputMode="numeric" autoComplete="postal-code" className="mono" value={end.cep} onChange={(e) => setE("cep", cepMask(e.target.value))} />
+                <Input inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" className="mono" value={end.cep} onChange={(e) => setE("cep", cepMask(e.target.value))} />
               </Field>
               <Field label={t("street")} error={err("street")} className="col-span-6 sm:col-span-4">
-                <Input autoComplete="off" value={end.logradouro} onChange={(e) => setE("logradouro", e.target.value)} />
+                <Input autoComplete="off" placeholder={t("ph.street")} value={end.logradouro} onChange={(e) => setE("logradouro", e.target.value)} />
               </Field>
               <Field label={t("number")} error={err("number")} className="col-span-3 sm:col-span-2">
-                <Input autoComplete="off" value={end.numero} onChange={(e) => setE("numero", e.target.value)} />
+                <Input autoComplete="off" placeholder="123" value={end.numero} onChange={(e) => setE("numero", e.target.value)} />
               </Field>
               <Field label={t("complement")} className="col-span-3 sm:col-span-4">
-                <Input autoComplete="off" value={end.complemento ?? ""} onChange={(e) => setE("complemento", e.target.value)} />
+                <Input autoComplete="off" placeholder={t("ph.complement")} value={end.complemento ?? ""} onChange={(e) => setE("complemento", e.target.value)} />
               </Field>
               <Field label={t("district")} error={err("district")} className="col-span-6 sm:col-span-2">
-                <Input autoComplete="off" value={end.bairro} onChange={(e) => setE("bairro", e.target.value)} />
+                <Input autoComplete="off" placeholder={t("ph.district")} value={end.bairro} onChange={(e) => setE("bairro", e.target.value)} />
               </Field>
               <Field label={t("city")} error={err("city")} className="col-span-4 sm:col-span-3">
-                <Input autoComplete="off" value={end.cidade} onChange={(e) => setE("cidade", e.target.value)} />
+                <Input autoComplete="off" placeholder={t("ph.city")} value={end.cidade} onChange={(e) => setE("cidade", e.target.value)} />
               </Field>
               <Field label={t("state")} error={err("uf")} className="col-span-2 sm:col-span-1">
-                <Input autoComplete="off" maxLength={2} className="uppercase" value={end.uf} onChange={(e) => setE("uf", e.target.value.toUpperCase())} />
+                <Input autoComplete="off" maxLength={2} placeholder="SP" className="uppercase" value={end.uf} onChange={(e) => setE("uf", e.target.value.toUpperCase())} />
               </Field>
             </div>
           </fieldset>

@@ -300,7 +300,7 @@ export function PdvTerminal({
                 <label htmlFor={qtdId} className={rotulo} style={{ color: "var(--text-muted)" }}>{t("terminal.quantity")}</label>
                 <input
                   id={qtdId}
-                  inputMode="decimal"
+                  inputMode="decimal" placeholder="1"
                   value={qtd}
                   onChange={(e) => setQtd(e.target.value)}
                   className="mono w-full rounded-xl px-3 py-2.5 text-sm outline-none"

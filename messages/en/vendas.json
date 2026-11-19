@@ -177,7 +177,8 @@
       "success": "Register open. Happy selling!",
       "error": "Could not open the register.",
       "pinTitle": "Open register",
-      "pinSubtitle": "Enter your 4-digit PIN to open the register"
+      "pinSubtitle": "Enter your 4-digit PIN to open the register",
+      "operatorPh": "e.g. John"
     },
     "history": {
       "title": "Previous closings",

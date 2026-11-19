@@ -77,7 +77,7 @@ export function BillsModal({ order, costCenters, onClose, toast }: Props) {
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("bills.desc", { count: n })}</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("bills.installments")}>
-            <Input inputMode="numeric" value={installments} maxLength={2} onChange={(e) => setInstallments(e.target.value.replace(/\D/g, ""))} />
+            <Input inputMode="numeric" value={installments} maxLength={2} placeholder="12" onChange={(e) => setInstallments(e.target.value.replace(/\D/g, ""))} />
           </Field>
           <Field label={t("bills.firstDueDate")}>
             <Input type="date" value={firstDue} onChange={(e) => setFirstDue(e.target.value)} />

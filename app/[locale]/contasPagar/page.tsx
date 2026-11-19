@@ -581,7 +581,7 @@ function BillModal({ open, editing, uid, onClose, onSave }: BillModalProps) {
                                     <input
                                         id={installmentsId}
                                         type="number" min={2} max={60} value={installments}
-                                        onChange={e => setInstallments(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                                        placeholder="12" onChange={e => setInstallments(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
                                         disabled={!!editing}
                                         className="w-20 rounded-lg px-3 py-2 text-sm outline-none font-mono disabled:opacity-50"
                                         style={{ background: "var(--cf-input)", border: "2px solid var(--cf-border)", color: "var(--cf-text)" }} />

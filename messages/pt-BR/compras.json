@@ -469,5 +469,20 @@
       "cancelled": "Cancelado",
       "completed": "Concluído"
     }
+  },
+  "ph": {
+    "razaoSocial": "Ex.: Papelaria Central Ltda",
+    "nomeFantasia": "Ex.: Papelaria Central",
+    "categoria": "Ex.: Material de escritório",
+    "responsavel": "Ex.: Maria da Silva",
+    "logradouro": "Ex.: Rua das Flores",
+    "complemento": "Ex.: Sala 12",
+    "bairro": "Ex.: Centro",
+    "cidade": "Ex.: São Paulo",
+    "observacoes": "Ex.: Prefere contato por WhatsApp",
+    "internalNotes": "Ex.: Negociado com desconto à vista",
+    "reason": "Ex.: Prazo de entrega incompatível",
+    "description": "Ex.: Resma de papel A4",
+    "notes": "Ex.: Entrega em horário comercial"
   }
 }

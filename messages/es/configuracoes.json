@@ -216,6 +216,7 @@
     "descMember": "Solo el dueño de la cuenta cambia el número y los avisos.",
     "phone": "Tu WhatsApp",
     "name": "Tu nombre (usado en el saludo)",
+    "namePlaceholder": "Ej.: María",
     "kindsTitle": "Qué avisos quieres recibir",
     "kinds": {
       "caixa": {

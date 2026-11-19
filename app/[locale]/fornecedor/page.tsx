@@ -206,18 +206,18 @@ function ProfileForm({ supplier, onSaved, onError }: { supplier: PortalSupplier;
         ))}
       </dl>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-        <Field label={t("supplier.fields.nomeFantasia")} className="sm:col-span-3"><Input value={f.nomeFantasia} maxLength={120} onChange={(e) => set("nomeFantasia", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.ie")} error={errors.ie} className="sm:col-span-3"><Input value={f.ie} maxLength={20} onChange={(e) => set("ie", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.responsavel")} error={errors.responsavel} className="sm:col-span-2"><Input value={f.responsavel} maxLength={120} onChange={(e) => set("responsavel", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.telefone")} error={errors.telefone} className="sm:col-span-2"><Input inputMode="tel" value={f.telefone} onChange={(e) => set("telefone", maskPhone(e.target.value))} /></Field>
-        <Field label={t("supplier.fields.whatsapp")} error={errors.whatsapp} className="sm:col-span-2"><Input inputMode="tel" value={f.whatsapp} onChange={(e) => set("whatsapp", maskPhone(e.target.value))} /></Field>
-        <Field label={t("supplier.fields.categoria")} error={errors.categoria} className="sm:col-span-6"><Input value={f.categoria} maxLength={80} onChange={(e) => set("categoria", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.cep")} error={errors["endereco.cep"]} className="sm:col-span-2"><Input inputMode="numeric" value={f.endereco.cep} onChange={(e) => setAddr("cep", maskCep(e.target.value))} /></Field>
-        <Field label={t("supplier.fields.logradouro")} error={errors["endereco.logradouro"]} className="sm:col-span-4"><Input value={f.endereco.logradouro} maxLength={160} onChange={(e) => setAddr("logradouro", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.numero")} error={errors["endereco.numero"]} className="sm:col-span-1"><Input value={f.endereco.numero} maxLength={20} onChange={(e) => setAddr("numero", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.complemento")} className="sm:col-span-2"><Input value={f.endereco.complemento} maxLength={80} onChange={(e) => setAddr("complemento", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.bairro")} className="sm:col-span-3"><Input value={f.endereco.bairro} maxLength={80} onChange={(e) => setAddr("bairro", e.target.value)} /></Field>
-        <Field label={t("supplier.fields.cidade")} error={errors["endereco.cidade"]} className="sm:col-span-4"><Input value={f.endereco.cidade} maxLength={80} onChange={(e) => setAddr("cidade", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.nomeFantasia")} className="sm:col-span-3"><Input value={f.nomeFantasia} maxLength={120} placeholder={t("ph.nomeFantasia")} onChange={(e) => set("nomeFantasia", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.ie")} error={errors.ie} className="sm:col-span-3"><Input value={f.ie} maxLength={20} placeholder="000.000.000.000" onChange={(e) => set("ie", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.responsavel")} error={errors.responsavel} className="sm:col-span-2"><Input value={f.responsavel} maxLength={120} placeholder={t("ph.responsavel")} onChange={(e) => set("responsavel", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.telefone")} error={errors.telefone} className="sm:col-span-2"><Input inputMode="tel" value={f.telefone} placeholder="(11) 90000-0000" onChange={(e) => set("telefone", maskPhone(e.target.value))} /></Field>
+        <Field label={t("supplier.fields.whatsapp")} error={errors.whatsapp} className="sm:col-span-2"><Input inputMode="tel" value={f.whatsapp} placeholder="(11) 90000-0000" onChange={(e) => set("whatsapp", maskPhone(e.target.value))} /></Field>
+        <Field label={t("supplier.fields.categoria")} error={errors.categoria} className="sm:col-span-6"><Input value={f.categoria} maxLength={80} placeholder={t("ph.categoria")} onChange={(e) => set("categoria", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.cep")} error={errors["endereco.cep"]} className="sm:col-span-2"><Input inputMode="numeric" value={f.endereco.cep} placeholder="00000-000" onChange={(e) => setAddr("cep", maskCep(e.target.value))} /></Field>
+        <Field label={t("supplier.fields.logradouro")} error={errors["endereco.logradouro"]} className="sm:col-span-4"><Input value={f.endereco.logradouro} maxLength={160} placeholder={t("ph.logradouro")} onChange={(e) => setAddr("logradouro", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.numero")} error={errors["endereco.numero"]} className="sm:col-span-1"><Input value={f.endereco.numero} maxLength={20} placeholder="123" onChange={(e) => setAddr("numero", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.complemento")} className="sm:col-span-2"><Input value={f.endereco.complemento} maxLength={80} placeholder={t("ph.complemento")} onChange={(e) => setAddr("complemento", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.bairro")} className="sm:col-span-3"><Input value={f.endereco.bairro} maxLength={80} placeholder={t("ph.bairro")} onChange={(e) => setAddr("bairro", e.target.value)} /></Field>
+        <Field label={t("supplier.fields.cidade")} error={errors["endereco.cidade"]} className="sm:col-span-4"><Input value={f.endereco.cidade} maxLength={80} placeholder={t("ph.cidade")} onChange={(e) => setAddr("cidade", e.target.value)} /></Field>
         <Field label={t("supplier.fields.uf")} error={errors["endereco.uf"]} className="sm:col-span-2">
           <select value={f.endereco.uf} onChange={(e) => setAddr("uf", e.target.value)} className={controlClass} style={controlStyle}>
             <option value="">—</option>

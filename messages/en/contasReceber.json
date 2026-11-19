@@ -420,7 +420,14 @@
         "noPin": "Set up your PIN to issue boletos.",
         "amountFormat": "Use a comma for cents (e.g. 1.234,56)."
       },
-      "pinSubtitleDetail": "Enter your PIN to issue {amount} to {payer}, due {date}"
+      "pinSubtitleDetail": "Enter your PIN to issue {amount} to {payer}, due {date}",
+      "ph": {
+        "name": "e.g. Jane Smith",
+        "street": "e.g. Flower Street",
+        "complement": "e.g. Apt 45",
+        "district": "e.g. Downtown",
+        "city": "e.g. São Paulo"
+      }
     }
   }
 }

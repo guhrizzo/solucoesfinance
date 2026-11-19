@@ -127,7 +127,7 @@ export default function FornecedorConvite() {
             </p>
             <input type="email" autoComplete="username" value={info.email} readOnly hidden />
             <Field label={info.accountExists ? t("login.password") : t("invite.createPassword")}>
-              <Input type="password" autoComplete={info.accountExists ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input type="password" autoComplete={info.accountExists ? "current-password" : "new-password"} value={password} placeholder="••••••••" onChange={(e) => setPassword(e.target.value)} />
             </Field>
             {!info.accountExists && (
               <>
@@ -142,7 +142,7 @@ export default function FornecedorConvite() {
                   })}
                 </ul>
                 <Field label={t("invite.confirmPassword")}>
-                  <Input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+                  <Input type="password" autoComplete="new-password" value={confirm} placeholder="••••••••" onChange={(e) => setConfirm(e.target.value)} />
                 </Field>
               </>
             )}
