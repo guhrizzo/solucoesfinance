@@ -183,9 +183,45 @@ export function transporteMtls(secrets: InterSecrets, rede: RedeInter = REDE_REA
   };
 }
 
+/** Nome legível dos campos que o Inter costuma apontar no 400 (o técnico vai junto, entre parênteses). */
+const CAMPOS: Record<string, string> = {
+  "pagador.cpfCnpj": "CPF/CNPJ do pagador", "pagador.nome": "Nome do pagador", "pagador.tipoPessoa": "Tipo de pessoa",
+  "pagador.cep": "CEP", "pagador.endereco": "Endereço (rua)", "pagador.numero": "Número", "pagador.complemento": "Complemento",
+  "pagador.bairro": "Bairro", "pagador.cidade": "Cidade", "pagador.uf": "UF", "pagador.email": "E-mail",
+  "pagador.ddd": "DDD", "pagador.telefone": "Telefone", valorNominal: "Valor", dataVencimento: "Vencimento",
+  seuNumero: "Identificador", numDiasAgenda: "Dias para baixa", multa: "Multa", mora: "Juros",
+};
+const PROP_RE = /^[A-Za-z0-9_.[\]]{1,60}$/;
+
+/**
+ * Campos recusados num 400 do Inter (`violacoes: [{ propriedade, razao, valor }]`).
+ * Só o NOME do campo e o motivo: o `valor` nunca é lido e sequências de 4+ dígitos
+ * no motivo viram "…", para CPF/CEP/telefone não irem para a tela nem para o log.
+ */
+export function camposRecusados(json: unknown): string {
+  const lista = isRec(json) && Array.isArray(json.violacoes) ? json.violacoes : [];
+  const partes: string[] = [];
+  for (const v of lista.slice(0, 3)) {
+    if (!isRec(v)) continue;
+    const prop = str(v.propriedade);
+    if (!PROP_RE.test(prop)) continue;
+    const nome = CAMPOS[prop] ?? CAMPOS[prop.split(".")[0]];
+    const razao = str(v.razao).replace(/\d{4,}/g, "…").replace(/\s+/g, " ").slice(0, 50);
+    partes.push(`${nome ? `${nome} (${prop})` : prop}${razao ? `: ${razao}` : ""}`);
+  }
+  return partes.join("; ");
+}
+
 async function chamar(t: Transporte, req: Parameters<Transporte>[0]): Promise<unknown> {
   const r = await t(req);
-  if (r.status < 200 || r.status >= 300) throw erroHttp(r.status);
+  if (r.status < 200 || r.status >= 300) {
+    const campos = r.status === 400 ? camposRecusados(r.json) : "";
+    if (campos) {
+      const msg = `O Banco Inter recusou a cobrança (HTTP 400). ${campos}`;
+      throw new InterHttpError(msg.length > 200 ? `${msg.slice(0, 197)}...` : msg, 400);
+    }
+    throw erroHttp(r.status);
+  }
   return r.json;
 }
 
@@ -217,8 +253,10 @@ export function buildEmitBody(i: EmitirInput): Record<string, unknown> {
   const ddd = semDdi.length >= 10 ? semDdi.slice(0, 2) : "";
   const numero = semDdi.length >= 10 ? semDdi.slice(2) : semDdi;
   const e = i.pagador.endereco;
+  // Contrato oficial da Cobrança v3 (schema em developers.inter.co, conferido em
+  // 2026-11-19): o documento é `cpfCnpj`. `cnpjCpf` era da v2 e o Inter devolvia 400.
   const pagador: Record<string, unknown> = {
-    cnpjCpf: doc,
+    cpfCnpj: doc,
     nome: i.pagador.nome,
     tipoPessoa: doc.length === 14 ? "JURIDICA" : "FISICA",
     cep: e.cep,
@@ -241,12 +279,12 @@ export function buildEmitBody(i: EmitirInput): Record<string, unknown> {
     pagador,
   };
   if (i.multaPercentual && i.multaPercentual > 0) {
-    // ASSUNÇÃO (não verificado no sandbox): multa percentual usa `taxa` com codigoMulta PERCENTUAL.
-    body.multa = { codigoMulta: "PERCENTUAL", taxa: i.multaPercentual };
+    // v3 (schema oficial): multa = { codigo: PERCENTUAL | VALORFIXO, taxa | valor }.
+    body.multa = { codigo: "PERCENTUAL", taxa: i.multaPercentual };
   }
   if (i.moraPercentualMensal && i.moraPercentualMensal > 0) {
-    // ASSUNÇÃO (não verificado no sandbox): mora mensal usa `taxa` com codigoMora TAXAMENSAL.
-    body.mora = { codigoMora: "TAXAMENSAL", taxa: i.moraPercentualMensal };
+    // v3 (schema oficial): mora = { codigo: TAXAMENSAL | VALORDIA, taxa | valor }.
+    body.mora = { codigo: "TAXAMENSAL", taxa: i.moraPercentualMensal };
   }
   const linhas = (i.mensagem ?? []).filter((l) => l.trim()).slice(0, 5);
   if (linhas.length) {

@@ -142,7 +142,9 @@ test("buildEmitBody: sem multa/mora não inclui os campos", () => {
   assert.equal(b.dataVencimento, "2026-12-10");
   assert.equal("multa" in b, false);
   assert.equal("mora" in b, false);
-  assert.equal(b.pagador.cnpjCpf, "12345678909");
+  // Contrato oficial da Cobrança v3 (developers.inter.co): pagador.cpfCnpj (cnpjCpf era da v2).
+  assert.equal(b.pagador.cpfCnpj, "12345678909");
+  assert.equal("cnpjCpf" in b.pagador, false);
   assert.equal(b.pagador.tipoPessoa, "FISICA");
   assert.equal(b.pagador.ddd, "11");
   assert.equal(b.pagador.telefone, "912345678");
@@ -159,8 +161,9 @@ test("buildEmitBody: CNPJ é JURIDICA; multa 2 e mora 1 entram", () => {
     mensagem: ["a", "b"],
   });
   assert.equal(b.pagador.tipoPessoa, "JURIDICA");
-  assert.deepEqual(b.multa, { codigoMulta: "PERCENTUAL", taxa: 2 });
-  assert.deepEqual(b.mora, { codigoMora: "TAXAMENSAL", taxa: 1 });
+  // v3: multa { codigo: PERCENTUAL|VALORFIXO, taxa|valor }; mora { codigo: TAXAMENSAL|VALORDIA, taxa|valor }.
+  assert.deepEqual(b.multa, { codigo: "PERCENTUAL", taxa: 2 });
+  assert.deepEqual(b.mora, { codigo: "TAXAMENSAL", taxa: 1 });
   assert.deepEqual(b.mensagem, { linha1: "a", linha2: "b" });
 });
 
@@ -338,4 +341,32 @@ test("transporteMtls: falha no token vira InterRedeError fase token; falha de re
     () => transporteMtls(SECRETS, b.net)({ method: "POST", path: "/x", scope: "boleto-cobranca.write", body: {} }),
     (e) => e instanceof InterRedeError && e.fase === "chamada" && /falar com o Banco Inter/.test(e.message),
   );
+});
+
+test("buildEmitBody: pagador traz todos os obrigatórios da v3", () => {
+  const b = buildEmitBody(input);
+  for (const k of ["cpfCnpj", "nome", "tipoPessoa", "cep", "endereco", "cidade", "uf"]) assert.ok(b.pagador[k], `pagador.${k}`);
+  for (const k of ["seuNumero", "dataVencimento", "valorNominal", "pagador", "numDiasAgenda"]) assert.ok(k in b, k);
+});
+
+test("emitirCobranca: 400 mostra o campo recusado (nome legível + motivo), sem o valor enviado", async () => {
+  const { t } = fake(400, {
+    title: "Requisição inválida",
+    violacoes: [
+      { razao: "deve ser preenchido", propriedade: "pagador.cpfCnpj", valor: "12345678909" },
+      { razao: "CEP 01310100 inválido", propriedade: "pagador.cep", valor: "01310100" },
+    ],
+  });
+  const err = await emitirCobranca(t, input).then(() => null, (e) => e);
+  assert.ok(err, "deveria lançar");
+  assert.equal(err.status, 400);
+  assert.match(err.message, /CPF\/CNPJ do pagador \(pagador\.cpfCnpj\): deve ser preenchido/);
+  assert.match(err.message, /CEP \(pagador\.cep\)/);
+  assert.doesNotMatch(err.message, /12345678909|01310100/); // nunca o dado pessoal
+  assert.ok(err.message.length <= 200, "cabe na mensagem segura");
+});
+
+test("emitirCobranca: 400 sem violações mantém a mensagem genérica", async () => {
+  const { t } = fake(400, { title: "Bad Request" });
+  await assert.rejects(() => emitirCobranca(t, input), /recusou os dados da cobrança \(HTTP 400\)\. Confira documento, endereço e valores\./);
 });

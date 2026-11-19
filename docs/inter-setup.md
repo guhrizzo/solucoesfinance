@@ -228,8 +228,8 @@ Todas as marcadas `ASSUNÇÃO (não verificado no sandbox)` no código, mais as 
 |---|---|---|---|---|
 | 1 | `x-conta-corrente` só dígitos, sem zeros à esquerda (igual ao extrato) | `lib/interCobranca.ts:142` | Chamadas na conta certa; 400/403 de conta | Normalização da conta em `transporteMtls` |
 | 2 | Telefone: `ddd` = 2 primeiros dígitos, `telefone` = restante, sem DDI 55 | `lib/interCobranca.ts:215` | Emitir com telefone; o Inter aceita e mostra no boleto | `ddd`/`telefone` em `buildEmitBody` |
-| 3 | Multa percentual: `multa = { codigoMulta: "PERCENTUAL", taxa }` | `lib/interCobranca.ts:244` | Emitir com multa e ver se voltou igual | Objeto `multa` |
-| 4 | Mora mensal: `mora = { codigoMora: "TAXAMENSAL", taxa }` | `lib/interCobranca.ts:248` | Idem, com juros | Objeto `mora` |
+| 3 | ✅ Confirmado no schema oficial v3 (2026-11-19): `multa = { codigo: "PERCENTUAL", taxa }` (era `codigoMulta`, da v2) | `lib/interCobranca.ts:244` | Emitir com multa e ver se voltou igual | Objeto `multa` |
+| 4 | ✅ Confirmado no schema oficial v3 (2026-11-19): `mora = { codigo: "TAXAMENSAL", taxa }` (era `codigoMora`, da v2) | `lib/interCobranca.ts:248` | Idem, com juros | Objeto `mora` |
 | 5 | Campos da consulta no topo ou dentro de `cobranca`/`boleto`/`pix` | `lib/interCobranca.ts:272` | JSON real do `GET /cobrancas/{codigo}` | Lista de objetos em `parseCobranca` |
 | 6 | Nomes `linhaDigitavel`, `codigoBarras`, `nossoNumero`, `pixCopiaECola` (aceita também `pixCopiaCola`) | `lib/interCobranca.ts:285` | Linha digitável e Pix preenchidos no app | Chaves lidas em `parseCobranca` |
 | 7 | Data do pagamento em `dataPagamento` ou `dataSituacao` | `lib/interCobranca.ts:296` | Campo real; **formato e fuso** (o código pega os 10 primeiros caracteres e exige `AAAA-MM-DD`; pagamento perto da meia-noite pode cair no dia errado) | Chave e conversão de data |
