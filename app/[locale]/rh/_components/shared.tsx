@@ -27,6 +27,8 @@ export interface Colaborador {
   jornada: { tipo: string; cargaSemanal: number | null; horario: string };
   insalubridade: number;
   periculosidade: boolean;
+  horasNoturnasMes?: number;
+  pctAdNoturno?: number;
   categoriaFgts: "geral" | "aprendiz" | "domestico";
 }
 
@@ -53,6 +55,10 @@ export interface CustoMes {
   diasAtivos: number;
   diasMes: number;
   salario: number;
+  /** Ausente em meses fechados antes do adicional noturno existir. */
+  adNoturno?: number;
+  insalubridade?: number;
+  periculosidade?: number;
   prov13: number;
   provFerias: number;
   comissao: number;
@@ -174,7 +180,7 @@ export function EdicaoInline({ inicial, sufixo, onSalvar, onCancelar, disabled }
   const [v, setV] = useState(inicial);
   return (
     <span className="flex items-center gap-1">
-      <Input inputMode="decimal" aria-label={t("novoValor")} className="!w-28 !py-1.5 text-right" value={v} onChange={(e) => setV(e.target.value)} autoFocus />
+      <Input inputMode="decimal" aria-label={t("novoValor")} className="!w-28 !py-1.5 text-right" placeholder="0,00" value={v} onChange={(e) => setV(e.target.value)} autoFocus />
       {sufixo && <span className="text-xs">{sufixo}</span>}
       <Button size="sm" disabled={disabled || !v} onClick={() => onSalvar(v)}>{t("salvar")}</Button>
       <Button size="sm" variant="ghost" onClick={onCancelar}>{t("cancelar")}</Button>

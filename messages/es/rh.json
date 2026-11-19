@@ -89,7 +89,19 @@
       "pix": "CPF, correo, teléfono o clave aleatoria",
       "tipoConta": "Selecciona...",
       "jornadaTipo": "Seleccione",
-      "horario": "08:00–17:00, 1h de descanso"
+      "horario": "08:00–17:00, 1h de descanso",
+      "logradouro": "Ej.: Calle de las Flores",
+      "numero": "Ej.: 123",
+      "complemento": "Ej.: Depto 42, bloque B",
+      "bairro": "Ej.: Centro",
+      "cidade": "Ej.: São Paulo",
+      "uf": "SP",
+      "horasNoturnas": "Ej.: 120",
+      "pctAdNoturno": "Ej.: 20",
+      "rubricaNome": "Ej.: Gratificación de función",
+      "tabelaObs": "Ej.: Ordenanza vigente en 2026",
+      "eventoDescricao": "Ej.: Saldo de salario",
+      "beneficioNome": "Ej.: Vale de comida"
     },
     "endereco": "Dirección",
     "cep": "Código postal",
@@ -124,7 +136,12 @@
       "geral": "General (CLT) — 8%",
       "aprendiz": "Aprendiz — 2%",
       "domestico": "Doméstico — 8% + 3,2%"
-    }
+    },
+    "adNoturno": "Adicional nocturno (%)",
+    "adNoturnoHint": "Sobre la hora normal, entre las 22h y las 5h. CLT: mínimo 20%. En blanco = no tiene.",
+    "horasNoturnas": "Horas nocturnas por mes",
+    "horasNoturnasHint": "Cuente la hora nocturna reducida (52min30s): 7h de reloj entre las 22h y las 5h = 8h. Ej.: 12x36 de 19h a 7h ≈ 15 turnos × 8h = 120h. Se vuelve el valor estándar del registro del mes en la nómina, donde se puede ajustar.",
+    "noturnoErro": "Adicional nocturno: complete el porcentaje y las horas por mes (o deje ambos en blanco)."
   },
   "rem": {
     "titulo": "Remuneración de {nome}",
@@ -177,6 +194,7 @@
       "colaborador": "Colaborador",
       "dias": "Días",
       "salario": "Salario",
+      "adicionais": "Adicionales",
       "prov13": "13º (prov.)",
       "provFerias": "Vacaciones+1/3 (prov.)",
       "encargos": "Cargas",
@@ -185,12 +203,32 @@
       "bonus": "Bono",
       "total": "Total"
     },
-    "premissas": "Las cargas y provisiones (13º y vacaciones + 1/3) valen solo para vínculo CLT. Salario y beneficios son proporcionales a los días activos del mes. La base de las cargas es salario + provisiones + comisión + bono; los beneficios quedan fuera.",
+    "premissas": "Cargas y provisiones (13º y vacaciones + 1/3) valen solo para vínculo CLT. Salario y beneficios son proporcionales a los días activos del mes. Adicionales (solo CLT, del registro, proporcionales al mes): nocturno = horas × valor de la hora × %; insalubridad = grado × salario mínimo; peligrosidad = 30% del salario base. La base de las cargas es salario + adicionales + provisiones + comisión + bono; los beneficios quedan fuera. Con la nómina cerrada, vale lo que la nómina calculó.",
     "bonusSalvo": "Bono guardado.",
     "rateioTitulo": "Reparto por centro de costo",
     "rateioNota": "Registrado en los centros de costo solo como presupuesto (previsto), sin baja — la baja llega del extracto en Flujo de caja. Nada va al DRE. Lo que no tiene asignación aparece como \"No asignado\".",
     "naoAlocado": "No asignado",
-    "daFolha": "de la nómina"
+    "daFolha": "de la nómina",
+    "imprimir": "Imprimir / PDF",
+    "gerandoPdf": "Generando PDF...",
+    "pdfErro": "No fue posible generar el PDF.",
+    "pdf": {
+      "titulo": "Costo mensual de personal",
+      "competencia": "Período",
+      "situacao": "Situación",
+      "colaboradores": "Colaboradores",
+      "total": "Costo total",
+      "totalGeral": "Total general",
+      "geradoEm": "Generado el {data} por NexusFi",
+      "pagina": "Página {n} de {total}",
+      "rateio": "Prorrateo por centro de costo",
+      "premissas": "Premisas"
+    },
+    "adic": {
+      "noturno": "Nocturno",
+      "insalubridade": "Insalubr.",
+      "periculosidade": "Peligros."
+    }
   },
   "encargos": {
     "titulo": "Porcentaje de cargas sociales",

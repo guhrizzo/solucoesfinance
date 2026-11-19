@@ -10,6 +10,12 @@
 //  • Base dos encargos = salário + 13º + férias + comissão + bônus.
 //    Benefícios ficam fora da base.
 //  • O percentual de encargos é o vigente no último dia ativo do mês.
+//  • Adicional noturno (só CLT, do cadastro): horas/mês × dias ativos/dias do
+//    mês × (salário ÷ divisor de horas) × %. Integra provisões e encargos.
+//  • Insalubridade (grau % × salário mínimo) e periculosidade (% × salário-base
+//    do período), só CLT, proporcionais ao mês — mesma regra da folha.
+//    Todos os adicionais integram provisões e encargos.
+//    Com folha fechada nenhum soma: o salário-base apurado já os contém.
 
 import { daysInMonth, lastDay } from "./datas";
 import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vigencia";
@@ -32,6 +38,12 @@ export interface CustoInput {
   beneficios: Vigencia<BeneficioVig>[];
   comissao: number;
   bonus: number;
+  /** Adicional noturno fixo do cadastro; divisorHoras = horas/mês da folha (ex.: 220). */
+  adicionalNoturno?: { horasMes: number; pct: number; divisorHoras: number };
+  /** Grau de insalubridade (% sobre o salário mínimo vigente). */
+  insalubridade?: { pct: number; salarioMinimo: number };
+  /** Periculosidade (% sobre o salário-base). */
+  periculosidade?: { pct: number };
   /** Folha fechada: remuneração-base real do mês (substitui o salário do contrato). */
   salarioOverride?: number;
 }
@@ -41,6 +53,10 @@ export interface CustoMes {
   diasAtivos: number;
   diasMes: number;
   salario: number;
+  /** Adicional noturno estimado do mês (0 quando não tem ou quando veio da folha fechada). */
+  adNoturno: number;
+  insalubridade: number;
+  periculosidade: number;
   prov13: number;
   provFerias: number;
   comissao: number;
@@ -69,7 +85,7 @@ export function calcularCustoMes(i: CustoInput): CustoMes {
   };
 
   if (dias.length === 0) {
-    return { ...base, salario: 0, prov13: 0, provFerias: 0, encargosPct: 0, encargos: 0, beneficios: [], beneficiosTotal: 0, total: 0, semSalario: false };
+    return { ...base, salario: 0, adNoturno: 0, insalubridade: 0, periculosidade: 0, prov13: 0, provFerias: 0, encargosPct: 0, encargos: 0, beneficios: [], beneficiosTotal: 0, total: 0, semSalario: false };
   }
 
   const daFolha = i.salarioOverride !== undefined;
@@ -77,12 +93,28 @@ export function calcularCustoMes(i: CustoInput): CustoMes {
   const semSalario = salario === 0;
   const clt = i.vinculo === "CLT";
 
-  const prov13 = clt ? r2(salario / 12) : 0;
-  const provFerias = clt ? r2((salario / 12) * (4 / 3)) : 0;
-
   const ultimoDia = dias[dias.length - 1] ?? lastDay(i.comp);
+  const an = i.adicionalNoturno;
+  let adNoturno = 0;
+  if (clt && !daFolha && an && an.horasMes > 0 && an.pct > 0 && an.divisorHoras > 0) {
+    const salarioMensal = vigenciaEm(i.salarios, ultimoDia)?.dados.valor ?? 0;
+    const horas = (an.horasMes * dias.length) / diasMes;
+    adNoturno = r2(horas * (salarioMensal / an.divisorHoras) * (an.pct / 100));
+  }
+  const salarioMensalVig = vigenciaEm(i.salarios, ultimoDia)?.dados.valor ?? 0;
+  const proporcao = salarioMensalVig > 0 ? Math.min(1, salario / salarioMensalVig) : 1;
+  const ins = i.insalubridade;
+  const insalubridade = clt && !daFolha && ins && ins.pct > 0 && ins.salarioMinimo > 0
+    ? r2(ins.salarioMinimo * (ins.pct / 100) * proporcao) : 0;
+  const per = i.periculosidade;
+  const periculosidade = clt && !daFolha && per && per.pct > 0 ? r2(salario * (per.pct / 100)) : 0;
+  const remuneracao = salario + adNoturno + insalubridade + periculosidade;
+
+  const prov13 = clt ? r2(remuneracao / 12) : 0;
+  const provFerias = clt ? r2((remuneracao / 12) * (4 / 3)) : 0;
+
   const encargosPct = clt ? Math.max(0, vigenciaEm(i.encargos, ultimoDia)?.dados.pct ?? 0) : 0;
-  const baseEncargos = salario + prov13 + provFerias + base.comissao + base.bonus;
+  const baseEncargos = remuneracao + prov13 + provFerias + base.comissao + base.bonus;
   const encargos = clt ? r2((baseEncargos * encargosPct) / 100) : 0;
 
   // Benefícios: agrupa por nome (cada nome é uma "linha" com seu histórico).
@@ -98,6 +130,6 @@ export function calcularCustoMes(i: CustoInput): CustoMes {
   }
   const beneficiosTotal = r2(beneficios.reduce((s, b) => s + b.valor, 0));
 
-  const total = r2(salario + prov13 + provFerias + encargos + beneficiosTotal + base.comissao + base.bonus);
-  return { ...base, salario, prov13, provFerias, encargosPct, encargos, beneficios, beneficiosTotal, total, semSalario, ...(daFolha ? { salarioDaFolha: true } : {}) };
+  const total = r2(salario + adNoturno + insalubridade + periculosidade + prov13 + provFerias + encargos + beneficiosTotal + base.comissao + base.bonus);
+  return { ...base, salario, adNoturno, insalubridade, periculosidade, prov13, provFerias, encargosPct, encargos, beneficios, beneficiosTotal, total, semSalario, ...(daFolha ? { salarioDaFolha: true } : {}) };
 }

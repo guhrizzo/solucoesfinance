@@ -391,3 +391,49 @@ test("retorno: filtros de centro, colaborador e produto; visão do próprio sem 
   assert.equal(proprio.linhas[0].resultado, null);
   assert.equal(proprio.linhas[0].comissao, 100);
 });
+
+test("adicional noturno do cadastro entra no custo (CLT), na base das provisões e dos encargos", () => {
+  // 3000 / 220h = 13,6364/h × 20% × 120h = 327,27
+  const c = calcularCustoMes(base({ adicionalNoturno: { horasMes: 120, pct: 20, divisorHoras: 220 } }));
+  assert.equal(c.adNoturno, 327.27);
+  assert.equal(c.prov13, 277.27); // (3000 + 327,27) / 12
+  assert.equal(c.provFerias, 369.7); // (3000 + 327,27) / 12 × 4/3
+  // base = 3000 + 327,27 + 277,27 + 369,70 = 3974,24 → 30% = 1192,27
+  assert.equal(c.encargos, 1192.27);
+  assert.equal(c.total, 3000 + 327.27 + 277.27 + 369.7 + 1192.27);
+});
+
+test("adicional noturno: proporcional aos dias ativos; fora de CLT e com folha fechada não soma", () => {
+  const meio = calcularCustoMes(base({ entrada: "2026-10-17", salarios: [vig("2026-10-17", { valor: 3000 })], adicionalNoturno: { horasMes: 124, pct: 20, divisorHoras: 220 } }));
+  // 15 de 31 dias → 60h × 13,6364 × 20% = 163,64
+  assert.equal(meio.adNoturno, 163.64);
+  const pj = calcularCustoMes(base({ vinculo: "PJ", adicionalNoturno: { horasMes: 120, pct: 20, divisorHoras: 220 } }));
+  assert.equal(pj.adNoturno, 0);
+  const folha = calcularCustoMes(base({ salarioOverride: 3500, adicionalNoturno: { horasMes: 120, pct: 20, divisorHoras: 220 } }));
+  assert.equal(folha.adNoturno, 0); // a folha fechada já traz o adicional no salário-base apurado
+  const sem = calcularCustoMes(base());
+  assert.equal(sem.adNoturno, 0);
+});
+
+test("insalubridade (s/ salário mínimo) e periculosidade (s/ salário-base) entram no custo CLT, como na folha", () => {
+  // insalubridade 20% de 1621 = 324,20
+  const ins = calcularCustoMes(base({ insalubridade: { pct: 20, salarioMinimo: 1621 } }));
+  assert.equal(ins.insalubridade, 324.2);
+  assert.equal(ins.periculosidade, 0);
+  assert.equal(ins.prov13, 277.02); // (3000 + 324,20) / 12
+  assert.equal(ins.total, 3000 + 324.2 + 277.02 + ins.provFerias + ins.encargos);
+  // periculosidade 30% de 3000 = 900
+  const per = calcularCustoMes(base({ periculosidade: { pct: 30 } }));
+  assert.equal(per.periculosidade, 900);
+  assert.equal(per.prov13, 325); // (3000 + 900) / 12
+});
+
+test("insalubridade/periculosidade: proporcionais ao mês; fora de CLT e com folha fechada não somam", () => {
+  // 15 de 31 dias: salário 1451,61; insalubridade 324,20 × 15/31 = 156,87; periculosidade 30% de 1451,61 = 435,48
+  const meio = calcularCustoMes(base({ entrada: "2026-10-17", salarios: [vig("2026-10-17", { valor: 3000 })], insalubridade: { pct: 20, salarioMinimo: 1621 } }));
+  assert.equal(meio.insalubridade, 156.87);
+  const meioP = calcularCustoMes(base({ entrada: "2026-10-17", salarios: [vig("2026-10-17", { valor: 3000 })], periculosidade: { pct: 30 } }));
+  assert.equal(meioP.periculosidade, 435.48);
+  assert.equal(calcularCustoMes(base({ vinculo: "PJ", periculosidade: { pct: 30 } })).periculosidade, 0);
+  assert.equal(calcularCustoMes(base({ salarioOverride: 3500, insalubridade: { pct: 20, salarioMinimo: 1621 } })).insalubridade, 0);
+});

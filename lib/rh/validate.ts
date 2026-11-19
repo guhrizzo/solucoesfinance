@@ -55,6 +55,10 @@ export interface ColaboradorInput {
   jornada: Jornada;
   insalubridade: (typeof GRAUS_INSALUBRIDADE)[number];
   periculosidade: boolean;
+  /** Horas noturnas fixas por mês (hora reduzida, 22h–5h); 0 = sem adicional noturno. */
+  horasNoturnasMes: number;
+  /** % do adicional noturno deste colaborador (ex.: 20). 0 = sem adicional. */
+  pctAdNoturno: number;
   categoriaFgts: (typeof CATEGORIAS_FGTS)[number];
 }
 
@@ -146,6 +150,19 @@ export function validarColaborador(
     d.insalubridade = g as ColaboradorInput["insalubridade"];
   }
   if (!parcial || tem("periculosidade")) d.periculosidade = body.periculosidade === true;
+  if (!parcial || tem("horasNoturnasMes")) {
+    const h = Number(body.horasNoturnasMes ?? 0);
+    if (!Number.isFinite(h) || h < 0 || h > 300) return { ok: false, erro: "Horas noturnas por mês inválidas (0 a 300)." };
+    d.horasNoturnasMes = Math.round(h * 100) / 100;
+  }
+  if (!parcial || tem("pctAdNoturno")) {
+    const pct = Number(body.pctAdNoturno ?? 0);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) return { ok: false, erro: "Percentual do adicional noturno inválido (0 a 100%)." };
+    d.pctAdNoturno = Math.round(pct * 100) / 100;
+  }
+  if ((d.horasNoturnasMes ?? 0) > 0 !== (d.pctAdNoturno ?? 0) > 0 && "horasNoturnasMes" in body && "pctAdNoturno" in body) {
+    return { ok: false, erro: "Adicional noturno: informe o percentual e as horas por mês (ou deixe os dois em branco)." };
+  }
   if (!parcial || tem("categoriaFgts")) {
     const c = body.categoriaFgts ?? "geral";
     if (!CATEGORIAS_FGTS.includes(c as never)) return { ok: false, erro: "Categoria de FGTS inválida." };

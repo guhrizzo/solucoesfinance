@@ -22,6 +22,7 @@ const VAZIO = {
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
   jornadaTipo: "", cargaSemanal: "", horario: "",
   insalubridade: "0", periculosidade: "nao", categoriaFgts: "geral",
+  pctAdNoturno: "", horasNoturnasMes: "",
 };
 
 export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props) {
@@ -69,6 +70,8 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
           horario: colaborador.jornada?.horario ?? "",
           insalubridade: String(colaborador.insalubridade ?? 0), periculosidade: colaborador.periculosidade ? "sim" : "nao",
           categoriaFgts: colaborador.categoriaFgts ?? "geral",
+          pctAdNoturno: (colaborador.pctAdNoturno ?? 0) > 0 ? String(colaborador.pctAdNoturno).replace(".", ",") : "",
+          horasNoturnasMes: (colaborador.horasNoturnasMes ?? 0) > 0 ? String(colaborador.horasNoturnasMes).replace(".", ",") : "",
         });
       } catch (e) {
         if (!cancelled) setErro(e instanceof Error ? e.message : t("comum.erroCarregar"));
@@ -94,6 +97,9 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
   }
 
   async function salvar() {
+    const horasNoturnas = Number(f.horasNoturnasMes.replace(",", ".")) || 0;
+    const pctNoturno = Number(f.pctAdNoturno.replace(",", ".")) || 0;
+    if ((horasNoturnas > 0) !== (pctNoturno > 0)) { setErro(t("form.noturnoErro")); return; }
     setSaving(true);
     setErro("");
     try {
@@ -106,6 +112,7 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
         endereco: { cep: f.cep, logradouro: f.logradouro, numero: f.numero, complemento: f.complemento, bairro: f.bairro, cidade: f.cidade, uf: f.uf },
         jornada: { tipo: f.jornadaTipo, cargaSemanal: f.cargaSemanal ? Number(f.cargaSemanal.replace(",", ".")) : null, horario: f.horario },
         insalubridade: Number(f.insalubridade) || 0, periculosidade: f.periculosidade === "sim", categoriaFgts: f.categoriaFgts,
+        horasNoturnasMes: horasNoturnas, pctAdNoturno: pctNoturno,
       };
       if (colaborador) {
         await rhApi("/api/rh/colaboradores", { method: "PATCH", body: { id: colaborador.id, ...payload } });
@@ -189,12 +196,12 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
           <legend className="mb-1 text-sm font-semibold" style={{ color: "var(--text)" }}>{t("form.endereco")}</legend>
           <div className="grid gap-3 sm:grid-cols-6">
             <Field label={t("form.cep")} className="sm:col-span-2"><Input inputMode="numeric" placeholder="00000-000" value={f.cep} onChange={(e) => set("cep", formatarCep(e.target.value))} maxLength={9} /></Field>
-            <Field label={t("form.logradouro")} className="sm:col-span-3"><Input value={f.logradouro} onChange={(e) => set("logradouro", e.target.value)} maxLength={120} /></Field>
-            <Field label={t("form.numero")} className="sm:col-span-1"><Input value={f.numero} onChange={(e) => set("numero", e.target.value)} maxLength={12} /></Field>
-            <Field label={t("form.complemento")} className="sm:col-span-2"><Input value={f.complemento} onChange={(e) => set("complemento", e.target.value)} maxLength={60} /></Field>
-            <Field label={t("form.bairro")} className="sm:col-span-2"><Input value={f.bairro} onChange={(e) => set("bairro", e.target.value)} maxLength={60} /></Field>
-            <Field label={t("form.cidade")} className="sm:col-span-1"><Input value={f.cidade} onChange={(e) => set("cidade", e.target.value)} maxLength={60} /></Field>
-            <Field label={t("form.uf")} className="sm:col-span-1"><Input value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} maxLength={2} /></Field>
+            <Field label={t("form.logradouro")} className="sm:col-span-3"><Input placeholder={t("form.ph.logradouro")} value={f.logradouro} onChange={(e) => set("logradouro", e.target.value)} maxLength={120} /></Field>
+            <Field label={t("form.numero")} className="sm:col-span-1"><Input placeholder={t("form.ph.numero")} value={f.numero} onChange={(e) => set("numero", e.target.value)} maxLength={12} /></Field>
+            <Field label={t("form.complemento")} className="sm:col-span-2"><Input placeholder={t("form.ph.complemento")} value={f.complemento} onChange={(e) => set("complemento", e.target.value)} maxLength={60} /></Field>
+            <Field label={t("form.bairro")} className="sm:col-span-2"><Input placeholder={t("form.ph.bairro")} value={f.bairro} onChange={(e) => set("bairro", e.target.value)} maxLength={60} /></Field>
+            <Field label={t("form.cidade")} className="sm:col-span-1"><Input placeholder={t("form.ph.cidade")} value={f.cidade} onChange={(e) => set("cidade", e.target.value)} maxLength={60} /></Field>
+            <Field label={t("form.uf")} className="sm:col-span-1"><Input placeholder={t("form.ph.uf")} value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} maxLength={2} /></Field>
           </div>
         </fieldset>
 
@@ -233,6 +240,24 @@ export function ColaboradorModal({ open, colaborador, onClose, onSaved }: Props)
               <select className={selectClass} style={selectStyle} value={f.categoriaFgts} onChange={(e) => set("categoriaFgts", e.target.value)}>
                 {(["geral", "aprendiz", "domestico"] as const).map((c) => <option key={c} value={c}>{t(`form.fgts.${c}`)}</option>)}
               </select>
+            </Field>
+            <Field label={t("form.adNoturno")} hint={t("form.adNoturnoHint")}>
+              <Input
+                inputMode="decimal"
+                placeholder={t("form.ph.pctAdNoturno")}
+                value={f.pctAdNoturno}
+                onChange={(e) => set("pctAdNoturno", e.target.value.replace(/[^\d,.]/g, ""))}
+                maxLength={6}
+              />
+            </Field>
+            <Field label={t("form.horasNoturnas")} hint={t("form.horasNoturnasHint")} className="sm:col-span-2">
+              <Input
+                inputMode="decimal"
+                placeholder={t("form.ph.horasNoturnas")}
+                value={f.horasNoturnasMes}
+                onChange={(e) => set("horasNoturnasMes", e.target.value.replace(/[^\d,.]/g, ""))}
+                maxLength={6}
+              />
             </Field>
           </div>
         </fieldset>

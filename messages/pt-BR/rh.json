@@ -89,7 +89,19 @@
       "pix": "CPF, e-mail, telefone ou chave aleatória",
       "tipoConta": "Selecione...",
       "jornadaTipo": "Selecione",
-      "horario": "08:00–17:00, 1h de intervalo"
+      "horario": "08:00–17:00, 1h de intervalo",
+      "logradouro": "Ex.: Rua das Flores",
+      "numero": "Ex.: 123",
+      "complemento": "Ex.: Apto 42, bloco B",
+      "bairro": "Ex.: Centro",
+      "cidade": "Ex.: São Paulo",
+      "uf": "SP",
+      "horasNoturnas": "Ex.: 120",
+      "pctAdNoturno": "Ex.: 20",
+      "rubricaNome": "Ex.: Gratificação de função",
+      "tabelaObs": "Ex.: Portaria vigente em 2026",
+      "eventoDescricao": "Ex.: Saldo de salário",
+      "beneficioNome": "Ex.: Vale-refeição"
     },
     "endereco": "Endereço",
     "cep": "CEP",
@@ -124,7 +136,12 @@
       "geral": "Geral (CLT) — 8%",
       "aprendiz": "Jovem aprendiz — 2%",
       "domestico": "Doméstico — 8% + 3,2%"
-    }
+    },
+    "adNoturno": "Adicional noturno (%)",
+    "adNoturnoHint": "Sobre a hora normal, entre 22h e 5h. CLT: mínimo 20%. Em branco = não tem.",
+    "horasNoturnas": "Horas noturnas por mês",
+    "horasNoturnasHint": "Conte a hora noturna reduzida (52min30s): 7h de relógio entre 22h e 5h = 8h. Ex.: 12x36 das 19h às 7h ≈ 15 plantões × 8h = 120h. Vira o padrão do lançamento do mês na folha, onde dá para ajustar.",
+    "noturnoErro": "Adicional noturno: preencha o percentual e as horas por mês (ou deixe os dois em branco)."
   },
   "rem": {
     "titulo": "Remuneração de {nome}",
@@ -177,6 +194,7 @@
       "colaborador": "Colaborador",
       "dias": "Dias",
       "salario": "Salário",
+      "adicionais": "Adicionais",
       "prov13": "13º (prov.)",
       "provFerias": "Férias+1/3 (prov.)",
       "encargos": "Encargos",
@@ -185,12 +203,32 @@
       "bonus": "Bônus",
       "total": "Total"
     },
-    "premissas": "Encargos e provisões (13º e férias + 1/3) valem só para vínculo CLT. Salário e benefícios são proporcionais aos dias ativos no mês. A base dos encargos é salário + provisões + comissão + bônus; benefícios ficam de fora.",
+    "premissas": "Encargos e provisões (13º e férias + 1/3) valem só para vínculo CLT. Salário e benefícios são proporcionais aos dias ativos no mês. Adicionais (só CLT, do cadastro, proporcionais ao mês): noturno = horas × valor da hora × %; insalubridade = grau × salário mínimo; periculosidade = 30% do salário-base. A base dos encargos é salário + adicionais + provisões + comissão + bônus; benefícios ficam de fora. Com a folha fechada, vale o que a folha apurou.",
     "bonusSalvo": "Bônus salvo.",
     "rateioTitulo": "Rateio por centro de custo",
     "rateioNota": "Lançado nos centros de custo só como orçamento (previsto), sem baixa — a baixa vem do extrato no Fluxo de Caixa. Nada vai para a DRE. O que não tem alocação aparece como \"Não alocado\".",
     "naoAlocado": "Não alocado",
-    "daFolha": "da folha"
+    "daFolha": "da folha",
+    "imprimir": "Imprimir / PDF",
+    "gerandoPdf": "Gerando PDF...",
+    "pdfErro": "Não foi possível gerar o PDF.",
+    "pdf": {
+      "titulo": "Custo mensal de pessoal",
+      "competencia": "Competência",
+      "situacao": "Situação",
+      "colaboradores": "Colaboradores",
+      "total": "Custo total",
+      "totalGeral": "Total geral",
+      "geradoEm": "Gerado em {data} por NexusFi",
+      "pagina": "Página {n} de {total}",
+      "rateio": "Rateio por centro de custo",
+      "premissas": "Premissas"
+    },
+    "adic": {
+      "noturno": "Noturno",
+      "insalubridade": "Insalubr.",
+      "periculosidade": "Pericul."
+    }
   },
   "encargos": {
     "titulo": "Percentual de encargos",

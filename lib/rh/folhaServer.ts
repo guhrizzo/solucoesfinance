@@ -17,7 +17,7 @@ import {
   type CategoriaFgts, type LancamentoMes, type ParametrosFolha, type ResultadoFolha, type Rubrica, type TabelaInss, type TabelaIrrf,
 } from "./folha";
 import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vigencia";
-import { firstDay, lastDay } from "./datas";
+import { daysInMonth, firstDay, lastDay } from "./datas";
 import { apurarComissoes } from "./comissaoServer";
 import { rhCol, type RhBase } from "./server";
 
@@ -198,7 +198,10 @@ export async function apurarFolha(ctx: RhBase, comp: string): Promise<FolhaApura
     const salarioMensal = vigenciaEm(sal, ultimo)?.dados.valor ?? 0;
     const salarioPeriodo = Math.round(valorProporcional(sal, dias, comp, (x) => x.valor) * 100) / 100;
     const l = lancs.get(d.id);
-    const lanc: LancamentoMes = { ...LANCAMENTO_VAZIO, ...(l ? { he50: l.he50 ?? 0, he100: l.he100 ?? 0, noturnas: l.noturnas ?? 0, faltasDias: l.faltasDias ?? 0, atrasosHoras: l.atrasosHoras ?? 0, adiantamento: l.adiantamento ?? 0, extras: l.extras ?? [] } : {}) };
+    // Adicional noturno fixo do cadastro: vira o padrão do mês (proporcional aos
+    // dias ativos) enquanto não houver lançamento com horas noturnas próprias.
+    const noturnasPadrao = Math.round(((Number(c.horasNoturnasMes) || 0) * dias.length / daysInMonth(comp)) * 100) / 100;
+    const lanc: LancamentoMes = { ...LANCAMENTO_VAZIO, noturnas: noturnasPadrao, ...(l ? { he50: l.he50 ?? 0, he100: l.he100 ?? 0, noturnas: l.noturnas ?? noturnasPadrao, faltasDias: l.faltasDias ?? 0, atrasosHoras: l.atrasosHoras ?? 0, adiantamento: l.adiantamento ?? 0, extras: l.extras ?? [] } : {}) };
     const comissao = comissoes.porColab.get(d.id)?.total ?? 0;
     const resultado = calcularFolhaColab({
       nomeColaborador: String(c.nome), dependentes: Number(c.dependentes) || 0, salarioMensal, salarioPeriodo, lanc, comissao,
@@ -207,7 +210,8 @@ export async function apurarFolha(ctx: RhBase, comp: string): Promise<FolhaApura
       categoriaFgts: (c.categoriaFgts as CategoriaFgts | undefined) ?? "geral",
       vtBeneficio: Math.round(valorProporcional(vts.get(d.id) ?? [], dias, comp, (x) => x.valor) * 100) / 100,
       diasUteis: cabecalho.diasUteis, domingosFeriados: cabecalho.domingosFeriados,
-      rubricas, params, inss: inss?.dados as TabelaInss | null ?? null, irrf: irrf?.dados as TabelaIrrf | null ?? null,
+      // % do adicional noturno do cadastro (quando informado) vale sobre o parâmetro da empresa.
+      rubricas, params: Number(c.pctAdNoturno) > 0 ? { ...params, pctAdNoturno: Number(c.pctAdNoturno) } : params, inss: inss?.dados as TabelaInss | null ?? null, irrf: irrf?.dados as TabelaIrrf | null ?? null,
     });
     resultado.erros.forEach((e) => errosGlobais.add(e));
     const hash = hashResultado(resultado);

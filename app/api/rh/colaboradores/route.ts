@@ -28,6 +28,8 @@ const publico = (id: string, d: DocumentData) => ({
   jornada: d.jornada ?? { tipo: "", cargaSemanal: null, horario: "" },
   insalubridade: Number(d.insalubridade) || 0,
   periculosidade: !!d.periculosidade,
+  horasNoturnasMes: Number(d.horasNoturnasMes) || 0,
+  pctAdNoturno: Number(d.pctAdNoturno) || 0,
   categoriaFgts: d.categoriaFgts ?? "geral",
   cpfMascarado: d.cpfFinal2 ? `•••.•••.•••-${d.cpfFinal2}` : maskCpf(""),
   temBanco: !!d.bancoEnc,
@@ -145,7 +147,7 @@ export async function POST(request: Request) {
       status: d.status, dependentes: d.dependentes, comissionado: d.comissionado,
       cpfEnc: encryptText(d.cpf), cpfHash: hash, cpfFinal2: d.cpf.slice(9),
       bancoEnc: encryptJson(d.banco), enderecoEnc: encryptJson(d.endereco), membroUid: vinculo.uid,
-      jornada: d.jornada, insalubridade: d.insalubridade, periculosidade: d.periculosidade, categoriaFgts: d.categoriaFgts,
+      jornada: d.jornada, insalubridade: d.insalubridade, periculosidade: d.periculosidade, horasNoturnasMes: d.horasNoturnasMes, pctAdNoturno: d.pctAdNoturno, categoriaFgts: d.categoriaFgts,
       createdAt: now, createdBy: ctx.actor.uid, createdByName: ctx.actor.name,
     });
     if (salario > 0) {
@@ -276,7 +278,7 @@ export async function PATCH(request: Request) {
     if (d.endereco !== undefined) { upd.enderecoEnc = encryptJson(d.endereco); campos.push("endereco"); }
     if (d.jornada !== undefined) { upd.jornada = d.jornada; campos.push("jornada"); }
     // Adicionais e categoria do FGTS valem para as folhas abertas; as fechadas ficam congeladas.
-    for (const k of ["insalubridade", "periculosidade", "categoriaFgts"] as const) {
+    for (const k of ["insalubridade", "periculosidade", "horasNoturnasMes", "pctAdNoturno", "categoriaFgts"] as const) {
       if (d[k] !== undefined && d[k] !== (atual[k] ?? (k === "categoriaFgts" ? "geral" : k === "periculosidade" ? false : 0))) { upd[k] = d[k]; campos.push(k); }
     }
     if ("membroUid" in body) {

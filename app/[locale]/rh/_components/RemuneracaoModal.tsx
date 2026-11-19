@@ -115,7 +115,7 @@ export function RemuneracaoModal({ colaborador, onClose }: Props) {
         <section className="space-y-3">
           <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>{t("rem.beneficios")}</h3>
           <div className="grid items-end gap-3 sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
-            <Field label={t("rem.nomeBeneficio")}><Input value={ben.nome} onChange={(e) => setBen({ ...ben, nome: e.target.value })} maxLength={60} /></Field>
+            <Field label={t("rem.nomeBeneficio")}><Input placeholder={t("form.ph.beneficioNome")} value={ben.nome} onChange={(e) => setBen({ ...ben, nome: e.target.value })} maxLength={60} /></Field>
             <Field label={t("rem.tipoBeneficio")}>
               <select className={selectClass} style={selectStyle} value={ben.tipo} onChange={(e) => setBen({ ...ben, tipo: e.target.value })}>
                 {(["vt", "vr", "saude", "outro"] as const).map((k) => <option key={k} value={k}>{t(`rem.tipos.${k}`)}</option>)}

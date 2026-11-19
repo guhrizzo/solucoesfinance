@@ -35,6 +35,10 @@ export async function GET(request: Request) {
     }
 
     const total = r2(linhas.reduce((s, l) => s + ((l.custo as { total: number }).total || 0), 0));
+    // Cabeçalho do PDF (Imprimir): nome e CNPJ da empresa, de Configurações.
+    const companySnap = await ctx.db.doc(`users/${ctx.ownerUid}/profile/company`).get();
+    const company = companySnap.exists ? companySnap.data() ?? {} : {};
+    const empresa = { nome: String(company.nomeFantasia || company.razaoSocial || ""), cnpj: company.cnpj ? String(company.cnpj) : null };
     await logRh(ctx, "consultou_custos", { info: comp });
     return NextResponse.json({
       comp,
@@ -44,6 +48,7 @@ export async function GET(request: Request) {
       historicoReaberturas: compSnap.exists ? compSnap.data()?.reaberturas ?? [] : [],
       linhas,
       total,
+      empresa,
     });
   } catch (error) {
     console.error("Erro RH/custos GET:", error);

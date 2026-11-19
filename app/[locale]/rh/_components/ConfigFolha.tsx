@@ -182,7 +182,7 @@ export function ConfigFolha() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {PARAMS.filter((k) => !(PARAMETROS_LEGAIS as readonly string[]).includes(k)).map((k) => (
             <Field key={k} label={t(`folha.parametros.campos.${k}`)}>
-              <Input inputMode="decimal" value={par[k] ?? ""} onChange={(e) => setPar({ ...par, [k]: e.target.value })} />
+              <Input inputMode="decimal" placeholder={String(PARAMETROS_SUGERIDOS[k as keyof typeof PARAMETROS_SUGERIDOS] ?? "0").replace(".", ",")} value={par[k] ?? ""} onChange={(e) => setPar({ ...par, [k]: e.target.value })} />
             </Field>
           ))}
         </div>
@@ -236,8 +236,8 @@ export function ConfigFolha() {
         {rub && (
           <div className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={t("folha.rubricas.codigo")}><Input value={rub.codigo ?? ""} maxLength={10} onChange={(e) => setRub({ ...rub, codigo: e.target.value })} /></Field>
-              <Field label={t("folha.rubricas.nome")}><Input value={rub.nome ?? ""} maxLength={60} onChange={(e) => setRub({ ...rub, nome: e.target.value })} /></Field>
+              <Field label={t("folha.rubricas.codigo")}><Input placeholder="Ex.: 0101" value={rub.codigo ?? ""} maxLength={10} onChange={(e) => setRub({ ...rub, codigo: e.target.value })} /></Field>
+              <Field label={t("folha.rubricas.nome")}><Input placeholder={t("form.ph.rubricaNome")} value={rub.nome ?? ""} maxLength={60} onChange={(e) => setRub({ ...rub, nome: e.target.value })} /></Field>
               <Field label={t("folha.rubricas.natureza")}>
                 <select className={selectClass} style={selectStyle} value={rub.natureza} onChange={(e) => setRub({ ...rub, natureza: e.target.value as "provento" | "desconto" })}>
                   <option value="provento">{t("folha.rubricas.naturezas.provento")}</option>
@@ -288,19 +288,19 @@ export function ConfigFolha() {
             {tab.faixas.map((f, i) => (
               <div key={i} className={`grid items-end gap-2 ${tab.tipo === "irrf" ? "sm:grid-cols-[1fr_1fr_1fr_auto]" : "sm:grid-cols-[1fr_1fr_auto]"}`}>
                 <Field label={i === 0 ? t("folha.tabelas.ate") : undefined}><Input inputMode="decimal" aria-label={t("folha.tabelas.ate")} value={f.ate} placeholder={tab.tipo === "irrf" && i === tab.faixas.length - 1 ? t("folha.tabelas.semTeto") : ""} onChange={(e) => setFaixa(i, { ate: e.target.value })} /></Field>
-                <Field label={i === 0 ? t("folha.tabelas.aliquota") : undefined}><Input inputMode="decimal" aria-label={t("folha.tabelas.aliquota")} value={f.aliquota} onChange={(e) => setFaixa(i, { aliquota: e.target.value })} /></Field>
-                {tab.tipo === "irrf" && <Field label={i === 0 ? t("folha.tabelas.deduzir") : undefined}><Input inputMode="decimal" aria-label={t("folha.tabelas.deduzir")} value={f.deduzir} onChange={(e) => setFaixa(i, { deduzir: e.target.value })} /></Field>}
+                <Field label={i === 0 ? t("folha.tabelas.aliquota") : undefined}><Input inputMode="decimal" aria-label={t("folha.tabelas.aliquota")} placeholder="0,0" value={f.aliquota} onChange={(e) => setFaixa(i, { aliquota: e.target.value })} /></Field>
+                {tab.tipo === "irrf" && <Field label={i === 0 ? t("folha.tabelas.deduzir") : undefined}><Input inputMode="decimal" aria-label={t("folha.tabelas.deduzir")} placeholder="0,00" value={f.deduzir} onChange={(e) => setFaixa(i, { deduzir: e.target.value })} /></Field>}
                 <Button size="sm" variant="ghost" icon={Trash2} aria-label={t("alocacao.remover")} disabled={tab.faixas.length === 1} onClick={() => setTab({ ...tab, faixas: tab.faixas.filter((_, k) => k !== i) })} />
               </div>
             ))}
             <Button size="sm" variant="secondary" icon={Plus} onClick={() => setTab({ ...tab, faixas: [...tab.faixas, { ate: "", aliquota: "", deduzir: "0" }] })}>{t("comissoes.regras.faixaAdd")}</Button>
             {tab.tipo === "irrf" && (
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label={t("folha.tabelas.deducaoDependente")}><Input inputMode="decimal" value={tab.dep} onChange={(e) => setTab({ ...tab, dep: e.target.value })} /></Field>
-                <Field label={t("folha.tabelas.simplificado")} hint={t("folha.tabelas.simplificadoHint")}><Input inputMode="decimal" value={tab.simp} onChange={(e) => setTab({ ...tab, simp: e.target.value })} /></Field>
+                <Field label={t("folha.tabelas.deducaoDependente")}><Input inputMode="decimal" placeholder="0,00" value={tab.dep} onChange={(e) => setTab({ ...tab, dep: e.target.value })} /></Field>
+                <Field label={t("folha.tabelas.simplificado")} hint={t("folha.tabelas.simplificadoHint")}><Input inputMode="decimal" placeholder="0,00" value={tab.simp} onChange={(e) => setTab({ ...tab, simp: e.target.value })} /></Field>
               </div>
             )}
-            <Field label={t("folha.tabelas.obs")}><Input value={tab.obs} maxLength={200} onChange={(e) => setTab({ ...tab, obs: e.target.value })} /></Field>
+            <Field label={t("folha.tabelas.obs")}><Input placeholder={t("form.ph.tabelaObs")} value={tab.obs} maxLength={200} onChange={(e) => setTab({ ...tab, obs: e.target.value })} /></Field>
             {tabErro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{tabErro}</p>}
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setTab(null)}>{t("form.cancelar")}</Button>

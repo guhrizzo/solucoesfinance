@@ -18,7 +18,8 @@ import { diasAtivos, type Vigencia } from "./vigencia";
 import { ratear, type DadosAlocacao, type Rateio } from "./alocacao";
 import { monthOf, nextComp, todayKey } from "./datas";
 import { apurarComissoes, type ResultadoComissao } from "./comissaoServer";
-import { salariosDaFolhaFechada } from "./folhaServer";
+import { carregarParametros, salariosDaFolhaFechada } from "./folhaServer";
+import { PARAMETROS_SUGERIDOS } from "./folha";
 
 export const EMPRESA = "_empresa";
 
@@ -147,6 +148,10 @@ interface ColabDoc {
   dataSaida: string | null;
   status: string;
   comissionado: boolean;
+  horasNoturnasMes?: number;
+  pctAdNoturno?: number;
+  insalubridade?: number;
+  periculosidade?: boolean;
 }
 
 export interface RateioNomeado {
@@ -193,7 +198,7 @@ export async function carregarAlocacoes(ctx: RhBase): Promise<Map<string, Vigenc
 
 /** Apura o custo de todos os colaboradores ativos na competência (cálculo vivo). */
 export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<LinhaCusto[]> {
-  const [colabSnap, vigSnap, varSnap, aloc, centros, comissoes, salariosFolha] = await Promise.all([
+  const [colabSnap, vigSnap, varSnap, aloc, centros, comissoes, salariosFolha, params] = await Promise.all([
     rhCol(ctx, "rhColaboradores").get(),
     rhCol(ctx, "rhVigencias").get(),
     rhCol(ctx, "rhVariaveis").where("comp", "==", comp).get(),
@@ -201,7 +206,11 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
     listarCentros(ctx),
     apurarComissoes(ctx, comp),
     salariosDaFolhaFechada(ctx, comp),
+    carregarParametros(ctx),
   ]);
+  // Adicional noturno: mesmo divisor de horas e % padrão da folha (o % do cadastro tem prioridade).
+  const divisorHoras = params.horasMes ?? PARAMETROS_SUGERIDOS.horasMes;
+  const pctNoturnoEmpresa = params.pctAdNoturno ?? PARAMETROS_SUGERIDOS.pctAdNoturno;
   const nomeCentro = new Map(centros.map((c) => [c.id, c.nome]));
 
   const salarios = new Map<string, Vigencia<{ valor: number }>[]>();
@@ -241,6 +250,12 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
       // Folha fechada: o custo passa a refletir o que foi de fato apurado (faltas, horas extras…).
       salarioOverride: salariosFolha?.has(c.id) ? salariosFolha.get(c.id) : undefined,
       bonus: vr?.bonus ?? 0,
+      adicionalNoturno: (Number(c.horasNoturnasMes) || 0) > 0
+        ? { horasMes: Number(c.horasNoturnasMes), pct: Number(c.pctAdNoturno) > 0 ? Number(c.pctAdNoturno) : pctNoturnoEmpresa, divisorHoras }
+        : undefined,
+      // Insalubridade e periculosidade: mesmas bases legais da folha (salário mínimo / % do salário-base).
+      insalubridade: Number(c.insalubridade) > 0 ? { pct: Number(c.insalubridade), salarioMinimo: params.salarioMinimo ?? PARAMETROS_SUGERIDOS.salarioMinimo } : undefined,
+      periculosidade: c.periculosidade === true ? { pct: params.pctPericulosidade ?? PARAMETROS_SUGERIDOS.pctPericulosidade } : undefined,
     });
     if (custo.diasAtivos === 0) continue;
     const r: Rateio = ratear(custo.total, diasAtivos(comp, c.dataEntrada, c.dataSaida ?? null), aloc.get(c.id) ?? []);

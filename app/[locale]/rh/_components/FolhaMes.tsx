@@ -142,8 +142,8 @@ export function FolhaMes() {
 
       {folha && !folha.fechada && (
         <div className="flex flex-wrap items-end gap-3">
-          <Field label={t("folha.mes.diasUteis")}><Input inputMode="numeric" className="!w-28" value={cab.diasUteis} onChange={(e) => setCab({ ...cab, diasUteis: e.target.value })} onBlur={salvarCab} /></Field>
-          <Field label={t("folha.mes.domingosFeriados")}><Input inputMode="numeric" className="!w-28" value={cab.domingosFeriados} onChange={(e) => setCab({ ...cab, domingosFeriados: e.target.value })} onBlur={salvarCab} /></Field>
+          <Field label={t("folha.mes.diasUteis")}><Input inputMode="numeric" className="!w-28" placeholder="22" value={cab.diasUteis} onChange={(e) => setCab({ ...cab, diasUteis: e.target.value })} onBlur={salvarCab} /></Field>
+          <Field label={t("folha.mes.domingosFeriados")}><Input inputMode="numeric" className="!w-28" placeholder="5" value={cab.domingosFeriados} onChange={(e) => setCab({ ...cab, domingosFeriados: e.target.value })} onBlur={salvarCab} /></Field>
           <p className="max-w-md pb-2 text-xs" style={{ color: "var(--text-subtle)" }}>{t("folha.mes.dsrNota")}</p>
         </div>
       )}
@@ -214,7 +214,7 @@ export function FolhaMes() {
             <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t("folha.lanc.nota")}</p>
             <div className="grid gap-3 sm:grid-cols-3">
               {(["he50", "he100", "noturnas", "faltasDias", "atrasosHoras", "adiantamento"] as const).map((k) => (
-                <Field key={k} label={t(`folha.lanc.campos.${k}`)}><Input inputMode="decimal" value={lanc.f[k]} onChange={(e) => setLanc({ ...lanc, f: { ...lanc.f, [k]: e.target.value } })} /></Field>
+                <Field key={k} label={t(`folha.lanc.campos.${k}`)}><Input inputMode="decimal" placeholder="0" value={lanc.f[k]} onChange={(e) => setLanc({ ...lanc, f: { ...lanc.f, [k]: e.target.value } })} /></Field>
               ))}
             </div>
             <div className="space-y-2">

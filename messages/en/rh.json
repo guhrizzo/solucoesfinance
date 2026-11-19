@@ -89,7 +89,19 @@
       "pix": "Tax ID, e-mail, phone or random key",
       "tipoConta": "Select...",
       "jornadaTipo": "Select",
-      "horario": "08:00–17:00, 1h break"
+      "horario": "08:00–17:00, 1h break",
+      "logradouro": "E.g.: 123 Main Street",
+      "numero": "E.g.: 123",
+      "complemento": "E.g.: Apt 42, block B",
+      "bairro": "E.g.: Downtown",
+      "cidade": "E.g.: São Paulo",
+      "uf": "SP",
+      "horasNoturnas": "E.g.: 120",
+      "pctAdNoturno": "E.g.: 20",
+      "rubricaNome": "E.g.: Role bonus",
+      "tabelaObs": "E.g.: Ordinance in force in 2026",
+      "eventoDescricao": "E.g.: Salary balance",
+      "beneficioNome": "E.g.: Meal voucher"
     },
     "endereco": "Address",
     "cep": "ZIP code",
@@ -124,7 +136,12 @@
       "geral": "General (CLT) — 8%",
       "aprendiz": "Apprentice — 2%",
       "domestico": "Domestic — 8% + 3.2%"
-    }
+    },
+    "adNoturno": "Night shift premium (%)",
+    "adNoturnoHint": "On the regular hourly rate, between 10 pm and 5 am. CLT: at least 20%. Blank = none.",
+    "horasNoturnas": "Night hours per month",
+    "horasNoturnasHint": "Count the reduced night hour (52min30s): 7 clock hours between 10 pm and 5 am = 8h. E.g.: 12x36 from 7 pm to 7 am ≈ 15 shifts × 8h = 120h. It becomes the default for the month's payroll entry, where you can adjust it.",
+    "noturnoErro": "Night shift premium: fill in the percentage and the hours per month (or leave both blank)."
   },
   "rem": {
     "titulo": "Pay for {nome}",
@@ -177,6 +194,7 @@
       "colaborador": "Employee",
       "dias": "Days",
       "salario": "Salary",
+      "adicionais": "Premiums",
       "prov13": "13th (accr.)",
       "provFerias": "Vacation+1/3 (accr.)",
       "encargos": "Charges",
@@ -185,12 +203,32 @@
       "bonus": "Bonus",
       "total": "Total"
     },
-    "premissas": "Charges and accruals (13th salary and vacation + 1/3) apply only to CLT contracts. Salary and benefits are prorated by active days in the month. The charges base is salary + accruals + commission + bonus; benefits are excluded.",
+    "premissas": "Charges and accruals (13th salary and vacation + 1/3) apply only to CLT employees. Salary and benefits are prorated by active days in the month. Premiums (CLT only, from the employee record, prorated by month): night = hours × hourly rate × %; unhealthy work = degree × minimum wage; hazard = 30% of base salary. The charges base is salary + premiums + accruals + commission + bonus; benefits are excluded. Once payroll is closed, the payroll amounts prevail.",
     "bonusSalvo": "Bonus saved.",
     "rateioTitulo": "Split by cost center",
     "rateioNota": "Posted to cost centers only as budget (forecast), with no settlement — settlement comes from the bank statement in Cash flow. Nothing goes to the P&L. Anything without an allocation shows as \"Unallocated\".",
     "naoAlocado": "Unallocated",
-    "daFolha": "from payroll"
+    "daFolha": "from payroll",
+    "imprimir": "Print / PDF",
+    "gerandoPdf": "Generating PDF...",
+    "pdfErro": "Could not generate the PDF.",
+    "pdf": {
+      "titulo": "Monthly personnel cost",
+      "competencia": "Period",
+      "situacao": "Status",
+      "colaboradores": "Employees",
+      "total": "Total cost",
+      "totalGeral": "Grand total",
+      "geradoEm": "Generated on {data} by NexusFi",
+      "pagina": "Page {n} of {total}",
+      "rateio": "Allocation by cost center",
+      "premissas": "Assumptions"
+    },
+    "adic": {
+      "noturno": "Night",
+      "insalubridade": "Unhealthy",
+      "periculosidade": "Hazard"
+    }
   },
   "encargos": {
     "titulo": "Payroll charges rate",

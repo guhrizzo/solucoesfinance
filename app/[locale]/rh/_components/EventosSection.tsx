@@ -189,7 +189,7 @@ function EventoModal({ id: idInicial, colaboradores, onClose, onChanged }: { id:
                   </Field>
                 )}
                 {CAMPOS[tipo].map((k) => (
-                  <Field key={k} label={t(`folha.eventos.campos.${k}`)}><Input inputMode="decimal" value={inputs[k] ?? ""} onChange={(e) => setInputs({ ...inputs, [k]: e.target.value })} /></Field>
+                  <Field key={k} label={t(`folha.eventos.campos.${k}`)}><Input inputMode="decimal" placeholder="0" value={inputs[k] ?? ""} onChange={(e) => setInputs({ ...inputs, [k]: e.target.value })} /></Field>
                 ))}
               </div>
               <Button variant="secondary" size="sm" disabled={busy || !colaboradorId} onClick={sugerir}>{t("folha.eventos.sugerir")}</Button>
@@ -212,12 +212,12 @@ function EventoModal({ id: idInicial, colaboradores, onClose, onChanged }: { id:
                     {linhas.map((l, i) => (
                       <tr key={i} className="border-t" style={{ borderColor: "var(--border)" }}>
                         <td className="py-1.5 pr-2">
-                          <Input aria-label={t("folha.eventos.descricao")} value={l.descricao} disabled={travado} maxLength={120} onChange={(e) => editLinha(i, { descricao: e.target.value })} />
+                          <Input aria-label={t("folha.eventos.descricao")} placeholder={t("form.ph.eventoDescricao")} value={l.descricao} disabled={travado} maxLength={120} onChange={(e) => editLinha(i, { descricao: e.target.value })} />
                           <span className="text-xs" style={{ color: "var(--text-subtle)" }}>
                             {t(`folha.rubricas.naturezas.${l.natureza}`)}{l.grupo === "decimo" ? ` · ${t("folha.eventos.grupoDecimo")}` : ""}{l.informativo ? ` · ${t("folha.eventos.informativo")}` : ""}{l.ref ? ` · ${l.ref}` : ""}
                           </span>
                         </td>
-                        <td className="px-1"><Input className="!w-28 text-right" inputMode="decimal" aria-label={t("folha.lanc.valor")} disabled={travado} defaultValue={String(l.valor).replace(".", ",")} onBlur={(e) => { const v = Number(e.target.value.replace(",", ".")); if (Number.isFinite(v) && v !== l.valor) editLinha(i, { valor: v }); }} /></td>
+                        <td className="px-1"><Input className="!w-28 text-right" inputMode="decimal" aria-label={t("folha.lanc.valor")} placeholder="0,00" disabled={travado} defaultValue={String(l.valor).replace(".", ",")} onBlur={(e) => { const v = Number(e.target.value.replace(",", ".")); if (Number.isFinite(v) && v !== l.valor) editLinha(i, { valor: v }); }} /></td>
                         {(["inss", "irrf", "fgts"] as const).map((k) => (
                           <td key={k} className="px-1 text-center"><input type="checkbox" aria-label={k.toUpperCase()} disabled={travado || l.informativo} checked={l[k]} onChange={(e) => editLinha(i, { [k]: e.target.checked })} /></td>
                         ))}

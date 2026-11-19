@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Lock, LockOpen, Users } from "lucide-react";
+import { Lock, LockOpen, Printer, Users } from "lucide-react";
 import { Button, EmptyState, Field, Input, KpiTile, Pill, Table, type Column } from "@/app/components/ui";
 import { formatMoney } from "@/lib/format";
 import { usePeriod } from "@/app/hooks/usePeriod";
+import { gerarCustoPdf } from "@/lib/rh/custoPdf";
 import { fmtData, rhApi, type CustoMes, RhModal as Modal } from "./shared";
 
 interface Rateio { itens: { centroId: string; centroNome: string; valor: number }[]; naoAlocado: number }
@@ -18,7 +19,11 @@ interface Resposta {
   historicoReaberturas: { em: number; porNome: string; motivo: string }[];
   linhas: Linha[];
   total: number;
+  empresa?: { nome: string; cnpj: string | null };
 }
+
+/** Adicionais do mês (noturno + insalubridade + periculosidade); meses fechados antigos não têm os campos. */
+const adicionaisDe = (c: CustoMes) => Math.round(((c.adNoturno ?? 0) + (c.insalubridade ?? 0) + (c.periculosidade ?? 0)) * 100) / 100;
 
 export function CustoTab() {
   const t = useTranslations("rh");
@@ -30,6 +35,7 @@ export function CustoTab() {
   const [modal, setModal] = useState<"fechar" | "reabrir" | null>(null);
   const [motivo, setMotivo] = useState("");
   const [bonusEdit, setBonusEdit] = useState<Record<string, string>>({});
+  const [imprimindo, setImprimindo] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -88,10 +94,59 @@ export function CustoTab() {
   }
   const centrosOrdenados = [...porCentro.values()].sort((a, b) => b.valor - a.valor);
 
+  async function imprimir() {
+    if (!data) return;
+    // Abre a aba já no clique (senão o bloqueador de pop-up barra depois do await).
+    const janela = window.open("", "_blank");
+    setImprimindo(true); setErro("");
+    try {
+      const agora = new Date();
+      const blob = await gerarCustoPdf({
+        empresa: { nome: data.empresa?.nome || "NexusFi", cnpj: data.empresa?.cnpj },
+        competencia: label,
+        situacao: t(fechada ? "custo.fechada" : "custo.aberta"),
+        fechadaPor: fechada && data.fechadaPorNome ? t("custo.fechadaPor", { nome: data.fechadaPorNome }) : undefined,
+        linhas: data.linhas.map((l) => ({
+          nome: l.nome, sub: `${l.cargo || "—"} · ${t(`vinculos.${l.vinculo as "CLT"}`)}`, semSalario: !!l.custo.semSalario,
+          dias: `${l.custo.diasAtivos}/${l.custo.diasMes}`, salario: l.custo.salario, adicionais: adicionaisDe(l.custo), prov13: l.custo.prov13, provFerias: l.custo.provFerias,
+          encargos: l.custo.encargos, beneficios: l.custo.beneficiosTotal, comissao: l.custo.comissao, bonus: l.custo.bonus, total: l.custo.total,
+        })),
+        total: data.total,
+        rateio: [
+          ...centrosOrdenados.map((c) => ({ nome: c.nome, valor: c.valor })),
+          ...(naoAlocado > 0 ? [{ nome: t("custo.naoAlocado"), valor: naoAlocado, naoAlocado: true }] : []),
+        ],
+        premissas: t("custo.premissas"),
+        money,
+        labels: {
+          titulo: t("custo.pdf.titulo"), competencia: t("custo.pdf.competencia"), situacao: t("custo.pdf.situacao"),
+          colaboradores: t("custo.pdf.colaboradores"), total: t("custo.pdf.total"), totalGeral: t("custo.pdf.totalGeral"),
+          rateio: t("custo.pdf.rateio"), premissas: t("custo.pdf.premissas"), semSalario: t("custo.semSalario"),
+          geradoEm: (d) => t("custo.pdf.geradoEm", { data: d }),
+          pagina: (n, total) => t("custo.pdf.pagina", { n, total }),
+          cols: (["colaborador", "dias", "salario", "adicionais", "prov13", "provFerias", "encargos", "beneficios", "comissao", "bonus", "total"] as const).map((k) => t(`custo.cols.${k}`)),
+        },
+        dataGeracao: new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(agora),
+        nomeArquivo: `custo-mensal-${monthKey}`,
+      });
+      const url = URL.createObjectURL(blob);
+      if (janela) janela.location.href = url;
+      else window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      janela?.close();
+      console.error("RH: falha ao gerar PDF:", e);
+      setErro(t("custo.pdfErro"));
+    } finally {
+      setImprimindo(false);
+    }
+  }
+
   const cols: Column[] = [
     { key: "colaborador", header: t("custo.cols.colaborador") },
     { key: "dias", header: t("custo.cols.dias"), align: "right" },
     { key: "salario", header: t("custo.cols.salario"), align: "right" },
+    { key: "adicionais", header: t("custo.cols.adicionais"), align: "right" },
     { key: "prov13", header: t("custo.cols.prov13"), align: "right" },
     { key: "provFerias", header: t("custo.cols.provFerias"), align: "right" },
     { key: "encargos", header: t("custo.cols.encargos"), align: "right" },
@@ -115,9 +170,16 @@ export function CustoTab() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="max-w-2xl text-xs" style={{ color: "var(--text-subtle)" }}>{t("custo.premissas")}</p>
-        {data && (fechada
-          ? <Button variant="secondary" icon={LockOpen} onClick={() => setModal("reabrir")}>{t("custo.reabrir")}</Button>
-          : <Button icon={Lock} onClick={() => setModal("fechar")} disabled={data.linhas.length === 0}>{t("custo.fechar")}</Button>)}
+        {data && (
+          <span className="flex flex-wrap gap-2">
+            <Button variant="secondary" icon={Printer} onClick={imprimir} loading={imprimindo} disabled={imprimindo || data.linhas.length === 0}>
+              {imprimindo ? t("custo.gerandoPdf") : t("custo.imprimir")}
+            </Button>
+            {fechada
+              ? <Button variant="secondary" icon={LockOpen} onClick={() => setModal("reabrir")}>{t("custo.reabrir")}</Button>
+              : <Button icon={Lock} onClick={() => setModal("fechar")} disabled={data.linhas.length === 0}>{t("custo.fechar")}</Button>}
+          </span>
+        )}
       </div>
 
       {erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}
@@ -140,6 +202,18 @@ export function CustoTab() {
               );
               case "dias": return `${c.diasAtivos}/${c.diasMes}`;
               case "salario": return <span>{money(c.salario)}{c.salarioDaFolha && <Pill tone="info" className="ml-1">{t("custo.daFolha")}</Pill>}</span>;
+              case "adicionais": {
+                const partes = ([["noturno", c.adNoturno], ["insalubridade", c.insalubridade], ["periculosidade", c.periculosidade]] as const)
+                  .filter(([, v]) => (v ?? 0) > 0);
+                return (
+                  <span>
+                    {money(adicionaisDe(c))}
+                    {partes.map(([k, v]) => (
+                      <span key={k} className="block text-[11px]" style={{ color: "var(--text-subtle)" }}>{t(`custo.adic.${k}`)} {money(v ?? 0)}</span>
+                    ))}
+                  </span>
+                );
+              }
               case "prov13": return money(c.prov13);
               case "provFerias": return money(c.provFerias);
               case "encargos": return <span title={`${c.encargosPct}%`}>{money(c.encargos)}</span>;
@@ -149,6 +223,7 @@ export function CustoTab() {
                 <Input
                   aria-label={`${t("custo.cols.bonus")} — ${r.nome}`}
                   inputMode="decimal"
+                  placeholder="0,00"
                   className="!w-28 !py-1.5 text-right mono"
                   value={bonusEdit[r.colaboradorId] ?? c.bonus.toFixed(2).replace(".", ",")}
                   onChange={(e) => setBonusEdit((p) => ({ ...p, [r.colaboradorId]: e.target.value }))}
