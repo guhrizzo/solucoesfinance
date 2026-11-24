@@ -3,6 +3,10 @@
 import { useState, useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
+import { gsap } from "gsap";
+import { ScrollSmoother } from "gsap/dist/ScrollSmoother";
+import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
+import { attachLandingScroller } from "@/app/lib/motion";
 
 const MODAL_FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -108,7 +112,8 @@ export default function FinanceHome() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const pageRef = useRef<HTMLDivElement>(null);
+  const scrollWrapperRef = useRef<HTMLDivElement>(null);
+  const scrollContentRef = useRef<HTMLDivElement>(null);
 
   // Planos e preços: período de cobrança escolhido via modal (Mensal | Anual).
   const [period, setPeriod] = useState<BillingPeriod>("mensal");
@@ -182,22 +187,48 @@ export default function FinanceHome() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const wrapper = scrollWrapperRef.current;
+    const content = scrollContentRef.current;
+    if (!wrapper || !content) return;
+
+    let stopSmoothing: (() => void) | undefined;
+    const syncMotion = () => {
+      if (document.documentElement.hasAttribute("data-reduced-motion")) {
+        stopSmoothing?.();
+        stopSmoothing = undefined;
+      } else if (!stopSmoothing) {
+        gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+        const smoother = ScrollSmoother.create({ wrapper, content, smooth: 0.65, smoothTouch: 0.18 });
+        const detach = attachLandingScroller(content, smoother);
+        stopSmoothing = () => {
+          detach();
+          smoother.kill();
+        };
+      }
+    };
+
+    syncMotion();
+    const observer = new MutationObserver(syncMotion);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-reduced-motion"],
+    });
+
+    return () => {
+      observer.disconnect();
+      stopSmoothing?.();
+    };
+  }, []);
+
   // ── Reveal fade/blur das seções — forçado via JS ──────────────────────────
   // O usuário pediu explicitamente para MANTER as animações mesmo com
   // "desempenho melhorado" / prefers-reduced-motion ligado, então não há
   // guarda de reduce-motion aqui. A rolagem suave de <a href="#..."> e o
   // patch de scroll-behavior vivem em <ForceMotion/> (montado no layout).
   useEffect(() => {
-    const page = pageRef.current;
-    if (page) {
-      page.style.opacity = "0";
-      page.style.filter = "blur(14px)";
-      page.style.transition = "opacity 0.6s ease, filter 0.6s ease";
-      requestAnimationFrame(() => {
-        page.style.opacity = "1";
-        page.style.filter = "blur(0px)";
-      });
-    }
+    const content = scrollContentRef.current;
+    if (!content) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -213,7 +244,7 @@ export default function FinanceHome() {
       { threshold: 0.1, rootMargin: "0px 0px -8% 0px" }
     );
 
-    document.querySelectorAll<HTMLElement>("section").forEach((el) => {
+    content.querySelectorAll<HTMLElement>("section").forEach((el) => {
       const r = el.getBoundingClientRect();
       const alreadyVisible = r.top < window.innerHeight * 0.9 && r.bottom > 0;
       if (alreadyVisible) return; // hero / primeira dobra ficam intactos
@@ -229,11 +260,16 @@ export default function FinanceHome() {
   }, []);
 
   return (
-    <div ref={pageRef} className="mkt min-h-screen bg-white font-sans overflow-x-hidden">
+    <div className="mkt min-h-screen bg-white font-sans overflow-x-clip">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         * { font-family: 'Sora', sans-serif; }
         .mono { font-family: 'JetBrains Mono', monospace; }
+        .landing-scroll-content { animation: landingFadeIn 0.6s ease; }
+        @keyframes landingFadeIn {
+          from { opacity: 0; filter: blur(14px); }
+          to { opacity: 1; filter: blur(0); }
+        }
         .hero-gradient {
           background: linear-gradient(135deg, #0a1628 0%, #0d2247 40%, #0e3a7a 70%, #1565c0 100%);
         }
@@ -390,12 +426,14 @@ export default function FinanceHome() {
         )}
       </nav>
 
+      <div ref={scrollWrapperRef}>
+      <div ref={scrollContentRef} className="landing-scroll-content min-h-screen">
       {/* Hero */}
       <section className="hero-gradient min-h-screen flex flex-col relative overflow-hidden">
         {/* Video background */}
         <video
           className="hero-video absolute inset-0 w-full h-full object-cover"
-          src="https://firebasestorage.googleapis.com/v0/b/finance-add95.firebasestorage.app/o/video-background.mp4?alt=media&token=93c7066d-a23b-4e66-a683-f481725c65d5"
+          src="/hero-nexusfi-digitacao.mp4"
           autoPlay
           muted
           loop
@@ -1012,6 +1050,8 @@ export default function FinanceHome() {
 
       {/* Footer */}
       <Footer />
+      </div>
+      </div>
 
       {/* Botão flutuante do WhatsApp */}
       <WhatsAppFab />

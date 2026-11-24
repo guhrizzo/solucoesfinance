@@ -11,6 +11,32 @@
 const DEFAULT_DURATION = 620; // ms
 
 let currentAnimation = 0;
+type LandingScroller = { scrollTop(): number; scrollTop(value: number): void };
+let landingScroll: { content: HTMLElement; scroller: LandingScroller } | undefined;
+
+export function attachLandingScroller(content: HTMLElement, scroller: LandingScroller): () => void {
+  cancelSmoothScroll();
+  landingScroll = { content, scroller };
+
+  return () => {
+    cancelSmoothScroll();
+    landingScroll = undefined;
+  };
+}
+
+function scrollY(): number {
+  return landingScroll?.scroller.scrollTop() ?? window.scrollY;
+}
+
+function scrollToY(y: number): void {
+  if (landingScroll) landingScroll.scroller.scrollTop(y);
+  else window.scrollTo(0, y);
+}
+
+function elementScrollY(el: Element): number {
+  // O conteúdo do GSAP pode estar alguns pixels atrás da rolagem nativa.
+  return landingScroll?.content.contains(el) ? scrollY() : window.scrollY;
+}
 
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -32,7 +58,7 @@ export function smoothScrollTo(
 ): void {
   if (typeof window === "undefined") return;
 
-  const startY = window.scrollY;
+  const startY = scrollY();
   const maxY = Math.max(
     0,
     document.documentElement.scrollHeight - window.innerHeight,
@@ -43,7 +69,7 @@ export function smoothScrollTo(
   const id = ++currentAnimation;
 
   if (Math.abs(distance) < 2 || duration <= 0) {
-    window.scrollTo(0, endY);
+    scrollToY(endY);
     return;
   }
 
@@ -52,7 +78,7 @@ export function smoothScrollTo(
   const step = (now: number) => {
     if (id !== currentAnimation) return; // outro scroll assumiu o controle
     const progress = clamp((now - startTime) / duration, 0, 1);
-    window.scrollTo(0, startY + distance * easeInOutCubic(progress));
+    scrollToY(startY + distance * easeInOutCubic(progress));
     if (progress < 1) requestAnimationFrame(step);
   };
 
@@ -72,7 +98,7 @@ export function smoothScrollToElement(
   const marginTop =
     parseFloat(getComputedStyle(el).scrollMarginTop || "0") || 0;
   const top =
-    el.getBoundingClientRect().top + window.scrollY - marginTop - extraOffset;
+    el.getBoundingClientRect().top + elementScrollY(el) - marginTop - extraOffset;
   smoothScrollTo(top, duration);
 }
 
@@ -137,7 +163,7 @@ export function installForcedSmoothScroll(): () => void {
     if (typeof arg === "object" && arg !== null && arg.behavior === "smooth") {
       const rect = this.getBoundingClientRect();
       const block = arg.block ?? "start";
-      let top = rect.top + window.scrollY;
+      let top = rect.top + elementScrollY(this);
       if (block === "center") top -= (window.innerHeight - rect.height) / 2;
       else if (block === "end") top -= window.innerHeight - rect.height;
       const marginTop =
@@ -212,6 +238,7 @@ export function installForcedSmoothScroll(): () => void {
   window.addEventListener("keydown", onKeyDown);
 
   return () => {
+    cancelSmoothScroll();
     htmlStyle.scrollBehavior = prevScrollBehavior;
     window.scrollTo = nativeScrollTo as typeof window.scrollTo;
     window.scroll = nativeScroll as typeof window.scroll;

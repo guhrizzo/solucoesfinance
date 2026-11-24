@@ -1108,7 +1108,9 @@ html[data-underline-links="1"] a[href] {
    Especificidade maior que a regra de cartão abaixo, então vence nelas. */
 [data-theme="dark"] .mkt.bg-white,
 [data-theme="dark"] .mkt > section.bg-white,
-[data-theme="dark"] .mkt > section.bg-slate-50 { background-color: var(--mkt-bg); }
+[data-theme="dark"] .mkt > section.bg-slate-50,
+[data-theme="dark"] .mkt .landing-scroll-content > section.bg-white,
+[data-theme="dark"] .mkt .landing-scroll-content > section.bg-slate-50 { background-color: var(--mkt-bg); }
 
 /* Cartões e blocos internos → superfície elevada */
 [data-theme="dark"] .mkt .bg-white,
