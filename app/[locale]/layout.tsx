@@ -92,6 +92,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
+        <meta name="facebook-domain-verification" content="xrvump8fcnaw2wsvgrz1irik57lxjw" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{
