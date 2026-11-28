@@ -36,6 +36,11 @@ interface Tx {
 // Helper de formatação — moeda travada em BRL, agrupamento pelo locale.
 const toBRL = (n: number, locale: string) => formatMoney(n, locale);
 
+const REPORT_KPI_CARD = "cf-card min-w-0 space-y-2 p-4 sm:p-5";
+const REPORT_KPI_HEADER = "flex items-center justify-between gap-3";
+const REPORT_KPI_ICON = "flex size-7 shrink-0 items-center justify-center rounded-lg";
+const REPORT_KPI_VALUE = "mono text-xl font-extrabold [overflow-wrap:anywhere] sm:text-2xl";
+
 // Célula de categoria da conciliação linha a linha: <select> com as categorias
 // do tipo + opção "Descrição (especificar)", que troca por um input livre.
 // O VALOR gravado (`tx.category`) segue o nome canônico pt-BR — só a exibição
@@ -818,58 +823,55 @@ export default function RelatoriosPage() {
         {/* Aba: Fluxo de Caixa */}
         {activeTab === "fluxo" && (
           <div className="space-y-6 fade-in">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-          <div className="cf-card p-5 space-y-2 relative overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className={REPORT_KPI_CARD}>
+            <div className={REPORT_KPI_HEADER}>
               <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiInflows")}</span>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+              <div className={`${REPORT_KPI_ICON} bg-pos-weak text-pos`} aria-hidden="true">
                 <ArrowUpRight size={16} />
               </div>
             </div>
-            <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
+            <p className={REPORT_KPI_VALUE} style={{ color: "var(--db-text)" }}>
               {<Sensitive hidden={hideValues}>{toBRL(metrics.entradas, locale)}</Sensitive>}
             </p>
             <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("fluxo.kpiInflowsHint")}</p>
           </div>
 
-          <div className="cf-card p-5 space-y-2 relative overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className={REPORT_KPI_CARD}>
+            <div className={REPORT_KPI_HEADER}>
               <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiOutflows")}</span>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
+              <div className={`${REPORT_KPI_ICON} bg-neg-weak text-neg`} aria-hidden="true">
                 <ArrowDownRight size={16} />
               </div>
             </div>
-            <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
+            <p className={REPORT_KPI_VALUE} style={{ color: "var(--db-text)" }}>
               {<Sensitive hidden={hideValues}>{toBRL(metrics.saidas, locale)}</Sensitive>}
             </p>
             <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("fluxo.kpiOutflowsHint")}</p>
           </div>
 
-          <div className="cf-card p-5 space-y-2 relative overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className={REPORT_KPI_CARD}>
+            <div className={REPORT_KPI_HEADER}>
               <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiBalance")}</span>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+              <div className={`${REPORT_KPI_ICON} bg-brand-weak text-brand`} aria-hidden="true">
                 <DollarSign size={16} />
               </div>
             </div>
-            <p className="text-2xl font-extrabold mono" style={{ color: metrics.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
+            <p className={REPORT_KPI_VALUE} style={{ color: metrics.saldo >= 0 ? "var(--success)" : "var(--danger)" }}>
               {<Sensitive hidden={hideValues}>{toBRL(metrics.saldo, locale)}</Sensitive>}
             </p>
             <p className="text-xs" style={{ color: "var(--db-text-3)" }}>{t("fluxo.kpiBalanceHint")}</p>
           </div>
 
-          <div className="cf-card p-5 space-y-2 relative overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div className={REPORT_KPI_CARD}>
+            <div className={REPORT_KPI_HEADER}>
               <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--db-text-2)" }}>{t("fluxo.kpiReconcile")}</span>
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: "var(--status-info-bg)", color: "var(--status-info-text)" }}
-              >
+              <div className={`${REPORT_KPI_ICON} bg-brand-weak text-brand`} aria-hidden="true">
                 <ShieldCheck size={16} />
               </div>
             </div>
-            <p className="text-2xl font-extrabold mono" style={{ color: "var(--db-text)" }}>
+            <p className={REPORT_KPI_VALUE} style={{ color: "var(--db-text)" }}>
               {metrics.taxaConciliacao.toFixed(0)}%
             </p>
             <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "var(--db-border)" }}>
