@@ -13,9 +13,10 @@ import { isSupremeAdminEmail } from "@/lib/compAccounts";
 import { feedbackResolvedEmail } from "@/lib/emailTemplates";
 import { FEEDBACK_LIMITS, type FeedbackDoc } from "@/lib/feedback";
 
-async function verifiedEmail(uid: string): Promise<string | null> {
+async function supremeAdminEmail(uid: string): Promise<string | null> {
   try {
-    return (await (await getAdminAuth()).getUser(uid)).email ?? null;
+    const user = await (await getAdminAuth()).getUser(uid);
+    return isSupremeAdminEmail(user.email, user.emailVerified) ? user.email ?? null : null;
   } catch {
     return null;
   }
@@ -27,8 +28,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: scope.error }, { status: scope.status });
   }
 
-  const adminEmail = await verifiedEmail(scope.uid);
-  if (!isSupremeAdminEmail(adminEmail)) {
+  const adminEmail = await supremeAdminEmail(scope.uid);
+  if (!adminEmail) {
     return NextResponse.json({ error: "Você não tem acesso a esta ação." }, { status: 403 });
   }
 

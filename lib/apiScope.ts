@@ -60,6 +60,7 @@ export async function requireScope(
   const auth = await getAdminAuth();
   let uid: string;
   let email: string | null;
+  let isSupremeAdmin: boolean;
   try {
     const decoded = await auth.verifyIdToken(token);
     // Login criado pelo convite do portal do fornecedor (claim portalOnly):
@@ -69,6 +70,7 @@ export async function requireScope(
     }
     uid = decoded.uid;
     email = decoded.email ?? null;
+    isSupremeAdmin = isSupremeAdminEmail(email, decoded.email_verified);
   } catch {
     return { error: "Sessão inválida ou expirada. Entre novamente.", status: 401 };
   }
@@ -79,7 +81,7 @@ export async function requireScope(
   let scope: ApiScope;
   if (!snap.exists) {
     // Sem doc de acesso → é dono da própria conta (acesso total).
-    scope = { uid, ownerUid: uid, isOwner: true, permissions: "all", email, isSupremeAdmin: isSupremeAdminEmail(email) };
+    scope = { uid, ownerUid: uid, isOwner: true, permissions: "all", email, isSupremeAdmin };
   } else {
     const data = (snap.data() ?? {}) as { ownerId?: string; permissions?: PermissionKey[] };
     const ownerUid = typeof data.ownerId === "string" && data.ownerId ? data.ownerId : uid;
@@ -89,7 +91,7 @@ export async function requireScope(
       isOwner: ownerUid === uid,
       permissions: Array.isArray(data.permissions) ? data.permissions : [],
       email,
-      isSupremeAdmin: isSupremeAdminEmail(email),
+      isSupremeAdmin,
     };
   }
 

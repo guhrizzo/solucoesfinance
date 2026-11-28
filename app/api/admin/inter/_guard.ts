@@ -50,7 +50,7 @@ export async function guardAdmin(req: Request): Promise<{ scope: ApiScope } | Ne
 }
 
 /** Pro/cortesia do cliente como DONO da própria conta (mesma regra de app/api/inter/_guard.ts). */
-async function clienteTemPro(uid: string, email: string | null): Promise<boolean> {
+async function clienteTemPro(uid: string, email: string | null, emailVerified?: boolean): Promise<boolean> {
   const db = await getAdminDb();
   const state = await resolveScopeSubscription(db, {
     uid,
@@ -58,7 +58,7 @@ async function clienteTemPro(uid: string, email: string | null): Promise<boolean
     isOwner: true,
     permissions: "all",
     email,
-    isSupremeAdmin: isSupremeAdminEmail(email),
+    isSupremeAdmin: isSupremeAdminEmail(email, emailVerified),
   });
   return isProAccess(state);
 }

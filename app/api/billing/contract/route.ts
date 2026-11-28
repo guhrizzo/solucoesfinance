@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   // Conta cortesia (adm supremo): nunca paga → não faz sentido assinar contrato.
   try {
     const rec = await (await getAdminAuth()).getUser(scope.ownerUid);
-    if (isCompedEmail(rec.email)) {
+    if (isCompedEmail(rec.email, rec.emailVerified)) {
       return NextResponse.json(
         { error: "Sua conta é cortesia e tem acesso liberado — não é necessário contratar." },
         { status: 409 }

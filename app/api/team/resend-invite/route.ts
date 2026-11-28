@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const memberUid = typeof body?.memberUid === "string" ? body.memberUid : "";
   if (!memberUid) return NextResponse.json({ error: "Membro inválido." }, { status: 400 });
 
-  const { limited, retryAfterSec } = checkRateLimit(`team-resend:${memberUid}`, { windowMs: 15 * 60 * 1000, max: 3 }, isSupremeAdminEmail(auth.ownerEmail));
+  const { limited, retryAfterSec } = checkRateLimit(`team-resend:${memberUid}`, { windowMs: 15 * 60 * 1000, max: 3 }, isSupremeAdminEmail(auth.ownerEmail, auth.ownerEmailVerified));
   if (limited) {
     return NextResponse.json(
       { error: "Muitos reenvios em pouco tempo. Aguarde alguns minutos." },

@@ -22,6 +22,7 @@ import { canLoginWithSystemBrowser, loginWithSystemBrowser } from "@/lib/desktop
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink } from "@/lib/authLink";
 import { passwordRules } from "@/lib/passwordRules";
+import { requiresSupremeAdminEmailVerification } from "@/lib/compAccounts";
 import { notifyLeadConverted, rememberLead } from "@/lib/midas/convertClient";
 
 const KNOWN_ERROR_CODES = new Set([
@@ -94,7 +95,11 @@ export default function RegisterPage() {
   // já nasce travado (lib/billing.freshBillingDoc), então aqui só encaminhamos:
   // com plano escolhido (?plano=…) vai direto ao contrato; sem plano, à escolha
   // do plano. Não há mais questionário nem tour de entrada — o Midas apresenta.
-  const goAfterSignup = async () => {
+  const goAfterSignup = (registeredEmail: string | null) => {
+    if (requiresSupremeAdminEmailVerification(registeredEmail)) {
+      router.push("/configuracoes");
+      return;
+    }
     const qs = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const plano = qs?.get("plano") || null;
     router.push(
@@ -112,7 +117,7 @@ export default function RegisterPage() {
     try {
       const cred = await registerWithEmail(name.trim(), email, password);
       notifyLeadConverted(cred.user);
-      await goAfterSignup();
+      goAfterSignup(cred.user.email);
     } catch (err: any) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -131,7 +136,7 @@ export default function RegisterPage() {
       }
       const cred = await registerWithGoogle();
       notifyLeadConverted(cred.user);
-      await goAfterSignup();
+      goAfterSignup(cred.user.email);
     } catch (err: any) {
       const pending = await extractPendingGoogleLink(err);
       if (pending) {

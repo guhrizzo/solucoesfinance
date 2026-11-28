@@ -42,8 +42,8 @@ export async function GET(request: Request) {
       const doc = (b.exists ? b.data() : null) as BillingDoc | null;
       let rhEnabled = canUseRh(resolveSubscriptionState(doc));
       if (!rhEnabled) {
-        const email = await getAdminAuth().then((a) => a.getUser(ownerUid)).then((u) => u.email ?? null).catch(() => null);
-        rhEnabled = isCompedEmail(email);
+        const owner = await getAdminAuth().then((auth) => auth.getUser(ownerUid)).catch(() => null);
+        rhEnabled = isCompedEmail(owner?.email, owner?.emailVerified);
       }
       if (!rhEnabled) continue;
       await sincronizarDesde({ db, ownerUid }, desde);

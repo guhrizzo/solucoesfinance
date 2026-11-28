@@ -26,6 +26,7 @@ import AdminConectarCliente from "./AdminConectarCliente";
 interface AuthUser {
   uid: string;
   email: string | null;
+  emailVerified: boolean;
   displayName: string | null;
 }
 
@@ -55,7 +56,7 @@ export default function ConfiguracoesPage() {
   const scope = useAccountScope();
   const { toasts, show: showToast, remove: removeToast } = useToast();
 
-  const isAdmin = isSupremeAdminEmail(user?.email ?? null);
+  const isAdmin = isSupremeAdminEmail(user?.email, user?.emailVerified);
   const sub = useSubscription();
   const isPro = isProAccess(sub);
   // Só aparece depois que o escopo carregou e confirmou que é o dono.
@@ -92,7 +93,7 @@ export default function ConfiguracoesPage() {
           window.location.href = "/login";
           return;
         }
-        setUser({ uid: u.uid, email: u.email, displayName: u.displayName });
+        setUser({ uid: u.uid, email: u.email, emailVerified: u.emailVerified, displayName: u.displayName });
         setLoading(false);
       });
     })();
@@ -158,7 +159,9 @@ export default function ConfiguracoesPage() {
           </div>
 
           {tab === "perfil" && (
-            <PerfilTab user={user} scope={scope} showToast={showToast} onUserChange={setUser} />
+            <PerfilTab user={user} scope={scope} showToast={showToast} onUserChange={(updated) => {
+              setUser((current) => current?.uid === updated.uid ? { ...current, displayName: updated.displayName } : current);
+            }} />
           )}
           {tab === "aparencia" && <AparenciaTab showToast={showToast} />}
           {tab === "whatsapp" && <WhatsAppTab showToast={showToast} defaultName={user.displayName ?? ""} />}

@@ -3,7 +3,7 @@
 // GET   → lista os chamados. Adm supremo (lib/compAccounts) vê TODOS;
 //         qualquer outro vê só os próprios. Ser conta cortesia (isenta de
 //         cobrança) não dá esse privilégio — só quem está em
-//         SUPREME_ADMIN_EMAILS.
+//         lista de administradores em lib/compAccounts.
 //
 // A coleção `feedback` só é tocada aqui (Admin SDK) — firestore.rules nega
 // acesso direto do client.
@@ -24,13 +24,13 @@ import {
 
 const MAX_LIST = 500;
 
-/** e-mail + nome verificados do requisitante (nunca do corpo do request). */
-async function identify(uid: string): Promise<{ email: string | null; name: string | null }> {
+/** Dados da conta do requisitante consultados no Firebase. */
+async function identify(uid: string): Promise<{ email: string | null; name: string | null; emailVerified: boolean }> {
   try {
     const rec = await (await getAdminAuth()).getUser(uid);
-    return { email: rec.email ?? null, name: rec.displayName ?? null };
+    return { email: rec.email ?? null, name: rec.displayName ?? null, emailVerified: rec.emailVerified };
   } catch {
-    return { email: null, name: null };
+    return { email: null, name: null, emailVerified: false };
   }
 }
 
@@ -114,8 +114,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: scope.error }, { status: scope.status });
   }
 
-  const { email } = await identify(scope.uid);
-  const isAdmin = isSupremeAdminEmail(email);
+  const { email, emailVerified } = await identify(scope.uid);
+  const isAdmin = isSupremeAdminEmail(email, emailVerified);
 
   try {
     const db = await getAdminDb();

@@ -8,12 +8,14 @@ import { Check, Lock } from "lucide-react";
 import { Avatar, Card, Button, Input } from "@/app/components/ui";
 import { useProfilePhoto } from "@/app/hooks/useProfilePhoto";
 import type { AccountScope } from "@/app/hooks/useAccountScope";
+import { requiresSupremeAdminEmailVerification } from "@/lib/compAccounts";
 
 type ShowToast = (message: string, type?: "success" | "error" | "warning" | "info") => void;
 
 interface AuthUser {
   uid: string;
   email: string | null;
+  emailVerified: boolean;
   displayName: string | null;
 }
 
@@ -61,6 +63,7 @@ export default function PerfilTab({
   // ── Nome de exibição ──
   const [displayName, setDisplayName] = useState(user.displayName ?? "");
   const [savingName, setSavingName] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
   const nameDirty = displayName.trim() !== (user.displayName ?? "").trim();
 
   // ── Dados da empresa ──
@@ -113,6 +116,25 @@ export default function PerfilTab({
   }, [scope.loading, scope.ownerUid]);
 
   const photo = useProfilePhoto();
+
+  async function sendVerification() {
+    setSendingVerification(true);
+    try {
+      const { getFirebase } = await import("@/lib/firebase");
+      const { sendEmailVerification } = await import("firebase/auth");
+      const { auth } = await getFirebase();
+      const current = auth.currentUser;
+      if (current?.uid !== user.uid || current.email !== user.email) {
+        throw new Error(t("personal.sessionExpired"));
+      }
+      await sendEmailVerification(current);
+      showToast(t("personal.verificationSent"), "success");
+    } catch {
+      showToast(t("personal.verificationError"), "error");
+    } finally {
+      setSendingVerification(false);
+    }
+  }
 
   async function handleSaveName() {
     if (!nameDirty || savingName) return;
@@ -226,6 +248,14 @@ export default function PerfilTab({
               ),
             })}
           </p>
+          {!user.emailVerified && requiresSupremeAdminEmailVerification(user.email) && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>{t("personal.verificationHint")}</p>
+              <Button size="sm" variant="secondary" loading={sendingVerification} onClick={sendVerification}>
+                {t("personal.sendVerification")}
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end">

@@ -15,6 +15,7 @@ import { getAdminAuth, getAdminDb } from "./firebaseAdmin";
 export interface OwnerContext {
   ownerUid: string;
   ownerEmail: string | null;
+  ownerEmailVerified: boolean;
   ownerName: string | null;
 }
 
@@ -48,6 +49,7 @@ export async function requireOwner(req: NextRequest): Promise<RequireOwnerResult
   return {
     ownerUid: decoded.uid,
     ownerEmail: decoded.email ?? null,
+    ownerEmailVerified: decoded.email_verified === true,
     ownerName: (decoded.name as string | undefined) ?? null,
   };
 }

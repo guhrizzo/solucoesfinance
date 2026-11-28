@@ -64,7 +64,7 @@ export function useSubscription(): State {
 
           // Conta cortesia (adm supremo): libera na hora, sem trial/paywall.
           // Não depende do doc de billing nem de ser dono ou membro.
-          if (isCompedEmail(u.email)) {
+          if (isCompedEmail(u.email, u.emailVerified)) {
             if (!cancelled) {
               setState({
                 ...resolveSubscriptionState({ comped: true }),

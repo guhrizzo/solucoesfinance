@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   try {
     const rec = await (await getAdminAuth()).getUser(scope.ownerUid);
-    if (isCompedEmail(rec.email)) {
+    if (isCompedEmail(rec.email, rec.emailVerified)) {
       return NextResponse.json({ ok: false, reason: "conta cortesia" });
     }
     const createdAt = Date.parse(rec.metadata?.creationTime || "") || 0;

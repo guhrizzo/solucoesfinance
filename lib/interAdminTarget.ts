@@ -22,11 +22,12 @@ export type AdminTargetDeps = {
   getUserByEmail(email: string): Promise<{
     uid: string;
     email?: string;
+    emailVerified?: boolean;
     displayName?: string;
     customClaims?: Record<string, unknown>;
   } | null>;
   hasAccessDoc(uid: string): Promise<boolean>;
-  isPro(uid: string, email: string | null): Promise<boolean>;
+  isPro(uid: string, email: string | null, emailVerified?: boolean): Promise<boolean>;
 };
 
 export type AdminTarget =
@@ -56,7 +57,7 @@ export async function resolveTarget(rawEmail: unknown, deps: AdminTargetDeps): P
     };
   }
 
-  const pro = await deps.isPro(user.uid, email);
+  const pro = await deps.isPro(user.uid, email, user.emailVerified);
   return { ok: true, ownerUid: user.uid, email, nome: user.displayName || email, pro };
 }
 

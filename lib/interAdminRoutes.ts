@@ -35,6 +35,7 @@ export const INVALID_BODY_ERROR = "Dados inválidos.";
 export type AdminUserRecordLike = {
   uid: string;
   email?: string;
+  emailVerified?: boolean;
   displayName?: string;
   customClaims?: Record<string, unknown>;
 };
@@ -45,7 +46,7 @@ export type AdminDepsIO = {
   /** true se o documento existir (ex.: users/{uid}/profile/access). */
   docExists(path: string): Promise<boolean>;
   /** Pro/cortesia do DONO (mesma regra das rotas /api/inter/*). */
-  isPro(uid: string, email: string | null): Promise<boolean>;
+  isPro(uid: string, email: string | null, emailVerified?: boolean): Promise<boolean>;
 };
 
 /** Só o código exato de "usuário não existe" do Firebase Auth. */
@@ -65,10 +66,10 @@ export function buildAdminDeps(io: AdminDepsIO): AdminTargetDeps {
         throw e; // outros erros: a rota responde 500 com mensagem fixa
       }
       if (!u || typeof u.uid !== "string" || !u.uid) return null;
-      return { uid: u.uid, email: u.email, displayName: u.displayName, customClaims: u.customClaims };
+      return { uid: u.uid, email: u.email, emailVerified: u.emailVerified, displayName: u.displayName, customClaims: u.customClaims };
     },
     hasAccessDoc: (uid) => io.docExists(`users/${uid}/profile/access`),
-    isPro: (uid, email) => io.isPro(uid, email),
+    isPro: (uid, email, emailVerified) => io.isPro(uid, email, emailVerified),
   };
 }
 

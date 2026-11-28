@@ -30,11 +30,10 @@ export async function resolveScopeSubscription(
 
   // Membro de uma conta cujo DONO é cortesia (o doc pode não estar marcado ainda).
   if (!scope.isOwner) {
-    const ownerEmail = await getAdminAuth()
-      .then((a) => a.getUser(scope.ownerUid))
-      .then((u) => u.email ?? null)
+    const owner = await getAdminAuth()
+      .then((auth) => auth.getUser(scope.ownerUid))
       .catch(() => null);
-    if (isCompedEmail(ownerEmail)) {
+    if (isCompedEmail(owner?.email, owner?.emailVerified)) {
       await ref.set({ comped: true, updatedAt: Date.now() }, { merge: true }).catch(() => {});
       return resolveSubscriptionState({ comped: true });
     }

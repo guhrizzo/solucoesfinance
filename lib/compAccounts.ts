@@ -25,6 +25,12 @@ const SUPREME_ADMIN_EMAILS = [
   "felipeaugjpaiva@gmail.com",
 ];
 
+/** Contas futuras só recebem os privilégios depois que o Firebase confirma o endereço. */
+const VERIFIED_SUPREME_ADMIN_EMAILS = [
+  "gustavorizzo@nexusfi.com.br",
+  "felipe.paiva@nexusfi.com.br",
+];
+
 /** E-mails com acesso vitalício e gratuito, sem privilégio de admin. */
 const COURTESY_ONLY_EMAILS = [
   "atelieda.ni25@gmail.com",
@@ -42,6 +48,10 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+export function requiresSupremeAdminEmailVerification(email: string | null | undefined): boolean {
+  return !!email && VERIFIED_SUPREME_ADMIN_EMAILS.includes(normalizeEmail(email));
+}
+
 /** Lista efetiva: hard-coded + env `COMP_ACCOUNT_EMAILS` (separada por vírgula). */
 function compEmailSet(): Set<string> {
   const fromEnv = (process.env.COMP_ACCOUNT_EMAILS || "")
@@ -52,14 +62,17 @@ function compEmailSet(): Set<string> {
 }
 
 /** true se o e-mail pertence a uma conta cortesia (nunca cobrada). */
-export function isCompedEmail(email: string | null | undefined): boolean {
+export function isCompedEmail(email: string | null | undefined, emailVerified?: boolean): boolean {
   if (!email) return false;
-  return compEmailSet().has(normalizeEmail(email));
+  const normalized = normalizeEmail(email);
+  if (VERIFIED_SUPREME_ADMIN_EMAILS.includes(normalized)) return emailVerified === true;
+  return compEmailSet().has(normalized);
 }
 
 /** true se o e-mail é de um adm supremo (dono da plataforma). */
-export function isSupremeAdminEmail(email: string | null | undefined): boolean {
+export function isSupremeAdminEmail(email: string | null | undefined, emailVerified?: boolean): boolean {
   if (!email) return false;
-  const set = new Set(SUPREME_ADMIN_EMAILS.map(normalizeEmail));
-  return set.has(normalizeEmail(email));
+  const normalized = normalizeEmail(email);
+  return SUPREME_ADMIN_EMAILS.includes(normalized) ||
+    (emailVerified === true && VERIFIED_SUPREME_ADMIN_EMAILS.includes(normalized));
 }

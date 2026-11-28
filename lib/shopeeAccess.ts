@@ -10,9 +10,9 @@
 import { useAuth } from "@/app/hooks/useAuth";
 import { isSupremeAdminEmail } from "@/lib/compAccounts";
 
-export function isShopeeUiEmail(email: string | null | undefined): boolean {
+export function isShopeeUiEmail(email: string | null | undefined, emailVerified?: boolean): boolean {
   if (!email) return false;
-  if (isSupremeAdminEmail(email)) return true;
+  if (isSupremeAdminEmail(email, emailVerified)) return true;
   const e = email.trim().toLowerCase();
   return (process.env.NEXT_PUBLIC_SHOPEE_UI_EMAILS || "")
     .split(",")
@@ -24,5 +24,5 @@ export function isShopeeUiEmail(email: string | null | undefined): boolean {
 /** true se o usuário logado pode ver a Shopee na interface. */
 export function useShopeeUi(): boolean {
   const { user } = useAuth();
-  return isShopeeUiEmail(user?.email);
+  return isShopeeUiEmail(user?.email, user?.emailVerified);
 }

@@ -52,8 +52,8 @@ export async function GET(request: Request) {
         const b = await db.doc(`users/${ownerUid}/profile/billing`).get();
         const doc = (b.exists ? b.data() : null) as BillingDoc | null;
         if (isProAccess(resolveSubscriptionState(doc))) return true;
-        const email = await getAdminAuth().then((a) => a.getUser(ownerUid)).then((u) => u.email ?? null).catch(() => null);
-        return isCompedEmail(email);
+        const owner = await getAdminAuth().then((auth) => auth.getUser(ownerUid)).catch(() => null);
+        return isCompedEmail(owner?.email, owner?.emailVerified);
       })();
       proCache.set(ownerUid, p);
     }

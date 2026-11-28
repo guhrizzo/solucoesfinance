@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const { limited, retryAfterSec } = checkRateLimit(`team-invite:${auth.ownerUid}`, {
     windowMs: 60 * 60 * 1000,
     max: 20,
-  }, isSupremeAdminEmail(auth.ownerEmail));
+  }, isSupremeAdminEmail(auth.ownerEmail, auth.ownerEmailVerified));
   if (limited) {
     return NextResponse.json(
       { error: "Muitos convites em pouco tempo. Aguarde e tente novamente." },

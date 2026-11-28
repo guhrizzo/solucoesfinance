@@ -34,14 +34,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Sessão inválida ou expirada. Entre novamente." }, { status: 401 });
   }
 
-  let email: string | null = null;
+  let isAdmin = false;
   try {
-    email = (await auth.getUser(uid)).email ?? null;
+    const user = await auth.getUser(uid);
+    isAdmin = isSupremeAdminEmail(user.email, user.emailVerified);
   } catch {
-    email = null;
+    // Uma conta indisponível não pode acessar as métricas.
   }
 
-  if (!isSupremeAdminEmail(email)) {
+  if (!isAdmin) {
     return NextResponse.json({ error: "Sua conta não tem acesso a esta área." }, { status: 403 });
   }
 

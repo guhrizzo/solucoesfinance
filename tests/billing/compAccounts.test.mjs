@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { isCompedEmail, isSupremeAdminEmail, requiresSupremeAdminEmailVerification } from "../../lib/compAccounts.ts";
+
+test("os novos administradores recebem privilégio e cortesia só após verificar o endereço", () => {
+  for (const email of ["gustavorizzo@nexusfi.com.br", "felipe.paiva@nexusfi.com.br"]) {
+    assert.equal(requiresSupremeAdminEmailVerification(email), true);
+    assert.equal(isSupremeAdminEmail(email), false);
+    assert.equal(isSupremeAdminEmail(email, false), false);
+    assert.equal(isCompedEmail(email, false), false);
+    assert.equal(isSupremeAdminEmail(` ${email.toUpperCase()} `, true), true);
+    assert.equal(isCompedEmail(email, true), true);
+  }
+});
+
+test("mantém o acesso anterior e distingue cortesia de administração", () => {
+  for (const email of ["gurizzo943@gmail.com", "felipeaugjpaiva@gmail.com"]) {
+    assert.equal(requiresSupremeAdminEmailVerification(email), false);
+    assert.equal(isSupremeAdminEmail(email), true);
+    assert.equal(isCompedEmail(email), true);
+  }
+  assert.equal(isCompedEmail("atelieda.ni25@gmail.com"), true);
+  assert.equal(isSupremeAdminEmail("atelieda.ni25@gmail.com", true), false);
+  assert.equal(isSupremeAdminEmail("outra.pessoa@nexusfi.com.br", true), false);
+});

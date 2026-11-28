@@ -41,13 +41,8 @@ export async function GET(request: Request) {
     // Conta cortesia (adm supremo): se o DONO está na allowlist e o doc ainda
     // não foi marcado, marca agora. O client destrava via onSnapshot.
     if (!doc.comped) {
-      let ownerEmail: string | null = null;
-      try {
-        ownerEmail = (await (await getAdminAuth()).getUser(ownerUid)).email ?? null;
-      } catch {
-        /* sem e-mail → trata como conta normal */
-      }
-      if (isCompedEmail(ownerEmail)) {
+      const owner = await getAdminAuth().then((auth) => auth.getUser(ownerUid)).catch(() => null);
+      if (isCompedEmail(owner?.email, owner?.emailVerified)) {
         const now = Date.now();
         await ref.set({ comped: true, updatedAt: now }, { merge: true });
         doc = { ...doc, comped: true, updatedAt: now };
