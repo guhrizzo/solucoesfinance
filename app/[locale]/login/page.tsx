@@ -13,6 +13,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { extractPendingGoogleLink, completeGoogleLink, type PendingGoogleLink } from "@/lib/authLink";
 import { canLoginWithSystemBrowser, loginWithSystemBrowser } from "@/lib/desktopBridge";
+import { requiresSupremeAdminEmailVerification } from "@/lib/compAccounts";
 import { notifyLeadConverted, rememberLead, shouldConvertAfterGoogle } from "@/lib/midas/convertClient";
 
 // Códigos de erro Firebase reconhecidos → chave em auth.errors.
@@ -113,8 +114,13 @@ export default function LoginPage() {
     try {
       const { getFirebase } = await import("@/lib/firebase");
       const { auth } = await getFirebase();
-      const claims = (await auth.currentUser?.getIdTokenResult())?.claims;
+      const user = auth.currentUser;
+      const claims = (await user?.getIdTokenResult())?.claims;
       if (claims?.portalOnly === true) { router.push("/fornecedor"); return; }
+      if (user && requiresSupremeAdminEmailVerification(user.email)) {
+        router.replace(user.emailVerified ? "/dashboard" : "/configuracoes");
+        return;
+      }
     } catch { /* segue o fluxo normal */ }
     const plano =
       typeof window !== "undefined"

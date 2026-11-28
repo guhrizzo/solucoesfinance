@@ -63,7 +63,7 @@ export default function PerfilTab({
   // ── Nome de exibição ──
   const [displayName, setDisplayName] = useState(user.displayName ?? "");
   const [savingName, setSavingName] = useState(false);
-  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationAction, setVerificationAction] = useState<"send" | "check" | null>(null);
   const nameDirty = displayName.trim() !== (user.displayName ?? "").trim();
 
   // ── Dados da empresa ──
@@ -117,22 +117,32 @@ export default function PerfilTab({
 
   const photo = useProfilePhoto();
 
-  async function sendVerification() {
-    setSendingVerification(true);
+  async function verifyEmail(action: "send" | "check") {
+    setVerificationAction(action);
     try {
       const { getFirebase } = await import("@/lib/firebase");
-      const { sendEmailVerification } = await import("firebase/auth");
       const { auth } = await getFirebase();
       const current = auth.currentUser;
       if (current?.uid !== user.uid || current.email !== user.email) {
         throw new Error(t("personal.sessionExpired"));
       }
-      await sendEmailVerification(current);
-      showToast(t("personal.verificationSent"), "success");
+      if (action === "send") {
+        const { sendEmailVerification } = await import("firebase/auth");
+        await sendEmailVerification(current);
+        showToast(t("personal.verificationSent"), "success");
+      } else {
+        await current.reload();
+        if (!current.emailVerified) {
+          showToast(t("personal.verificationPending"), "info");
+          return;
+        }
+        await current.getIdToken(true);
+        window.location.reload();
+      }
     } catch {
-      showToast(t("personal.verificationError"), "error");
+      showToast(t(action === "send" ? "personal.verificationError" : "personal.verificationCheckError"), "error");
     } finally {
-      setSendingVerification(false);
+      setVerificationAction(null);
     }
   }
 
@@ -251,9 +261,14 @@ export default function PerfilTab({
           {!user.emailVerified && requiresSupremeAdminEmailVerification(user.email) && (
             <div className="mt-3 space-y-2">
               <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>{t("personal.verificationHint")}</p>
-              <Button size="sm" variant="secondary" loading={sendingVerification} onClick={sendVerification}>
-                {t("personal.sendVerification")}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" loading={verificationAction === "send"} disabled={verificationAction !== null} onClick={() => verifyEmail("send")}>
+                  {t("personal.sendVerification")}
+                </Button>
+                <Button size="sm" variant="secondary" loading={verificationAction === "check"} disabled={verificationAction !== null} onClick={() => verifyEmail("check")}>
+                  {t("personal.checkVerification")}
+                </Button>
+              </div>
             </div>
           )}
         </div>

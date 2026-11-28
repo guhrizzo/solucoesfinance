@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { usePathname } from "@/i18n/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { Sparkles, X } from "lucide-react";
 import { useSubscription } from "../hooks/useSubscription";
+import { subscriptionGateView } from "@/lib/billing";
+import { PageLoader } from "./ui";
 import Paywall from "./Paywall";
 
 // Rotas internas onde o hook de assinatura roda (banner de trial + bloqueio).
@@ -38,12 +40,15 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
 
 function Chrome({ pathname, children }: { pathname: string; children: React.ReactNode }) {
   const sub = useSubscription();
-  const gated = matches(pathname, GATED_PREFIXES);
+  const router = useRouter();
+  const view = subscriptionGateView(matches(pathname, GATED_PREFIXES), sub);
 
-  // Bloqueio: só depois de confirmar que expirou (estado inicial é otimista).
-  if (gated && !sub.loading && !sub.signedOut && !sub.isActive) {
-    return <Paywall state={sub} blocking />;
-  }
+  useEffect(() => {
+    if (view === "verify") router.replace("/configuracoes");
+  }, [router, view]);
+
+  if (view === "loading" || view === "verify") return <PageLoader />;
+  if (view === "paywall") return <Paywall state={sub} blocking />;
 
   return (
     <>

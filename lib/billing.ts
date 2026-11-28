@@ -94,6 +94,16 @@ export interface SubscriptionState {
   cardTrialEligible: boolean;
 }
 
+export function subscriptionGateView(
+  gated: boolean,
+  state: { loading: boolean; signedOut: boolean; isActive: boolean; verificationRequired: boolean },
+): "content" | "loading" | "verify" | "paywall" {
+  if (!gated || state.signedOut) return "content";
+  if (state.loading) return "loading";
+  if (state.verificationRequired) return "verify";
+  return state.isActive ? "content" : "paywall";
+}
+
 /**
  * Elegível ao teste com cartão: entrou pelo caminho do cartão, nunca pagou,
  * nunca ativou esse teste e não tem renovação automática viva.

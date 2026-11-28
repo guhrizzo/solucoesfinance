@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { resolveSubscriptionState, type BillingDoc, type SubscriptionState } from "@/lib/billing";
-import { isCompedEmail } from "@/lib/compAccounts";
+import { isCompedEmail, requiresSupremeAdminEmailVerification } from "@/lib/compAccounts";
 
 // Estado ao vivo da assinatura da CONTA (o dono — membros herdam).
 //
@@ -16,12 +16,14 @@ interface State extends SubscriptionState {
   isOwner: boolean;
   /** true quando não há usuário logado (o gate deixa passar; useAuth redireciona). */
   signedOut: boolean;
+  verificationRequired: boolean;
 }
 
 const INITIAL: State = {
   loading: true,
   isOwner: true,
   signedOut: false,
+  verificationRequired: false,
   status: "trialing",
   isActive: true,
   accessUntil: 0,
@@ -43,6 +45,7 @@ export function useSubscription(): State {
     let unsubAuth: (() => void) | undefined;
     let unsubDoc: (() => void) | undefined;
     let cancelled = false;
+    let authRevision = 0;
 
     (async () => {
       try {
@@ -54,23 +57,42 @@ export function useSubscription(): State {
             import("@/lib/authedFetch"),
           ]);
         const { auth, db } = await getFirebase();
+        if (cancelled) return;
 
         unsubAuth = onAuthStateChanged(auth, async (u) => {
+          const revision = ++authRevision;
+          const isCurrent = () => !cancelled && revision === authRevision;
           unsubDoc?.();
+          unsubDoc = undefined;
           if (!u) {
-            if (!cancelled) setState({ ...INITIAL, loading: false, signedOut: true });
+            if (isCurrent()) setState({ ...INITIAL, loading: false, signedOut: true });
             return;
+          }
+          if (!isCurrent()) return;
+          setState(INITIAL);
+
+          if (requiresSupremeAdminEmailVerification(u.email) && !u.emailVerified) {
+            // O link pode ter sido aberto em outra aba, com a sessão atual ainda desatualizada.
+            await u.reload().catch(() => {});
+            if (!isCurrent()) return;
+            if (requiresSupremeAdminEmailVerification(u.email) && !u.emailVerified) {
+              setState({ ...INITIAL, ...resolveSubscriptionState(null), loading: false, verificationRequired: true });
+              return;
+            }
+            await u.getIdToken(true).catch(() => {});
+            if (!isCurrent()) return;
           }
 
           // Conta cortesia (adm supremo): libera na hora, sem trial/paywall.
           // Não depende do doc de billing nem de ser dono ou membro.
           if (isCompedEmail(u.email, u.emailVerified)) {
-            if (!cancelled) {
+            if (isCurrent()) {
               setState({
                 ...resolveSubscriptionState({ comped: true }),
                 loading: false,
                 isOwner: true,
                 signedOut: false,
+                verificationRequired: false,
               });
             }
             return;
@@ -89,7 +111,7 @@ export function useSubscription(): State {
             if (res.ok) {
               const d = await res.json();
               isOwner = !!d.isOwner;
-              if (!cancelled) {
+              if (isCurrent()) {
                 setState({
                   status: d.status,
                   isActive: d.isActive,
@@ -106,12 +128,14 @@ export function useSubscription(): State {
                   loading: false,
                   isOwner,
                   signedOut: false,
+                  verificationRequired: false,
                 });
               }
             }
           } catch {
             /* segue pro snapshot mesmo assim */
           }
+          if (!isCurrent()) return;
 
           // Descobre o ownerUid pra escutar o doc certo.
           try {
@@ -128,17 +152,18 @@ export function useSubscription(): State {
           } catch {
             /* trata como dono */
           }
+          if (!isCurrent()) return;
 
           // 2. Escuta o doc de billing do dono, ao vivo.
           unsubDoc = onSnapshot(
             doc(db, "users", ownerUid, "profile", "billing"),
             (snap) => {
-              if (cancelled) return;
+              if (!isCurrent()) return;
               const s = resolveSubscriptionState(snap.exists() ? (snap.data() as BillingDoc) : null);
-              setState({ ...s, loading: false, isOwner, signedOut: false });
+              setState({ ...s, loading: false, isOwner, signedOut: false, verificationRequired: false });
             },
             () => {
-              if (!cancelled) setState((p) => ({ ...p, loading: false, isOwner, signedOut: false }));
+              if (isCurrent()) setState((p) => ({ ...p, loading: false, isOwner, signedOut: false }));
             }
           );
         });
