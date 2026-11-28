@@ -203,8 +203,10 @@
       "bonus": "Bônus",
       "total": "Total"
     },
-    "premissas": "Encargos e provisões (13º e férias + 1/3) valem só para vínculo CLT. Salário e benefícios são proporcionais aos dias ativos no mês. Adicionais (só CLT, do cadastro, proporcionais ao mês): noturno = horas × valor da hora × %; insalubridade = grau × salário mínimo; periculosidade = 30% do salário-base. A base dos encargos é salário + adicionais + provisões + comissão + bônus; benefícios ficam de fora. Com a folha fechada, vale o que a folha apurou.",
+    "premissas": "Encargos e provisões de 13º e férias + 1/3 se aplicam a vínculos CLT. Salário e benefícios são proporcionais aos dias ativos. Os encargos gerenciais incidem sobre remuneração, comissão, bônus e provisões. Com a folha fechada, o FGTS usa o valor apurado na folha e inclui a provisão sobre 13º e férias.",
     "bonusSalvo": "Bônus salvo.",
+    "semDetalheEncargos": "Detalhamento indisponível",
+    "encargosPendentes": "A coluna Encargos mostra — para alíquotas ainda sem cadastro. Informe as alíquotas da empresa na aba Encargos.",
     "rateioTitulo": "Rateio por centro de custo",
     "rateioNota": "Lançado nos centros de custo só como orçamento (previsto), sem baixa — a baixa vem do extrato no Fluxo de Caixa. Nada vai para a DRE. O que não tem alocação aparece como \"Não alocado\".",
     "naoAlocado": "Não alocado",
@@ -231,14 +233,22 @@
     }
   },
   "encargos": {
-    "titulo": "Percentual de encargos",
-    "desc": "Valor único da empresa, aplicado a todos os colaboradores CLT. Varia conforme o regime tributário — confirme com o contador.",
+    "titulo": "Alíquotas de encargos patronais",
+    "desc": "Informe as alíquotas por vigência de acordo com o regime da empresa. Use 0 quando um encargo não se aplicar. O FGTS segue a categoria do colaborador na folha. Uma nova vigência substitui o percentual anterior a partir da data indicada.",
     "atual": "Vigente hoje",
-    "pct": "Encargos (%)",
+    "consolidado": "Percentual consolidado",
     "aPartirDe": "A partir de",
     "aplicar": "Aplicar",
     "historico": "Histórico",
-    "nenhum": "Ainda não definido (0%)."
+    "nenhum": "Alíquotas ainda não cadastradas.",
+    "tipos": {
+      "fgts": "FGTS",
+      "fgtsRescisorio": "FGTS rescisório",
+      "inssPatronal": "INSS patronal",
+      "rat": "RAT",
+      "terceiros": "Terceiros",
+      "outros": "Outros encargos"
+    }
   },
   "log": {
     "titulo": "Quem acessou ou alterou dados de colaboradores",

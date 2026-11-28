@@ -8,7 +8,7 @@
 // de assumir um número — e a folha não pode ser fechada com erro.
 //
 // Limites conhecidos (a conferência do contador cobre): o INSS patronal não é
-// calculado (o custo dele está no % de encargos do custo gerencial); o IRRF usa
+// calculado (o custo gerencial usa as alíquotas patronais cadastradas); o IRRF usa
 // tabela com parcela a deduzir, dedução por dependente e, se informado, o
 // desconto simplificado (vale o mais vantajoso). Redutores e demais regras
 // especiais devem ser tratados com rubrica manual.
@@ -285,6 +285,8 @@ export interface ResultadoFolha {
   fgts: number;
   /** Doméstico: FGTS extra (conta separada da multa de rescisão). */
   fgtsRescisorio: number;
+  /** Alíquotas da apuração, disponíveis nos fechamentos que registram este campo. */
+  aliquotasFgts?: ReturnType<typeof fgtsDaCategoria>;
   proventos: number;
   descontos: number;
   liquido: number;
@@ -431,5 +433,5 @@ export function calcularFolhaColab(e: EntradaFolha): ResultadoFolha {
     }, 0),
   );
   if (e.salarioPeriodo <= 0) avisos.push(`${e.nomeColaborador}: sem salário no mês.`);
-  return { itens, bases, inss, irrf, irrfMetodo, fgts, fgtsRescisorio, proventos, descontos, liquido: r2(proventos - descontos), custoSalarioBase, erros, avisos };
+  return { itens, bases, inss, irrf, irrfMetodo, fgts, fgtsRescisorio, aliquotasFgts: fg, proventos, descontos, liquido: r2(proventos - descontos), custoSalarioBase, erros, avisos };
 }

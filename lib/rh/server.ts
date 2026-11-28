@@ -13,13 +13,13 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { canUseRh } from "@/lib/billing";
 import { resolveScopeSubscription } from "@/lib/scopeSubscription";
-import { calcularCustoMes, r2, type BeneficioVig, type CustoMes, type Vinculo } from "./custo";
+import { calcularCustoMes, r2, type BeneficioVig, type CustoMes, type DadosEncargos, type Vinculo } from "./custo";
 import { diasAtivos, type Vigencia } from "./vigencia";
 import { ratear, type DadosAlocacao, type Rateio } from "./alocacao";
 import { monthOf, nextComp, todayKey } from "./datas";
 import { apurarComissoes, type ResultadoComissao } from "./comissaoServer";
-import { carregarParametros, salariosDaFolhaFechada } from "./folhaServer";
-import { PARAMETROS_SUGERIDOS } from "./folha";
+import { carregarParametros, custosDaFolhaFechada } from "./folhaServer";
+import { fgtsDaCategoria, PARAMETROS_SUGERIDOS, type CategoriaFgts } from "./folha";
 
 export const EMPRESA = "_empresa";
 
@@ -152,6 +152,7 @@ interface ColabDoc {
   pctAdNoturno?: number;
   insalubridade?: number;
   periculosidade?: boolean;
+  categoriaFgts?: CategoriaFgts;
 }
 
 export interface RateioNomeado {
@@ -198,14 +199,14 @@ export async function carregarAlocacoes(ctx: RhBase): Promise<Map<string, Vigenc
 
 /** Apura o custo de todos os colaboradores ativos na competência (cálculo vivo). */
 export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<LinhaCusto[]> {
-  const [colabSnap, vigSnap, varSnap, aloc, centros, comissoes, salariosFolha, params] = await Promise.all([
+  const [colabSnap, vigSnap, varSnap, aloc, centros, comissoes, custosFolha, params] = await Promise.all([
     rhCol(ctx, "rhColaboradores").get(),
     rhCol(ctx, "rhVigencias").get(),
     rhCol(ctx, "rhVariaveis").where("comp", "==", comp).get(),
     carregarAlocacoes(ctx),
     listarCentros(ctx),
     apurarComissoes(ctx, comp),
-    salariosDaFolhaFechada(ctx, comp),
+    custosDaFolhaFechada(ctx, comp),
     carregarParametros(ctx),
   ]);
   // Adicional noturno: mesmo divisor de horas e % padrão da folha (o % do cadastro tem prioridade).
@@ -215,7 +216,7 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
 
   const salarios = new Map<string, Vigencia<{ valor: number }>[]>();
   const beneficios = new Map<string, Vigencia<BeneficioVig>[]>();
-  const encargos: Vigencia<{ pct: number }>[] = [];
+  const encargos: Vigencia<DadosEncargos>[] = [];
   for (const d of vigSnap.docs) {
     const v = d.data();
     const base = { id: d.id, inicio: String(v.inicio), fim: (v.fim as string | null) ?? null };
@@ -225,7 +226,7 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
     } else if (v.tipo === "beneficio") {
       beneficios.set(cid, [...(beneficios.get(cid) ?? []), { ...base, dados: { nome: String(v.nome ?? ""), tipo: String(v.tipoBeneficio ?? "outro"), valor: Number(v.valor) || 0 } }]);
     } else if (v.tipo === "encargos" && cid === EMPRESA) {
-      encargos.push({ ...base, dados: { pct: Number(v.pct) || 0 } });
+      encargos.push({ ...base, dados: { pct: Number(v.pct) || 0, aliquotas: v.aliquotas } });
     }
   }
   const variaveis = new Map<string, { bonus: number; comissao: number }>();
@@ -238,6 +239,7 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
   for (const d of colabSnap.docs) {
     const c = { id: d.id, ...d.data() } as ColabDoc;
     const vr = variaveis.get(c.id);
+    const folha = custosFolha.get(c.id);
     const custo = calcularCustoMes({
       comp,
       entrada: c.dataEntrada,
@@ -245,10 +247,11 @@ export async function apurarCompetencia(ctx: RhBase, comp: string): Promise<Linh
       vinculo: c.vinculo,
       salarios: salarios.get(c.id) ?? [],
       encargos,
+      fgts: folha?.fgtsApurado ?? fgtsDaCategoria(params, c.categoriaFgts ?? "geral"),
       beneficios: beneficios.get(c.id) ?? [],
       comissao: comissoes.porColab.get(c.id)?.total ?? 0,
       // Folha fechada: o custo passa a refletir o que foi de fato apurado (faltas, horas extras…).
-      salarioOverride: salariosFolha?.has(c.id) ? salariosFolha.get(c.id) : undefined,
+      salarioOverride: folha?.custoSalarioBase,
       bonus: vr?.bonus ?? 0,
       adicionalNoturno: (Number(c.horasNoturnasMes) || 0) > 0
         ? { horasMes: Number(c.horasNoturnasMes), pct: Number(c.pctAdNoturno) > 0 ? Number(c.pctAdNoturno) : pctNoturnoEmpresa, divisorHoras }

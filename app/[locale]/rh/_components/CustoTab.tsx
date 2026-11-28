@@ -7,6 +7,7 @@ import { Button, EmptyState, Field, Input, KpiTile, Pill, Table, type Column } f
 import { formatMoney } from "@/lib/format";
 import { usePeriod } from "@/app/hooks/usePeriod";
 import { gerarCustoPdf } from "@/lib/rh/custoPdf";
+import { ENCARGOS_PATRONAIS } from "@/lib/rh/custo";
 import { fmtData, rhApi, type CustoMes, RhModal as Modal } from "./shared";
 
 interface Rateio { itens: { centroId: string; centroNome: string; valor: number }[]; naoAlocado: number }
@@ -80,6 +81,9 @@ export function CustoTab() {
 
   const money = (n: number) => formatMoney(n, locale);
   const fechada = data?.status === "fechada";
+  const encargosPendentes = data?.linhas.some(({ custo }) =>
+    custo.detalheEncargos && ENCARGOS_PATRONAIS.some((k) => custo.detalheEncargos?.[k] === undefined),
+  );
 
   // Rateio por centro de custo (soma das linhas) + parte sem alocação.
   const porCentro = new Map<string, { nome: string; valor: number }>();
@@ -183,6 +187,7 @@ export function CustoTab() {
       </div>
 
       {erro && <p role="alert" className="text-sm font-medium" style={{ color: "var(--neg)" }}>{erro}</p>}
+      {!fechada && encargosPendentes && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{t("custo.encargosPendentes")}</p>}
 
       {data && (
         <Table
@@ -216,8 +221,36 @@ export function CustoTab() {
               }
               case "prov13": return money(c.prov13);
               case "provFerias": return money(c.provFerias);
-              case "encargos": return <span title={`${c.encargosPct}%`}>{money(c.encargos)}</span>;
-              case "beneficios": return money(c.beneficiosTotal);
+              case "encargos": {
+                const detalhe = c.detalheEncargos;
+                return (
+                  <span>
+                    {money(c.encargos)}
+                    {detalhe && (["fgts", "fgtsRescisorio", ...ENCARGOS_PATRONAIS] as const).map((k) => (
+                      (k !== "fgtsRescisorio" || detalhe[k] !== undefined) && (
+                        <span key={k} className="block text-[11px]" style={{ color: "var(--text-subtle)" }}>
+                          {t(`encargos.tipos.${k}`)} {detalhe[k] === undefined ? "—" : money(detalhe[k])}
+                        </span>
+                      )
+                    ))}
+                    {!detalhe && r.vinculo === "CLT" && (
+                      <span className="block text-[11px]" style={{ color: "var(--text-subtle)" }}>
+                        {t(c.encargosPct > 0 ? "encargos.consolidado" : "custo.semDetalheEncargos")}
+                      </span>
+                    )}
+                  </span>
+                );
+              }
+              case "beneficios": return (
+                <span>
+                  {money(c.beneficiosTotal)}
+                  {c.beneficios?.map((b) => (
+                    <span key={b.nome} className="block text-[11px]" style={{ color: "var(--text-subtle)" }}>
+                      {b.nome} {money(b.valor)}
+                    </span>
+                  ))}
+                </span>
+              );
               case "comissao": return money(c.comissao);
               case "bonus": return fechada ? money(c.bonus) : (
                 <Input

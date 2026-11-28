@@ -6,6 +6,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button, Input, Modal } from "@/app/components/ui";
 import { inputBaseStyle } from "@/app/components/ui/Input";
 import { authedFetch } from "@/lib/authedFetch";
+import type { AliquotasPatronais, DetalheEncargos } from "@/lib/rh/custo";
 
 export type Vinculo = "CLT" | "PJ" | "estagio" | "outro";
 
@@ -47,6 +48,7 @@ export interface Vigencia {
   fim: string | null;
   valor?: number;
   pct?: number;
+  aliquotas?: AliquotasPatronais;
   nome?: string;
   tipoBeneficio?: string;
 }
@@ -65,6 +67,8 @@ export interface CustoMes {
   bonus: number;
   encargosPct: number;
   encargos: number;
+  detalheEncargos?: DetalheEncargos;
+  beneficios?: { nome: string; valor: number }[];
   beneficiosTotal: number;
   total: number;
   semSalario: boolean;

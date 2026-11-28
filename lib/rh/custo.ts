@@ -22,6 +22,14 @@ import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vige
 
 export type Vinculo = "CLT" | "PJ" | "estagio" | "outro";
 
+export const ENCARGOS_PATRONAIS = ["inssPatronal", "rat", "terceiros", "outros"] as const;
+export type AliquotasPatronais = Record<(typeof ENCARGOS_PATRONAIS)[number], number>;
+export type DetalheEncargos = Partial<AliquotasPatronais & { fgts: number; fgtsRescisorio: number }>;
+export interface DadosEncargos {
+  pct: number;
+  aliquotas?: AliquotasPatronais;
+}
+
 export interface BeneficioVig {
   nome: string;
   tipo: string; // vt | vr | saude | outro
@@ -34,7 +42,12 @@ export interface CustoInput {
   saida: string | null;
   vinculo: Vinculo;
   salarios: Vigencia<{ valor: number }>[];
-  encargos: Vigencia<{ pct: number }>[];
+  encargos: Vigencia<DadosEncargos>[];
+  fgts?: {
+    aliquota: number | null;
+    rescisorio: number;
+    folha?: { fgts: number; fgtsRescisorio: number };
+  };
   beneficios: Vigencia<BeneficioVig>[];
   comissao: number;
   bonus: number;
@@ -63,6 +76,7 @@ export interface CustoMes {
   bonus: number;
   encargosPct: number;
   encargos: number;
+  detalheEncargos?: DetalheEncargos;
   beneficios: { nome: string; tipo: string; valor: number }[];
   beneficiosTotal: number;
   total: number;
@@ -113,9 +127,29 @@ export function calcularCustoMes(i: CustoInput): CustoMes {
   const prov13 = clt ? r2(remuneracao / 12) : 0;
   const provFerias = clt ? r2((remuneracao / 12) * (4 / 3)) : 0;
 
-  const encargosPct = clt ? Math.max(0, vigenciaEm(i.encargos, ultimoDia)?.dados.pct ?? 0) : 0;
+  const vigenciaEncargos = clt ? vigenciaEm(i.encargos, ultimoDia)?.dados : undefined;
+  const aliquotas = vigenciaEncargos?.aliquotas;
+  const encargosPct = aliquotas ? 0 : Math.max(0, vigenciaEncargos?.pct ?? 0);
   const baseEncargos = remuneracao + prov13 + provFerias + base.comissao + base.bonus;
-  const encargos = clt ? r2((baseEncargos * encargosPct) / 100) : 0;
+  let encargos = r2((baseEncargos * encargosPct) / 100);
+  let detalheEncargos: DetalheEncargos | undefined;
+  if (clt && (aliquotas || (i.fgts && encargosPct === 0))) {
+    detalheEncargos = {};
+    if (aliquotas) {
+      for (const encargo of ENCARGOS_PATRONAIS) {
+        detalheEncargos[encargo] = r2((baseEncargos * aliquotas[encargo]) / 100);
+      }
+    }
+    const fgts = i.fgts;
+    if (fgts && (fgts.aliquota !== null || fgts.folha)) {
+      const baseFgts = fgts.folha ? prov13 + provFerias : Math.max(0, baseEncargos);
+      detalheEncargos.fgts = r2((fgts.folha?.fgts ?? 0) + (baseFgts * (fgts.aliquota ?? 0)) / 100);
+      if (fgts.rescisorio > 0 || (fgts.folha?.fgtsRescisorio ?? 0) > 0) {
+        detalheEncargos.fgtsRescisorio = r2((fgts.folha?.fgtsRescisorio ?? 0) + (baseFgts * fgts.rescisorio) / 100);
+      }
+    }
+    encargos = r2(Object.values(detalheEncargos).reduce((soma, valor) => soma + valor, 0));
+  }
 
   // Benefícios: agrupa por nome (cada nome é uma "linha" com seu histórico).
   const porNome = new Map<string, Vigencia<BeneficioVig>[]>();
@@ -131,5 +165,5 @@ export function calcularCustoMes(i: CustoInput): CustoMes {
   const beneficiosTotal = r2(beneficios.reduce((s, b) => s + b.valor, 0));
 
   const total = r2(salario + adNoturno + insalubridade + periculosidade + prov13 + provFerias + encargos + beneficiosTotal + base.comissao + base.bonus);
-  return { ...base, salario, adNoturno, insalubridade, periculosidade, prov13, provFerias, encargosPct, encargos, beneficios, beneficiosTotal, total, semSalario, ...(daFolha ? { salarioDaFolha: true } : {}) };
+  return { ...base, salario, adNoturno, insalubridade, periculosidade, prov13, provFerias, encargosPct, encargos, beneficios, beneficiosTotal, total, semSalario, ...(detalheEncargos ? { detalheEncargos } : {}), ...(daFolha ? { salarioDaFolha: true } : {}) };
 }

@@ -49,6 +49,7 @@ test("folha: salário, INSS, IRRF, FGTS e líquido", async () => {
   assert.equal(r.inss, 300);
   assert.equal(r.irrf, 70);
   assert.equal(r.fgts, 160);
+  assert.deepEqual(r.aliquotasFgts, { aliquota: 8, rescisorio: 0 });
   assert.equal(r.proventos, 2000);
   assert.equal(r.liquido, 1630);
   assert.equal(r.custoSalarioBase, 2000);

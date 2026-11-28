@@ -40,6 +40,43 @@ test("PJ e estágio: sem encargos nem provisões", () => {
   }
 });
 
+test("FGTS por categoria entra no custo mesmo sem vigência de encargos patronais", () => {
+  const c = calcularCustoMes(base({ encargos: [], fgts: { aliquota: 2, rescisorio: 0 } }));
+  assert.deepEqual(c.detalheEncargos, { fgts: 71.67 });
+  assert.equal(c.encargos, 71.67);
+  assert.equal(c.total, 3655);
+});
+
+test("alíquotas discriminadas somam ao FGTS apurado na folha e à provisão de FGTS", () => {
+  const c = calcularCustoMes(base({
+    encargos: [vig("2026-01-01", { pct: 0, aliquotas: { inssPatronal: 20, rat: 1, terceiros: 5.8, outros: 0 } })],
+    salarioOverride: 3000,
+    fgts: { aliquota: 8, rescisorio: 3.2, folha: { fgts: 200, fgtsRescisorio: 80 } },
+  }));
+  assert.deepEqual(c.detalheEncargos, {
+    fgts: 246.67, fgtsRescisorio: 98.67, inssPatronal: 716.67, rat: 35.83, terceiros: 207.83, outros: 0,
+  });
+  assert.equal(c.encargos, 1305.67);
+  assert.equal(c.total, 4889);
+});
+
+test("percentual histórico consolidado continua sem somar FGTS em duplicidade", () => {
+  const c = calcularCustoMes(base({ fgts: { aliquota: 8, rescisorio: 0 } }));
+  assert.equal(c.encargos, 1075);
+  assert.equal(c.detalheEncargos, undefined);
+});
+
+test("FGTS e alíquotas patronais não entram no custo de vínculos não CLT", () => {
+  const c = calcularCustoMes(base({
+    vinculo: "PJ",
+    encargos: [vig("2026-01-01", { pct: 0, aliquotas: { inssPatronal: 20, rat: 1, terceiros: 5.8, outros: 0 } })],
+    fgts: { aliquota: 8, rescisorio: 0 },
+  }));
+  assert.equal(c.encargos, 0);
+  assert.equal(c.detalheEncargos, undefined);
+  assert.equal(c.total, 3000);
+});
+
 test("benefícios, comissão e bônus entram no total; benefício fica fora da base de encargos", () => {
   const c = calcularCustoMes(base({
     vinculo: "PJ",

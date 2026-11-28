@@ -20,6 +20,7 @@ import { diasAtivos, valorProporcional, vigenciaEm, type Vigencia } from "./vige
 import { daysInMonth, firstDay, lastDay } from "./datas";
 import { apurarComissoes } from "./comissaoServer";
 import { rhCol, type RhBase } from "./server";
+import { r2, type CustoInput } from "./custo";
 
 export async function carregarParametros(ctx: RhBase): Promise<ParametrosFolha> {
   const s = await rhCol(ctx, "rhConfig").doc("folha").get();
@@ -226,10 +227,30 @@ export async function apurarFolha(ctx: RhBase, comp: string): Promise<FolhaApura
   return { ...base, fechada, linhas, erros: [...errosGlobais], foraDaFolha, tabelas: { inssId: inss?.id ?? null, irrfId: irrf?.id ?? null } };
 }
 
-/** Salário-base que o custo gerencial usa de uma folha FECHADA (colab → valor). */
-export async function salariosDaFolhaFechada(ctx: RhBase, comp: string): Promise<Map<string, number> | null> {
+/** Salário-base e FGTS apurados na folha fechada para o custo gerencial. */
+export async function custosDaFolhaFechada(ctx: RhBase, comp: string): Promise<Map<string, {
+  custoSalarioBase: number;
+  fgtsApurado?: CustoInput["fgts"];
+}>> {
   const f = await rhCol(ctx, "rhFolhas").doc(comp).get();
-  if (!f.exists || f.data()?.status !== "fechada") return null;
+  if (f.data()?.status !== "fechada") return new Map();
   const snap = await rhCol(ctx, "rhFolhaItens").where("comp", "==", comp).get();
-  return new Map(snap.docs.map((d) => [String(d.data().colaboradorId), Number(d.data().resultado?.custoSalarioBase) || 0]));
+  return new Map(snap.docs.map((d) => {
+    const item = d.data();
+    const resultado = item.resultado as Partial<ResultadoFolha> | undefined;
+    const fgts = resultado?.fgts;
+    const fgtsRescisorio = resultado?.fgtsRescisorio ?? 0;
+    const baseFgts = resultado?.bases?.fgts ?? 0;
+    // A folha antiga guarda a base e o depósito, mas não a alíquota.
+    const aliquotas = resultado?.aliquotasFgts ?? {
+      aliquota: baseFgts > 0 && fgts !== undefined ? r2((fgts / baseFgts) * 100) : null,
+      rescisorio: baseFgts > 0 ? r2((fgtsRescisorio / baseFgts) * 100) : 0,
+    };
+    return [String(item.colaboradorId), {
+      custoSalarioBase: Number(resultado?.custoSalarioBase) || 0,
+      fgtsApurado: typeof fgts === "number"
+        ? { ...aliquotas, folha: { fgts, fgtsRescisorio } }
+        : undefined,
+    }];
+  }));
 }

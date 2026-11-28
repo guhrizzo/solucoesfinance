@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { guardRh, isCtx, logRh, rhCol, competenciasFechadas, EMPRESA, listarCentros, recomputarUsoCentros, sincronizarSeguro } from "@/lib/rh/server";
 import { validarItens } from "@/lib/rh/alocacao";
+import { ENCARGOS_PATRONAIS, type AliquotasPatronais, type DadosEncargos } from "@/lib/rh/custo";
 import { isValidDate, dayBefore, monthOf } from "@/lib/rh/datas";
 import { validarNovaVigencia, validarEncerramento, type ErroVigencia, type Vigencia } from "@/lib/rh/vigencia";
 import { folhasFechadas } from "@/lib/rh/folhaServer";
@@ -22,6 +23,23 @@ const MSG: Record<ErroVigencia, string> = {
 };
 
 const ehNumero = (n: number, max: number) => Number.isFinite(n) && n >= 0 && n <= max;
+
+function dadosEncargos(body: { pct?: unknown; aliquotas?: unknown }): DadosEncargos | null {
+  if (body.aliquotas === undefined) {
+    const pct = Number(body.pct);
+    return ehNumero(pct, 200) ? { pct: Math.round(pct * 100) / 100 } : null;
+  }
+
+  if (!body.aliquotas || typeof body.aliquotas !== "object") return null;
+  const campos = body.aliquotas as Record<string, unknown>;
+  const aliquotas = {} as AliquotasPatronais;
+  for (const encargo of ENCARGOS_PATRONAIS) {
+    const pct = campos[encargo];
+    if (typeof pct !== "number" || !ehNumero(pct, 100)) return null;
+    aliquotas[encargo] = Math.round(pct * 10000) / 10000;
+  }
+  return { pct: 0, aliquotas };
+}
 
 export async function GET(request: Request) {
   try {
@@ -94,9 +112,9 @@ export async function POST(request: Request) {
           if (!ehNumero(valor, 10_000_000)) return NextResponse.json({ error: "Valor inválido." }, { status: 400 });
           upd.valor = valor;
         } else if (v.tipo === "encargos") {
-          const pct = Number(body.pct);
-          if (!ehNumero(pct, 200)) return NextResponse.json({ error: "Percentual de encargos inválido." }, { status: 400 });
-          upd.pct = Math.round(pct * 100) / 100;
+          const encargos = dadosEncargos(body);
+          if (!encargos || (v.aliquotas && !encargos.aliquotas)) return NextResponse.json({ error: "Alíquotas de encargos inválidas." }, { status: 400 });
+          Object.assign(upd, encargos);
         } else if (v.tipo === "alocacao") {
           const erroItens = validarItens(body.itens);
           if (erroItens) return NextResponse.json({ error: erroItens }, { status: 400 });
@@ -158,9 +176,9 @@ export async function POST(request: Request) {
       }
       dados.itens = itens;
     } else if (tipo === "encargos") {
-      const pct = Number(body.pct);
-      if (!ehNumero(pct, 200)) return NextResponse.json({ error: "Percentual de encargos inválido." }, { status: 400 });
-      dados.pct = Math.round(pct * 100) / 100;
+      const encargos = dadosEncargos(body);
+      if (!encargos) return NextResponse.json({ error: "Alíquotas de encargos inválidas." }, { status: 400 });
+      Object.assign(dados, encargos);
     } else {
       const valor = Math.round(Number(body.valor) * 100) / 100;
       if (!ehNumero(valor, 10_000_000) || (tipo === "salario" && valor <= 0)) {

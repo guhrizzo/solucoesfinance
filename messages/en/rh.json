@@ -203,8 +203,10 @@
       "bonus": "Bonus",
       "total": "Total"
     },
-    "premissas": "Charges and accruals (13th salary and vacation + 1/3) apply only to CLT employees. Salary and benefits are prorated by active days in the month. Premiums (CLT only, from the employee record, prorated by month): night = hours × hourly rate × %; unhealthy work = degree × minimum wage; hazard = 30% of base salary. The charges base is salary + premiums + accruals + commission + bonus; benefits are excluded. Once payroll is closed, the payroll amounts prevail.",
+    "premissas": "Payroll charges and accruals for 13th salary and vacation plus one third apply to CLT employees. Salary and benefits are prorated by active days. Estimated payroll charges use pay, commissions, bonuses, and accruals. After payroll closes, FGTS uses the payroll amount plus the accrual for 13th salary and vacation.",
     "bonusSalvo": "Bonus saved.",
+    "semDetalheEncargos": "Breakdown unavailable",
+    "encargosPendentes": "A dash in the Charges column indicates a missing rate. Enter your company’s rates in the Charges tab.",
     "rateioTitulo": "Split by cost center",
     "rateioNota": "Posted to cost centers only as budget (forecast), with no settlement — settlement comes from the bank statement in Cash flow. Nothing goes to the P&L. Anything without an allocation shows as \"Unallocated\".",
     "naoAlocado": "Unallocated",
@@ -231,14 +233,22 @@
     }
   },
   "encargos": {
-    "titulo": "Payroll charges rate",
-    "desc": "A single company-wide rate applied to all CLT employees. It varies with the tax regime — confirm with your accountant.",
+    "titulo": "Employer payroll charge rates",
+    "desc": "Enter the rates for your company’s tax regime and their effective date. Use 0 for charges that do not apply. FGTS follows the employee’s payroll category. New rates replace the previous rate from the selected date.",
     "atual": "Current",
-    "pct": "Charges (%)",
+    "consolidado": "Combined rate",
     "aPartirDe": "Effective from",
     "aplicar": "Apply",
     "historico": "History",
-    "nenhum": "Not set yet (0%)."
+    "nenhum": "Rates not set yet.",
+    "tipos": {
+      "fgts": "FGTS",
+      "fgtsRescisorio": "Severance FGTS",
+      "inssPatronal": "Employer INSS",
+      "rat": "RAT",
+      "terceiros": "Third-party contributions",
+      "outros": "Other charges"
+    }
   },
   "log": {
     "titulo": "Who accessed or changed employee data",

@@ -203,8 +203,10 @@
       "bonus": "Bono",
       "total": "Total"
     },
-    "premissas": "Cargas y provisiones (13º y vacaciones + 1/3) valen solo para vínculo CLT. Salario y beneficios son proporcionales a los días activos del mes. Adicionales (solo CLT, del registro, proporcionales al mes): nocturno = horas × valor de la hora × %; insalubridad = grado × salario mínimo; peligrosidad = 30% del salario base. La base de las cargas es salario + adicionales + provisiones + comisión + bono; los beneficios quedan fuera. Con la nómina cerrada, vale lo que la nómina calculó.",
+    "premissas": "Las cargas y provisiones de 13.º sueldo y vacaciones más un tercio se aplican a los empleados CLT. El salario y los beneficios son proporcionales a los días activos. Las cargas estimadas se calculan sobre remuneración, comisiones, bonos y provisiones. Al cerrar la nómina, el FGTS usa el importe calculado en la nómina más la provisión de 13.º sueldo y vacaciones.",
     "bonusSalvo": "Bono guardado.",
+    "semDetalheEncargos": "Desglose no disponible",
+    "encargosPendentes": "Un guion en la columna Cargas indica que falta una tasa. Introduce las tasas de la empresa en la pestaña Cargas.",
     "rateioTitulo": "Reparto por centro de costo",
     "rateioNota": "Registrado en los centros de costo solo como presupuesto (previsto), sin baja — la baja llega del extracto en Flujo de caja. Nada va al DRE. Lo que no tiene asignación aparece como \"No asignado\".",
     "naoAlocado": "No asignado",
@@ -231,14 +233,22 @@
     }
   },
   "encargos": {
-    "titulo": "Porcentaje de cargas sociales",
-    "desc": "Valor único de la empresa, aplicado a todos los colaboradores CLT. Varía según el régimen tributario — confírmalo con el contador.",
+    "titulo": "Tasas de cargas patronales",
+    "desc": "Introduce las tasas según el régimen fiscal de la empresa y su fecha de vigencia. Usa 0 cuando no corresponda una carga. El FGTS se calcula según la categoría del empleado en la nómina. Las nuevas tasas sustituyen el porcentaje anterior desde la fecha indicada.",
     "atual": "Vigente hoy",
-    "pct": "Cargas (%)",
+    "consolidado": "Porcentaje consolidado",
     "aPartirDe": "A partir de",
     "aplicar": "Aplicar",
     "historico": "Historial",
-    "nenhum": "Aún sin definir (0%)."
+    "nenhum": "Tasas pendientes de registro.",
+    "tipos": {
+      "fgts": "FGTS",
+      "fgtsRescisorio": "FGTS por rescisión",
+      "inssPatronal": "INSS patronal",
+      "rat": "RAT",
+      "terceiros": "Aportes a terceros",
+      "outros": "Otras cargas"
+    }
   },
   "log": {
     "titulo": "Quién accedió o modificó datos de colaboradores",
